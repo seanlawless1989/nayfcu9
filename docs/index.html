@@ -520,11 +520,12 @@ function makeDb(sb){
 function authBox(){
   const el=document.getElementById("auth");if(!el)return;
   if(me){el.innerHTML=`<span class="who">${canWrite?"Coach":"Signed in"}: ${esc(me.email)}</span><button class="mini" id="signOut">Sign out</button>`}
-  else{el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
+  else if(/[?&]coach\b/.test(location.search)){el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
+  else{el.innerHTML=""}
 }
 async function checkCoach(){
   canWrite=false;
-  if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data}
+  if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
   if(!canWrite&&["new","edit","gfx"].includes(view))view="home";
   authBox();render();
 }
@@ -538,8 +539,8 @@ document.addEventListener("click",async e=>{
 document.addEventListener("submit",async e=>{
   if(e.target.id!=="loginForm")return;e.preventDefault();
   const email=document.getElementById("loginEmail").value.trim();if(!email){toast("Type your email.");return}
-  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
-  toast(error?"Couldn't send the link: "+error.message:"Check your email for the sign-in link.");
+  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}});
+  toast(error?"That email isn't on the club's coach list.":"Check your email for the sign-in link.");
 });
 (async function(){
   render();

@@ -58,3 +58,17 @@ create policy "see own coach row" on public.coaches for select to authenticated 
 
 -- >>> Change this to your email, then run. Add a line per coach.
 insert into public.coaches (email) values ('coach@example.com') on conflict do nothing;
+
+-- Only emails on the coaches list can create a sign-in account.
+create or replace function public.only_coaches_can_sign_up()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.coaches where email = lower(new.email)) then
+    raise exception 'Only club coaches can sign in';
+  end if;
+  return new;
+end $$;
+revoke execute on function public.only_coaches_can_sign_up() from public, anon, authenticated;
+drop trigger if exists only_coaches_can_sign_up on auth.users;
+create trigger only_coaches_can_sign_up before insert on auth.users
+  for each row execute function public.only_coaches_can_sign_up();

@@ -32,7 +32,7 @@ If the site isn't showing, go to the repository's **Settings**, then **Pages**. 
 2. Set **Site URL** to https://seanlawless1989.github.io/nayfcu9/
 3. Add the same address under **Redirect URLs**.
 
-Then open the site, tap **Coach sign in**, enter your email, and click the link in the email you're sent.
+Then open the site with `?coach` on the end (https://seanlawless1989.github.io/nayfcu9/?coach), tap **Coach sign in**, enter your email, and click the link in the email you're sent.
 
 ## Adding coaches later
 
