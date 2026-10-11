@@ -629,7 +629,11 @@ const KITS={yellow:{body:C.yellow,trim:C.blue,ink:C.ink,band:C.blue,bandInk:C.wh
   blue:{body:C.blue,trim:C.yellow,ink:C.white,band:C.yellow,bandInk:C.ink},
   purple:{body:"#4A1D7A",trim:"#F050F8",ink:C.white,band:C.yellow,bandInk:C.ink,octopus:true}};
 function octopusBadge(cx,cy,w){
-  if(IMG.octopus){contain(IMG.octopus,cx-w/2,cy-w*.16,w,w*.32);return}
+  if(IMG.octopus&&IMG.octopus.width/IMG.octopus.height>2){contain(IMG.octopus,cx-w/2,cy-w*.16,w,w*.32);return}
+  if(IMG.octopus){// mascot beside the wordmark
+    const m=w*.36;X.save();X.font=font(Math.round(w*.24),BODY,800);const tw=X.measureText("octopus").width;const total=m*.95+w*.04+tw,x0=cx-total/2;
+    contain(IMG.octopus,x0,cy-m/2,m*.95,m);X.fillStyle=C.white;X.textAlign="left";X.textBaseline="middle";
+    X.fillText("octopus",x0+m*.95+w*.04,cy-w*.05);X.font=font(Math.round(w*.1),BODY,600);X.fillText("energy",x0+m*.95+w*.05,cy+w*.12);X.restore();return}
   X.save();X.fillStyle=C.white;X.textAlign="center";X.textBaseline="middle";
   fit("octopus",w,Math.round(w*.26),BODY,800);X.fillText("octopus",cx,cy-w*.04);
   X.font=font(Math.round(w*.11),BODY,600);X.fillText("energy",cx,cy+w*.13);X.restore();
