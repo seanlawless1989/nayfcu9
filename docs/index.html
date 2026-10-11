@@ -11,7 +11,7 @@
 <title>Newton Aycliffe Under 9s</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Luckiest+Guy&family=Archivo:wght@400;500;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Luckiest+Guy&family=Oswald:wght@700&family=Archivo:wght@400;500;600;800&display=swap">
 <style>
 /* Layout: club-coloured masthead, tab strip, then one view at a time (dashboard, results, entry form, players, squad) */
 :root{
@@ -96,9 +96,9 @@ textarea{min-height:70px;resize:vertical}
 .score input{width:84px;font:400 30px var(--display);text-align:center;padding:6px}
 .score span{font:400 28px var(--display)}
 .pp{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
-.pr{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);min-width:0}
+.pr{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:7px 9px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);min-width:0}
 .pr.on{border-color:var(--club);background:var(--card)}
-.pr label{display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer;font-weight:600}
+.pr label{display:flex;align-items:center;gap:8px;flex:1 1 100%;min-width:0;cursor:pointer;font-weight:600}
 .pr label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pr input[type=checkbox]{width:20px;height:20px;accent-color:var(--club);margin:0;flex:none}
 .pr .n{display:inline-grid;place-items:center;min-width:26px;height:24px;border-radius:6px;background:var(--gold);color:var(--goldInk);font:400 12px var(--display);flex:none}
@@ -225,9 +225,10 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
         <div class="btns">
           <span class="hint">Kit</span>
           <div class="seg" role="group" aria-label="Kit colour">
-            <button id="kit-yellow" aria-pressed="true" data-kit="yellow">Yellow</button><button id="kit-blue" aria-pressed="false" data-kit="blue">Blue</button>
+            <button id="kit-yellow" aria-pressed="true" data-kit="yellow">Yellow</button><button id="kit-blue" aria-pressed="false" data-kit="blue">Blue</button><button id="kit-purple" aria-pressed="false" data-kit="purple">Purple</button>
           </div>
         </div>
+        <label class="f">Captain (wears the armband)<select id="captain"></select></label>
         <div class="file"><span class="thumb" id="squadPhotoThumb"></span><label class="f">Player photo for the left side (a cut-out works best)<input type="file" id="squadPhoto" accept="image/*"></label></div>
       </section>
 
@@ -250,7 +251,7 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
         <div class="btns">
           <span class="hint">Shirt</span>
           <div class="seg" role="group" aria-label="Shirt colour">
-            <button id="pk-yellow" aria-pressed="true" data-pkit="yellow">Yellow</button><button id="pk-blue" aria-pressed="false" data-pkit="blue">Blue</button>
+            <button id="pk-yellow" aria-pressed="true" data-pkit="yellow">Yellow</button><button id="pk-blue" aria-pressed="false" data-pkit="blue">Blue</button><button id="pk-purple" aria-pressed="false" data-pkit="purple">Purple</button>
           </div>
         </div>
         <div class="file"><span class="thumb" id="potmPhotoThumb"></span><label class="f">Her photo with the award<input type="file" id="potmPhoto" accept="image/*"></label></div>
@@ -259,6 +260,7 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
       <section class="panel" data-for="setup" hidden>
         <h2>Badges and logos</h2>
         <p class="hint">The club badge, Grey-Smith Legal and Coffey Coffee logos are built in. Upload a replacement here only if one changes; it's kept in this browser.</p>
+        <div class="file"><span class="thumb" id="octopusThumb"></span><label class="f">Octopus Energy logo (shown on the purple kit; a white logo works best)<input type="file" id="octopusUp" accept="image/*"></label></div>
         <div class="file"><span class="thumb" id="crestThumb"></span><label class="f">Newton Aycliffe club badge<input type="file" id="crestUp" accept="image/*"></label></div>
         <div class="file"><span class="thumb" id="sponsorThumb"></span><label class="f">Sponsor logo<input type="file" id="sponsorUp" accept="image/*"></label></div>
         <div class="file"><span class="thumb" id="coffeyThumb"></span><label class="f">Coffey Coffee PotM badge (replaces the whole badge)<input type="file" id="coffeyUp" accept="image/*"></label></div>
@@ -299,6 +301,9 @@ function seasonOf(iso){if(!iso)return"";const y=+iso.slice(0,4),m=+iso.slice(5,7
 function todaySeason(){const d=new Date();return seasonOf(d.toISOString().slice(0,10))}
 function result(m){if(m.us==null||m.them==null||m.us===""||m.them==="")return null;return m.us>m.them?"W":m.us===m.them?"D":"L"}
 function played(m){return m.played||{}}
+function assistsOf(m){return m.assists||{}}
+const ASSISTS_FROM="2026-27";
+function assistsTracked(s){return s>=ASSISTS_FROM}
 function sortMatches(a){return a.slice().sort((x,y)=>(x.date||"").localeCompare(y.date||""))}
 function seasonMatches(){return sortMatches(matches.filter(m=>seasonOf(m.date)===season))}
 function pname(id){return id}
@@ -308,8 +313,9 @@ function slug(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").r
 
 // ---------- stats ----------
 function teamStats(list){const s={P:0,W:0,D:0,L:0,F:0,A:0};list.forEach(m=>{const r=result(m);if(!r)return;s.P++;s[r]++;s.F+=+m.us;s.A+=+m.them});s.GD=s.F-s.A;return s}
-function playerStats(list){const out={};const get=n=>out[n]||(out[n]={apps:0,goals:0,potm:0,appsKnown:0});
+function playerStats(list){const out={};const get=n=>out[n]||(out[n]={apps:0,goals:0,assists:0,potm:0,appsKnown:0});
   list.forEach(m=>{const pl=played(m);for(const [n,g] of Object.entries(pl)){const o=get(n);if(m.apps!==false)o.apps++;o.goals+=+g||0}
+    for(const [n,a] of Object.entries(assistsOf(m)))get(n).assists+=+a||0;
     if(m.potm)get(m.potm).potm++; if(m.apps!==false)Object.keys(out).forEach(()=>{})});
   return out}
 function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boolean));set.add(todaySeason());return [...set].sort().reverse()}
@@ -335,6 +341,7 @@ function homeView(){
   const done=list.filter(result);const last=done.slice(-6);
   const flagged=list.filter(m=>m.check).length;
   const scorers=Object.entries(ps).filter(([,o])=>o.goals>0).sort((a,b)=>b[1].goals-a[1].goals||a[0].localeCompare(b[0]));
+  const assisters=Object.entries(ps).filter(([,o])=>o.assists>0).sort((a,b)=>b[1].assists-a[1].assists||a[0].localeCompare(b[0]));
   const potms=Object.entries(ps).filter(([,o])=>o.potm>0).sort((a,b)=>b[1].potm-a[1].potm||a[0].localeCompare(b[0]));
   const max=scorers[0]?.[1].goals||1;
   const latest=done[done.length-1];
@@ -351,6 +358,7 @@ function homeView(){
     <section class="card"><h3>Latest result</h3>${latest?matchRow(latest):`<p class="hint">No results yet this season.</p>`}
       ${upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:""}</section>
     <section class="card"><h3>Top scorers</h3>${scorers.length?`<table class="lb"><tbody>${scorers.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/max*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No goals logged yet.</p>`}</section>
+    ${assistsTracked(season)?`<section class="card"><h3>Top assists</h3>${assisters.length?`<table class="lb"><tbody>${assisters.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.assists/assisters[0][1].assists*100)}%"></i><b>${o.assists}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No assists logged yet.</p>`}</section>`:""}
     <section class="card"><h3>Coffey Coffee player of the match</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td><span class="potm">${"☕".repeat(Math.min(o.potm,6))}</span> <b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No awards logged yet.</p>`}</section>
   </div></div>`;
 }
@@ -358,11 +366,12 @@ function homeView(){
 function matchRow(m){
   const d=m.date?new Date(m.date+"T12:00:00"):null;const r=result(m);
   const sc=Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>n+(g>1?` ×${g}`:"")).join(", ");
+  const as=Object.entries(assistsOf(m)).filter(([,a])=>a>0).map(([n,a])=>n+(a>1?` ×${a}`:"")).join(", ");
   return `<div class="match" role="button" tabindex="0" data-edit="${esc(m.id)}">
     <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
       <div class="meta">${[m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
-      ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}</div>
+      ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}</div>
     <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:`<span class="chip N">${m.comp==="Tournament"?"T":"–"}</span>`}</div>
     <div class="mg edit-only"><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button></div>
   </div>`;
@@ -377,26 +386,26 @@ function resultsView(){
 }
 
 function playersView(){
-  const list=seasonMatches(),ps=playerStats(list),tracked=appsTracked(list);
+  const list=seasonMatches(),ps=playerStats(list),tracked=appsTracked(list),at=assistsTracked(season);
   const all=matches,career=playerStats(all);
   const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps)])];
-  const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,potm:0},c:career[n]||{goals:0,potm:0}})).sort((a,b)=>b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
+  const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,assists:0,potm:0},c:career[n]||{goals:0,potm:0}})).sort((a,b)=>b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
   return `<section class="card"><h2>${season} players</h2>
    ${tracked?"":`<p class="hint" style="margin-bottom:10px">Appearances weren't recorded this season, so only goals and awards show.</p>`}
-   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th><th>PotM</th>${tracked?"<th>Per game</th>":""}<th>Career goals</th><th>Career PotM</th></tr></thead><tbody>
-   ${rows.map(({n,o,c})=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td><td>${o.potm}</td>${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}<td>${c.goals}</td><td>${c.potm}</td></tr>`).join("")}
+   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th>${at?"<th>Assists</th>":""}<th>PotM</th>${tracked?"<th>Per game</th>":""}<th>Career goals</th><th>Career PotM</th></tr></thead><tbody>
+   ${rows.map(({n,o,c})=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}<td>${o.potm}</td>${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}<td>${c.goals}</td><td>${c.potm}</td></tr>`).join("")}
    </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her match-by-match record.</p></section>`;
 }
 
 function playerDetail(n){
   const ss=seasons().slice().reverse();
-  const rows=ss.map(s=>{const l=sortMatches(matches.filter(m=>seasonOf(m.date)===s));const o=playerStats(l)[n]||{apps:0,goals:0,potm:0};return {s,o,tracked:appsTracked(l)}}).filter(r=>r.o.goals||r.o.apps||r.o.potm);
-  const games=sortMatches(matches.filter(m=>n in played(m)||m.potm===n)).reverse();
+  const rows=ss.map(s=>{const l=sortMatches(matches.filter(m=>seasonOf(m.date)===s));const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {s,o,tracked:appsTracked(l)}}).filter(r=>r.o.goals||r.o.apps||r.o.potm||r.o.assists);
+  const games=sortMatches(matches.filter(m=>n in played(m)||m.potm===n||n in assistsOf(m))).reverse();
   const tot=playerStats(matches)[n]||{apps:0,goals:0,potm:0};
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
-  <section class="card"><div class="pcard"><div class="big">${esc(numOf(n))||"·"}</div><div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${tot.goals} career goals · ${tot.potm} Coffey Coffee awards</p></div></div></section>
-  <section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>Goals</th><th>PotM</th></tr></thead><tbody>
-  ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps:"–"}</td><td>${r.o.goals}</td><td>${r.o.potm}</td></tr>`).join("")}</tbody></table></section>
+  <section class="card"><div class="pcard"><div class="big">${esc(numOf(n))||"·"}</div><div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${tot.goals} career goals · ${tot.assists||0} assists · ${tot.potm} Coffey Coffee awards</p></div></div></section>
+  <section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>Goals</th><th>Assists</th><th>PotM</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps:"–"}</td><td>${r.o.goals}</td><td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.potm}</td></tr>`).join("")}</tbody></table></section>
   <section class="card"><h3>Matches</h3><div class="list">${games.map(matchRow).join("")||`<p class="hint">No matches logged yet.</p>`}</div></section></div>`;
 }
 
@@ -415,7 +424,7 @@ function squadView(){
 
 // ---------- the match form ----------
 let F=null;
-function blankForm(){return {id:null,date:new Date().toISOString().slice(0,10),opp:"",ha:"H",venue:"",comp:"League",ko:"",us:"",them:"",potm:"",played:{},notes:"",check:"",apps:true}}
+function blankForm(){return {id:null,date:new Date().toISOString().slice(0,10),opp:"",ha:"H",venue:"",comp:"League",ko:"",us:"",them:"",potm:"",played:{},assists:{},notes:"",check:"",apps:true}}
 function formView(){
   if(!F)F=blankForm();
   const opps=[...new Set(matches.map(m=>m.opp).filter(Boolean))].sort(), venues=[...new Set(matches.map(m=>m.venue).filter(Boolean))].sort();
@@ -438,11 +447,12 @@ function formView(){
     <datalist id="venues">${venues.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
     <div class="seg" role="group" aria-label="Home or away"><button type="button" data-ha="H" aria-pressed="${F.ha==="H"}">Home</button><button type="button" data-ha="A" aria-pressed="${F.ha==="A"}">Away</button><button type="button" data-ha="N" aria-pressed="${F.ha==="N"}">Neutral</button></div>
   </section>
-  <section class="card stack" style="gap:12px"><h3>Who played and who scored</h3>
-    <p class="hint">Tick everyone who played, then tap + for each goal.</p>
+  <section class="card stack" style="gap:12px"><h3>Who played, scored and assisted</h3>
+    <p class="hint">Tick everyone who played, then tap + for each goal (⚽) and each assist (🅰️).</p>
     <div class="pp">${roster.map(p=>{const on=p.name in F.played;const g=F.played[p.name]||0;return `<div class="pr${on?" on":""}">
       <label for="pl-${esc(p.id)}"><input type="checkbox" id="pl-${esc(p.id)}" data-play="${esc(p.name)}"${on?" checked":""}><span class="n">${esc(p.num??"")}</span><span>${esc(p.name)}</span></label>
-      <div class="step"><span class="ball" aria-hidden="true">⚽</span><button type="button" data-goal="-1" data-n="${esc(p.name)}" aria-label="One less goal for ${esc(p.name)}"${g?"":" disabled"}>−</button><output>${g}</output><button type="button" data-goal="1" data-n="${esc(p.name)}" aria-label="One more goal for ${esc(p.name)}">+</button></div></div>`}).join("")}</div>
+      <div class="step"><span class="ball" aria-hidden="true">⚽</span><button type="button" data-goal="-1" data-n="${esc(p.name)}" aria-label="One less goal for ${esc(p.name)}"${g?"":" disabled"}>−</button><output>${g}</output><button type="button" data-goal="1" data-n="${esc(p.name)}" aria-label="One more goal for ${esc(p.name)}">+</button></div>
+      <div class="step"><span class="ball" aria-hidden="true">🅰️</span><button type="button" data-assist="-1" data-n="${esc(p.name)}" aria-label="One less assist for ${esc(p.name)}"${(F.assists[p.name]||0)?"":" disabled"}>−</button><output>${F.assists[p.name]||0}</output><button type="button" data-assist="1" data-n="${esc(p.name)}" aria-label="One more assist for ${esc(p.name)}">+</button></div></div>`}).join("")}</div>
   </section>
   <section class="card stack" style="gap:12px"><h3>Final score</h3>
     <div class="score"><label class="f">Newton Aycliffe<input type="number" min="0" id="f-us" value="${esc(F.us)}" placeholder="${goalSum}"></label><span>–</span><label class="f">${esc(F.opp||"Them")}<input type="number" min="0" id="f-them" value="${esc(F.them)}"></label></div>
@@ -461,7 +471,7 @@ async function saveMatch(){
   if(!F.date||!F.opp){toast("Add the date and opponent first.");return}
   const goalSum=Object.values(F.played).reduce((a,b)=>a+(+b||0),0);
   const body={date:F.date,opp:F.opp,ha:F.ha,venue:F.venue,comp:F.comp,ko:F.ko,us:F.us===""?(Object.keys(F.played).length&&F.them!==""?goalSum:null):F.us,them:F.them===""?null:F.them,
-    potm:F.potm||null,played:F.played,notes:F.notes,apps:F.apps!==false,check:F.check||"",updated:new Date().toISOString()};
+    potm:F.potm||null,played:F.played,assists:F.assists||{},notes:F.notes,apps:F.apps!==false,check:F.check||"",updated:new Date().toISOString()};
   const id=F.id||`${F.date}-${slug(F.opp)}-${Math.random().toString(36).slice(2,6)}`;
   $("#saveM").disabled=true;
   try{await db.collection("matches").doc(id).set(body);toast("Match saved.");season=seasonOf(F.date);F=null;editing=null;setView("results")}
@@ -476,13 +486,15 @@ document.addEventListener("click",async e=>{
   if(t.dataset.view){F=null;playerView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
   if(t.dataset.edit){const m=matches.find(x=>x.id===t.dataset.edit);if(!m)return;
     if(!canWrite){return}
-    F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
+    F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.assists=F.assists||{};F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
   if(t.dataset.player){playerView=t.dataset.player;setView("players");return}
   if("back" in t.dataset){playerView=null;render();return}
   if("cancel" in t.dataset){F=null;setView("results");return}
   if(t.dataset.ha&&F){readForm();F.ha=t.dataset.ha;render();return}
   if(t.dataset.goal&&F){readForm();const n=t.dataset.n;const g=Math.max(0,(F.played[n]||0)+ +t.dataset.goal);F.played[n]=g;
     if(F.us!==""&&F.us!=null&&!F._usTouched){F.us=Object.values(F.played).reduce((a,b)=>a+(+b||0),0)}render();return}
+  if(t.dataset.assist&&F){readForm();const n=t.dataset.n;F.assists=F.assists||{};const a=Math.max(0,(F.assists[n]||0)+ +t.dataset.assist);if(a)F.assists[n]=a;else delete F.assists[n];
+    if(a&&!(n in F.played))F.played[n]=0;render();return}
   if(t.id==="delM"){if(t.dataset.sure){try{await db.collection("matches").doc(F.id).delete();toast("Match deleted.");F=null;setView("results")}catch(err){toast("Couldn't delete it. Try again.")}}
     else{t.dataset.sure="1";t.textContent="Tap again to delete";setTimeout(()=>{if(t.isConnected){delete t.dataset.sure;t.textContent="Delete match"}},4000)}return}
   if(t.dataset.cur!=null){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);try{await db.collection("players").doc(p.id).update({current:t.dataset.cur==="1"})}catch(err){toast("Couldn't update. Try again.")}return}
@@ -493,7 +505,7 @@ document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.tar
 document.addEventListener("change",async e=>{
   const t=e.target;if(t.closest&&t.closest("#gfxView"))return;
   if(t.id==="season"){season=t.value;playerView=null;render();return}
-  if(t.dataset.play&&F){readForm();const n=t.dataset.play;if(t.checked)F.played[n]=F.played[n]||0;else{delete F.played[n];if(F.potm===n)F.potm=""}render();return}
+  if(t.dataset.play&&F){readForm();const n=t.dataset.play;if(t.checked)F.played[n]=F.played[n]||0;else{delete F.played[n];if(F.assists)delete F.assists[n];if(F.potm===n)F.potm=""}render();return}
   if(t.id==="f-us"&&F){F._usTouched=true}
   if(t.dataset.f){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);const val=t.dataset.f==="num"?(t.value===""?null:+t.value):t.value.trim();if(!val&&t.dataset.f==="name")return;
     try{await db.collection("players").doc(p.id).update({[t.dataset.f]:val});toast("Saved.")}catch(err){toast("Couldn't save. Try again.")}}
@@ -570,11 +582,11 @@ let squad=DEFAULT_SQUAD.map(([name,num])=>({name,num}));
 let S=Object.assign({
   mode:"squad",opp:"Seaham AFC Youth Reds",date:"2026-10-03",ko:"10:15",venue:"",comp:"League",ha:"H",
   picked:["Daisy","Ayla","Chloe","Jessica","Isobel","Sophia","Amara","Evie"],kit:"yellow",
-  goals:{Daisy:3,Lydia:2,Chloe:1},us:6,them:2,usManual:false,ftPotm:"",potm:"Sophia",pkit:"yellow",sponsorName:"Grey-Smith Legal"
+  goals:{Daisy:3,Lydia:2,Chloe:1},us:6,them:2,usManual:false,ftPotm:"",potm:"Sophia",pkit:"yellow",captain:"Daisy",sponsorName:"Grey-Smith Legal"
 },store.get("nayfc.state",{}));
 const save=()=>store.set("nayfc.state",S);
 
-const IMG={coffeyLogo:null,crest:null,sponsor:null,coffey:null,opp:null,squadPhoto:null,ftPhoto:null,potmPhoto:null};
+const IMG={octopus:null,coffeyLogo:null,crest:null,sponsor:null,coffey:null,opp:null,squadPhoto:null,ftPhoto:null,potmPhoto:null};
 const logos=store.get("nayfc.logos",{});
 const oppCrests=store.get("nayfc.oppCrests",{});
 
@@ -588,7 +600,7 @@ const W=1080;
 function cover(img,x,y,w,h){const s=Math.max(w/img.width,h/img.height);const sw=w/s,sh=h/s;X.drawImage(img,(img.width-sw)/2,(img.height-sh)/2*0.6,sw,sh,x,y,w,h)}
 function contain(img,x,y,w,h){const s=Math.min(w/img.width,h/img.height);const dw=img.width*s,dh=img.height*s;X.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh)}
 function font(px,fam,weight){return `${weight||""} ${px}px ${fam}`.trim()}
-const DISPLAY='"Archivo Black","Arial Black",sans-serif', SHIRT='"Luckiest Guy","Arial Black",sans-serif', BODY='"Archivo",Arial,sans-serif';
+const DISPLAY='"Archivo Black","Arial Black",sans-serif', SHIRT='"Oswald","Arial Narrow",sans-serif', BODY='"Archivo",Arial,sans-serif';
 function fit(text,maxW,start,fam,weight){let px=start;X.font=font(px,fam,weight);while(px>10&&X.measureText(text).width>maxW){px-=2;X.font=font(px,fam,weight)}return px}
 function arcText(text,cx,cy,r,mid,inside){// mid = centre angle (radians), text along arc; inside=true reads along bottom
   const chars=[...text];const widths=chars.map(c=>X.measureText(c).width);const total=widths.reduce((a,b)=>a+b,0);
@@ -613,9 +625,18 @@ function footballs(seed,color){ // faint ball pattern like the Canva backgrounds
   X.restore();
 }
 
-function shirt(cx,top,w,kit,name,num){
+const KITS={yellow:{body:C.yellow,trim:C.blue,ink:C.ink,band:C.blue,bandInk:C.white},
+  blue:{body:C.blue,trim:C.yellow,ink:C.white,band:C.yellow,bandInk:C.ink},
+  purple:{body:"#4A1D7A",trim:"#F050F8",ink:C.white,band:C.yellow,bandInk:C.ink,octopus:true}};
+function octopusBadge(cx,cy,w){
+  if(IMG.octopus){contain(IMG.octopus,cx-w/2,cy-w*.16,w,w*.32);return}
+  X.save();X.fillStyle=C.white;X.textAlign="center";X.textBaseline="middle";
+  fit("octopus",w,Math.round(w*.26),BODY,800);X.fillText("octopus",cx,cy-w*.04);
+  X.font=font(Math.round(w*.11),BODY,600);X.fillText("energy",cx,cy+w*.13);X.restore();
+}
+function shirt(cx,top,w,kit,name,num,captain){
   const h=w*1.02,x=cx-w/2,y=top,P=(px,py)=>[x+px*w/100,y+py*h/100];
-  const body=kit==="blue"?C.blue:C.yellow, trim=kit==="blue"?C.yellow:C.blue;
+  const K=KITS[kit]||KITS.yellow, body=K.body, trim=K.trim;
   X.save();X.shadowColor="rgba(0,0,0,.18)";X.shadowBlur=w*.06;X.shadowOffsetY=w*.03;
   X.beginPath();
   X.moveTo(...P(36,2));X.quadraticCurveTo(...P(50,11),...P(64,2));
@@ -628,13 +649,19 @@ function shirt(cx,top,w,kit,name,num){
   X.beginPath();X.moveTo(...P(97,35));X.lineTo(...P(89,41));X.stroke();
   X.beginPath();X.moveTo(...P(3,35));X.lineTo(...P(11,41));X.stroke();
   X.restore();
+  if(captain){// armband on the left sleeve
+    X.save();X.fillStyle=K.band;X.beginPath();X.moveTo(...P(3.4,26.5));X.lineTo(...P(7.4,20.3));X.lineTo(...P(15.8,37.6));X.lineTo(...P(13.4,40.2));X.closePath();X.fill();
+    const [bx,by]=P(10,31.2);X.translate(bx,by);X.rotate(Math.atan2(-(25*h/100),16*w/100)+Math.PI/2);
+    X.fillStyle=K.bandInk;X.textAlign="center";X.textBaseline="middle";X.font=font(Math.round(w*.085),SHIRT,700);X.fillText("C",0,w*.005);X.restore();
+  }
+  if(K.octopus)octopusBadge(cx,y+h*.15,w*.34);
   // name on a gentle arc + number
-  const ink=C.ink;X.fillStyle=ink;
+  X.fillStyle=K.ink;
   const nm=(name||"").toUpperCase();
-  let px=fit(nm,w*.66,w*.2,SHIRT);X.font=font(px,SHIRT);
-  arcText(nm,cx,y+h*.36+w*1.6,w*1.6,-Math.PI/2,false);
-  X.font=font(Math.round(w*.5),SHIRT);X.textAlign="center";X.textBaseline="alphabetic";
-  const n=String(num??"");fit(n,w*.6,Math.round(w*.52),SHIRT);X.fillText(n,cx,y+h*.86);
+  let px=fit(nm,w*.62,w*.17,SHIRT,700);X.font=font(px,SHIRT,700);
+  arcText(nm,cx,y+h*.36+w*2.4,w*2.4,-Math.PI/2,false);
+  X.textAlign="center";X.textBaseline="alphabetic";
+  const n=String(num??"");fit(n,w*.6,Math.round(w*.5),SHIRT,700);X.fillText(n,cx,y+h*.86);
 }
 
 function drawCrest(x,y,w,h){
@@ -704,7 +731,7 @@ function drawSquad(){
   const n=Math.max(players.length,1),cols=n<=8?4:(n<=10?5:6),rows=Math.ceil(n/cols);
   const cellW=gw/cols, sw=Math.min(cellW*.9,rows>2?150:185), rowH=rows>2?190:255, gy=rows>2?300:325;
   players.forEach((nm,i)=>{const r=Math.floor(i/cols),c=i%cols;const inRow=Math.min(cols,n-r*cols);const off=(cols-inRow)*cellW/2;
-    shirt(gx+off+cellW*c+cellW/2,gy+r*rowH,sw,S.kit,nm,playerNum(nm))});
+    shirt(gx+off+cellW*c+cellW/2,gy+r*rowH,sw,S.kit,nm,playerNum(nm),nm===S.captain)});
   if(!players.length){X.fillStyle=C.blue;X.font=font(34,BODY,800);X.textAlign="center";X.fillText("Tick players to add their shirts",gx+gw/2,520)}
   // bottom band
   X.fillStyle=C.yellow;X.beginPath();X.moveTo(0,860);X.lineTo(W,800);X.lineTo(W,W);X.lineTo(0,W);X.closePath();X.fill();
@@ -762,7 +789,7 @@ function drawPotm(){
   photoSlot(IMG.potmPhoto,0,0,560,W,"Add her photo\nwith the award");
   drawCrest(30,24,250,150);
   drawCoffey(810,240,215);
-  const nm=S.potm||"";shirt(820,500,390,S.pkit,nm,playerNum(nm));
+  const nm=S.potm||"";shirt(820,500,390,S.pkit,nm,playerNum(nm),nm===S.captain);
   drawSponsor(820,960,42);
 }
 
@@ -778,7 +805,7 @@ function caption(){
   const d=niceDate(S.date), opp=S.opp||"our opponents";let t="";
   if(S.mode==="squad"||S.mode==="setup"){
     const names=S.picked.filter(n=>squad.some(p=>p.name===n));
-    t=`⚽ UNDER 9s SQUAD ANNOUNCEMENT ⚽\n\nHere's our squad for ${d||"this weekend"}${S.ha==="A"?" away at":" at home to"} ${opp}${S.ko?`, ${S.ko} kick-off`:""}${S.venue?` at ${S.venue}`:""}.\n\n${names.map(n=>`${n} (${playerNum(n)})`).join("\n")}\n\nCome on girls! 💙💛${sp}\n\n#NAYFC #NewtonAycliffe #GirlsFootball`;
+    t=`⚽ UNDER 9s SQUAD ANNOUNCEMENT ⚽\n\nHere's our squad for ${d||"this weekend"}${S.ha==="A"?" away at":" at home to"} ${opp}${S.ko?`, ${S.ko} kick-off`:""}${S.venue?` at ${S.venue}`:""}.\n\n${names.map(n=>`${n} (${playerNum(n)})${n===S.captain?" ©":""}`).join("\n")}\n\nCome on girls! 💙💛${sp}\n\n#NAYFC #NewtonAycliffe #GirlsFootball`;
   } else if(S.mode==="ft"){
     const us=S.us??"?",them=S.them??"?";const res=+us>+them?"WIN":(+us===+them?"DRAW":"DEFEAT");
     const sc=Object.entries(S.goals).filter(([n,g])=>g>0).map(([n,g])=>`⚽ ${n}${g>1?` x${g}`:""}`).join("\n");
@@ -798,6 +825,8 @@ function buildPickers(){
   $("squadCount").textContent=`${S.picked.filter(n=>squad.some(p=>p.name===n)).length} picked. Shirts appear in squad-list order.`;
   $("goalPick").innerHTML=squad.map((p,i)=>{const g=S.goals[p.name]||0;return `<div class="gl${g?" on":""}"><span class="n">${esc(p.name)}</span><button aria-label="One less goal for ${esc(p.name)}" data-g="-1" data-n="${esc(p.name)}">−</button><output>${g}</output><button aria-label="One more goal for ${esc(p.name)}" data-g="1" data-n="${esc(p.name)}">+</button></div>`}).join("");
   playerOptions($("ftPotm"),S.ftPotm,true);playerOptions($("potmPlayer"),S.potm,false);
+  const picked=S.picked.filter(n=>squad.some(p=>p.name===n));
+  $("captain").innerHTML='<option value="">No captain</option>'+picked.map(n=>`<option>${esc(n)}</option>`).join("");$("captain").value=picked.includes(S.captain)?S.captain:"";
   if($("squadEdit"))$("squadEdit").innerHTML=squad.map((p,i)=>`<div class="sq-row"><input type="text" id="sqn${i}" aria-label="Player name" value="${esc(p.name)}" data-i="${i}" data-k="name"><input type="number" id="sqk${i}" aria-label="Shirt number" value="${esc(p.num)}" data-i="${i}" data-k="num"><button class="x" aria-label="Remove ${esc(p.name)}" data-rm="${i}">×</button></div>`).join("");
 }
 function syncInputs(){
@@ -810,7 +839,7 @@ function syncInputs(){
 function setMode(m){S.mode=m;ROOT.querySelectorAll(".gtabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.mode===m));
   ROOT.querySelectorAll("[data-for]").forEach(p=>p.hidden=p.dataset.for!==m);
   $("matchPanel").hidden=(m==="setup"||m==="potm")?false:false;save();render()}
-function thumbs(){[["crestThumb","crest"],["sponsorThumb","sponsor"],["coffeyThumb","coffey"],["oppCrestThumb","opp"],["squadPhotoThumb","squadPhoto"],["ftPhotoThumb","ftPhoto"],["potmPhotoThumb","potmPhoto"]]
+function thumbs(){[["crestThumb","crest"],["sponsorThumb","sponsor"],["coffeyThumb","coffey"],["oppCrestThumb","opp"],["squadPhotoThumb","squadPhoto"],["ftPhotoThumb","ftPhoto"],["potmPhotoThumb","potmPhoto"],["octopusThumb","octopus"]]
   .forEach(([id,k])=>{$(id).style.backgroundImage=IMG[k]?`url("${IMG[k].src}")`:"none"})}
 async function setOppCrestFor(name){const src=oppCrests[(name||"").trim().toLowerCase()];IMG.opp=src?await loadImg(src):null;thumbs();render()}
 
@@ -831,6 +860,7 @@ $("squadPick").addEventListener("change",e=>{const n=e.target.dataset.n;if(!n)re
 $("usScore").addEventListener("input",()=>{S.us=$("usScore").value===""?null:+$("usScore").value;S.usManual=$("usScore").value!=="";save();render()});
 $("themScore").addEventListener("input",()=>{S.them=$("themScore").value===""?null:+$("themScore").value;save();render()});
 $("ftPotm").addEventListener("change",()=>{S.ftPotm=$("ftPotm").value;save();render()});
+$("captain").addEventListener("change",()=>{S.captain=$("captain").value;save();render()});
 $("potmPlayer").addEventListener("change",()=>{S.potm=$("potmPlayer").value;save();render()});
 $("sponsorName").addEventListener("input",()=>{S.sponsorName=$("sponsorName").value;save();render()});
 
@@ -840,9 +870,9 @@ function onUpload(id,key,persist){$(id).addEventListener("change",async e=>{cons
     if(persist==="opp"&&S.opp){oppCrests[S.opp.trim().toLowerCase()]=small;store.set("nayfc.oppCrests",oppCrests)}}
   else{img=await loadImg(shrink(img,1600))}
   IMG[key]=img;thumbs();render()})}
-onUpload("crestUp","crest","logo");onUpload("sponsorUp","sponsor","logo");onUpload("coffeyUp","coffey","logo");onUpload("oppCrest","opp","opp");
+onUpload("crestUp","crest","logo");onUpload("sponsorUp","sponsor","logo");onUpload("coffeyUp","coffey","logo");onUpload("octopusUp","octopus","logo");onUpload("oppCrest","opp","opp");
 onUpload("squadPhoto","squadPhoto");onUpload("ftPhoto","ftPhoto");onUpload("potmPhoto","potmPhoto");
-$("clearLogos").addEventListener("click",async()=>{const BUILTIN={crest:"crest.png",sponsor:"gsl.png"};for(const k of["crest","sponsor","coffey"]){delete logos[k];IMG[k]=BUILTIN[k]?await loadImg(BUILTIN[k]):null}store.set("nayfc.logos",logos);thumbs();render();toast("Back to the club's standard logos.")});
+$("clearLogos").addEventListener("click",async()=>{const BUILTIN={crest:"crest.png",sponsor:"gsl.png",octopus:"octopus.png"};for(const k of["crest","sponsor","coffey","octopus"]){delete logos[k];IMG[k]=BUILTIN[k]?await loadImg(BUILTIN[k]):null}store.set("nayfc.logos",logos);thumbs();render();toast("Back to the club's standard logos.")});
 
 function toast(t){$("gtoast").textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>$("gtoast").textContent="",5000)}
 function fileName(){const opp=(S.opp||"match").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"");const kind={squad:"Squad",ft:"FullTime",potm:"PotM"}[S.mode]||"Post";return `${S.date||"date"}_U9s_${kind}_${opp}.png`}
@@ -873,12 +903,12 @@ window.GFX={
 };
 // ---------- boot ----------
 (async function(){
-  const BUILTIN={crest:"crest.png",sponsor:"gsl.png"};
-  for(const k of["crest","sponsor","coffey"])IMG[k]=logos[k]?await loadImg(logos[k]):(BUILTIN[k]?await loadImg(BUILTIN[k]):null);
+  const BUILTIN={crest:"crest.png",sponsor:"gsl.png",octopus:"octopus.png"};
+  for(const k of["crest","sponsor","coffey","octopus"])IMG[k]=logos[k]?await loadImg(logos[k]):(BUILTIN[k]?await loadImg(BUILTIN[k]):null);
   IMG.coffeyLogo=await loadImg("coffey.jpg");
   if(S.opp){const src=oppCrests[S.opp.trim().toLowerCase()];if(src)IMG.opp=await loadImg(src)}
   buildPickers();syncInputs();setMode(S.mode==="setup"?"squad":S.mode);thumbs();
-  try{await Promise.all([document.fonts.load('40px "Archivo Black"'),document.fonts.load('40px "Luckiest Guy"'),document.fonts.load('800 20px "Archivo"')])}catch(e){}
+  try{await Promise.all([document.fonts.load('40px "Archivo Black"'),document.fonts.load('40px "Luckiest Guy"'),document.fonts.load('700 40px "Oswald"'),document.fonts.load('800 20px "Archivo"')])}catch(e){}
   render();
   
   $("saveBtn").textContent="Download image";

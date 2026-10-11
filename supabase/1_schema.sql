@@ -22,6 +22,7 @@ create table if not exists public.matches (
   apps       boolean not null default true,       -- false = appearances weren't recorded
   notes      text default '',
   check_note text default '',
+  assists jsonb not null default '{}'::jsonb,
   updated    timestamptz not null default now()
 );
 
@@ -72,3 +73,6 @@ revoke execute on function public.only_coaches_can_sign_up() from public, anon, 
 drop trigger if exists only_coaches_can_sign_up on auth.users;
 create trigger only_coaches_can_sign_up before insert on auth.users
   for each row execute function public.only_coaches_can_sign_up();
+
+-- Added 2026-10: assists per player, e.g. {"Lydia": 1}. Safe to re-run on an existing database.
+alter table public.matches add column if not exists assists jsonb not null default '{}'::jsonb;
