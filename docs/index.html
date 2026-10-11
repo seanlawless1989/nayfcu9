@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Newton Aycliffe Youth FC Under 9s results and stats">
+<link rel="icon" href="crest.png">
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<title>Newton Aycliffe Under 9s</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Luckiest+Guy&family=Archivo:wght@400;500;600;800&display=swap">
+<style>
+/* Layout: club-coloured masthead, tab strip, then one view at a time (dashboard, results, entry form, players, squad) */
+:root{
+  --bg:#F2F4FB; --card:#FFFFFF; --panel:var(--card); --ink:#121733; --muted:#5A6283; --line:#DADEEE; --field:#F8F9FE;
+  --club:#2235E8; --clubDeep:#16239E; --clubInk:#FFFFFF; --gold:#FFD200; --goldInk:#1A1A1A;
+  --win:#1C8A44; --draw:#B07A00; --loss:#C0262D; --pink:#E94E9E; --warn:#FFF1C7; --warnInk:#7A5300;
+  --display:"Archivo Black","Arial Black",Impact,sans-serif;
+  --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0D1120; --card:#161B31; --ink:#EDEFF9; --muted:#A1A8C8; --line:#283050; --field:#1C2240;
+  --club:#5C6CFF; --clubDeep:#1B2577; --clubInk:#FFFFFF; --gold:#FFD84A; --goldInk:#1A1A1A;
+  --win:#4CC27A; --draw:#E2B33D; --loss:#FF6B6B; --pink:#F57DBA; --warn:#3A3216; --warnInk:#F4D37A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1120; --card:#161B31; --ink:#EDEFF9; --muted:#A1A8C8; --line:#283050; --field:#1C2240;
+  --club:#5C6CFF; --clubDeep:#1B2577; --clubInk:#FFFFFF; --gold:#FFD84A; --goldInk:#1A1A1A;
+  --win:#4CC27A; --draw:#E2B33D; --loss:#FF6B6B; --pink:#F57DBA; --warn:#3A3216; --warnInk:#F4D37A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+.mast{background:var(--clubDeep);color:var(--clubInk);border-bottom:6px solid var(--gold)}
+.mast .in{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:14px;display:flex;align-items:center;gap:14px}
+.crest{width:84px;height:auto;flex:none;background:#fff;border-radius:50%/50%;padding:3px}
+.mast h1{font-family:var(--display);font-weight:400;font-size:clamp(20px,4vw,30px);line-height:1.05;margin:0;letter-spacing:.01em;text-wrap:balance}
+.mast p{margin:3px 0 0;font-size:13px;opacity:.85}
+.mast .season{margin-left:12px}
+.mast .auth{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;font-size:12.5px}
+.mast .auth .mini{background:transparent;color:var(--clubInk);border-color:rgba(255,255,255,.4)}
+.mast .in{flex-wrap:wrap}
+.mast select{font:600 14px var(--body);background:var(--club);color:var(--clubInk);border:1.5px solid rgba(255,255,255,.35);border-radius:9px;padding:7px 10px}
+nav.tabs{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:12px 0;display:flex;gap:6px;flex-wrap:wrap}
+nav.tabs button{font:600 14px var(--body);padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+nav.tabs button[aria-current="page"]{background:var(--club);border-color:var(--club);color:var(--clubInk)}
+nav.tabs .add{background:var(--gold);border-color:var(--gold);color:var(--goldInk)}
+main{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:16px 60px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 10px;letter-spacing:.01em}
+h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+.stack{display:flex;flex-direction:column;gap:16px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start}
+.record{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (min-width:700px){.record{grid-template-columns:repeat(7,minmax(0,1fr))}}
+.rec{background:var(--field);border-radius:10px;padding:10px 6px;text-align:center}
+.rec b{display:block;font-family:var(--display);font-weight:400;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.rec span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.rec.w b{color:var(--win)}.rec.d b{color:var(--draw)}.rec.l b{color:var(--loss)}
+.form{display:flex;gap:5px;flex-wrap:wrap}
+.chip{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;border-radius:7px;font:800 13px var(--body);color:#fff}
+.chip.W{background:var(--win)}.chip.D{background:var(--draw)}.chip.L{background:var(--loss)}.chip.N{background:var(--muted)}
+.lb{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.lb th{font:700 11px var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1.5px solid var(--line)}
+.lb th:first-child,.lb td:first-child{text-align:left}
+.lb td{padding:8px;border-bottom:1px solid var(--line);text-align:right}
+.lb tr.click{cursor:pointer}.lb tr.click:hover td{background:var(--field)}
+.lb .num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:6px;background:var(--gold);color:var(--goldInk);font:400 13px var(--display);margin-right:8px}
+.bar{display:flex;align-items:center;gap:8px}.bar i{display:block;height:10px;border-radius:5px;background:var(--club)}
+.scroll{overflow-x:auto}
+.match{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
+.match:hover{border-color:var(--club)}
+.mg{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+.mini{font:700 12.5px var(--body);padding:6px 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer}
+.mini:hover{border-color:var(--club)}
+.mini:disabled{opacity:.4;cursor:default}
+.match .d{font:700 12px var(--body);color:var(--muted);text-align:center;line-height:1.15;min-width:44px}
+.match .d b{display:block;font:400 22px var(--display);color:var(--ink)}
+.match .o{font-weight:700;overflow:hidden;text-overflow:ellipsis}
+.match .meta{font-size:13px;color:var(--muted)}
+.match .sc{font:400 24px var(--display);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.flag{display:inline-block;font:700 11px var(--body);background:var(--warn);color:var(--warnInk);border-radius:6px;padding:2px 6px;margin-left:6px}
+.potm{display:inline-block;font:700 12px var(--body);color:var(--pink)}
+.list{display:flex;flex-direction:column;gap:8px}
+.month{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:10px 0 2px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:var(--muted);min-width:0}
+input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{font:15px var(--body);color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:9px;padding:9px 10px;width:100%;min-width:0}
+textarea{min-height:70px;resize:vertical}
+.seg{display:inline-flex;align-self:flex-start;border:1.5px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{font:600 14px var(--body);border:0;background:var(--field);color:var(--ink);padding:9px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--club);color:var(--clubInk)}
+.score{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.score input{width:84px;font:400 30px var(--display);text-align:center;padding:6px}
+.score span{font:400 28px var(--display)}
+.pp{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.pr{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);min-width:0}
+.pr.on{border-color:var(--club);background:var(--card)}
+.pr label{display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer;font-weight:600}
+.pr label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pr input[type=checkbox]{width:20px;height:20px;accent-color:var(--club);margin:0;flex:none}
+.pr .n{display:inline-grid;place-items:center;min-width:26px;height:24px;border-radius:6px;background:var(--gold);color:var(--goldInk);font:400 12px var(--display);flex:none}
+.step{display:flex;align-items:center;gap:4px}
+.step button{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:800 17px var(--body);cursor:pointer}
+.step button:disabled{opacity:.35;cursor:default}
+.step output{min-width:22px;text-align:center;font:400 17px var(--display)}
+.step .ball{font-size:12px;color:var(--muted);margin-right:2px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font:700 15px var(--body);padding:11px 18px;border-radius:10px;border:0;background:var(--club);color:var(--clubInk);cursor:pointer}
+.btn.gold{background:var(--gold);color:var(--goldInk)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.danger{background:transparent;color:var(--loss);border:1.5px solid var(--loss)}
+.btn:disabled{opacity:.5;cursor:default}
+.note{padding:10px 12px;border-radius:10px;background:var(--warn);color:var(--warnInk);font-size:13.5px}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;max-width:calc(100% - 32px)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+.sq{display:grid;grid-template-columns:minmax(0,1fr) 80px auto;gap:8px;align-items:center}
+.pcard{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.pcard .big{display:grid;place-items:center;width:72px;height:72px;border-radius:14px;background:var(--gold);color:var(--goldInk);font:400 34px var(--display)}
+.ro .edit-only{display:none!important}
+[hidden]{display:none!important}
+@media (max-width:520px){.match{grid-template-columns:auto minmax(0,1fr)}.match .sc{grid-column:2;justify-content:flex-start}}
+/* ---- graphics maker ---- */
+.gtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.gtabs button{font:600 14px var(--body);padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.gtabs button[aria-selected="true"]{background:var(--club);color:var(--clubInk);border-color:var(--club)}
+.gtabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.ggrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
+@media (max-width:860px){.ggrid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0}
+.grow{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted);min-width:0}
+input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{font:15px var(--body);color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;width:100%;min-width:0}
+textarea{min-height:150px;resize:vertical;line-height:1.4}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{font:600 13px var(--body);border:0;background:var(--field);color:var(--ink);padding:8px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--club);color:var(--clubInk)}
+.gplayers{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.pl{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);cursor:pointer;user-select:none;min-width:0}
+.pl input{accent-color:var(--club);width:18px;height:18px;margin:0}
+.pl b{font-family:var(--display);font-weight:400;font-size:15px;min-width:24px;color:var(--club);font-variant-numeric:tabular-nums}
+.pl span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl.on{border-color:var(--club)}
+.goals{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.gl{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 8px;border:1.5px solid var(--line);border-radius:10px;background:var(--field)}
+.gl.on{border-color:var(--club)}
+.gl .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.gl button{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:800 16px var(--body);cursor:pointer}
+.gl output{min-width:20px;text-align:center;font-family:var(--display);font-variant-numeric:tabular-nums}
+.btn{font:700 14px var(--body);padding:10px 16px;border-radius:10px;border:0;background:var(--club);color:var(--clubInk);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.file{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.file input{font-size:13px;max-width:100%}
+.thumb{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:var(--field) center/contain no-repeat}
+.preview{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+.preview canvas,.preview img{display:block;width:100%;max-width:100%;height:auto;aspect-ratio:1/1;border-radius:10px;box-shadow:0 10px 30px rgba(10,20,60,.18)}
+.gtoast{font-size:13px;font-weight:600;color:var(--club);min-height:1.2em}
+.sq-row{display:grid;grid-template-columns:minmax(0,1fr) 70px 36px;gap:6px}
+.x{border:1.5px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;cursor:pointer;font-weight:800}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+</style>
+
+</head>
+<body>
+<header class="mast">
+  <div class="in">
+    <img class="crest" src="crest.png" alt="Newton Aycliffe Youth Football Club badge">
+    <div>
+      <h1>Newton Aycliffe Under 9s</h1>
+      <p>Results, player stats and matchday graphics</p>
+    </div>
+    <div class="auth" id="auth"></div>
+    <div class="season"><label class="f" style="color:inherit" for="season">Season<select id="season"></select></label></div>
+  </div>
+</header>
+<nav class="tabs" aria-label="Sections">
+  <button data-view="home" aria-current="page">Season</button>
+  <button data-view="results">Results</button>
+  <button data-view="players">Players</button>
+  <button data-view="squad">Squad</button>
+  <button data-view="gfx" class="edit-only">Graphics</button>
+  <button data-view="new" class="add edit-only">+ Add a match</button>
+</nav>
+<main id="main"><div class="empty">Loading the season…</div></main>
+<main id="gfxView" hidden>
+<nav class="gtabs" role="tablist">
+    <button role="tab" id="tab-squad" aria-selected="true" data-mode="squad">Squad announcement</button>
+    <button role="tab" id="tab-ft" aria-selected="false" data-mode="ft">Full time</button>
+    <button role="tab" id="tab-potm" aria-selected="false" data-mode="potm">Player of the match</button>
+    <button role="tab" id="tab-setup" aria-selected="false" data-mode="setup">Logos</button>
+  </nav>
+
+  <div class="ggrid">
+    <div class="col" style="display:flex;flex-direction:column;gap:16px;min-width:0">
+
+      <section class="panel" id="matchPanel">
+        <h2>The match</h2>
+        <div class="grow">
+          <label class="f" style="grid-column:1/-1">Opponent<input type="text" id="opp"></label>
+          <label class="f">Date<input type="date" id="date"></label>
+          <label class="f">Kick-off<input type="time" id="ko"></label>
+          <label class="f">Venue<input type="text" id="venue" placeholder="e.g. New Ferens Park"></label>
+          <label class="f">Competition<select id="comp"><option>League</option><option>Cup</option><option>Friendly</option><option>Tournament</option></select></label>
+        </div>
+        <div class="btns">
+          <div class="seg" role="group" aria-label="Home or away">
+            <button id="ha-H" aria-pressed="true" data-gha="H">Home</button><button id="ha-A" aria-pressed="false" data-gha="A">Away</button>
+          </div>
+          <div class="file"><span class="thumb" id="oppCrestThumb"></span><label class="f">Opponent badge (remembered for next time)<input type="file" id="oppCrest" accept="image/*"></label></div>
+        </div>
+      </section>
+
+      <section class="panel" data-for="squad">
+        <h2>Squad</h2>
+        <div class="gplayers" id="squadPick"></div>
+        <p class="hint" id="squadCount"></p>
+        <div class="btns">
+          <span class="hint">Kit</span>
+          <div class="seg" role="group" aria-label="Kit colour">
+            <button id="kit-yellow" aria-pressed="true" data-kit="yellow">Yellow</button><button id="kit-blue" aria-pressed="false" data-kit="blue">Blue</button>
+          </div>
+        </div>
+        <div class="file"><span class="thumb" id="squadPhotoThumb"></span><label class="f">Player photo for the left side (a cut-out works best)<input type="file" id="squadPhoto" accept="image/*"></label></div>
+      </section>
+
+      <section class="panel" data-for="ft" hidden>
+        <h2>Score</h2>
+        <div class="grow">
+          <label class="f">Our goals<input type="number" id="usScore" min="0" max="40"></label>
+          <label class="f">Their goals<input type="number" id="themScore" min="0" max="40"></label>
+        </div>
+        <h2>Scorers</h2>
+        <div class="goals" id="goalPick"></div>
+        <p class="hint">Tap + for each goal. Our score fills in from the scorers; change it if there was an own goal.</p>
+        <label class="f">Coffey Coffee player of the match<select id="ftPotm"></select></label>
+        <div class="file"><span class="thumb" id="ftPhotoThumb"></span><label class="f">Team photo<input type="file" id="ftPhoto" accept="image/*"></label></div>
+      </section>
+
+      <section class="panel" data-for="potm" hidden>
+        <h2>Coffey Coffee player of the match</h2>
+        <label class="f">Player<select id="potmPlayer"></select></label>
+        <div class="btns">
+          <span class="hint">Shirt</span>
+          <div class="seg" role="group" aria-label="Shirt colour">
+            <button id="pk-yellow" aria-pressed="true" data-pkit="yellow">Yellow</button><button id="pk-blue" aria-pressed="false" data-pkit="blue">Blue</button>
+          </div>
+        </div>
+        <div class="file"><span class="thumb" id="potmPhotoThumb"></span><label class="f">Her photo with the award<input type="file" id="potmPhoto" accept="image/*"></label></div>
+      </section>
+
+      <section class="panel" data-for="setup" hidden>
+        <h2>Badges and logos</h2>
+        <p class="hint">The club badge, Grey-Smith Legal and Coffey Coffee logos are built in. Upload a replacement here only if one changes; it's kept in this browser.</p>
+        <div class="file"><span class="thumb" id="crestThumb"></span><label class="f">Newton Aycliffe club badge<input type="file" id="crestUp" accept="image/*"></label></div>
+        <div class="file"><span class="thumb" id="sponsorThumb"></span><label class="f">Sponsor logo<input type="file" id="sponsorUp" accept="image/*"></label></div>
+        <div class="file"><span class="thumb" id="coffeyThumb"></span><label class="f">Coffey Coffee PotM badge (replaces the whole badge)<input type="file" id="coffeyUp" accept="image/*"></label></div>
+        <label class="f">Sponsor name (for captions)<input type="text" id="sponsorName"></label>
+        <div class="btns"><button class="btn ghost" id="clearLogos">Go back to the standard logos</button></div>
+        <p class="hint">Players and shirt numbers come from the Squad page.</p>
+      </section>
+    </div>
+
+    <div class="preview" style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <canvas id="cv" width="1080" height="1080" aria-label="Post preview"></canvas>
+      <div class="btns">
+        <button class="btn" id="saveBtn">Save image</button>
+        <span class="hint" id="saveHint">On a phone you can also press and hold the image to save it.</span>
+      </div>
+      <div class="gtoast" id="gtoast" role="status"></div>
+      <section class="panel">
+        <h2>Facebook caption</h2>
+        <textarea id="caption" aria-label="Caption"></textarea>
+        <div class="btns"><button class="btn ghost" id="copyCap">Copy caption</button></div>
+      </section>
+    </div>
+  </div>
+
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let db=null, canWrite=false;
+let matches=[], players=[], view="home", season=null, editing=null, playerView=null;
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const LONGM=["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function seasonOf(iso){if(!iso)return"";const y=+iso.slice(0,4),m=+iso.slice(5,7);const s=m>=7?y:y-1;return `${s}-${String((s+1)%100).padStart(2,"0")}`}
+function todaySeason(){const d=new Date();return seasonOf(d.toISOString().slice(0,10))}
+function result(m){if(m.us==null||m.them==null||m.us===""||m.them==="")return null;return m.us>m.them?"W":m.us===m.them?"D":"L"}
+function played(m){return m.played||{}}
+function sortMatches(a){return a.slice().sort((x,y)=>(x.date||"").localeCompare(y.date||""))}
+function seasonMatches(){return sortMatches(matches.filter(m=>seasonOf(m.date)===season))}
+function pname(id){return id}
+function numOf(name){const p=players.find(p=>p.name===name);return p&&p.num!=null&&p.num!==""?p.num:""}
+function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,3500)}
+function slug(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"match"}
+
+// ---------- stats ----------
+function teamStats(list){const s={P:0,W:0,D:0,L:0,F:0,A:0};list.forEach(m=>{const r=result(m);if(!r)return;s.P++;s[r]++;s.F+=+m.us;s.A+=+m.them});s.GD=s.F-s.A;return s}
+function playerStats(list){const out={};const get=n=>out[n]||(out[n]={apps:0,goals:0,potm:0,appsKnown:0});
+  list.forEach(m=>{const pl=played(m);for(const [n,g] of Object.entries(pl)){const o=get(n);if(m.apps!==false)o.apps++;o.goals+=+g||0}
+    if(m.potm)get(m.potm).potm++; if(m.apps!==false)Object.keys(out).forEach(()=>{})});
+  return out}
+function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boolean));set.add(todaySeason());return [...set].sort().reverse()}
+function appsTracked(list){return list.some(m=>m.apps!==false)}
+
+// ---------- views ----------
+function setView(v){view=v;document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));render();window.scrollTo({top:0})}
+function render(){
+  const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
+  sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
+  const main=$("#main");const gv=view==="gfx";main.hidden=gv;$("#gfxView").hidden=!gv;if(gv){window.GFX&&GFX.refresh();document.body.classList.toggle("ro",!canWrite);return}
+  if(!db){main.innerHTML=`<div class="card empty">Loading the results…</div>`;return}
+  if(view==="home")main.innerHTML=homeView();
+  else if(view==="results")main.innerHTML=resultsView();
+  else if(view==="players")main.innerHTML=playerView?playerDetail(playerView):playersView();
+  else if(view==="squad")main.innerHTML=squadView();
+  else if(view==="new"||view==="edit")main.innerHTML=formView();
+  document.body.classList.toggle("ro",!canWrite);
+}
+
+function homeView(){
+  const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
+  const done=list.filter(result);const last=done.slice(-6);
+  const flagged=list.filter(m=>m.check).length;
+  const scorers=Object.entries(ps).filter(([,o])=>o.goals>0).sort((a,b)=>b[1].goals-a[1].goals||a[0].localeCompare(b[0]));
+  const potms=Object.entries(ps).filter(([,o])=>o.potm>0).sort((a,b)=>b[1].potm-a[1].potm||a[0].localeCompare(b[0]));
+  const max=scorers[0]?.[1].goals||1;
+  const latest=done[done.length-1];
+  const upcoming=list.filter(m=>!result(m)&&m.date>=new Date().toISOString().slice(0,10))[0];
+  return `<div class="stack">
+  ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
+  <section class="card"><h3>${season} record</h3>
+    <div class="record">
+      ${[["P","Played",""],["W","Won","w"],["D","Drawn","d"],["L","Lost","l"],["F","Scored",""],["A","Conceded",""],["GD","Goal diff",""]].map(([k,l,c])=>`<div class="rec ${c}"><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}
+    </div>
+    ${last.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${last.map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}
+  </section>
+  <div class="cols">
+    <section class="card"><h3>Latest result</h3>${latest?matchRow(latest):`<p class="hint">No results yet this season.</p>`}
+      ${upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:""}</section>
+    <section class="card"><h3>Top scorers</h3>${scorers.length?`<table class="lb"><tbody>${scorers.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/max*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No goals logged yet.</p>`}</section>
+    <section class="card"><h3>Coffey Coffee player of the match</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td><span class="potm">${"☕".repeat(Math.min(o.potm,6))}</span> <b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No awards logged yet.</p>`}</section>
+  </div></div>`;
+}
+
+function matchRow(m){
+  const d=m.date?new Date(m.date+"T12:00:00"):null;const r=result(m);
+  const sc=Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>n+(g>1?` ×${g}`:"")).join(", ");
+  return `<div class="match" role="button" tabindex="0" data-edit="${esc(m.id)}">
+    <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
+    <div style="min-width:0"><div class="o">${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
+      <div class="meta">${[m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
+      ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}</div>
+    <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:`<span class="chip N">${m.comp==="Tournament"?"T":"–"}</span>`}</div>
+    <div class="mg edit-only"><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button></div>
+  </div>`;
+}
+
+function resultsView(){
+  const list=seasonMatches().reverse();
+  if(!list.length)return `<div class="card empty">No matches for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
+  let out="",cur="";
+  list.forEach(m=>{const d=new Date(m.date+"T12:00:00");const k=LONGM[d.getMonth()]+" "+d.getFullYear();if(k!==cur){out+=`<div class="month">${k}</div>`;cur=k}out+=matchRow(m)});
+  return `<div class="list">${out}</div>`;
+}
+
+function playersView(){
+  const list=seasonMatches(),ps=playerStats(list),tracked=appsTracked(list);
+  const all=matches,career=playerStats(all);
+  const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps)])];
+  const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,potm:0},c:career[n]||{goals:0,potm:0}})).sort((a,b)=>b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
+  return `<section class="card"><h2>${season} players</h2>
+   ${tracked?"":`<p class="hint" style="margin-bottom:10px">Appearances weren't recorded this season, so only goals and awards show.</p>`}
+   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th><th>PotM</th>${tracked?"<th>Per game</th>":""}<th>Career goals</th><th>Career PotM</th></tr></thead><tbody>
+   ${rows.map(({n,o,c})=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td><td>${o.potm}</td>${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}<td>${c.goals}</td><td>${c.potm}</td></tr>`).join("")}
+   </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her match-by-match record.</p></section>`;
+}
+
+function playerDetail(n){
+  const ss=seasons().slice().reverse();
+  const rows=ss.map(s=>{const l=sortMatches(matches.filter(m=>seasonOf(m.date)===s));const o=playerStats(l)[n]||{apps:0,goals:0,potm:0};return {s,o,tracked:appsTracked(l)}}).filter(r=>r.o.goals||r.o.apps||r.o.potm);
+  const games=sortMatches(matches.filter(m=>n in played(m)||m.potm===n)).reverse();
+  const tot=playerStats(matches)[n]||{apps:0,goals:0,potm:0};
+  return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
+  <section class="card"><div class="pcard"><div class="big">${esc(numOf(n))||"·"}</div><div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${tot.goals} career goals · ${tot.potm} Coffey Coffee awards</p></div></div></section>
+  <section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>Goals</th><th>PotM</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps:"–"}</td><td>${r.o.goals}</td><td>${r.o.potm}</td></tr>`).join("")}</tbody></table></section>
+  <section class="card"><h3>Matches</h3><div class="list">${games.map(matchRow).join("")||`<p class="hint">No matches logged yet.</p>`}</div></section></div>`;
+}
+
+function squadView(){
+  const ps=players.slice().sort((a,b)=>(b.current-a.current)||((+a.num||99)-(+b.num||99))||a.name.localeCompare(b.name));
+  return `<section class="card"><h2>Squad</h2>
+  <p class="hint" style="margin-bottom:12px">First names only. Players marked "Left" stay in the records but drop off the match form.</p>
+  <div class="stack" style="gap:8px">${ps.map(p=>`<div class="sq" data-pid="${esc(p.id)}">
+    <input type="text" id="sqn-${esc(p.id)}" value="${esc(p.name)}" aria-label="Name" data-f="name" ${canWrite?"":"disabled"}>
+    <input type="number" id="sqk-${esc(p.id)}" value="${esc(p.num??"")}" aria-label="Shirt number" data-f="num" ${canWrite?"":"disabled"}>
+    <div class="seg edit-only"><button data-cur="1" aria-pressed="${!!p.current}">In squad</button><button data-cur="0" aria-pressed="${!p.current}">Left</button></div>
+  </div>`).join("")}</div>
+  <div class="btns edit-only" style="margin-top:14px"><input type="text" id="newName" placeholder="New player's first name" style="max-width:240px"><input type="number" id="newNum" placeholder="No." style="max-width:90px"><button class="btn" id="addP">Add player</button></div>
+  <p class="hint" style="margin-top:12px">Renaming here doesn't change old match records, so keep each name the same once she's played.</p></section>`;
+}
+
+// ---------- the match form ----------
+let F=null;
+function blankForm(){return {id:null,date:new Date().toISOString().slice(0,10),opp:"",ha:"H",venue:"",comp:"League",ko:"",us:"",them:"",potm:"",played:{},notes:"",check:"",apps:true}}
+function formView(){
+  if(!F)F=blankForm();
+  const opps=[...new Set(matches.map(m=>m.opp).filter(Boolean))].sort(), venues=[...new Set(matches.map(m=>m.venue).filter(Boolean))].sort();
+  const roster=players.filter(p=>p.current||p.name in F.played).sort((a,b)=>(+a.num||99)-(+b.num||99));
+  const goalSum=Object.values(F.played).reduce((a,b)=>a+(+b||0),0);
+  const mism=F.us!==""&&F.us!=null&&+F.us!==goalSum;
+  const playedNames=Object.keys(F.played);
+  return `<form id="mform" class="stack" novalidate>
+  <h2>${F.id?"Edit match":"Add a match"}</h2>
+  ${F.check?`<div class="note"><b>To check:</b> ${esc(F.check)}</div>`:""}
+  <section class="card stack" style="gap:12px"><h3>The match</h3>
+    <div class="grid2">
+      <label class="f" style="grid-column:1/-1">Opponent<input type="text" id="f-opp" list="opps" value="${esc(F.opp)}" required></label>
+      <label class="f">Date<input type="date" id="f-date" value="${esc(F.date)}" required></label>
+      <label class="f">Kick-off<input type="time" id="f-ko" value="${esc(F.ko)}"></label>
+      <label class="f">Venue<input type="text" id="f-venue" list="venues" value="${esc(F.venue)}"></label>
+      <label class="f">Competition<select id="f-comp">${["League","Cup","Friendly","Tournament"].map(c=>`<option${c===F.comp?" selected":""}>${c}</option>`).join("")}</select></label>
+    </div>
+    <datalist id="opps">${opps.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
+    <datalist id="venues">${venues.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
+    <div class="seg" role="group" aria-label="Home or away"><button type="button" data-ha="H" aria-pressed="${F.ha==="H"}">Home</button><button type="button" data-ha="A" aria-pressed="${F.ha==="A"}">Away</button><button type="button" data-ha="N" aria-pressed="${F.ha==="N"}">Neutral</button></div>
+  </section>
+  <section class="card stack" style="gap:12px"><h3>Who played and who scored</h3>
+    <p class="hint">Tick everyone who played, then tap + for each goal.</p>
+    <div class="pp">${roster.map(p=>{const on=p.name in F.played;const g=F.played[p.name]||0;return `<div class="pr${on?" on":""}">
+      <label for="pl-${esc(p.id)}"><input type="checkbox" id="pl-${esc(p.id)}" data-play="${esc(p.name)}"${on?" checked":""}><span class="n">${esc(p.num??"")}</span><span>${esc(p.name)}</span></label>
+      <div class="step"><span class="ball" aria-hidden="true">⚽</span><button type="button" data-goal="-1" data-n="${esc(p.name)}" aria-label="One less goal for ${esc(p.name)}"${g?"":" disabled"}>−</button><output>${g}</output><button type="button" data-goal="1" data-n="${esc(p.name)}" aria-label="One more goal for ${esc(p.name)}">+</button></div></div>`}).join("")}</div>
+  </section>
+  <section class="card stack" style="gap:12px"><h3>Final score</h3>
+    <div class="score"><label class="f">Newton Aycliffe<input type="number" min="0" id="f-us" value="${esc(F.us)}" placeholder="${goalSum}"></label><span>–</span><label class="f">${esc(F.opp||"Them")}<input type="number" min="0" id="f-them" value="${esc(F.them)}"></label></div>
+    ${mism?`<p class="hint" style="color:var(--warnInk)">The scorers add up to ${goalSum}. Fine if there was an own goal; add it in the notes.</p>`:""}
+    <label class="f">Coffey Coffee player of the match<select id="f-potm"><option value="">Not chosen yet</option>${(playedNames.length?playedNames:roster.map(p=>p.name)).map(n=>`<option${n===F.potm?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
+    <label class="f">Notes<textarea id="f-notes">${esc(F.notes)}</textarea></label>
+  </section>
+  <div class="btns"><button class="btn gold" type="submit" id="saveM">${F.id?"Save changes":"Save match"}</button><button type="button" class="btn ghost" data-cancel>Cancel</button>
+   ${F.id?`<button type="button" class="btn danger" id="delM" style="margin-left:auto">Delete match</button>`:""}</div>
+  </form>`;
+}
+function readForm(){const v=id=>$("#"+id)?.value??"";F.opp=v("f-opp").trim();F.date=v("f-date");F.ko=v("f-ko");F.venue=v("f-venue").trim();F.comp=v("f-comp");
+  F.us=v("f-us")===""?"":+v("f-us");F.them=v("f-them")===""?"":+v("f-them");F.potm=v("f-potm");F.notes=v("f-notes")}
+async function saveMatch(){
+  readForm();
+  if(!F.date||!F.opp){toast("Add the date and opponent first.");return}
+  const goalSum=Object.values(F.played).reduce((a,b)=>a+(+b||0),0);
+  const body={date:F.date,opp:F.opp,ha:F.ha,venue:F.venue,comp:F.comp,ko:F.ko,us:F.us===""?(Object.keys(F.played).length&&F.them!==""?goalSum:null):F.us,them:F.them===""?null:F.them,
+    potm:F.potm||null,played:F.played,notes:F.notes,apps:F.apps!==false,check:F.check||"",updated:new Date().toISOString()};
+  const id=F.id||`${F.date}-${slug(F.opp)}-${Math.random().toString(36).slice(2,6)}`;
+  $("#saveM").disabled=true;
+  try{await db.collection("matches").doc(id).set(body);toast("Match saved.");season=seasonOf(F.date);F=null;editing=null;setView("results")}
+  catch(e){$("#saveM").disabled=false;toast(e&&e.code==="quota_exceeded"?"The results store is full.":"Couldn't save. Check your connection and try again.");if(e&&e.code==="invalid_argument"){canWrite=false;render()}}
+}
+
+// ---------- events ----------
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("button,tr.click,.match");if(!t)return;
+  if(t.closest("#gfxView"))return;
+  if(t.dataset.gfx){const m=matches.find(x=>x.id===t.dataset.mid);if(m){F=null;playerView=null;setView("gfx");await GFX.loadMatch(m,t.dataset.gfx)}return}
+  if(t.dataset.view){F=null;playerView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
+  if(t.dataset.edit){const m=matches.find(x=>x.id===t.dataset.edit);if(!m)return;
+    if(!canWrite){return}
+    F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
+  if(t.dataset.player){playerView=t.dataset.player;setView("players");return}
+  if("back" in t.dataset){playerView=null;render();return}
+  if("cancel" in t.dataset){F=null;setView("results");return}
+  if(t.dataset.ha&&F){readForm();F.ha=t.dataset.ha;render();return}
+  if(t.dataset.goal&&F){readForm();const n=t.dataset.n;const g=Math.max(0,(F.played[n]||0)+ +t.dataset.goal);F.played[n]=g;
+    if(F.us!==""&&F.us!=null&&!F._usTouched){F.us=Object.values(F.played).reduce((a,b)=>a+(+b||0),0)}render();return}
+  if(t.id==="delM"){if(t.dataset.sure){try{await db.collection("matches").doc(F.id).delete();toast("Match deleted.");F=null;setView("results")}catch(err){toast("Couldn't delete it. Try again.")}}
+    else{t.dataset.sure="1";t.textContent="Tap again to delete";setTimeout(()=>{if(t.isConnected){delete t.dataset.sure;t.textContent="Delete match"}},4000)}return}
+  if(t.dataset.cur!=null){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);try{await db.collection("players").doc(p.id).update({current:t.dataset.cur==="1"})}catch(err){toast("Couldn't update. Try again.")}return}
+  if(t.id==="addP"){const name=$("#newName").value.trim();if(!name){toast("Type a first name.");return}if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast(`${name} is already in the squad.`);return}
+    const num=$("#newNum").value;try{await db.collection("players").doc(slug(name)).set({name,num:num===""?null:+num,current:true});toast(`${name} added.`)}catch(err){toast("Couldn't add her. Try again.")}return}
+});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("match")){e.preventDefault();e.target.click()}});
+document.addEventListener("change",async e=>{
+  const t=e.target;if(t.closest&&t.closest("#gfxView"))return;
+  if(t.id==="season"){season=t.value;playerView=null;render();return}
+  if(t.dataset.play&&F){readForm();const n=t.dataset.play;if(t.checked)F.played[n]=F.played[n]||0;else{delete F.played[n];if(F.potm===n)F.potm=""}render();return}
+  if(t.id==="f-us"&&F){F._usTouched=true}
+  if(t.dataset.f){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);const val=t.dataset.f==="num"?(t.value===""?null:+t.value):t.value.trim();if(!val&&t.dataset.f==="name")return;
+    try{await db.collection("players").doc(p.id).update({[t.dataset.f]:val});toast("Saved.")}catch(err){toast("Couldn't save. Try again.")}}
+});
+document.addEventListener("submit",e=>{if(e.target.id==="mform"){e.preventDefault();saveMatch()}else e.preventDefault()});
+
+// ---------- boot (Supabase) ----------
+const CFG=window.NAYFC_CONFIG||{};
+let sb=null, me=null;
+function makeDb(sb){
+  const subs={matches:[],players:[]};
+  const toDoc=r=>{const d=Object.assign({},r);delete d.id;if("check_note" in d){d.check=d.check_note||"";delete d.check_note}if(d.us===undefined)d.us=null;return {id:r.id,data:()=>d}};
+  const toRow=(id,b)=>{const r=Object.assign({id},b);if("check" in r){r.check_note=r.check||"";delete r.check}delete r.updated;return r};
+  async function load(c){const {data,error}=await sb.from(c).select("*");if(error)throw error;const snap={docs:data.map(toDoc)};subs[c].forEach(([ok])=>ok(snap))}
+  return {collection:c=>({
+    onSnapshot(ok,bad){subs[c].push([ok,bad]);load(c).catch(e=>bad&&bad(e));return()=>{}},
+    doc:id=>({
+      async set(b){const {error}=await sb.from(c).upsert(toRow(id,b));if(error)throw {code:"invalid_argument",message:error.message};await load(c)},
+      async update(b){const r=toRow(id,b);delete r.id;const {error}=await sb.from(c).update(r).eq("id",id);if(error)throw {code:"invalid_argument",message:error.message};await load(c)},
+      async delete(){const {error}=await sb.from(c).delete().eq("id",id);if(error)throw {code:"invalid_argument",message:error.message};await load(c)}
+    })}),
+    reload(){return Promise.all([load("players"),load("matches")])}};
+}
+function authBox(){
+  const el=document.getElementById("auth");if(!el)return;
+  if(me){el.innerHTML=`<span class="who">${canWrite?"Coach":"Signed in"}: ${esc(me.email)}</span><button class="mini" id="signOut">Sign out</button>`}
+  else{el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
+}
+async function checkCoach(){
+  canWrite=false;
+  if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data}
+  if(!canWrite&&["new","edit","gfx"].includes(view))view="home";
+  authBox();render();
+}
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.id==="signOut"){await sb.auth.signOut();return}
+  if(b.id==="signIn"){const m=document.getElementById("main");view="login";
+    m.hidden=false;document.getElementById("gfxView").hidden=true;
+    m.innerHTML=`<form class="card stack" id="loginForm" style="max-width:420px"><h2>Coach sign in</h2><p class="hint">We'll email you a sign-in link. Only coaches on the club's list can add matches.</p><label class="f">Email<input type="text" id="loginEmail" inputmode="email" autocomplete="email"></label><div class="btns"><button class="btn" type="submit">Email me a link</button><button class="btn ghost" type="button" data-view="home">Cancel</button></div></form>`;return}
+});
+document.addEventListener("submit",async e=>{
+  if(e.target.id!=="loginForm")return;e.preventDefault();
+  const email=document.getElementById("loginEmail").value.trim();if(!email){toast("Type your email.");return}
+  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});
+  toast(error?"Couldn't send the link: "+error.message:"Check your email for the sign-in link.");
+});
+(async function(){
+  render();
+  if(!window.supabase||!CFG.supabaseUrl||!CFG.supabaseAnonKey){document.getElementById("main").innerHTML=`<div class="card empty">This site isn't connected to its database yet. Add the Supabase details to config.js (see the README).</div>`;return}
+  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);
+  db=makeDb(sb);canWrite=false;
+  const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
+  sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
+  db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login")render()},()=>toast("Couldn't load the squad. Reload the page."));
+  db.collection("matches").onSnapshot(s=>{matches=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(view!=="new"&&view!=="edit"&&view!=="login")render()},()=>toast("Couldn't load the results. Reload the page."));
+  await checkCoach();
+})();
+})();
+</script>
+<script>
+
+(function(){
+const $=id=>document.getElementById(id);const ROOT=document.getElementById("gfxView");
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+             set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+
+const C={blue:"#2235E8",blueDeep:"#1424B8",yellow:"#FFD200",ink:"#111111",white:"#FFFFFF",pink:"#F7A3D3",pinkDeep:"#E5559F",teal:"#1AA8A0",faint:"#E7EAF4"};
+
+// ---------- state ----------
+const DEFAULT_SQUAD=[["Daisy",4],["Holly",2],["Chloe",8],["Lydia",7],["Isobel",3],["Sophia",11],["Jessica",9],["Ayla",6],["Evie",17],["Amara",18]];
+let squad=DEFAULT_SQUAD.map(([name,num])=>({name,num}));
+let S=Object.assign({
+  mode:"squad",opp:"Seaham AFC Youth Reds",date:"2026-10-03",ko:"10:15",venue:"",comp:"League",ha:"H",
+  picked:["Daisy","Ayla","Chloe","Jessica","Isobel","Sophia","Amara","Evie"],kit:"yellow",
+  goals:{Daisy:3,Lydia:2,Chloe:1},us:6,them:2,usManual:false,ftPotm:"",potm:"Sophia",pkit:"yellow",sponsorName:"Grey-Smith Legal"
+},store.get("nayfc.state",{}));
+const save=()=>store.set("nayfc.state",S);
+
+const IMG={coffeyLogo:null,crest:null,sponsor:null,coffey:null,opp:null,squadPhoto:null,ftPhoto:null,potmPhoto:null};
+const logos=store.get("nayfc.logos",{});
+const oppCrests=store.get("nayfc.oppCrests",{});
+
+function loadImg(src){return new Promise((res)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
+function shrink(img,max){const s=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext("2d").drawImage(img,0,0,c.width,c.height);return c.toDataURL("image/png")}
+function readFile(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res(null);r.readAsDataURL(file)})}
+
+// ---------- canvas helpers ----------
+const cv=$("cv"),X=cv.getContext("2d");
+const W=1080;
+function cover(img,x,y,w,h){const s=Math.max(w/img.width,h/img.height);const sw=w/s,sh=h/s;X.drawImage(img,(img.width-sw)/2,(img.height-sh)/2*0.6,sw,sh,x,y,w,h)}
+function contain(img,x,y,w,h){const s=Math.min(w/img.width,h/img.height);const dw=img.width*s,dh=img.height*s;X.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh)}
+function font(px,fam,weight){return `${weight||""} ${px}px ${fam}`.trim()}
+const DISPLAY='"Archivo Black","Arial Black",sans-serif', SHIRT='"Luckiest Guy","Arial Black",sans-serif', BODY='"Archivo",Arial,sans-serif';
+function fit(text,maxW,start,fam,weight){let px=start;X.font=font(px,fam,weight);while(px>10&&X.measureText(text).width>maxW){px-=2;X.font=font(px,fam,weight)}return px}
+function arcText(text,cx,cy,r,mid,inside){// mid = centre angle (radians), text along arc; inside=true reads along bottom
+  const chars=[...text];const widths=chars.map(c=>X.measureText(c).width);const total=widths.reduce((a,b)=>a+b,0);
+  let a=mid+(inside?1:-1)*total/2/r;
+  X.save();X.textAlign="center";X.textBaseline="middle";
+  chars.forEach((c,i)=>{const w=widths[i];a+=(inside?-1:1)*w/2/r;X.save();X.translate(cx+r*Math.cos(a),cy+r*Math.sin(a));X.rotate(a+(inside?-Math.PI/2:Math.PI/2));X.fillText(c,0,0);X.restore();a+=(inside?-1:1)*w/2/r});
+  X.restore();
+}
+function ordinal(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
+function niceDate(iso,withYear){if(!iso)return"";const d=new Date(iso+"T12:00:00");if(isNaN(d))return"";
+  const days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],m=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return `${days[d.getDay()]} ${ordinal(d.getDate())} ${m[d.getMonth()]}${withYear?" "+d.getFullYear():""}`}
+function koText(t){return t?`${t} KO`:""}
+
+function footballs(seed,color){ // faint ball pattern like the Canva backgrounds
+  let s=seed;const rnd=()=>(s=(s*9301+49297)%233280)/233280;
+  X.save();X.strokeStyle=color;X.lineWidth=3;
+  for(let i=0;i<26;i++){const x=rnd()*W,y=rnd()*W,r=22+rnd()*26;
+    X.beginPath();X.arc(x,y,r,0,Math.PI*2);X.stroke();
+    X.beginPath();for(let k=0;k<5;k++){const a=-Math.PI/2+k*2*Math.PI/5;const px=x+r*.38*Math.cos(a),py=y+r*.38*Math.sin(a);k?X.lineTo(px,py):X.moveTo(px,py)}X.closePath();X.stroke();
+    for(let k=0;k<5;k++){const a=-Math.PI/2+k*2*Math.PI/5;X.beginPath();X.moveTo(x+r*.38*Math.cos(a),y+r*.38*Math.sin(a));X.lineTo(x+r*Math.cos(a),y+r*Math.sin(a));X.stroke()}}
+  X.restore();
+}
+
+function shirt(cx,top,w,kit,name,num){
+  const h=w*1.02,x=cx-w/2,y=top,P=(px,py)=>[x+px*w/100,y+py*h/100];
+  const body=kit==="blue"?C.blue:C.yellow, trim=kit==="blue"?C.yellow:C.blue;
+  X.save();X.shadowColor="rgba(0,0,0,.18)";X.shadowBlur=w*.06;X.shadowOffsetY=w*.03;
+  X.beginPath();
+  X.moveTo(...P(36,2));X.quadraticCurveTo(...P(50,11),...P(64,2));
+  X.lineTo(...P(84,7));X.lineTo(...P(100,32));X.lineTo(...P(88,42));X.lineTo(...P(80,34));
+  X.lineTo(...P(81,100));X.lineTo(...P(19,100));X.lineTo(...P(20,34));X.lineTo(...P(12,42));X.lineTo(...P(0,32));X.lineTo(...P(16,7));X.closePath();
+  X.fillStyle=body;X.fill();X.restore();
+  // trims
+  X.save();X.strokeStyle=trim;X.lineCap="round";X.lineWidth=w*.045;
+  X.beginPath();X.moveTo(...P(36,2.5));X.quadraticCurveTo(...P(50,11),...P(64,2.5));X.stroke();
+  X.beginPath();X.moveTo(...P(97,35));X.lineTo(...P(89,41));X.stroke();
+  X.beginPath();X.moveTo(...P(3,35));X.lineTo(...P(11,41));X.stroke();
+  X.restore();
+  // name on a gentle arc + number
+  const ink=C.ink;X.fillStyle=ink;
+  const nm=(name||"").toUpperCase();
+  let px=fit(nm,w*.66,w*.2,SHIRT);X.font=font(px,SHIRT);
+  arcText(nm,cx,y+h*.36+w*1.6,w*1.6,-Math.PI/2,false);
+  X.font=font(Math.round(w*.5),SHIRT);X.textAlign="center";X.textBaseline="alphabetic";
+  const n=String(num??"");fit(n,w*.6,Math.round(w*.52),SHIRT);X.fillText(n,cx,y+h*.86);
+}
+
+function drawCrest(x,y,w,h){
+  if(IMG.crest){const s=Math.min(w/IMG.crest.width,h/IMG.crest.height),dw=IMG.crest.width*s,dh=IMG.crest.height*s;
+    X.save();X.fillStyle=C.white;X.beginPath();X.ellipse(x+w/2,y+h/2,dw/2-2,dh/2-2,0,0,Math.PI*2);X.fill();X.restore();contain(IMG.crest,x,y,w,h);return}
+  const cx=x+w/2,cy=y+h/2,rx=w/2-4,ry=h/2-4;
+  X.save();X.fillStyle=C.white;X.strokeStyle=C.blue;X.lineWidth=Math.max(3,w*.02);
+  X.beginPath();X.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);X.fill();X.stroke();
+    X.fillStyle=C.blue;X.textAlign="center";X.textBaseline="middle";
+  fit("NEWTON AYCLIFFE",rx*1.5,Math.round(h*.16),DISPLAY);X.fillText("NEWTON AYCLIFFE",cx,cy-ry*.62);
+  fit("YOUTH FOOTBALL CLUB",rx*1.3,Math.round(h*.1),DISPLAY);X.fillText("YOUTH FOOTBALL CLUB",cx,cy+ry*.64);
+  X.beginPath();X.arc(cx,cy,h*.14,0,Math.PI*2);X.fill();
+  X.strokeStyle=C.white;X.lineWidth=Math.max(2,h*.012);X.beginPath();X.arc(cx,cy,h*.055,0,Math.PI*2);X.stroke();
+  X.restore();
+}
+function drawSponsor(cx,cy,r){
+  if(IMG.sponsor){contain(IMG.sponsor,cx-r,cy-r,r*2,r*2);return}
+  X.save();X.beginPath();X.arc(cx,cy,r,0,Math.PI*2);X.fillStyle=C.teal;X.fill();
+  X.fillStyle=C.white;X.textAlign="center";X.textBaseline="middle";X.font=`700 ${Math.round(r*.9)}px Georgia,serif`;X.fillText("gsl",cx,cy+r*.05);
+  X.font=font(Math.round(r*.15),BODY,600);arcText((S.sponsorName||"").toUpperCase()||"SPONSOR",cx,cy,r*.8,-Math.PI/2-.35,false);
+  X.restore();
+}
+function drawOppCrest(x,y,w,h,name){
+  if(IMG.opp){contain(IMG.opp,x,y,w,h);return}
+  const cx=x+w/2,cy=y+h/2,r=Math.min(w,h)/2-4;
+  X.save();X.beginPath();X.arc(cx,cy,r,0,Math.PI*2);X.fillStyle=C.white;X.fill();X.lineWidth=5;X.strokeStyle=C.ink;X.stroke();
+  const ini=(name||"?").split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,3).toUpperCase();
+  X.fillStyle=C.ink;X.textAlign="center";X.textBaseline="middle";fit(ini,r*1.4,Math.round(r*.8),DISPLAY);X.fillText(ini,cx,cy+r*.05);X.restore();
+}
+function drawCoffey(cx,cy,r){
+  if(IMG.coffey){contain(IMG.coffey,cx-r,cy-r,r*2,r*2);return}
+  X.save();
+  X.beginPath();X.arc(cx,cy,r,0,Math.PI*2);X.fillStyle="#141414";X.fill();
+  X.lineWidth=r*.04;X.strokeStyle=C.white;X.beginPath();X.arc(cx,cy,r*.93,0,Math.PI*2);X.stroke();
+  X.fillStyle=C.white;X.font=font(Math.round(r*.15),DISPLAY);arcText("PLAYER OF THE MATCH",cx,cy,r*.76,-Math.PI/2,false);
+  X.textAlign="center";X.textBaseline="middle";
+  if(IMG.coffeyLogo){X.beginPath();X.arc(cx,cy+r*.02,r*.58,0,Math.PI*2);X.fillStyle=C.white;X.fill();X.save();X.clip();contain(IMG.coffeyLogo,cx-r*.56,cy-r*.54,r*1.12,r*1.12);X.restore()}
+  else{X.fillStyle=C.pink;X.font=font(Math.round(r*.2),DISPLAY);X.fillText("COFFEY",cx,cy-r*.12);X.fillText("COFFEE",cx,cy+r*.12)}
+  // ribbon
+  const rw=r*1.7,rh=r*.26,ry=cy+r*.62;X.fillStyle=C.pink;X.strokeStyle="#141414";X.lineWidth=r*.03;
+  X.beginPath();X.moveTo(cx-rw/2,ry);X.lineTo(cx+rw/2,ry);X.lineTo(cx+rw/2-rh*.4,ry+rh/2);X.lineTo(cx+rw/2,ry+rh);X.lineTo(cx-rw/2,ry+rh);X.lineTo(cx-rw/2+rh*.4,ry+rh/2);X.closePath();X.fill();X.stroke();
+  X.fillStyle="#141414";X.font=font(Math.round(rh*.55),DISPLAY);X.fillText("NAYFC U9 GIRLS",cx,ry+rh*.54);
+  X.restore();
+}
+function photoSlot(img,x,y,w,h,label){
+  if(img){X.save();X.beginPath();X.rect(x,y,w,h);X.clip();cover(img,x,y,w,h);X.restore();return}
+  X.save();X.fillStyle="rgba(34,53,232,.08)";X.fillRect(x,y,w,h);X.setLineDash([16,12]);X.strokeStyle="rgba(34,53,232,.45)";X.lineWidth=4;X.strokeRect(x+8,y+8,w-16,h-16);
+  X.fillStyle="rgba(34,53,232,.7)";X.font=font(30,BODY,800);X.textAlign="center";X.textBaseline="middle";
+  label.split("\n").forEach((l,i,a)=>X.fillText(l,x+w/2,y+h/2+(i-(a.length-1)/2)*38));X.restore();
+}
+function playerNum(name){const p=squad.find(p=>p.name===name);return p?p.num:""}
+
+// ---------- the three posts ----------
+function drawSquad(){
+  X.fillStyle=C.white;X.fillRect(0,0,W,W);footballs(7,C.faint);
+  // diagonal bands
+  X.fillStyle=C.blue;X.beginPath();X.moveTo(0,0);X.lineTo(250,0);X.lineTo(0,150);X.closePath();X.fill();
+  X.fillStyle=C.yellow;X.beginPath();X.moveTo(0,270);X.lineTo(W,175);X.lineTo(W,200);X.lineTo(0,295);X.closePath();X.fill();
+  X.fillStyle=C.blue;X.beginPath();X.moveTo(0,296);X.lineTo(W,201);X.lineTo(W,213);X.lineTo(0,308);X.closePath();X.fill();
+  drawCrest(330,18,270,170);
+  X.fillStyle=C.ink;X.textAlign="left";X.textBaseline="alphabetic";X.font=font(46,DISPLAY);
+  ["UNDER 9S","SQUAD","ANNOUNCEMENT"].forEach((t,i)=>{fit(t,440,46,DISPLAY);X.fillText(t,625,70+i*52)});
+  const players=S.picked.filter(n=>squad.some(p=>p.name===n));
+  const hasPhoto=!!IMG.squadPhoto;
+  const gx=hasPhoto?330:40, gw=W-gx-30;
+  if(hasPhoto){X.save();X.beginPath();X.rect(0,250,340,600);X.clip();contain(IMG.squadPhoto,-10,250,360,600);X.restore()}
+  const n=Math.max(players.length,1),cols=n<=8?4:(n<=10?5:6),rows=Math.ceil(n/cols);
+  const cellW=gw/cols, sw=Math.min(cellW*.9,rows>2?150:185), rowH=rows>2?190:255, gy=rows>2?300:325;
+  players.forEach((nm,i)=>{const r=Math.floor(i/cols),c=i%cols;const inRow=Math.min(cols,n-r*cols);const off=(cols-inRow)*cellW/2;
+    shirt(gx+off+cellW*c+cellW/2,gy+r*rowH,sw,S.kit,nm,playerNum(nm))});
+  if(!players.length){X.fillStyle=C.blue;X.font=font(34,BODY,800);X.textAlign="center";X.fillText("Tick players to add their shirts",gx+gw/2,520)}
+  // bottom band
+  X.fillStyle=C.yellow;X.beginPath();X.moveTo(0,860);X.lineTo(W,800);X.lineTo(W,W);X.lineTo(0,W);X.closePath();X.fill();
+  X.fillStyle=C.blue;X.beginPath();X.moveTo(0,875);X.lineTo(W,815);X.lineTo(W,W);X.lineTo(0,W);X.closePath();X.fill();
+  drawOppCrest(28,895,165,165,S.opp);
+  X.fillStyle=C.yellow;X.textAlign="left";X.textBaseline="alphabetic";
+  const opp=("v "+(S.opp||"Opponent")).toUpperCase();fit(opp,560,48,DISPLAY);X.fillText(opp,215,940);
+  X.fillStyle=C.white;X.font=font(38,DISPLAY);fit(niceDate(S.date),560,38,DISPLAY);X.fillText(niceDate(S.date),215,992);
+  X.font=font(38,DISPLAY);const ln=[koText(S.ko),S.venue].filter(Boolean).join("  ·  ");fit(ln,560,38,DISPLAY);X.fillText(ln,215,1040);
+  X.fillStyle=C.white;X.font=font(26,BODY,800);X.textAlign="center";X.fillText("Proudly sponsored by",925,860);
+  drawSponsor(925,965,95);
+}
+
+function drawFT(){
+  X.fillStyle=C.white;X.fillRect(0,0,W,W);footballs(11,C.faint);
+  // header
+  X.fillStyle=C.yellow;X.fillRect(0,0,W,150);
+  X.fillStyle=C.blue;X.fillRect(0,150,W,16);
+  drawSponsor(110,95,80);
+  X.fillStyle=C.ink;X.textAlign="left";X.textBaseline="alphabetic";X.font=font(108,DISPLAY);X.fillText("FULL TIME",230,125);
+  // photo
+  const px=70,py=200,pw=880,ph=470;
+  X.save();X.shadowColor="rgba(0,0,0,.25)";X.shadowBlur=24;X.shadowOffsetY=8;X.fillStyle=C.white;X.fillRect(px-12,py-12,pw+24,ph+24);X.restore();
+  photoSlot(IMG.ftPhoto,px,py,pw,ph,"Add a team photo");
+  X.fillStyle=C.blue;X.save();X.translate(px+pw-40,py-26);X.rotate(.06);X.fillRect(0,0,130,40);X.restore();
+  // vertical date
+  X.save();X.translate(1030,py+ph);X.rotate(-Math.PI/2);X.fillStyle=C.ink;X.textAlign="left";X.font=font(30,DISPLAY);fit(niceDate(S.date,true),ph,30,DISPLAY);X.fillText(niceDate(S.date,true),0,0);X.restore();
+  // bottom
+  X.fillStyle=C.blue;X.fillRect(0,712,W,14);
+  X.fillStyle=C.yellow;X.fillRect(0,726,W,W-726);
+  const homeUs=S.ha==="H";
+  const left={x:40,y:752,w:260,h:200}, right={x:780,y:752,w:260,h:200};
+  if(homeUs){drawCrest(left.x,left.y,left.w,left.h);drawOppCrest(right.x+30,right.y,right.w-60,right.h,S.opp)}
+  else{drawOppCrest(left.x+30,left.y,left.w-60,left.h,S.opp);drawCrest(right.x,right.y,right.w,right.h)}
+  const us=S.us??"",them=S.them??"";const score=homeUs?`${us} - ${them}`:`${them} - ${us}`;
+  X.fillStyle=C.ink;X.textAlign="center";X.font=font(132,DISPLAY);X.fillText(score,540,900);
+  X.font=font(26,BODY,800);const oppLine=(homeUs?"v ":"at ")+(S.opp||"");fit(oppLine,420,26,BODY,800);X.fillText(oppLine,540,945);
+  // scorers under our crest
+  const sc=Object.entries(S.goals).filter(([n,g])=>g>0&&squad.some(p=>p.name===n));
+  const sx=homeUs?left.x+left.w/2:right.x+right.w/2;
+  X.font=font(sc.length>4?22:26,DISPLAY);X.textAlign="center";
+  sc.slice(0,6).forEach(([n,g],i)=>{const t=n.toUpperCase()+(g>1?` X${g}`:"");X.fillText(t,sx,982+i*(sc.length>4?24:30))});
+  if(sc.length===0){}
+  // potm pill
+  if(S.ftPotm){const t="COFFEY COFFEE PLAYER OF THE MATCH: "+S.ftPotm.toUpperCase();X.font=font(22,DISPLAY);const tw=Math.min(X.measureText(t).width,440)+40;
+    X.fillStyle=C.pink;X.beginPath();X.roundRect(540-tw/2,968,tw,46,23);X.fill();X.fillStyle=C.ink;fit(t,440,22,DISPLAY);X.fillText(t,540,999)}
+}
+
+function drawPotm(){
+  X.fillStyle=C.pink;X.fillRect(0,0,W,W);
+  X.fillStyle=C.yellow;X.beginPath();X.moveTo(0,90);X.lineTo(330,0);X.lineTo(420,0);X.lineTo(0,160);X.closePath();X.fill();
+  X.fillStyle=C.pinkDeep;X.beginPath();X.moveTo(0,190);X.lineTo(500,0);X.lineTo(540,0);X.lineTo(0,220);X.closePath();X.fill();
+  X.fillStyle=C.yellow;X.beginPath();X.moveTo(W,880);X.lineTo(W,960);X.lineTo(640,W);X.lineTo(560,W);X.closePath();X.fill();
+  X.fillStyle=C.pinkDeep;X.beginPath();X.moveTo(W,990);X.lineTo(W,1030);X.lineTo(880,W);X.lineTo(840,W);X.closePath();X.fill();
+  photoSlot(IMG.potmPhoto,0,0,560,W,"Add her photo\nwith the award");
+  drawCrest(30,24,250,150);
+  drawCoffey(810,240,215);
+  const nm=S.potm||"";shirt(820,500,390,S.pkit,nm,playerNum(nm));
+  drawSponsor(820,960,42);
+}
+
+function render(){
+  X.save();X.clearRect(0,0,W,W);
+  if(S.mode==="ft")drawFT();else if(S.mode==="potm")drawPotm();else drawSquad();
+  X.restore();caption();
+}
+
+// ---------- captions ----------
+function caption(){
+  const sp=S.sponsorName?` Thanks as always to our sponsor ${S.sponsorName}.`:"";
+  const d=niceDate(S.date), opp=S.opp||"our opponents";let t="";
+  if(S.mode==="squad"||S.mode==="setup"){
+    const names=S.picked.filter(n=>squad.some(p=>p.name===n));
+    t=`⚽ UNDER 9s SQUAD ANNOUNCEMENT ⚽\n\nHere's our squad for ${d||"this weekend"}${S.ha==="A"?" away at":" at home to"} ${opp}${S.ko?`, ${S.ko} kick-off`:""}${S.venue?` at ${S.venue}`:""}.\n\n${names.map(n=>`${n} (${playerNum(n)})`).join("\n")}\n\nCome on girls! 💙💛${sp}\n\n#NAYFC #NewtonAycliffe #GirlsFootball`;
+  } else if(S.mode==="ft"){
+    const us=S.us??"?",them=S.them??"?";const res=+us>+them?"WIN":(+us===+them?"DRAW":"DEFEAT");
+    const sc=Object.entries(S.goals).filter(([n,g])=>g>0).map(([n,g])=>`⚽ ${n}${g>1?` x${g}`:""}`).join("\n");
+    const opener=res==="WIN"?"What a performance! 🎉":(res==="DRAW"?"Honours even today.":"Not our day, but so proud of the effort. 💪");
+    t=`FULL TIME: Newton Aycliffe ${us} - ${them} ${opp}\n\n${opener}\n\n${sc?`Our scorers:\n${sc}\n\n`:""}${S.ftPotm?`☕ Coffey Coffee Player of the Match: ${S.ftPotm}\n\n`:""}${sp.trim()}\n\n#NAYFC #NewtonAycliffe #GirlsFootball`;
+  } else if(S.mode==="potm"){
+    t=`☕ COFFEY COFFEE PLAYER OF THE MATCH ☕\n\nCongratulations to ${S.potm||"…"}, our player of the match${S.opp?` against ${S.opp}`:""}! 🌟\n\nThanks to Coffey Coffee for supporting the Under 9s.${sp}\n\n#NAYFC #NewtonAycliffe #GirlsFootball`;
+  }
+  $("caption").value=t;
+}
+
+// ---------- UI wiring ----------
+function playerOptions(sel,val,allowNone){sel.innerHTML=(allowNone?'<option value="">(none yet)</option>':"")+squad.map(p=>`<option>${esc(p.name)}</option>`).join("");sel.value=val||(allowNone?"":squad[0]?.name||"")}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function buildPickers(){
+  $("squadPick").innerHTML=squad.map((p,i)=>`<label class="pl${S.picked.includes(p.name)?" on":""}" for="pk${i}"><input type="checkbox" id="pk${i}" data-n="${esc(p.name)}"${S.picked.includes(p.name)?" checked":""}><b>${esc(p.num)}</b><span>${esc(p.name)}</span></label>`).join("");
+  $("squadCount").textContent=`${S.picked.filter(n=>squad.some(p=>p.name===n)).length} picked. Shirts appear in squad-list order.`;
+  $("goalPick").innerHTML=squad.map((p,i)=>{const g=S.goals[p.name]||0;return `<div class="gl${g?" on":""}"><span class="n">${esc(p.name)}</span><button aria-label="One less goal for ${esc(p.name)}" data-g="-1" data-n="${esc(p.name)}">−</button><output>${g}</output><button aria-label="One more goal for ${esc(p.name)}" data-g="1" data-n="${esc(p.name)}">+</button></div>`}).join("");
+  playerOptions($("ftPotm"),S.ftPotm,true);playerOptions($("potmPlayer"),S.potm,false);
+  if($("squadEdit"))$("squadEdit").innerHTML=squad.map((p,i)=>`<div class="sq-row"><input type="text" id="sqn${i}" aria-label="Player name" value="${esc(p.name)}" data-i="${i}" data-k="name"><input type="number" id="sqk${i}" aria-label="Shirt number" value="${esc(p.num)}" data-i="${i}" data-k="num"><button class="x" aria-label="Remove ${esc(p.name)}" data-rm="${i}">×</button></div>`).join("");
+}
+function syncInputs(){
+  ["opp","date","ko","venue","comp"].forEach(k=>$(k).value=S[k]||"");
+  $("usScore").value=S.us??"";$("themScore").value=S.them??"";$("sponsorName").value=S.sponsorName||"";
+  ROOT.querySelectorAll("[data-gha]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.gha===S.ha));
+  document.querySelectorAll("[data-kit]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.kit===S.kit));
+  document.querySelectorAll("[data-pkit]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.pkit===S.pkit));
+}
+function setMode(m){S.mode=m;ROOT.querySelectorAll(".gtabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.mode===m));
+  ROOT.querySelectorAll("[data-for]").forEach(p=>p.hidden=p.dataset.for!==m);
+  $("matchPanel").hidden=(m==="setup"||m==="potm")?false:false;save();render()}
+function thumbs(){[["crestThumb","crest"],["sponsorThumb","sponsor"],["coffeyThumb","coffey"],["oppCrestThumb","opp"],["squadPhotoThumb","squadPhoto"],["ftPhotoThumb","ftPhoto"],["potmPhotoThumb","potmPhoto"]]
+  .forEach(([id,k])=>{$(id).style.backgroundImage=IMG[k]?`url("${IMG[k].src}")`:"none"})}
+async function setOppCrestFor(name){const src=oppCrests[(name||"").trim().toLowerCase()];IMG.opp=src?await loadImg(src):null;thumbs();render()}
+
+ROOT.querySelector(".gtabs").addEventListener("click",e=>{const b=e.target.closest("button[data-mode]");if(b)setMode(b.dataset.mode)});
+["opp","date","ko","venue","comp"].forEach(k=>$(k).addEventListener("input",()=>{S[k]=$(k).value;save();if(k==="opp")setOppCrestFor(S.opp);else render()}));
+ROOT.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.gha){S.ha=b.dataset.gha;syncInputs();save();render()}
+  if(b.dataset.kit){S.kit=b.dataset.kit;syncInputs();save();render()}
+  if(b.dataset.pkit){S.pkit=b.dataset.pkit;syncInputs();save();render()}
+  if(b.dataset.g){const n=b.dataset.n;S.goals[n]=Math.max(0,(S.goals[n]||0)+ +b.dataset.g);if(!S.goals[n])delete S.goals[n];
+    if(!S.usManual)S.us=Object.values(S.goals).reduce((a,c)=>a+c,0);buildPickers();syncInputs();save();render()}
+  if(b.dataset.rm){squad.splice(+b.dataset.rm,1);store.set("nayfc.squad",squad);buildPickers();render()}
+});
+$("squadPick").addEventListener("change",e=>{const n=e.target.dataset.n;if(!n)return;
+  if(e.target.checked){if(!S.picked.includes(n))S.picked.push(n)}else S.picked=S.picked.filter(x=>x!==n);
+  S.picked.sort((a,b)=>squad.findIndex(p=>p.name===a)-squad.findIndex(p=>p.name===b));buildPickers();save();render()});
+$("usScore").addEventListener("input",()=>{S.us=$("usScore").value===""?null:+$("usScore").value;S.usManual=$("usScore").value!=="";save();render()});
+$("themScore").addEventListener("input",()=>{S.them=$("themScore").value===""?null:+$("themScore").value;save();render()});
+$("ftPotm").addEventListener("change",()=>{S.ftPotm=$("ftPotm").value;save();render()});
+$("potmPlayer").addEventListener("change",()=>{S.potm=$("potmPlayer").value;save();render()});
+$("sponsorName").addEventListener("input",()=>{S.sponsorName=$("sponsorName").value;save();render()});
+
+function onUpload(id,key,persist){$(id).addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;const raw=await readFile(f);let img=await loadImg(raw);if(!img)return;
+  if(persist){const small=shrink(img,700);img=await loadImg(small);
+    if(persist==="logo"){logos[key]=small;if(!store.set("nayfc.logos",logos))toast("Couldn't remember that logo in this browser, it'll work until you close the page.")}
+    if(persist==="opp"&&S.opp){oppCrests[S.opp.trim().toLowerCase()]=small;store.set("nayfc.oppCrests",oppCrests)}}
+  else{img=await loadImg(shrink(img,1600))}
+  IMG[key]=img;thumbs();render()})}
+onUpload("crestUp","crest","logo");onUpload("sponsorUp","sponsor","logo");onUpload("coffeyUp","coffey","logo");onUpload("oppCrest","opp","opp");
+onUpload("squadPhoto","squadPhoto");onUpload("ftPhoto","ftPhoto");onUpload("potmPhoto","potmPhoto");
+$("clearLogos").addEventListener("click",async()=>{const BUILTIN={crest:"crest.png",sponsor:"gsl.png"};for(const k of["crest","sponsor","coffey"]){delete logos[k];IMG[k]=BUILTIN[k]?await loadImg(BUILTIN[k]):null}store.set("nayfc.logos",logos);thumbs();render();toast("Back to the club's standard logos.")});
+
+function toast(t){$("gtoast").textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>$("gtoast").textContent="",5000)}
+function fileName(){const opp=(S.opp||"match").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"");const kind={squad:"Squad",ft:"FullTime",potm:"PotM"}[S.mode]||"Post";return `${S.date||"date"}_U9s_${kind}_${opp}.png`}
+let downloads=null;
+$("saveBtn").addEventListener("click",async()=>{
+  if(S.mode==="setup"){setMode("squad")}
+  const blob=await new Promise(r=>cv.toBlob(r,"image/png"));
+  if(downloads){try{await downloads.save({filename:fileName(),data:blob});toast("Saved.");return}catch(e){if(e&&e.code==="declined"){toast("Not saved.");return}}}
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fileName();document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast("Image downloaded.");return}catch(e){}
+  showImageFallback();
+});
+function showImageFallback(){const url=cv.toDataURL("image/png");let im=$("fallbackImg");if(!im){im=document.createElement("img");im.id="fallbackImg";im.alt="Post image";cv.after(im)}im.src=url;cv.hidden=true;im.hidden=false;
+  toast("Press and hold (or right-click) the image and choose Save image.");setTimeout(()=>{cv.hidden=false;im.hidden=true},20000)}
+$("copyCap").addEventListener("click",()=>{const ta=$("caption");const done=()=>toast("Caption copied.");
+  try{navigator.clipboard.writeText(ta.value).then(done,()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select();toast("Selected, now copy it.")}});
+
+// ---------- portal hooks ----------
+window.GFX={
+  setSquad(list){squad=list.map(p=>({name:p.name,num:p.num??""}));buildPickers();render()},
+  async loadMatch(m,mode){
+    Object.assign(S,{opp:m.opp||"",date:m.date||"",ko:m.ko||"",venue:m.venue||"",comp:m.comp||"League",ha:m.ha==="A"?"A":"H",
+      picked:Object.keys(m.played||{}),goals:Object.fromEntries(Object.entries(m.played||{}).filter(([,g])=>g>0)),
+      us:m.us??null,them:m.them??null,usManual:m.us!=null,ftPotm:m.potm||""});
+    if(m.potm)S.potm=m.potm;
+    S.picked.sort((a,b)=>squad.findIndex(p=>p.name===a)-squad.findIndex(p=>p.name===b));
+    buildPickers();syncInputs();save();await setOppCrestFor(S.opp);setMode(mode||"squad")},
+  refresh(){render()}
+};
+// ---------- boot ----------
+(async function(){
+  const BUILTIN={crest:"crest.png",sponsor:"gsl.png"};
+  for(const k of["crest","sponsor","coffey"])IMG[k]=logos[k]?await loadImg(logos[k]):(BUILTIN[k]?await loadImg(BUILTIN[k]):null);
+  IMG.coffeyLogo=await loadImg("coffey.jpg");
+  if(S.opp){const src=oppCrests[S.opp.trim().toLowerCase()];if(src)IMG.opp=await loadImg(src)}
+  buildPickers();syncInputs();setMode(S.mode==="setup"?"squad":S.mode);thumbs();
+  try{await Promise.all([document.fonts.load('40px "Archivo Black"'),document.fonts.load('40px "Luckiest Guy"'),document.fonts.load('800 20px "Archivo"')])}catch(e){}
+  render();
+  
+  $("saveBtn").textContent="Download image";
+})();
+})();
+
+</script>
+
+</body>
+</html>
