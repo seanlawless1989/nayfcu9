@@ -77,3 +77,26 @@ create trigger only_coaches_can_sign_up before insert on auth.users
 -- Added 2026-10: assists per player, e.g. {"Lydia": 1}. Safe to re-run on an existing database.
 alter table public.matches add column if not exists assists jsonb not null default '{}'::jsonb;
 alter table public.matches add column if not exists postponed boolean not null default false;
+
+-- Added 2026-10: tournaments (games link to one via matches.tournament_id) and an honours board.
+alter table public.matches add column if not exists tournament_id text;
+alter table public.matches add column if not exists stage text default '';   -- Group stage, Semi final, Final...
+create table if not exists public.tournaments(
+  id text primary key, name text not null default '', date date, venue text default '',
+  potm text,                    -- player of the tournament
+  trophy text default '',       -- Winners, Runners-up, ... blank = none
+  notes text default '', updated timestamptz not null default now());
+create table if not exists public.honours(
+  id text primary key, date date, title text not null default '', achievement text default '', notes text default '', updated timestamptz not null default now());
+alter table public.tournaments enable row level security;
+alter table public.honours enable row level security;
+drop policy if exists "read tournaments" on public.tournaments;
+create policy "read tournaments" on public.tournaments for select to anon, authenticated using (true);
+drop policy if exists "coaches write tournaments" on public.tournaments;
+create policy "coaches write tournaments" on public.tournaments for all to authenticated using (public.is_coach()) with check (public.is_coach());
+drop policy if exists "read honours" on public.honours;
+create policy "read honours" on public.honours for select to anon, authenticated using (true);
+drop policy if exists "coaches write honours" on public.honours;
+create policy "coaches write honours" on public.honours for all to authenticated using (public.is_coach()) with check (public.is_coach());
+grant select on public.tournaments, public.honours to anon, authenticated;
+grant insert, update, delete on public.tournaments, public.honours to authenticated;

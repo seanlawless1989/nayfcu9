@@ -66,6 +66,18 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .ctag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--cc);color:#fff;font:700 11px var(--body);text-transform:uppercase;letter-spacing:.05em;margin-right:6px;vertical-align:1px}
 .c-cup .ctag{color:#111}
 .ckey{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}.ckey .match{all:unset;display:inline-block}
+.match.tcard{display:block;cursor:default}
+.tcard .thead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
+.tgames{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.tgame{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:var(--field)}
+.tgame[data-edit]{cursor:pointer}
+.tgame .o{font-weight:700;overflow:hidden;text-overflow:ellipsis}
+.tgame .sc{font:400 18px var(--display);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.stag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--card);border:1px solid var(--line);font:700 11px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:6px;vertical-align:1px}
+.trophy{display:inline-block;padding:2px 9px;border-radius:999px;background:#FFD200;color:#111;font:800 12px var(--body);margin-left:6px;vertical-align:2px}
+.hon{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.hon .ic{font-size:36px;text-align:center;line-height:1}
+.hon .t{font:400 18px var(--display)}
 .h2h{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:4px;font:600 12px var(--body);color:var(--muted)}
 .sc-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:6px;font:700 12px var(--body);color:#fff}
 .sc-chip.W{background:var(--win)}.sc-chip.D{background:var(--draw)}.sc-chip.L{background:var(--loss)}
@@ -196,9 +208,11 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
   <button data-view="results">Results</button>
   <button data-view="players">Players</button>
   <button data-view="opps">Opponents</button>
+  <button data-view="honours">Honours</button>
   <button data-view="squad">Squad</button>
   <button data-view="gfx" class="edit-only">Graphics</button>
   <button data-view="new" class="add edit-only">+ Add a match</button>
+  <button data-view="tnew" class="edit-only">+ Tournament</button>
 </nav>
 <main id="main"><div class="empty">Loading the season…</div></main>
 <main id="gfxView" hidden>
@@ -304,6 +318,7 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let db=null, canWrite=false;
+let tournaments=[], honours=[], T=null, H=null;
 let matches=[], players=[], view="home", season=null, editing=null, playerView=null, oppView=null;
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const LONGM=["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -348,6 +363,9 @@ function render(){
   if(view==="home")main.innerHTML=homeView();
   else if(view==="results")main.innerHTML=resultsView();
   else if(view==="fixtures")main.innerHTML=fixturesView();
+  else if(view==="honours")main.innerHTML=honoursView();
+  else if(view==="tnew"||view==="tedit")main.innerHTML=tFormView();
+  else if(view==="hnew"||view==="hedit")main.innerHTML=hFormView();
   else if(view==="players")main.innerHTML=playerView?playerDetail(playerView):playersView();
   else if(view==="squad")main.innerHTML=squadView();
   else if(view==="opps")main.innerHTML=oppView?oppDetail(oppView):oppsView();
@@ -400,21 +418,95 @@ function matchRow(m){
 }
 
 const CKEY=`<div class="ckey">${["League","Cup","Friendly","Tournament"].map(c=>`<span class="match c-${c.toLowerCase()}"><span class="ctag">${c}</span></span>`).join("")}</div>`;
+const STAGES=["Group stage","Round of 16","Quarter final","Semi final","Final","3rd place play-off","Plate","Shield","Friendly game"];
+const TROPHIES=["Winners","Runners-up","Semi-finalists","Plate winners","Shield winners"];
+function tGames(t){return matches.filter(m=>m.tournament_id===t.id).sort((a,b)=>STAGES.indexOf(a.stage||"Group stage")-STAGES.indexOf(b.stage||"Group stage"))}
+function trophyIcon(x){return /^winners|plate winners|shield winners/i.test(x||"")?"🏆":/runners/i.test(x||"")?"🥈":"🏅"}
+function tIsFixture(t){return (t.date||"")>=new Date().toISOString().slice(0,10)&&!tGames(t).some(result)}
+function tCard(t){
+  const g=tGames(t),st=teamStats(g.filter(result));const d=t.date?new Date(t.date+"T12:00:00"):null;
+  return `<div class="match tcard c-tournament"><div class="thead">
+    <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
+    <div style="min-width:0"><div class="o">${esc(t.name||"Tournament")}${t.trophy?`<span class="trophy">${trophyIcon(t.trophy)} ${esc(t.trophy)}</span>`:""}</div>
+      <div class="meta"><span class="ctag">Tournament</span>${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
+      ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}</div>
+    <div></div></div>
+    ${g.length?`<div class="tgames">${g.map(m=>{const r=result(m);return `<div class="tgame"${canWrite?` role="button" tabindex="0" data-edit="${esc(m.id)}"`:""}><div style="min-width:0"><div class="o"><span class="stag">${esc(m.stage||"Group stage")}</span>${esc(m.opp||"Opponent to add")}</div>
+      ${(sc=>sc?`<div class="meta">⚽ ${esc(sc)}</div>`:"")(Object.entries(played(m)).filter(([,x])=>x>0).map(([n,x])=>n+(x>1?` ×${x}`:"")).join(", "))}</div>
+      <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:`<span class="chip N">–</span>`}</div></div>`}).join("")}</div>`:`<p class="hint" style="margin-top:8px">No games added yet.</p>`}
+    <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div>
+  </div>`;
+}
+// one list of cards: plain matches plus one card per tournament
+function listItems(ms,ts){return [...ms.filter(m=>!m.tournament_id||!tournaments.some(t=>t.id===m.tournament_id)).map(m=>({date:m.date||"",pp:!!m.postponed,html:matchRow(m)})),...ts.map(t=>({date:t.date||"",pp:false,html:tCard(t)}))]}
+function monthList(items){let out="",cur="";items.forEach(it=>{const d=new Date(it.date+"T12:00:00");const k=isNaN(d)?"Date to add":LONGM[d.getMonth()]+" "+d.getFullYear();if(k!==cur){out+=`<div class="month">${k}</div>`;cur=k}out+=it.html});return out}
 function isFixture(m){return !result(m)&&(m.postponed||(m.date||"")>=new Date().toISOString().slice(0,10))}
+function seasonTournaments(){return tournaments.filter(t=>seasonOf(t.date)===season)}
 function fixturesView(){
-  const all=seasonMatches().filter(isFixture),pp=all.filter(m=>m.postponed),list=all.filter(m=>!m.postponed);
-  if(!all.length)return `<div class="card empty">No fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one.`:""}</div>`;
-  let out="",cur="";
-  if(pp.length)out+=`<div class="month">Postponed, awaiting a new date</div>`+pp.map(matchRow).join("");
-  list.forEach(m=>{const d=new Date(m.date+"T12:00:00");const k=LONGM[d.getMonth()]+" "+d.getFullYear();if(k!==cur){out+=`<div class="month">${k}</div>`;cur=k}out+=matchRow(m)});
-  return `<div class="list">${CKEY}${out}</div>`;
+  const items=listItems(seasonMatches().filter(isFixture),seasonTournaments().filter(tIsFixture)).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!items.length)return `<div class="card empty">No fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one.`:""}</div>`;
+  const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
+  return `<div class="list">${CKEY}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
 }
 function resultsView(){
-  const list=seasonMatches().filter(m=>!isFixture(m)).reverse();
-  if(!list.length)return `<div class="card empty">No results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
-  let out="",cur="";
-  list.forEach(m=>{const d=new Date(m.date+"T12:00:00");const k=LONGM[d.getMonth()]+" "+d.getFullYear();if(k!==cur){out+=`<div class="month">${k}</div>`;cur=k}out+=matchRow(m)});
-  return `<div class="list">${CKEY}${out}</div>`;
+  const items=listItems(seasonMatches().filter(m=>!isFixture(m)),seasonTournaments().filter(t=>!tIsFixture(t))).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!items.length)return `<div class="card empty">No results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
+  return `<div class="list">${CKEY}${monthList(items)}</div>`;
+}
+
+// ---------- honours ----------
+function honoursView(){
+  const items=[...tournaments.filter(t=>t.trophy).map(t=>({date:t.date||"",title:t.name,ach:t.trophy,sub:t.potm?`Player of the tournament: ${t.potm}`:"",notes:t.notes,t:t.id})),
+    ...honours.map(h=>({date:h.date||"",title:h.title,ach:h.achievement,sub:"",notes:h.notes,h:h.id}))].sort((a,b)=>b.date.localeCompare(a.date));
+  const bySeason={};items.forEach(i=>{(bySeason[seasonOf(i.date)||"Undated"]=bySeason[seasonOf(i.date)||"Undated"]||[]).push(i)});
+  const awards=tournaments.filter(t=>t.potm).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  return `<div class="stack"><section class="card"><h2>Honours board</h2><p class="hint">Every trophy the Under 9s have won. Tournament trophies appear here automatically; add league and cup trophies with the button below.</p>
+    <div class="btns edit-only" style="margin-top:10px"><button class="btn gold" data-view="hnew">+ Add an honour</button></div></section>
+  ${items.length?Object.entries(bySeason).map(([s,list])=>`<section class="card"><h3>${esc(s)}</h3><div class="list">${list.map(i=>`<div class="hon"><div class="ic">${trophyIcon(i.ach)}</div>
+    <div style="min-width:0"><div class="t">${esc(i.title)}</div><div class="meta"><b>${esc(i.ach||"")}</b>${i.date?` · ${(d=>`${d.getDate()} ${LONGM[d.getMonth()]} ${d.getFullYear()}`)(new Date(i.date+"T12:00:00"))}`:""}</div>${i.sub?`<div class="potm">⭐ ${esc(i.sub)}</div>`:""}${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}</div>
+    <div class="edit-only">${i.h?`<button class="mini" data-hedit="${esc(i.h)}">Edit</button>`:`<button class="mini" data-tedit="${esc(i.t)}">Edit</button>`}</div></div>`).join("")}</div></section>`).join(""):`<div class="card empty">No trophies yet. They'll appear here as soon as one is won. 🏆</div>`}
+  ${awards.length?`<section class="card"><h3>Players of the tournament</h3><table class="lb"><tbody>${awards.map(t=>`<tr class="click" data-player="${esc(t.potm)}"><td>⭐ ${esc(t.potm)}</td><td>${esc(t.name)}</td><td>${esc(t.date||"")}</td></tr>`).join("")}</tbody></table></section>`:""}
+  </div>`;
+}
+function tFormView(){
+  if(!T)T={id:null,name:"",date:new Date().toISOString().slice(0,10),venue:"",potm:"",trophy:"",notes:""};
+  const g=T.id?tGames(T):[];const names=[...new Set(g.flatMap(m=>Object.keys(played(m))))];const pool=names.length?names:players.filter(p=>p.current).map(p=>p.name);
+  const other=T.trophy&&!TROPHIES.includes(T.trophy);
+  return `<form id="tform" class="stack" novalidate><h2>${T.id?"Edit tournament":"Add a tournament"}</h2>
+  <section class="card stack" style="gap:12px">
+    <label class="f">Tournament name<input type="text" id="t-name" value="${esc(T.name)}" placeholder="e.g. Durham FC Sister Club Tournament"></label>
+    <div class="grid2"><label class="f">Date<input type="date" id="t-date" value="${esc(T.date||"")}"></label><label class="f">Venue<input type="text" id="t-venue" value="${esc(T.venue||"")}"></label></div>
+    <label class="f">Player of the tournament<select id="t-potm"><option value="">Not chosen yet</option>${pool.map(n=>`<option${n===T.potm?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
+    <label class="f">Trophy won<select id="t-trophy"><option value="">No trophy</option>${TROPHIES.map(x=>`<option${x===T.trophy?" selected":""}>${x}</option>`).join("")}<option value="__other"${other?" selected":""}>Something else…</option></select></label>
+    <label class="f" id="t-other-wrap"${other?"":" hidden"}>What did we win?<input type="text" id="t-other" value="${other?esc(T.trophy):""}" placeholder="e.g. Fair play award"></label>
+    <label class="f">Notes<textarea id="t-notes">${esc(T.notes||"")}</textarea></label>
+    <p class="hint">Add each game from the tournament card with <b>+ Add a game</b>, and pick its stage (group stage, semi final, final…).</p>
+  </section>
+  <div class="btns"><button class="btn gold" type="submit" id="saveT">${T.id?"Save tournament":"Create tournament"}</button><button type="button" class="btn ghost" data-view="results">Cancel</button>
+  ${T.id&&!g.length?`<button type="button" class="btn danger" id="delT" style="margin-left:auto">Delete tournament</button>`:""}</div></form>`;
+}
+async function saveTournament(){
+  const v=id=>$("#"+id)?.value??"";const tr=v("t-trophy")==="__other"?v("t-other").trim():v("t-trophy");
+  const body={name:v("t-name").trim(),date:v("t-date")||null,venue:v("t-venue").trim(),potm:v("t-potm")||null,trophy:tr,notes:v("t-notes").trim(),updated:new Date().toISOString()};
+  if(!body.name||!body.date){toast("Add the tournament name and date.");return}
+  const id=T.id||`${body.date}-${slug(body.name)}`;
+  try{await db.collection("tournaments").doc(id).set(body);toast("Tournament saved.");season=seasonOf(body.date)||season;T=null;setView(tIsFixture(Object.assign({id},body))?"fixtures":"results")}
+  catch(e){toast("Couldn't save. Check your connection and try again.")}
+}
+function hFormView(){
+  if(!H)H={id:null,title:"",achievement:"Winners",date:new Date().toISOString().slice(0,10),notes:""};
+  return `<form id="hform" class="stack" novalidate><h2>${H.id?"Edit honour":"Add an honour"}</h2><section class="card stack" style="gap:12px">
+    <label class="f">Trophy or competition<input type="text" id="h-title" value="${esc(H.title)}" placeholder="e.g. Russell Foster League Division 1"></label>
+    <label class="f">Achievement<select id="h-ach">${["Winners","Runners-up","Champions","Promoted","Semi-finalists","Fair play award"].map(x=>`<option${x===H.achievement?" selected":""}>${x}</option>`).join("")}</select></label>
+    <label class="f">Date<input type="date" id="h-date" value="${esc(H.date||"")}"></label>
+    <label class="f">Notes<textarea id="h-notes">${esc(H.notes||"")}</textarea></label></section>
+  <div class="btns"><button class="btn gold" type="submit">${H.id?"Save":"Add to the honours board"}</button><button type="button" class="btn ghost" data-view="honours">Cancel</button>
+  ${H.id?`<button type="button" class="btn danger" id="delH" style="margin-left:auto">Delete</button>`:""}</div></form>`;
+}
+async function saveHonour(){
+  const v=id=>$("#"+id)?.value??"";const body={title:v("h-title").trim(),achievement:v("h-ach"),date:v("h-date")||null,notes:v("h-notes").trim(),updated:new Date().toISOString()};
+  if(!body.title){toast("Add the trophy name.");return}
+  try{await db.collection("honours").doc(H.id||`${body.date||"undated"}-${slug(body.title)}`).set(body);toast("Added to the honours board.");H=null;setView("honours")}catch(e){toast("Couldn't save. Try again.")}
 }
 
 function playersView(){
@@ -431,7 +523,7 @@ function playersView(){
 
 function oppsView(){
   const today=new Date().toISOString().slice(0,10);const groups={};
-  matches.forEach(m=>{if(m.comp==="Tournament"||!m.opp)return;const k=oppKey(m.opp);(groups[k]=groups[k]||[]).push(m)});
+  matches.forEach(m=>{if(!m.opp||(m.comp==="Tournament"&&!m.tournament_id))return;const k=oppKey(m.opp);(groups[k]=groups[k]||[]).push(m)});
   const rows=Object.values(groups).map(list=>{const done=sortMatches(list.filter(result));const t=teamStats(done);
     const next=sortMatches(list.filter(m=>!result(m)&&!m.postponed&&m.date>=today))[0];
     const pp=list.some(m=>m.postponed&&!result(m));const name=(next||sortMatches(list).slice(-1)[0]).opp;return {name,t,done,next,pp}})
@@ -457,7 +549,7 @@ function playerDetail(n){
   const games=sortMatches(matches.filter(m=>n in played(m)||m.potm===n||n in assistsOf(m))).reverse();
   const tot=playerStats(matches)[n]||{apps:0,goals:0,potm:0};
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
-  <section class="card"><div class="pcard"><div class="big">${esc(numOf(n))||"·"}</div><div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${tot.goals} career goals · ${tot.assists||0} assists · ${tot.potm} Coffey Coffee awards</p></div></div></section>
+  <section class="card"><div class="pcard"><div class="big">${esc(numOf(n))||"·"}</div><div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${tot.goals} career goals · ${tot.assists||0} assists · ${tot.potm} Coffey Coffee awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}</p></div></div></section>
   <section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>Goals</th><th>Assists</th><th>PotM</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps:"–"}</td><td>${r.o.goals}</td><td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.potm}</td></tr>`).join("")}</tbody></table></section>
   <section class="card"><h3>Matches</h3><div class="list">${games.map(matchRow).join("")||`<p class="hint">No matches logged yet.</p>`}</div></section></div>`;
@@ -478,7 +570,7 @@ function squadView(){
 
 // ---------- the match form ----------
 let F=null;
-function blankForm(){return {id:null,date:new Date().toISOString().slice(0,10),opp:"",ha:"H",venue:"",comp:"League",ko:"",us:"",them:"",potm:"",played:{},assists:{},notes:"",check:"",apps:true,postponed:false}}
+function blankForm(){return {id:null,date:new Date().toISOString().slice(0,10),opp:"",ha:"H",venue:"",comp:"League",ko:"",us:"",them:"",potm:"",played:{},assists:{},notes:"",check:"",apps:true,postponed:false,tournament_id:null,stage:""}}
 function formView(){
   if(!F)F=blankForm();
   const opps=[...new Set(matches.map(m=>m.opp).filter(Boolean))].sort(), venues=[...new Set(matches.map(m=>m.venue).filter(Boolean))].sort();
@@ -497,6 +589,9 @@ function formView(){
       <label class="f">Venue<input type="text" id="f-venue" list="venues" value="${esc(F.venue)}"></label>
       <label class="f">Competition<select id="f-comp">${["League","Cup","Friendly","Tournament"].map(c=>`<option${c===F.comp?" selected":""}>${c}</option>`).join("")}</select></label>
     </div>
+    ${F.comp==="Tournament"?`<div class="grid2"><label class="f">Which tournament<select id="f-tid"><option value="">Choose…</option>${tournaments.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(t=>`<option value="${esc(t.id)}"${t.id===F.tournament_id?" selected":""}>${esc(t.name)} (${esc(t.date||"")})</option>`).join("")}</select></label>
+      <label class="f">Stage<select id="f-stage">${STAGES.map(x=>`<option${x===(F.stage||"Group stage")?" selected":""}>${x}</option>`).join("")}</select></label></div>
+      <p class="hint">New tournament? Create it first with <b>+ Add a tournament</b>.</p>`:""}
     <datalist id="opps">${opps.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
     <datalist id="venues">${venues.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
     <label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="f-pp"${F.postponed?" checked":""} style="width:20px;height:20px"> Postponed (new date to be confirmed)</label>
@@ -512,7 +607,7 @@ function formView(){
   <section class="card stack" style="gap:12px"><h3>Final score</h3>
     <div class="score"><label class="f">Newton Aycliffe<input type="number" min="0" id="f-us" value="${esc(F.us)}" placeholder="${goalSum}"></label><span>–</span><label class="f">${esc(F.opp||"Them")}<input type="number" min="0" id="f-them" value="${esc(F.them)}"></label></div>
     ${mism?`<p class="hint" style="color:var(--warnInk)">The scorers add up to ${goalSum}. Fine if there was an own goal; add it in the notes.</p>`:""}
-    <label class="f">Coffey Coffee player of the match<select id="f-potm"><option value="">Not chosen yet</option>${(playedNames.length?playedNames:roster.map(p=>p.name)).map(n=>`<option${n===F.potm?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
+    <label class="f"${F.comp==="Tournament"?" hidden":""}>Coffey Coffee player of the match<select id="f-potm"><option value="">Not chosen yet</option>${(playedNames.length?playedNames:roster.map(p=>p.name)).map(n=>`<option${n===F.potm?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
     <label class="f">Notes<textarea id="f-notes">${esc(F.notes)}</textarea></label>
   </section>
   <div class="btns"><button class="btn gold" type="submit" id="saveM">${F.id?"Save changes":"Save match"}</button><button type="button" class="btn ghost" data-cancel>Cancel</button>
@@ -520,13 +615,16 @@ function formView(){
   </form>`;
 }
 function readForm(){const v=id=>$("#"+id)?.value??"";F.opp=v("f-opp").trim();F.date=v("f-date");F.ko=v("f-ko");F.venue=v("f-venue").trim();F.comp=v("f-comp");
-  F.us=v("f-us")===""?"":+v("f-us");F.them=v("f-them")===""?"":+v("f-them");F.potm=v("f-potm");F.notes=v("f-notes");if($("#f-pp"))F.postponed=$("#f-pp").checked}
+  F.us=v("f-us")===""?"":+v("f-us");F.them=v("f-them")===""?"":+v("f-them");F.potm=v("f-potm");F.notes=v("f-notes");if($("#f-pp"))F.postponed=$("#f-pp").checked;
+  if($("#f-tid")){F.tournament_id=$("#f-tid").value||null;F.stage=$("#f-stage").value}else if(F.comp!=="Tournament"){F.tournament_id=null;F.stage=""}}
 async function saveMatch(){
   readForm();
   if(!F.date||!F.opp){toast("Add the date and opponent first.");return}
+  if(F.comp==="Tournament"&&!F.tournament_id){toast("Pick which tournament this game was in.");return}
+  if(F.comp==="Tournament")F.potm="";
   const goalSum=Object.values(F.played).reduce((a,b)=>a+(+b||0),0);
   const body={date:F.date,opp:F.opp,ha:F.ha,venue:F.venue,comp:F.comp,ko:F.ko,us:F.us===""?(Object.keys(F.played).length&&F.them!==""?goalSum:null):F.us,them:F.them===""?null:F.them,
-    potm:F.potm||null,played:F.played,assists:F.assists||{},postponed:!!F.postponed&&F.us===""&&F.them==="",notes:F.notes,apps:F.apps!==false,check:"",updated:new Date().toISOString()};
+    potm:F.potm||null,played:F.played,assists:F.assists||{},postponed:!!F.postponed&&F.us===""&&F.them==="",tournament_id:F.tournament_id||null,stage:F.stage||"",notes:F.notes,apps:F.apps!==false,check:"",updated:new Date().toISOString()};
   const id=F.id||`${F.date}-${slug(F.opp)}-${Math.random().toString(36).slice(2,6)}`;
   $("#saveM").disabled=true;
   try{await db.collection("matches").doc(id).set(body);toast("Match saved.");season=seasonOf(F.date);F=null;editing=null;setView(isFixture(body)?"fixtures":"results")}
@@ -535,14 +633,21 @@ async function saveMatch(){
 
 // ---------- events ----------
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("button,tr.click,.match");if(!t)return;
+  const t=e.target.closest("button,tr.click,[data-edit],.match");if(!t)return;
   if(t.closest("#gfxView"))return;
   if(t.dataset.gfx){const m=matches.find(x=>x.id===t.dataset.mid);if(m){F=null;playerView=null;setView("gfx");await GFX.loadMatch(m,t.dataset.gfx)}return}
-  if(t.dataset.view){F=null;playerView=null;oppView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
+  if(t.dataset.view){F=null;T=null;H=null;playerView=null;oppView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
   if(t.dataset.edit){const m=matches.find(x=>x.id===t.dataset.edit);if(!m)return;
     if(!canWrite){return}
     F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.assists=F.assists||{};F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
   if(t.dataset.player){playerView=t.dataset.player;setView("players");return}
+  if(t.dataset.tedit){const x=tournaments.find(y=>y.id===t.dataset.tedit);if(x&&canWrite){T=JSON.parse(JSON.stringify(x));setView("tedit")}return}
+  if(t.dataset.hedit){const x=honours.find(y=>y.id===t.dataset.hedit);if(x&&canWrite){H=JSON.parse(JSON.stringify(x));setView("hedit")}return}
+  if(t.dataset.tgame){const x=tournaments.find(y=>y.id===t.dataset.tgame);if(!x)return;F=Object.assign(blankForm(),{comp:"Tournament",tournament_id:x.id,date:x.date||blankForm().date,venue:x.venue||"",ha:"N",stage:"Group stage"});
+    const prev=tGames(x).slice(-1)[0];if(prev){F.played=Object.fromEntries(Object.keys(played(prev)).map(n=>[n,0]))}setView("new");return}
+  if(t.dataset.tpost){const x=tournaments.find(y=>y.id===t.dataset.tpost);if(x&&x.potm){F=null;setView("gfx");await GFX.loadTournament(x)}return}
+  if(t.id==="delT"){if(t.dataset.sure){try{await db.collection("tournaments").doc(T.id).delete();toast("Tournament deleted.");T=null;setView("results")}catch(err){toast("Couldn't delete it.")}}else{t.dataset.sure="1";t.textContent="Tap again to delete"}return}
+  if(t.id==="delH"){if(t.dataset.sure){try{await db.collection("honours").doc(H.id).delete();toast("Removed.");H=null;setView("honours")}catch(err){toast("Couldn't delete it.")}}else{t.dataset.sure="1";t.textContent="Tap again to delete"}return}
   if(t.dataset.opp){oppView=t.dataset.opp;setView("opps");return}
   if("back" in t.dataset){playerView=null;oppView=null;render();return}
   if("cancel" in t.dataset){F=null;setView("results");return}
@@ -563,16 +668,19 @@ document.addEventListener("change",async e=>{
   if(t.id==="season"){season=t.value;playerView=null;render();return}
   if(t.dataset.play&&F){readForm();const n=t.dataset.play;if(t.checked)F.played[n]=F.played[n]||0;else{delete F.played[n];if(F.assists)delete F.assists[n];if(F.potm===n)F.potm=""}render();return}
   if(t.id==="f-us"&&F){F._usTouched=true}
+  if(t.id==="f-comp"&&F){readForm();F.comp=t.value;if(F.comp==="Tournament")F.ha="N";render();return}
+  if(t.id==="f-tid"&&F){readForm();const x=tournaments.find(y=>y.id===t.value);if(x){F.date=x.date||F.date;if(!F.venue)F.venue=x.venue||""}render();return}
+  if(t.id==="t-trophy"){$("#t-other-wrap").hidden=t.value!=="__other";return}
   if(t.dataset.f){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);const val=t.dataset.f==="num"?(t.value===""?null:+t.value):t.value.trim();if(!val&&t.dataset.f==="name")return;
     try{await db.collection("players").doc(p.id).update({[t.dataset.f]:val});toast("Saved.")}catch(err){toast("Couldn't save. Try again.")}}
 });
-document.addEventListener("submit",e=>{if(e.target.id==="mform"){e.preventDefault();saveMatch()}else e.preventDefault()});
+document.addEventListener("submit",e=>{if(e.target.id==="mform"){e.preventDefault();saveMatch()}else if(e.target.id==="tform"){e.preventDefault();saveTournament()}else if(e.target.id==="hform"){e.preventDefault();saveHonour()}else e.preventDefault()});
 
 // ---------- boot (Supabase) ----------
 const CFG=window.NAYFC_CONFIG||{};
 let sb=null, me=null;
 function makeDb(sb){
-  const subs={matches:[],players:[]};
+  const subs={matches:[],players:[],tournaments:[],honours:[]};
   const toDoc=r=>{const d=Object.assign({},r);delete d.id;if("check_note" in d){d.check=d.check_note||"";delete d.check_note}if(d.us===undefined)d.us=null;return {id:r.id,data:()=>d}};
   const toRow=(id,b)=>{const r=Object.assign({id},b);if("check" in r){r.check_note=r.check||"";delete r.check}delete r.updated;return r};
   async function load(c){const {data,error}=await sb.from(c).select("*");if(error)throw error;const snap={docs:data.map(toDoc)};subs[c].forEach(([ok])=>ok(snap))}
@@ -583,7 +691,7 @@ function makeDb(sb){
       async update(b){const r=toRow(id,b);delete r.id;const {error}=await sb.from(c).update(r).eq("id",id);if(error)throw {code:"invalid_argument",message:error.message};await load(c)},
       async delete(){const {error}=await sb.from(c).delete().eq("id",id);if(error)throw {code:"invalid_argument",message:error.message};await load(c)}
     })}),
-    reload(){return Promise.all([load("players"),load("matches")])}};
+    reload(){return Promise.all([load("players"),load("matches"),load("tournaments"),load("honours")])}};
 }
 function authBox(){
   const el=document.getElementById("auth");if(!el)return;
@@ -618,7 +726,10 @@ document.addEventListener("submit",async e=>{
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  db.collection("matches").onSnapshot(s=>{matches=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(view!=="new"&&view!=="edit"&&view!=="login")render()},()=>toast("Couldn't load the results. Reload the page."));
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit"].includes(view);
+  db.collection("matches").onSnapshot(s=>{matches=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
+  db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
+  db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   await checkCoach();
 })();
 })();
@@ -756,7 +867,7 @@ function drawCoffey(cx,cy,r){
   X.save();
   X.beginPath();X.arc(cx,cy,r,0,Math.PI*2);X.fillStyle="#141414";X.fill();
   X.lineWidth=r*.04;X.strokeStyle=C.white;X.beginPath();X.arc(cx,cy,r*.93,0,Math.PI*2);X.stroke();
-  X.fillStyle=C.white;X.font=font(Math.round(r*.15),DISPLAY);arcText("PLAYER OF THE MATCH",cx,cy,r*.76,-Math.PI/2,false);
+  X.fillStyle=C.white;X.font=font(Math.round(r*.15),DISPLAY);arcText(S.potmKind==="tournament"?"PLAYER OF THE TOURNAMENT":"PLAYER OF THE MATCH",cx,cy,r*.76,-Math.PI/2,false);
   X.textAlign="center";X.textBaseline="middle";
   if(IMG.coffeyLogo){X.beginPath();X.arc(cx,cy+r*.02,r*.58,0,Math.PI*2);X.fillStyle=C.white;X.fill();X.save();X.clip();contain(IMG.coffeyLogo,cx-r*.56,cy-r*.54,r*1.12,r*1.12);X.restore()}
   else{X.fillStyle=C.pink;X.font=font(Math.round(r*.2),DISPLAY);X.fillText("COFFEY",cx,cy-r*.12);X.fillText("COFFEE",cx,cy+r*.12)}
@@ -872,7 +983,7 @@ function caption(){
     const opener=res==="WIN"?"What a performance! 🎉":(res==="DRAW"?"Honours even today.":"Not our day, but so proud of the effort. 💪");
     t=`FULL TIME: Newton Aycliffe ${us} - ${them} ${opp}\n\n${opener}\n\n${sc?`Our scorers:\n${sc}\n\n`:""}${S.ftPotm?`☕ Coffey Coffee Player of the Match: ${S.ftPotm}\n\n`:""}${sp.trim()}\n\n#NAYFC #NewtonAycliffe #GirlsFootball`;
   } else if(S.mode==="potm"){
-    t=`☕ COFFEY COFFEE PLAYER OF THE MATCH ☕\n\nCongratulations to ${S.potm||"…"}, our player of the match${S.opp?` against ${S.opp}`:""}! 🌟\n\nThanks to Coffey Coffee for supporting the Under 9s.${sp}\n\n#NAYFC #NewtonAycliffe #GirlsFootball`;
+    t=S.potmKind==="tournament"?`⭐ PLAYER OF THE TOURNAMENT ⭐\n\nCongratulations to ${S.potm||"…"}, our player of the tournament${S.tname?` at the ${S.tname}`:""}! 🌟`:`☕ COFFEY COFFEE PLAYER OF THE MATCH ☕\n\nCongratulations to ${S.potm||"…"}, our player of the match${S.opp?` against ${S.opp}`:""}! 🌟\n\nThanks to Coffey Coffee for supporting the Under 9s.${sp}\n\n#NAYFC #NewtonAycliffe #GirlsFootball`;
   }
   $("caption").value=t;
 }
@@ -921,6 +1032,7 @@ $("usScore").addEventListener("input",()=>{S.us=$("usScore").value===""?null:+$(
 $("themScore").addEventListener("input",()=>{S.them=$("themScore").value===""?null:+$("themScore").value;save();render()});
 $("ftPotm").addEventListener("change",()=>{S.ftPotm=$("ftPotm").value;save();render()});
 $("captain").addEventListener("change",()=>{S.captain=$("captain").value;save();render()});
+ROOT.querySelector(".gtabs").addEventListener("click",e=>{const b=e.target.closest("button[data-mode]");if(b&&b.dataset.mode!=="potm")S.potmKind="match"});
 $("potmPlayer").addEventListener("change",()=>{S.potm=$("potmPlayer").value;save();render()});
 $("sponsorName").addEventListener("input",()=>{S.sponsorName=$("sponsorName").value;save();render()});
 
@@ -956,9 +1068,10 @@ window.GFX={
     Object.assign(S,{opp:m.opp||"",date:m.date||"",ko:m.ko||"",venue:m.venue||"",comp:m.comp||"League",ha:m.ha==="A"?"A":"H",
       picked:Object.keys(m.played||{}),goals:Object.fromEntries(Object.entries(m.played||{}).filter(([,g])=>g>0)),
       us:m.us??null,them:m.them??null,usManual:m.us!=null,ftPotm:m.potm||""});
-    if(m.potm)S.potm=m.potm;
+    if(m.potm)S.potm=m.potm;S.potmKind="match";
     S.picked.sort((a,b)=>squad.findIndex(p=>p.name===a)-squad.findIndex(p=>p.name===b));
     buildPickers();syncInputs();save();await setOppCrestFor(S.opp);setMode(mode||"squad")},
+  async loadTournament(t){Object.assign(S,{potm:t.potm,potmKind:"tournament",tname:t.name,date:t.date||S.date,venue:t.venue||"",opp:""});buildPickers();syncInputs();save();setMode("potm")},
   refresh(){render()}
 };
 // ---------- boot ----------
