@@ -76,3 +76,4 @@ create trigger only_coaches_can_sign_up before insert on auth.users
 
 -- Added 2026-10: assists per player, e.g. {"Lydia": 1}. Safe to re-run on an existing database.
 alter table public.matches add column if not exists assists jsonb not null default '{}'::jsonb;
+alter table public.matches add column if not exists postponed boolean not null default false;
