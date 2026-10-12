@@ -481,7 +481,7 @@ function formView(){
   const playedNames=Object.keys(F.played);
   return `<form id="mform" class="stack" novalidate>
   <h2>${F.id?"Edit match":"Add a match"}</h2>
-  ${F.check?`<div class="note"><b>To check:</b> ${esc(F.check)}</div>`:""}
+  ${F.check?`<div class="note"><b>To check:</b> ${esc(F.check)}<br><span class="hint">Saving this match marks it as checked and removes the Check tag.</span></div>`:""}
   <section class="card stack" style="gap:12px"><h3>The match</h3>
     <div class="grid2">
       <label class="f" style="grid-column:1/-1">Opponent<input type="text" id="f-opp" list="opps" value="${esc(F.opp)}" required></label>
@@ -519,7 +519,7 @@ async function saveMatch(){
   if(!F.date||!F.opp){toast("Add the date and opponent first.");return}
   const goalSum=Object.values(F.played).reduce((a,b)=>a+(+b||0),0);
   const body={date:F.date,opp:F.opp,ha:F.ha,venue:F.venue,comp:F.comp,ko:F.ko,us:F.us===""?(Object.keys(F.played).length&&F.them!==""?goalSum:null):F.us,them:F.them===""?null:F.them,
-    potm:F.potm||null,played:F.played,assists:F.assists||{},postponed:!!F.postponed&&F.us===""&&F.them==="",notes:F.notes,apps:F.apps!==false,check:F.check||"",updated:new Date().toISOString()};
+    potm:F.potm||null,played:F.played,assists:F.assists||{},postponed:!!F.postponed&&F.us===""&&F.them==="",notes:F.notes,apps:F.apps!==false,check:"",updated:new Date().toISOString()};
   const id=F.id||`${F.date}-${slug(F.opp)}-${Math.random().toString(36).slice(2,6)}`;
   $("#saveM").disabled=true;
   try{await db.collection("matches").doc(id).set(body);toast("Match saved.");season=seasonOf(F.date);F=null;editing=null;setView(isFixture(body)?"fixtures":"results")}
