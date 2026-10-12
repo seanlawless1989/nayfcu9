@@ -187,6 +187,7 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
 </header>
 <nav class="tabs" aria-label="Sections">
   <button data-view="home" aria-current="page">Season</button>
+  <button data-view="fixtures">Fixtures</button>
   <button data-view="results">Results</button>
   <button data-view="players">Players</button>
   <button data-view="opps">Opponents</button>
@@ -341,6 +342,7 @@ function render(){
   if(!db){main.innerHTML=`<div class="card empty">Loading the results…</div>`;return}
   if(view==="home")main.innerHTML=homeView();
   else if(view==="results")main.innerHTML=resultsView();
+  else if(view==="fixtures")main.innerHTML=fixturesView();
   else if(view==="players")main.innerHTML=playerView?playerDetail(playerView):playersView();
   else if(view==="squad")main.innerHTML=squadView();
   else if(view==="opps")main.innerHTML=oppView?oppDetail(oppView):oppsView();
@@ -391,9 +393,18 @@ function matchRow(m){
   </div>`;
 }
 
+function isFixture(m){return !result(m)&&(m.postponed||(m.date||"")>=new Date().toISOString().slice(0,10))}
+function fixturesView(){
+  const all=seasonMatches().filter(isFixture),pp=all.filter(m=>m.postponed),list=all.filter(m=>!m.postponed);
+  if(!all.length)return `<div class="card empty">No fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one.`:""}</div>`;
+  let out="",cur="";
+  if(pp.length)out+=`<div class="month">Postponed, awaiting a new date</div>`+pp.map(matchRow).join("");
+  list.forEach(m=>{const d=new Date(m.date+"T12:00:00");const k=LONGM[d.getMonth()]+" "+d.getFullYear();if(k!==cur){out+=`<div class="month">${k}</div>`;cur=k}out+=matchRow(m)});
+  return `<div class="list">${out}</div>`;
+}
 function resultsView(){
-  const list=seasonMatches().reverse();
-  if(!list.length)return `<div class="card empty">No matches for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
+  const list=seasonMatches().filter(m=>!isFixture(m)).reverse();
+  if(!list.length)return `<div class="card empty">No results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
   let out="",cur="";
   list.forEach(m=>{const d=new Date(m.date+"T12:00:00");const k=LONGM[d.getMonth()]+" "+d.getFullYear();if(k!==cur){out+=`<div class="month">${k}</div>`;cur=k}out+=matchRow(m)});
   return `<div class="list">${out}</div>`;
@@ -511,7 +522,7 @@ async function saveMatch(){
     potm:F.potm||null,played:F.played,assists:F.assists||{},postponed:!!F.postponed&&F.us===""&&F.them==="",notes:F.notes,apps:F.apps!==false,check:F.check||"",updated:new Date().toISOString()};
   const id=F.id||`${F.date}-${slug(F.opp)}-${Math.random().toString(36).slice(2,6)}`;
   $("#saveM").disabled=true;
-  try{await db.collection("matches").doc(id).set(body);toast("Match saved.");season=seasonOf(F.date);F=null;editing=null;setView("results")}
+  try{await db.collection("matches").doc(id).set(body);toast("Match saved.");season=seasonOf(F.date);F=null;editing=null;setView(isFixture(body)?"fixtures":"results")}
   catch(e){$("#saveM").disabled=false;toast(e&&e.code==="quota_exceeded"?"The results store is full.":"Couldn't save. Check your connection and try again.");if(e&&e.code==="invalid_argument"){canWrite=false;render()}}
 }
 
