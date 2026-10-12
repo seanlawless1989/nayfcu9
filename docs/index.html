@@ -78,6 +78,65 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .hon{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
 .hon .ic{font-size:36px;text-align:center;line-height:1}
 .hon .t{font:400 18px var(--display)}
+
+/* ---------- sticker book ---------- */
+.bookbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.bookph{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px}
+.bookph label{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--field);font-weight:600;cursor:pointer}
+.bookph img,.bookph .ph0{width:34px;height:42px;object-fit:cover;border-radius:5px;background:#ddd;flex:none}
+.bookph input{display:none}
+#book{display:flex;flex-direction:column;align-items:center;gap:22px}
+.bp{width:210mm;height:297mm;background:#FFF8E6;color:#14182E;position:relative;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.18);font-family:"Archivo",Arial,sans-serif;padding:14mm;box-sizing:border-box;display:flex;flex-direction:column}
+.bp h1,.bp h2,.bp h3{font-family:"Archivo Black","Arial Black",sans-serif;margin:0;letter-spacing:.01em;color:#14182E}
+.bp .band{position:absolute;left:0;right:0;height:9mm;background:#2235E8}.bp .band.t{top:0;border-bottom:3mm solid #FFD200}.bp .band.b{bottom:0;border-top:3mm solid #FFD200}
+.bp .pno{position:absolute;bottom:2.4mm;right:8mm;color:#fff;font:700 10pt "Archivo",sans-serif;z-index:2}
+.bp .inner{flex:1;display:flex;flex-direction:column;margin:8mm 0 10mm;min-height:0}
+.bp.cover{background:#2235E8;color:#fff;align-items:center;justify-content:center;text-align:center;padding:18mm}
+.bp.cover h1{color:#FFD200;font-size:44pt;line-height:1;text-transform:uppercase;transform:rotate(-3deg)}
+.bp.cover h2{color:#fff;font-size:20pt;margin-top:8mm}
+.bp.cover .crest{width:95mm;background:#fff;border-radius:50%;padding:4mm;margin:10mm 0}
+.bp.cover .burst{display:inline-block;background:#FFD200;color:#14182E;font:900 15pt "Archivo Black",sans-serif;padding:4mm 8mm;border-radius:999px;transform:rotate(4deg);margin-top:6mm}
+.bp.cover .spons{display:flex;gap:10mm;align-items:center;justify-content:center;margin-top:auto}
+.bp.cover .spons img{height:20mm;background:#fff;border-radius:50%;padding:1.5mm}
+.bp .ttl{font-size:26pt;text-transform:uppercase;border-bottom:2mm solid #FFD200;padding-bottom:2mm;margin-bottom:6mm}
+.bp .rec{display:grid;grid-template-columns:repeat(7,1fr);gap:3mm;margin-bottom:7mm}
+.bp .rec div{background:#2235E8;color:#fff;border-radius:3mm;padding:3mm 0;text-align:center}
+.bp .rec b{display:block;font:400 22pt "Archivo Black",sans-serif;color:#FFD200}.bp .rec span{font-size:8pt;text-transform:uppercase;letter-spacing:.06em}
+.bp .two{display:grid;grid-template-columns:1fr 1fr;gap:7mm}
+.bp table{width:100%;border-collapse:collapse;font-size:10pt}.bp td,.bp th{padding:1.6mm 2mm;border-bottom:.3mm solid #d9cfb5;text-align:left}
+.bp th{font-size:8pt;text-transform:uppercase;letter-spacing:.06em;color:#5b5f78}.bp td.n{text-align:right;font-weight:800}
+.bp .res{font-size:9pt}.bp .res td{padding:1.1mm 1.6mm}
+.bp .wdl{display:inline-block;width:5.5mm;text-align:center;border-radius:1mm;color:#fff;font-weight:800;font-size:8pt}
+.bp .W{background:#1F8A4C}.bp .D{background:#B7791F}.bp .L{background:#C53030}.bp .N{background:#888}
+.bp.player .top{display:grid;grid-template-columns:78mm 1fr;gap:8mm;align-items:start}
+.bp .slot{width:78mm;height:100mm;border:1mm dashed #2235E8;border-radius:4mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#fff 0 6mm,#F4EEDC 6mm 12mm);color:#2235E8;text-align:center;position:relative}
+.bp .slot .sn{font:400 34pt "Archivo Black",sans-serif}.bp .slot .sl{font:700 10pt "Archivo",sans-serif;text-transform:uppercase;letter-spacing:.1em}
+.bp .slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:3mm}
+.bp .big{font:400 46pt/1 "Archivo Black",sans-serif;color:#2235E8}
+.bp .pname{font-size:32pt;text-transform:uppercase;line-height:1}
+.bp .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin-top:6mm}
+.bp .stats div{border:.6mm solid #14182E;border-radius:3mm;padding:2.5mm;text-align:center;background:#fff}
+.bp .stats b{display:block;font:400 20pt "Archivo Black",sans-serif;color:#2235E8}.bp .stats span{font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.bp .lines{margin-top:8mm}.bp .lines h3{font-size:13pt;margin-bottom:2mm}
+.bp .lines i{display:block;border-bottom:.4mm solid #bfb291;height:9mm}
+.bp .hl{background:#FFD200;border-radius:3mm;padding:3mm 4mm;margin-top:6mm;font-weight:700}
+.bp .sheet{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:84mm;gap:4mm}
+.bp .stk{border:.4mm solid #999;border-radius:3mm;overflow:hidden;display:flex;flex-direction:column;background:#fff;position:relative}
+.bp .stk .ph{flex:1;background:#2235E8 center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#FFD200;font:400 40pt "Archivo Black",sans-serif}
+.bp .stk .cap{background:#FFD200;padding:1.5mm 2mm;display:flex;justify-content:space-between;font:400 11pt "Archivo Black",sans-serif;text-transform:uppercase}
+.bp .stk .no{position:absolute;top:1.5mm;left:1.5mm;background:#fff;border-radius:1.5mm;padding:.3mm 1.6mm;font:800 8pt "Archivo",sans-serif;color:#14182E}
+.bp .stk.shiny .ph{background:linear-gradient(135deg,#f6f6f6,#d5d9ff 30%,#fff2b3 55%,#ffd1ef 80%,#f6f6f6)}
+.bp .stk.shiny img{max-width:80%;max-height:80%}
+.bp .hint{font-size:9pt;color:#5b5f78}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  .mast,nav.tabs,.bookbar,.bookctl,#toast,#gfxView{display:none!important}
+  main#main{padding:0!important;margin:0!important;max-width:none!important}
+  #book{gap:0}
+  .bp{box-shadow:none;break-after:page;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
 .h2h{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:4px;font:600 12px var(--body);color:var(--muted)}
 .sc-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:6px;font:700 12px var(--body);color:#fff}
 .sc-chip.W{background:var(--win)}.sc-chip.D{background:var(--draw)}.sc-chip.L{background:var(--loss)}
@@ -209,6 +268,7 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
   <button data-view="players">Players</button>
   <button data-view="opps">Opponents</button>
   <button data-view="honours">Honours</button>
+  <button data-view="book" class="edit-only">Sticker book</button>
   <button data-view="squad">Squad</button>
   <button data-view="gfx" class="edit-only">Graphics</button>
   <button data-view="new" class="add edit-only">+ Add a match</button>
@@ -364,6 +424,7 @@ function render(){
   else if(view==="results")main.innerHTML=resultsView();
   else if(view==="fixtures")main.innerHTML=fixturesView();
   else if(view==="honours")main.innerHTML=honoursView();
+  else if(view==="book")main.innerHTML=bookView();
   else if(view==="tnew"||view==="tedit")main.innerHTML=tFormView();
   else if(view==="hnew"||view==="hedit")main.innerHTML=hFormView();
   else if(view==="players")main.innerHTML=playerView?playerDetail(playerView):playersView();
@@ -453,6 +514,67 @@ function resultsView(){
   if(!items.length)return `<div class="card empty">No results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
   return `<div class="list">${CKEY}${monthList(items)}</div>`;
 }
+
+
+// ---------- sticker book ----------
+const BOOK_PH={};// photos stay in this browser tab only; never uploaded
+function bookView(){
+  const list=seasonMatches(),done=list.filter(result),t=teamStats(done),ps=playerStats(list),ts=seasonTournaments();
+  const roster=[...new Set([...Object.keys(ps).filter(n=>ps[n].apps||ps[n].goals||ps[n].potm),...(season===todaySeason()?players.filter(p=>p.current).map(p=>p.name):[])])]
+    .sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b));
+  const st=n=>Object.assign({apps:0,goals:0,assists:0,potm:0},ps[n]||{});
+  const pot=n=>ts.filter(x=>x.potm===n).length;
+  const scorers=roster.filter(n=>st(n).goals).sort((a,b)=>st(b).goals-st(a).goals).slice(0,8);
+  const at=assistsTracked(season),tracked=appsTracked(list);
+  const troph=[...ts.filter(x=>x.trophy).map(x=>({title:x.name,ach:x.trophy,date:x.date})),...honours.filter(h=>seasonOf(h.date)===season).map(h=>({title:h.title,ach:h.achievement,date:h.date}))];
+  let pg=0;const page=(cls,body)=>{pg++;return `<section class="bp ${cls}"><div class="band t"></div><div class="inner">${body}</div><div class="band b"></div><div class="pno">${pg}</div></section>`};
+  const nice=d=>d?(x=>`${x.getDate()} ${MONTHS[x.getMonth()]}`)(new Date(d+"T12:00:00")):"";
+  // cover
+  let out=`<section class="bp cover"><h2>Newton Aycliffe Youth Football Club</h2><img class="crest" src="crest.png" alt="">
+    <h1>Under 9s<br>Sticker Album</h1><h2>Season ${esc(season)}</h2><div class="burst">★ Collect them all! ★</div>
+    <div class="spons"><img src="gsl.png" alt="Grey-Smith Legal"><img src="coffey.jpg" alt="Coffey Coffee"></div></section>`;pg++;
+  // season in numbers
+  out+=page("",`<h1 class="ttl">The season in numbers</h1>
+    <div class="rec">${[["P","Played"],["W","Won"],["D","Drawn"],["L","Lost"],["F","Scored"],["A","Conceded"],["GD","Goal diff"]].map(([k,l])=>`<div><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}</div>
+    <div class="two"><div><h3>Top scorers</h3><table>${scorers.map((n,i)=>`<tr><td>${i+1}. ${esc(n)}</td><td class="n">${st(n).goals}</td></tr>`).join("")||`<tr><td>No goals logged yet</td></tr>`}</table></div>
+    <div><h3>Coffey Coffee player of the match</h3><table>${roster.filter(n=>st(n).potm).sort((a,b)=>st(b).potm-st(a).potm).map(n=>`<tr><td>☕ ${esc(n)}</td><td class="n">${st(n).potm}</td></tr>`).join("")||`<tr><td>None yet</td></tr>`}</table>
+    ${at?`<h3 style="margin-top:6mm">Assists</h3><table>${roster.filter(n=>st(n).assists).sort((a,b)=>st(b).assists-st(a).assists).slice(0,6).map(n=>`<tr><td>🅰️ ${esc(n)}</td><td class="n">${st(n).assists}</td></tr>`).join("")||`<tr><td>None yet</td></tr>`}</table>`:""}</div></div>
+    ${troph.length?`<div class="hl">🏆 ${troph.map(x=>`${esc(x.title)}: ${esc(x.ach)}`).join(" · ")}</div>`:""}`);
+  // results (split across pages, 34 rows each)
+  const rows=sortMatches(list.filter(m=>result(m)||m.comp==="Tournament"));
+  for(let i=0;i<Math.max(rows.length,1);i+=34){const chunk=rows.slice(i,i+34);
+    out+=page("",`<h1 class="ttl">Results${i?" (continued)":""}</h1><table class="res"><tr><th>Date</th><th>Opponent</th><th>Comp</th><th>Score</th><th></th><th>Scorers</th></tr>
+    ${chunk.map(m=>{const r=result(m);const tn=m.tournament_id?tournaments.find(x=>x.id===m.tournament_id):null;return `<tr><td>${nice(m.date)}</td><td>${esc(m.opp||"")}${m.stage&&m.stage!=="placeholder"?` <span class="hint">(${esc(m.stage)})</span>`:""}</td><td>${esc(tn?tn.name:m.comp||"")}</td><td class="n">${r?`${m.us}–${m.them}`:""}</td><td>${r?`<span class="wdl ${r}">${r}</span>`:""}</td><td class="hint">${esc(Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>n+(g>1?` ×${g}`:"")).join(", "))}</td></tr>`}).join("")||`<tr><td colspan="6">No results yet.</td></tr>`}</table>`)}
+  // honours
+  if(troph.length)out+=page("",`<h1 class="ttl">Honours</h1>${troph.map(x=>`<div class="hl" style="font-size:16pt">${trophyIcon(x.ach)} ${esc(x.title)}: ${esc(x.ach)} <span class="hint">${nice(x.date)}</span></div>`).join("")}
+    ${ts.filter(x=>x.potm).length?`<h3 style="margin-top:8mm">Players of the tournament</h3><table>${ts.filter(x=>x.potm).map(x=>`<tr><td>⭐ ${esc(x.potm)}</td><td>${esc(x.name)}</td></tr>`).join("")}</table>`:""}`);
+  // player pages
+  roster.forEach((n,i)=>{const o=st(n);const best=sortMatches(list.filter(m=>(played(m)[n]||0)>0)).sort((a,b)=>played(b)[n]-played(a)[n])[0];
+    out+=page("player",`<div class="top"><div class="slot">${BOOK_PH[n]&&BOOK_LAYOUT==="print"?`<img src="${BOOK_PH[n]}" alt="">`:(BOOK_LAYOUT==="stickers"?`<div class="sn">${i+2}</div><div class="sl">Stick ${esc(n)} here</div>`:BOOK_LAYOUT==="print"?`<div class="sl">Add ${esc(n)}'s photo</div>`:`<div class="sn">${esc(numOf(n))||"·"}</div><div class="sl">${esc(n)}</div>`)}</div>
+      <div><div class="big">${esc(numOf(n))||"·"}</div><h1 class="pname">${esc(n)}</h1>
+      <div class="stats">${tracked?`<div><b>${o.apps}</b><span>Games</span></div>`:""}<div><b>${o.goals}</b><span>Goals</span></div>${at?`<div><b>${o.assists}</b><span>Assists</span></div>`:""}<div><b>${o.potm}</b><span>Player of the match</span></div>${pot(n)?`<div><b>${pot(n)}</b><span>Player of the tournament</span></div>`:""}</div>
+      ${best?`<div class="hl">⚽ Best game: ${played(best)[n]} goal${played(best)[n]>1?"s":""} v ${esc(best.opp)} (${nice(best.date)})</div>`:""}</div></div>
+      <div class="lines"><h3>My favourite moment this season</h3><i></i><i></i><i></i></div>
+      <div class="lines"><h3>My coach says…</h3><i></i><i></i><i></i></div>
+      <div class="lines"><h3>Autographs</h3><i></i><i></i></div>`)});
+  // sticker sheets
+  if(BOOK_LAYOUT==="stickers"){const stk=[{shiny:1,img:"crest.png",cap:"Club badge",no:1},...roster.map((n,i)=>({n,no:i+2})),{shiny:1,img:"gsl.png",cap:"Grey-Smith Legal",no:roster.length+2},{shiny:1,img:"coffey.jpg",cap:"Coffey Coffee",no:roster.length+3}];
+    for(let i=0;i<stk.length;i+=9)out+=page("",`<h1 class="ttl">Stickers${i?"":` <span class="hint" style="font-family:Archivo;font-size:10pt;text-transform:none">Print on sticker paper and cut out</span>`}</h1><div class="sheet">${stk.slice(i,i+9).map(x=>x.n?
+      `<div class="stk"><span class="no">No. ${x.no}</span><div class="ph" style="${BOOK_PH[x.n]?`background-image:url('${BOOK_PH[x.n]}')`:""}">${BOOK_PH[x.n]?"":esc(numOf(x.n)||"")}</div><div class="cap"><span>${esc(x.n)}</span><span>${esc(numOf(x.n))}</span></div></div>`:
+      `<div class="stk shiny"><span class="no">No. ${x.no}</span><div class="ph"><img src="${x.img}" alt=""></div><div class="cap"><span>${esc(x.cap)}</span><span>✦</span></div></div>`).join("")}</div>`)}
+  return `<div class="bookctl card stack" style="margin-bottom:16px"><h2>Sticker book: ${esc(season)}</h2>
+    <p class="hint">Built from this season's results. Change the season at the top right. Add a photo for each player, then press <b>Print or save as PDF</b> and choose "Save as PDF" or your printer. Photos stay on this device. They're never uploaded to the site and they're cleared when you close the page.</p>
+    <div class="bookbar"><div class="seg" role="group" aria-label="Photos"><button data-blay="stickers" aria-pressed="${BOOK_LAYOUT==="stickers"}">Sticker sheets</button><button data-blay="print" aria-pressed="${BOOK_LAYOUT==="print"}">Photos printed in</button><button data-blay="none" aria-pressed="${BOOK_LAYOUT==="none"}">No photos</button></div>
+    <button class="btn gold" id="bookPrint">Print or save as PDF</button></div>
+    ${BOOK_LAYOUT==="none"?"":`<div class="bookph">${roster.map(n=>`<label>${BOOK_PH[n]?`<img src="${BOOK_PH[n]}" alt="">`:`<span class="ph0"></span>`}<span>${esc(n)}</span><input type="file" accept="image/*" data-bookph="${esc(n)}"></label>`).join("")}</div>`}</div>
+    <div id="book">${out}</div>`;
+}
+let BOOK_LAYOUT="print";
+document.addEventListener("change",async e=>{const n=e.target.dataset&&e.target.dataset.bookph;if(!n||!e.target.files[0])return;
+  if(BOOK_PH[n])URL.revokeObjectURL(BOOK_PH[n]);BOOK_PH[n]=URL.createObjectURL(e.target.files[0]);render()});
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.blay){BOOK_LAYOUT=b.dataset.blay;render()}
+  if(b.id==="bookPrint")window.print()});
 
 // ---------- honours ----------
 function honoursView(){
