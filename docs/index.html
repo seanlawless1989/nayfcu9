@@ -65,7 +65,8 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .match[class*=" c-"]{border:2px solid var(--cc);border-left-width:8px}
 .ctag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--cc);color:#fff;font:700 11px var(--body);text-transform:uppercase;letter-spacing:.05em;margin-right:6px;vertical-align:1px}
 .c-cup .ctag{color:#111}
-.ckey{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}.ckey .match{all:unset;display:inline-block}
+.ckey{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}.ckey .cf{all:unset;display:inline-flex;align-items:center;cursor:pointer;border-radius:8px;padding:2px;border:2px solid transparent;opacity:.55;font:700 12px var(--body)}
+.ckey .cf.on{opacity:1;border-color:var(--ink)}.ckey .cf:hover{opacity:1}.ckey .cf[data-cf=""]{padding:2px 9px;background:var(--card);border-color:var(--line)}.ckey .cf[data-cf=""].on{border-color:var(--ink)}
 .match.tcard{display:block;cursor:default}
 .tcard .thead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
 .tgames{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
@@ -478,7 +479,10 @@ function matchRow(m){
   </div>`;
 }
 
-const CKEY=`<div class="ckey">${["League","Cup","Friendly","Tournament"].map(c=>`<span class="match c-${c.toLowerCase()}"><span class="ctag">${c}</span></span>`).join("")}</div>`;
+let compFilter=null;
+const CKEY=()=>`<div class="ckey" role="group" aria-label="Filter by competition"><button class="cf${compFilter?"":" on"}" data-cf="">All</button>${["League","Cup","Friendly","Tournament"].map(c=>`<button class="cf match c-${c.toLowerCase()}${compFilter===c?" on":""}" data-cf="${c}" aria-pressed="${compFilter===c}"><span class="ctag">${c}</span></button>`).join("")}</div>`;
+const byComp=ms=>compFilter?ms.filter(m=>m.comp===compFilter):ms;
+const tByComp=ts=>!compFilter||compFilter==="Tournament"?ts:[];
 const STAGES=["Group stage","Round of 16","Quarter final","Semi final","Final","3rd place play-off","Plate","Shield","Friendly game"];
 const TROPHIES=["Winners","Runners-up","Semi-finalists","Plate winners","Shield winners"];
 function tGames(t){return matches.filter(m=>m.tournament_id===t.id).sort((a,b)=>STAGES.indexOf(a.stage||"Group stage")-STAGES.indexOf(b.stage||"Group stage"))}
@@ -504,15 +508,15 @@ function monthList(items){let out="",cur="";items.forEach(it=>{const d=new Date(
 function isFixture(m){return !result(m)&&(m.postponed||(m.date||"")>=new Date().toISOString().slice(0,10))}
 function seasonTournaments(){return tournaments.filter(t=>seasonOf(t.date)===season)}
 function fixturesView(){
-  const items=listItems(seasonMatches().filter(isFixture),seasonTournaments().filter(tIsFixture)).sort((a,b)=>a.date.localeCompare(b.date));
-  if(!items.length)return `<div class="card empty">No fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one.`:""}</div>`;
+  const items=listItems(byComp(seasonMatches().filter(isFixture)),tByComp(seasonTournaments().filter(tIsFixture))).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!items.length)return `${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one.`:""}</div>`;
   const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
-  return `<div class="list">${CKEY}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
+  return `<div class="list">${CKEY()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
 }
 function resultsView(){
-  const items=listItems(seasonMatches().filter(m=>!isFixture(m)),seasonTournaments().filter(t=>!tIsFixture(t))).sort((a,b)=>b.date.localeCompare(a.date));
-  if(!items.length)return `<div class="card empty">No results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
-  return `<div class="list">${CKEY}${monthList(items)}</div>`;
+  const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!items.length)return `${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
+  return `<div class="list">${CKEY()}${monthList(items)}</div>`;
 }
 
 
@@ -574,7 +578,8 @@ document.addEventListener("change",async e=>{const n=e.target.dataset&&e.target.
   if(BOOK_PH[n])URL.revokeObjectURL(BOOK_PH[n]);BOOK_PH[n]=URL.createObjectURL(e.target.files[0]);render()});
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.blay){BOOK_LAYOUT=b.dataset.blay;render()}
-  if(b.id==="bookPrint")window.print()});
+  if(b.id==="bookPrint")window.print();
+  if(b.dataset.cf!=null&&b.closest(".ckey")){compFilter=b.dataset.cf||null;render()}});
 
 // ---------- honours ----------
 function honoursView(){
