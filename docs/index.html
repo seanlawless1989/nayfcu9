@@ -61,6 +61,11 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .rec.w b{color:var(--win)}.rec.d b{color:var(--draw)}.rec.l b{color:var(--loss)}
 .form{display:flex;gap:5px;flex-wrap:wrap}
 .chip{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;border-radius:7px;font:800 13px var(--body);color:#fff}
+.match.c-league{--cc:#2235E8}.match.c-cup{--cc:#E0A800}.match.c-friendly{--cc:#1AA8A0}.match.c-tournament{--cc:#8B3FD9}
+.match[class*=" c-"]{border:2px solid var(--cc);border-left-width:8px}
+.ctag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--cc);color:#fff;font:700 11px var(--body);text-transform:uppercase;letter-spacing:.05em;margin-right:6px;vertical-align:1px}
+.c-cup .ctag{color:#111}
+.ckey{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}.ckey .match{all:unset;display:inline-block}
 .h2h{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:4px;font:600 12px var(--body);color:var(--muted)}
 .sc-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:6px;font:700 12px var(--body);color:#fff}
 .sc-chip.W{background:var(--win)}.sc-chip.D{background:var(--draw)}.sc-chip.L{background:var(--loss)}
@@ -381,10 +386,11 @@ function matchRow(m){
   const d=m.date?new Date(m.date+"T12:00:00"):null;const r=result(m);
   const sc=Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>n+(g>1?` ×${g}`:"")).join(", ");
   const as=Object.entries(assistsOf(m)).filter(([,a])=>a>0).map(([n,a])=>n+(a>1?` ×${a}`:"")).join(", ");
-  return `<div class="match" role="button" tabindex="0" data-edit="${esc(m.id)}">
+  const cc=["League","Cup","Friendly","Tournament"].includes(m.comp)?" c-"+m.comp.toLowerCase():"";
+  return `<div class="match${cc}" role="button" tabindex="0" data-edit="${esc(m.id)}">
     <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
-      <div class="meta">${[m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
+      <div class="meta">${cc?`<span class="ctag">${esc(m.comp)}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
       ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}</div>
@@ -393,6 +399,7 @@ function matchRow(m){
   </div>`;
 }
 
+const CKEY=`<div class="ckey">${["League","Cup","Friendly","Tournament"].map(c=>`<span class="match c-${c.toLowerCase()}"><span class="ctag">${c}</span></span>`).join("")}</div>`;
 function isFixture(m){return !result(m)&&(m.postponed||(m.date||"")>=new Date().toISOString().slice(0,10))}
 function fixturesView(){
   const all=seasonMatches().filter(isFixture),pp=all.filter(m=>m.postponed),list=all.filter(m=>!m.postponed);
@@ -400,14 +407,14 @@ function fixturesView(){
   let out="",cur="";
   if(pp.length)out+=`<div class="month">Postponed, awaiting a new date</div>`+pp.map(matchRow).join("");
   list.forEach(m=>{const d=new Date(m.date+"T12:00:00");const k=LONGM[d.getMonth()]+" "+d.getFullYear();if(k!==cur){out+=`<div class="month">${k}</div>`;cur=k}out+=matchRow(m)});
-  return `<div class="list">${out}</div>`;
+  return `<div class="list">${CKEY}${out}</div>`;
 }
 function resultsView(){
   const list=seasonMatches().filter(m=>!isFixture(m)).reverse();
   if(!list.length)return `<div class="card empty">No results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
   let out="",cur="";
   list.forEach(m=>{const d=new Date(m.date+"T12:00:00");const k=LONGM[d.getMonth()]+" "+d.getFullYear();if(k!==cur){out+=`<div class="month">${k}</div>`;cur=k}out+=matchRow(m)});
-  return `<div class="list">${out}</div>`;
+  return `<div class="list">${CKEY}${out}</div>`;
 }
 
 function playersView(){
