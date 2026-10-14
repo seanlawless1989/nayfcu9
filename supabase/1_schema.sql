@@ -100,3 +100,31 @@ drop policy if exists "coaches write honours" on public.honours;
 create policy "coaches write honours" on public.honours for all to authenticated using (public.is_coach()) with check (public.is_coach());
 grant select on public.tournaments, public.honours to anon, authenticated;
 grant insert, update, delete on public.tournaments, public.honours to authenticated;
+
+-- ---------- Oct 2026: playing time, keepers, availability ----------
+alter table public.matches add column if not exists quarters jsonb default '{}'::jsonb;
+alter table public.matches add column if not exists gk text;
+alter table public.matches add column if not exists saves integer;
+
+create table if not exists public.availability(
+  match_id text not null,
+  player text not null,
+  status text not null check (status in ('yes','no','maybe')),
+  updated timestamptz default now(),
+  primary key(match_id, player)
+);
+alter table public.availability enable row level security;
+-- Only coaches can see answers; parents answer through set_availability below.
+create policy "coaches read availability" on public.availability for select using (public.is_coach());
+create policy "coaches write availability" on public.availability for all using (public.is_coach()) with check (public.is_coach());
+
+create or replace function public.set_availability(p_match text, p_player text, p_status text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if p_status not in ('yes','no','maybe') then raise exception 'bad status'; end if;
+  if not exists (select 1 from matches where id = p_match and date >= current_date - 1) then raise exception 'unknown fixture'; end if;
+  if not exists (select 1 from players where name = p_player and current) then raise exception 'unknown player'; end if;
+  insert into availability(match_id, player, status, updated) values (p_match, p_player, p_status, now())
+  on conflict (match_id, player) do update set status = excluded.status, updated = now();
+end $$;
+grant execute on function public.set_availability(text,text,text) to anon, authenticated;
