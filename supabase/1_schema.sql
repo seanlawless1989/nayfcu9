@@ -138,3 +138,9 @@ alter table public.matches add column if not exists squad jsonb;
 
 -- Live match state, public so parents can follow: {status, half, halfStart, halfLen, form, slots, squad, events, mins}
 alter table public.matches add column if not exists live jsonb;
+
+-- Opposition badges, shared across the site (small PNG data URLs), public read, coach write
+create table if not exists public.badges(key text primary key, name text, img text not null, updated timestamptz default now());
+alter table public.badges enable row level security;
+create policy "public read badges" on public.badges for select using (true);
+create policy "coaches write badges" on public.badges for all using (public.is_coach()) with check (public.is_coach());

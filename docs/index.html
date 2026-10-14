@@ -310,7 +310,7 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
 /* ---------- matchday theme (Oct 2026 refresh) ---------- */
 body{background:var(--bg) radial-gradient(1200px 500px at 50% -200px,rgba(34,53,232,.10),transparent) no-repeat}
 .mast{position:relative;overflow:hidden;border-bottom:0;background:
-  linear-gradient(115deg,transparent 0 80%,rgba(255,210,0,.95) 80% 81%,transparent 81% 82.6%,rgba(255,210,0,.55) 82.6% 83.1%,transparent 83.1%),
+  linear-gradient(115deg,transparent 0 88%,rgba(255,210,0,.95) 88% 89%,transparent 89% 90.6%,rgba(255,210,0,.55) 90.6% 91.1%,transparent 91.1%),
   repeating-linear-gradient(115deg,rgba(255,255,255,.035) 0 22px,transparent 22px 44px),
   radial-gradient(900px 300px at 10% 0%,#3446FF 0%,transparent 60%),
   linear-gradient(160deg,#1A2BC9 0%,#0E1677 70%,#0A1052 100%)}
@@ -360,6 +360,12 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 .ctag{white-space:nowrap}
 @media (max-width:700px){nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}nav.tabs::-webkit-scrollbar{display:none}nav.tabs button{flex:none}
   .mast .in{padding-block:14px 18px}.crest{width:70px}}
+.badge{width:34px;height:34px;border-radius:50%;object-fit:contain;background:#fff;flex:none;vertical-align:middle;box-shadow:0 0 0 1px var(--line)}
+.badge.ini{display:inline-grid;place-items:center;background:var(--field);color:var(--muted);font:400 12px var(--display)}
+.badge.sm{width:24px;height:24px;font-size:9px;margin-right:6px}.badge.lg{width:72px;height:72px;font-size:22px}
+.match .o .badge{margin-right:6px;vertical-align:-6px}
+.live .board .tm{display:flex;flex-direction:column;align-items:center;gap:6px}.live .board .tm .badge,.live .board .tm img{width:44px;height:44px;border-radius:50%;background:#fff;object-fit:contain;padding:2px}
+.bup{font:700 12px var(--body);color:var(--club);cursor:pointer;white-space:nowrap}.bup input{display:none}
 .hero .btns{position:relative;justify-content:center;margin-top:12px}
 </style>
 
@@ -423,7 +429,7 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
           <div class="seg" role="group" aria-label="Home or away">
             <button id="ha-H" aria-pressed="true" data-gha="H">Home</button><button id="ha-A" aria-pressed="false" data-gha="A">Away</button>
           </div>
-          <div class="file"><span class="thumb" id="oppCrestThumb"></span><label class="f">Opponent badge (remembered for next time)<input type="file" id="oppCrest" accept="image/*"></label></div>
+          <div class="file"><span class="thumb" id="oppCrestThumb"></span><label class="f">Opponent badge (saved for the whole site)<input type="file" id="oppCrest" accept="image/*"></label></div>
         </div>
       </section>
 
@@ -527,6 +533,14 @@ function played(m){return m.played||{}}
 // opponents: names vary between sheets ("CLS", "FC", "Juniors"...), so compare on a cleaned-up key
 function oppKey(n){return String(n||"").toLowerCase().replace(/\bcls\b/g,"chester le street").replace(/[^a-z0-9 ]+/g," ")
   .replace(/\b(a?fc|jfc|youth|juniors?|girls|the|c ?a|football club|club)\b/g," ").replace(/\s+/g," ").trim()}
+// opposition badges: public.badges {key: oppKey(name), name, img: small PNG data URL}; coaches upload, everyone sees
+let BADGES={};
+async function loadBadges(){try{const {data}=await sb.from("badges").select("*");BADGES={};(data||[]).forEach(r=>BADGES[r.key]=r.img)}catch(e){}}
+function oppIni(n){return (n||"?").split(/\s+/).filter(w=>w&&!/^(fc|afc|the)$/i.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase()}
+function badge(n,cls){const b=BADGES[oppKey(n)];return b?`<img class="badge ${cls||""}" src="${b}" alt="">`:`<span class="badge ini ${cls||""}">${esc(oppIni(n))}</span>`}
+window.oppBadge=n=>BADGES[oppKey(n)]||null;window.saveBadgeFile=(n,f)=>canWrite&&saveBadge(n,f);
+function shrinkBadge(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=200,c=document.createElement("canvas");const k=Math.min(S/im.width,S/im.height,1);c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/png"))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
+async function saveBadge(name,file){try{const img=await shrinkBadge(file);const {error}=await sb.from("badges").upsert({key:oppKey(name),name,img});if(error)throw error;BADGES[oppKey(name)]=img;toast(`Badge saved for ${name}.`);render()}catch(e){toast("Couldn't save that badge. Try a PNG or JPG.")}}
 function meetings(opp,before){const k=oppKey(opp);return sortMatches(matches.filter(m=>result(m)&&oppKey(m.opp)===k&&(!before||m.date<before))).reverse()}
 function scChip(m){const r=result(m);return `<span class="sc-chip ${r}" title="${esc(m.date)} ${esc(m.comp||"")}">${r} ${m.us}–${m.them}</span>`}
 window.H2H=opp=>meetings(opp,new Date().toISOString().slice(0,10));
@@ -585,7 +599,7 @@ function render(){
 function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=live||nextFixture();if(!m)return "";
   const d=new Date(m.date+"T12:00:00");const days=Math.round((d-new Date(todayLocal()+"T12:00:00"))/864e5);
   const ini=(m.opp||"?").split(/\s+/).filter(w=>!/^(fc|afc|the)$/i.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase();
-  const us=`<div class="side"><img src="crest.png" alt=""><span>Newton Aycliffe</span></div>`,them=`<div class="side"><span class="ini">${esc(ini)}</span><span>${esc(m.opp)}</span></div>`;
+  const us=`<div class="side"><img src="crest.png" alt=""><span>Newton Aycliffe</span></div>`,them=`<div class="side">${window.oppBadge(m.opp)?`<img src="${window.oppBadge(m.opp)}" alt="">`:`<span class="ini">${esc(ini)}</span>`}<span>${esc(m.opp)}</span></div>`;
   const home=m.ha!=="A";const h=meetings(m.opp,m.date);
   const mid=live?`<div class="mid"><b>${m.us??0}–${m.them??0}</b><span>${m.live.status==="ht"?"Half time":"Live "+minuteOf(m.live)}</span></div>`:`<div class="mid"><b>${m.ko?esc(m.ko):"VS"}</b><span>${m.ko?"Kick-off":"Kick-off TBC"}</span></div>`;
   const cd=live?"🔴 Live now":days===0?"Today":days===1?"Tomorrow":`In ${days} days`;
@@ -643,7 +657,7 @@ function matchRow(m){
   const cc=["League","Cup","Friendly","Tournament"].includes(m.comp)?" c-"+m.comp.toLowerCase():"";
   return `<div class="match${cc}" role="button" tabindex="0" data-edit="${esc(m.id)}">
     <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
-    <div style="min-width:0"><div class="o">${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
+    <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
       <div class="meta">${cc?`<span class="ctag">${esc(compName(m.comp))}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
       ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
@@ -835,7 +849,7 @@ function liveBoard(m,L){const st=L&&L.status;const lab=st==="live"?`<span class=
   const ev=(L&&L.events)||[];const by={};ev.filter(e=>e.k==="goal").forEach(e=>{(by[e.n]=by[e.n]||[]).push(e.m)});
   const ours=Object.entries(by).map(([n,ms])=>`${esc(n)} ${ms.map(esc).join(", ")}`);const theirs=ev.filter(e=>e.k==="them").map(e=>esc(e.m));
   const sc=ours.length||theirs.length?`<div class="scorers"><div>${ours.map(x=>`<span>⚽ ${x}</span>`).join("")}</div><div>${theirs.length?`<span>⚽ ${theirs.join(", ")}</span>`:""}</div></div>`:"";
-  return `<div class="board"><div class="tm">Newton Aycliffe</div><div class="sc">${m.us??0} – ${m.them??0}<small>${lab}</small></div><div class="tm">${esc(m.opp)}</div>${sc}</div>`}
+  return `<div class="board"><div class="tm"><img src="crest.png" alt="">Newton Aycliffe</div><div class="sc">${m.us??0} – ${m.them??0}<small>${lab}</small></div><div class="tm">${badge(m.opp)}${esc(m.opp)}</div>${sc}</div>`}
 function liveView(){
   const m=LV&&matches.find(x=>x.id===LV.id);if(!m)return `<div class="card empty">Pick a fixture and tap ▶ Live match.</div>`;
   const pr=m.practice?`<div class="note"><b>Practice match.</b> Try anything: nothing is saved and parents can't see it. Tap "Practice live match" on Fixtures to start again.</div>`:"";
@@ -1001,7 +1015,8 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       await livePush({played:pl,halves:liveHalves(),us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
       const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
   }});
-document.addEventListener("change",e=>{if(e.target.dataset.pk&&PICK){const n=e.target.dataset.pk;if(e.target.checked)PICK.set.add(n);else PICK.set.delete(n);const h=e.target.closest(".card").querySelector(".av + .hint");if(h)h.textContent=`${PICK.set.size} picked.`;return}
+document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files[0]){saveBadge(e.target.dataset.badge,e.target.files[0]);return}
+  if(e.target.dataset.pk&&PICK){const n=e.target.dataset.pk;if(e.target.checked)PICK.set.add(n);else PICK.set.delete(n);const h=e.target.closest(".card").querySelector(".av + .hint");if(h)h.textContent=`${PICK.set.size} picked.`;return}
   if(!LV)return;
   if(e.target.dataset.slot!=null){const i=+e.target.dataset.slot,n=e.target.value;const j=LV.slots.indexOf(n);if(n&&j>=0&&j!==i)LV.slots[j]=LV.slots[i];LV.slots[i]=n;liveSaveLocal();render();return}
   if(e.target.id==="lvLen"){LV.halfLen=Math.max(5,+e.target.value||20);liveSaveLocal();return}
@@ -1098,7 +1113,7 @@ function oppsView(){
     .sort((a,b)=>(a.next?a.next.date:"9")<(b.next?b.next.date:"9")?-1:(a.next?a.next.date:"9")>(b.next?b.next.date:"9")?1:b.t.P-a.t.P||a.name.localeCompare(b.name));
   return `<section class="card"><h2>Head to head</h2><p class="hint" style="margin-bottom:10px">Every team we've played or are due to play, with the next game first. Last 5 reads oldest to newest. Tap a team to see every result against them.</p>
    <div class="scroll"><table class="lb"><thead><tr><th>Opponent</th><th>P</th><th>W</th><th>D</th><th>L</th><th>F</th><th>A</th><th>Last 5</th><th>Next</th></tr></thead><tbody>
-   ${rows.map(({name,t,done,next,pp})=>`<tr class="click" data-opp="${esc(name)}"><td>${esc(name)}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td><td>${t.F}</td><td>${t.A}</td>
+   ${rows.map(({name,t,done,next,pp})=>`<tr class="click" data-opp="${esc(name)}"><td>${badge(name,"sm")}${esc(name)}${canWrite&&!BADGES[oppKey(name)]?` <label class="bup" onclick="event.stopPropagation()">+ badge<input type="file" accept="image/*" data-badge="${esc(name)}"></label>`:""}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td><td>${t.F}</td><td>${t.A}</td>
      <td><div class="form" style="justify-content:flex-end">${done.slice(-5).map(m=>`<span class="chip ${result(m)}" title="${esc(m.date)} ${m.us}-${m.them}">${result(m)}</span>`).join("")||"–"}</div></td>
      <td>${next?(d=>`${d.getDate()} ${MONTHS[d.getMonth()]}`)(new Date(next.date+"T12:00:00")):pp?"Postponed":"–"}</td></tr>`).join("")}
    </tbody></table></div></section>`;
@@ -1106,7 +1121,7 @@ function oppsView(){
 function oppDetail(name){
   const k=oppKey(name);const list=sortMatches(matches.filter(m=>oppKey(m.opp)===k)).reverse();const t=teamStats(list.filter(result));
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All opponents</button>
-  <section class="card"><h2>${esc(name)}</h2>
+  <section class="card"><div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">${badge(name,"lg")}<h2 style="margin:0">${esc(name)}</h2>${canWrite?`<label class="bup btn ghost" style="margin-left:auto">${BADGES[oppKey(name)]?"Change badge":"Upload badge"}<input type="file" accept="image/*" data-badge="${esc(name)}"></label>`:""}</div>
     <div class="record">${[["P","Played",""],["W","Won","w"],["D","Drawn","d"],["L","Lost","l"],["F","Scored",""],["A","Conceded",""],["GD","Goal diff",""]].map(([k,l,c])=>`<div class="rec ${c}"><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}</div></section>
   <section class="card"><h3>Every game against them</h3><div class="list">${list.map(matchRow).join("")}</div></section></div>`;
 }
@@ -1310,6 +1325,7 @@ document.addEventListener("submit",async e=>{
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+  await loadBadges();
   await checkCoach();
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
@@ -1638,7 +1654,7 @@ function setMode(m){S.mode=m;ROOT.querySelectorAll(".gtabs button").forEach(b=>b
   $("matchPanel").hidden=(m==="month"||m==="ms");if(m==="month"){if(!S.month)S.month=new Date().toISOString().slice(0,7);MONTH_LIST=window.monthFixtures?window.monthFixtures(S.month):[];if($("gMonth"))$("gMonth").value=S.month}save();render()}
 function thumbs(){[["crestThumb","crest"],["sponsorThumb","sponsor"],["coffeyThumb","coffey"],["oppCrestThumb","opp"],["squadPhotoThumb","squadPhoto"],["ftPhotoThumb","ftPhoto"],["potmPhotoThumb","potmPhoto"],["octopusThumb","octopus"]]
   .forEach(([id,k])=>{$(id).style.backgroundImage=IMG[k]?`url("${IMG[k].src}")`:"none"})}
-async function setOppCrestFor(name){const src=oppCrests[(name||"").trim().toLowerCase()];IMG.opp=src?await loadImg(src):null;thumbs();render()}
+async function setOppCrestFor(name){const src=(window.oppBadge&&window.oppBadge(name))||oppCrests[(name||"").trim().toLowerCase()];IMG.opp=src?await loadImg(src):null;thumbs();render()}
 
 ROOT.querySelector(".gtabs").addEventListener("click",e=>{const b=e.target.closest("button[data-mode]");if(b)setMode(b.dataset.mode)});
 ["opp","date","ko","venue","comp"].forEach(k=>$(k).addEventListener("input",()=>{S[k]=$(k).value;save();if(k==="opp")setOppCrestFor(S.opp);else render()}));
@@ -1669,7 +1685,7 @@ $("sponsorName").addEventListener("input",()=>{S.sponsorName=$("sponsorName").va
 function onUpload(id,key,persist){$(id).addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;const raw=await readFile(f);let img=await loadImg(raw);if(!img)return;
   if(persist){const small=shrink(img,700);img=await loadImg(small);
     if(persist==="logo"){logos[key]=small;if(!store.set("nayfc.logos",logos))toast("Couldn't remember that logo in this browser, it'll work until you close the page.")}
-    if(persist==="opp"&&S.opp){oppCrests[S.opp.trim().toLowerCase()]=small;store.set("nayfc.oppCrests",oppCrests)}}
+    if(persist==="opp"&&S.opp){oppCrests[S.opp.trim().toLowerCase()]=small;store.set("nayfc.oppCrests",oppCrests);window.saveBadgeFile&&window.saveBadgeFile(S.opp,f)}}
   else{img=await loadImg(shrink(img,1600))}
   IMG[key]=img;thumbs();render()})}
 onUpload("crestUp","crest","logo");onUpload("sponsorUp","sponsor","logo");onUpload("coffeyUp","coffey","logo");onUpload("octopusUp","octopus","logo");onUpload("oppCrest","opp","opp");
