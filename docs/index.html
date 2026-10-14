@@ -565,7 +565,8 @@ function slug(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").r
 function teamStats(list){const s={P:0,W:0,D:0,L:0,F:0,A:0};list.forEach(m=>{const r=result(m);if(!r)return;s.P++;s[r]++;s.F+=+m.us;s.A+=+m.them});s.GD=s.F-s.A;return s}
 // keepers: {name: 1 = kept a clean sheet, 0 = in goal but conceded}. Older rows only have a single gk name.
 function keepersOf(m){if(m.keepers&&Object.keys(m.keepers).length)return m.keepers;return m.gk?{[m.gk]:result(m)&&+m.them===0?1:0}:{}}
-function playerStats(list){const out={};const get=n=>out[n]||(out[n]={apps:0,goals:0,assists:0,potm:0,appsKnown:0,gk:0,cs:0});
+function counted(m){return (result(m)||isLive(m))&&!m.postponed&&m.stage!=="placeholder"}
+function playerStats(list){list=list.filter(counted);const out={};const get=n=>out[n]||(out[n]={apps:0,goals:0,assists:0,potm:0,appsKnown:0,gk:0,cs:0});
   list.forEach(m=>{const pl=played(m);for(const [n,g] of Object.entries(pl)){const o=get(n);if(m.apps!==false)o.apps++;o.goals+=+g||0}
     for(const [n,a] of Object.entries(assistsOf(m)))get(n).assists+=+a||0;
     for(const [n,c] of Object.entries(keepersOf(m))){const o=get(n);o.gk++;o.cs+=+c?1:0}
@@ -750,7 +751,7 @@ let msgMatch=null;
 
 // ---------- milestones ----------
 const MS={apps:[[10,"10 games"],[25,"25 games"],[50,"50 games"],[75,"75 games"],[100,"100 games"]],goals:[[1,"First goal"],[10,"10 goals"],[25,"25 goals"],[50,"50 goals"],[100,"100 goals"]],assists:[[1,"First assist"],[10,"10 assists"],[25,"25 assists"]],cs:[[1,"First clean sheet"],[5,"5 clean sheets"],[10,"10 clean sheets"]],potm:[[1,"First player of the match"],[5,"5 player of the match awards"],[10,"10 player of the match awards"]]};
-function milestones(){const tot={},out=[];sortMatches(matches.filter(m=>result(m)||Object.keys(played(m)).length)).forEach(m=>{
+function milestones(){const tot={},out=[];sortMatches(matches.filter(counted)).forEach(m=>{
     const bump=(n,k,by)=>{if(!by)return;const t=tot[n]=tot[n]||{apps:0,goals:0,assists:0,potm:0,cs:0};const before=t[k];t[k]+=by;MS[k].forEach(([v,label])=>{if(before<v&&t[k]>=v)out.push({n,label,date:m.date,opp:m.opp,id:m.id})})};
     if(m.apps!==false)Object.keys(played(m)).forEach(n=>bump(n,"apps",1));
     Object.entries(played(m)).forEach(([n,g])=>bump(n,"goals",+g||0));Object.entries(assistsOf(m)).forEach(([n,a])=>bump(n,"assists",+a||0));Object.entries(keepersOf(m)).forEach(([n,c])=>bump(n,"cs",+c?1:0));if(m.potm)bump(m.potm,"potm",1)});
@@ -1142,7 +1143,7 @@ function oppDetail(name){
 function playerDetail(n){
   const ss=seasons().slice().reverse();
   const rows=ss.map(s=>{const l=sortMatches(matches.filter(m=>seasonOf(m.date)===s));const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {s,o,tracked:appsTracked(l)}}).filter(r=>r.o.goals||r.o.apps||r.o.potm||r.o.assists||r.o.gk);
-  const games=sortMatches(matches.filter(m=>n in played(m)||m.potm===n||n in assistsOf(m))).reverse();
+  const games=sortMatches(matches.filter(m=>counted(m)&&n in played(m)||m.potm===n||n in assistsOf(m))).reverse();
   const tot=playerStats(matches)[n]||{apps:0,goals:0,potm:0};
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
   <section class="card"><div class="pcard">${PHOTOS[n]?`<div class="pphoto">${pface(n,"")}<span>${esc(numOf(n))||""}</span></div>`:`<div class="big">${esc(numOf(n))||"·"}</div>`}<div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${tot.goals} career goals · ${tot.assists||0} assists · ${tot.potm} Coffey Coffee awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}</p>${canWrite?`<label class="bup btn ghost">${PHOTOS[n]?"Change photo":"Add photo"}<input type="file" accept="image/*" data-photo="${esc(n)}"></label> <span class="hint">Only coaches can see photos.</span>`:""}</div></div></section>
@@ -1173,7 +1174,7 @@ function blankForm(){return {id:null,date:new Date().toISOString().slice(0,10),o
 function formView(){
   if(!F)F=blankForm();
   const opps=[...new Set(matches.map(m=>m.opp).filter(Boolean))].sort(), venues=[...new Set(matches.map(m=>m.venue).filter(Boolean))].sort();
-  const roster=players.filter(p=>p.current||p.name in F.played).sort((a,b)=>(+a.num||99)-(+b.num||99));
+  const fs=F.date?seasonOf(F.date):season;const seasonNames=new Set(matches.filter(m=>seasonOf(m.date)===fs).flatMap(m=>Object.keys(played(m))));const roster=players.filter(p=>p.current||p.name in F.played||(fs!==todaySeason()&&seasonNames.has(p.name))).sort((a,b)=>(+a.num||99)-(+b.num||99));
   const goalSum=Object.values(F.played).reduce((a,b)=>a+(+b||0),0);
   const mism=F.us!==""&&F.us!=null&&+F.us!==goalSum;
   const playedNames=Object.keys(F.played);
