@@ -611,7 +611,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
   const cd=live?"🔴 Live now":days===0?"Today":days===1?"Tomorrow":`In ${days} days`;
   return `<section class="hero"><div class="kick">${live?"Live now":"Next match"} · ${esc(compName(m.comp||""))}</div>
     <div class="vs">${home?us:them}${mid}${home?them:us}</div>
-    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${m.venue?`<span class="pill">📍 ${esc(m.venue)}</span>`:""}<span class="pill">${m.ha==="A"?"Away":m.ha==="H"?"Home":"Venue TBC"}</span></div>
+    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${m.venue?`<span class="pill">📍 ${esc(m.venue)}</span>`:""}${m.ha==="A"||m.ha==="H"?`<span class="pill">${m.ha==="A"?"Away":"Home"}</span>`:m.venue?"":`<span class="pill">Venue TBC</span>`}</div>
     ${!live&&h.length?`<div class="h2hrow">Last time: ${h.slice(0,3).map(scChip).join(" ")}</div>`:""}
     ${live?`<div class="btns"><button class="btn gold" data-tl="${esc(m.id)}">Follow live</button></div>`:""}</section>`}
 function homeView(){
