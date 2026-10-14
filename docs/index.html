@@ -259,7 +259,13 @@ textarea{min-height:70px;resize:vertical}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;max-width:calc(100% - 32px)}
 .empty{padding:28px 16px;text-align:center;color:var(--muted)}
 .sq{display:grid;grid-template-columns:minmax(0,1fr) 80px auto;gap:8px;align-items:center}
+.gflash{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:rgba(8,14,60,.94);cursor:pointer;animation:gfbg .35s steps(1) 8}
+.gf-in{text-align:center;color:#fff;font-family:var(--display)}.gf-in b{display:block;font:400 clamp(72px,22vw,180px)/1 var(--display);color:#FFD400;letter-spacing:.04em;text-shadow:0 6px 0 #2235E8,0 0 30px rgba(255,212,0,.6);animation:gfblink .35s steps(1) infinite}
+.gf-in span{display:block;margin-top:14px;font-size:clamp(26px,7vw,48px)}.gf-in em{display:block;margin-top:8px;font:700 18px var(--body);font-style:normal;opacity:.85}
+@keyframes gfblink{50%{color:#fff;text-shadow:0 6px 0 #FFD400}}@keyframes gfbg{50%{background:rgba(34,53,232,.95)}}
 .pcard{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.pphoto{position:relative;width:96px;height:96px}.pphoto img{width:96px;height:96px;border-radius:16px;object-fit:cover;border:3px solid var(--gold)}.pphoto span:not(:empty){position:absolute;right:-6px;bottom:-6px;min-width:28px;height:28px;padding:0 4px;border-radius:8px;display:grid;place-items:center;background:var(--gold);color:var(--goldInk);font:400 14px var(--display)}
+.pthumb{width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;border:2px solid var(--gold)}
 .pcard .big{display:grid;place-items:center;width:72px;height:72px;border-radius:14px;background:var(--gold);color:var(--goldInk);font:400 34px var(--display)}
 .ro .edit-only{display:none!important}
 [hidden]{display:none!important}
@@ -318,7 +324,7 @@ body{background:var(--bg) radial-gradient(1200px 500px at 50% -200px,rgba(34,53,
 .mast .in{position:relative;z-index:1;padding-block:20px 24px}
 .crest{width:96px;padding:4px;box-shadow:0 0 0 4px var(--gold),0 10px 30px rgba(0,0,0,.45)}
 .mast h1{font-size:clamp(24px,5vw,40px);text-transform:uppercase;letter-spacing:.02em;text-shadow:0 3px 0 rgba(0,0,0,.25)}
-.mast h1 em{font-style:normal;color:var(--gold)}
+.mast h1 em{font-style:normal;color:var(--gold)}.mast h1 .lc{text-transform:none}
 .mast p{font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px;opacity:.9}
 .mast select{background:rgba(255,255,255,.12);backdrop-filter:blur(4px)}
 nav.tabs{position:sticky;top:0;z-index:30;max-width:none;margin:0;padding:10px max(16px,calc((100% - 1100px)/2 + 16px));background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
@@ -380,7 +386,7 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
   <div class="in">
     <img class="crest" src="crest.png" alt="Newton Aycliffe Youth Football Club badge">
     <div>
-      <h1>Newton Aycliffe <em>Under 9s</em></h1>
+      <h1>Newton Aycliffe <em>Under 9<span class="lc">s</span></em></h1>
       <p>Youth Football Club · Girls</p>
     </div>
     <div class="auth" id="auth"></div>
@@ -700,6 +706,11 @@ function isLive(m){return !!(m.live&&(m.live.status==="live"||m.live.status==="h
 function isFixture(m){if(isLive(m))return true;return !result(m)&&(m.postponed||(m.date||"")>=new Date().toISOString().slice(0,10))}
 // ---------- availability (parents answer; only coaches can read) ----------
 let AV={};// {match_id:{player:status}}
+let PHOTOS={};// coach-only player photos {name:dataURL}
+async function loadPhotos(){if(!sb||!canWrite){PHOTOS={};return}const {data}=await sb.from("player_photos").select("player,img");PHOTOS={};(data||[]).forEach(r=>PHOTOS[r.player]=r.img)}
+function pface(n,cls){return PHOTOS[n]?`<img class="${cls}" src="${PHOTOS[n]}" alt="">`:""}
+function shrinkPhoto(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=300,c=document.createElement("canvas"),k=Math.min(im.width,im.height);c.width=c.height=S;c.getContext("2d").drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,0,0,S,S);ok(c.toDataURL("image/jpeg",.82))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
+async function savePhoto(n,file){try{const img=await shrinkPhoto(file);const {error}=await sb.from("player_photos").upsert({player:n,img});if(error)throw error;PHOTOS[n]=img;toast(`Photo saved for ${n}.`);render()}catch(e){toast("Couldn't save that photo. Try a JPG or PNG.")}}
 async function loadAvail(){if(!sb||!canWrite){AV={};return}const {data}=await sb.from("availability").select("*");AV={};(data||[]).forEach(r=>{(AV[r.match_id]=AV[r.match_id]||{})[r.player]=r.status})}
 function avSummary(id){const a=AV[id]||{};const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));
   return `Availability: ✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${c.no.length?` (can't make it: ${c.no.map(esc).join(", ")})`:""}`}
@@ -890,12 +901,13 @@ function renderTicker(){const el=document.getElementById("ticker");if(!el)return
   const items=L.map(m=>{const g=(m.live.events||[]).filter(e=>e.k==="goal").map(e=>`${e.n} ${e.m}`).join(", ");const st=m.live.status==="live"?`🔴 LIVE ${minuteOf(m.live)}`:m.live.status==="ht"?"⏸ HALF TIME":"🏁 FULL TIME";
     return `<button class="tk" data-tl="${esc(m.id)}">${m.practice?"PRACTICE · ":""}${st} · Newton Aycliffe ${m.us??0}–${m.them??0} ${esc(m.opp)}${g?` · ⚽ ${esc(g)}`:""} · Tap to follow</button>`}).join("");
   const h=`<div class="tkin">${items}${items}</div>`;el.hidden=false;if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
+window.goalFlash=goalFlash;function goalFlash(n,score){document.querySelectorAll(".gflash").forEach(x=>x.remove());const d=document.createElement("div");d.className="gflash";d.innerHTML=`<div class="gf-in"><b>GOAL!</b>${n?`<span>${esc(n)}</span>`:""}${score?`<em>${esc(score)}</em>`:""}</div>`;d.onclick=()=>d.remove();document.body.appendChild(d);try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}setTimeout(()=>d.remove(),3600)}
 async function pollLive(){if(!sb||!matches.length)return;const t=todayLocal();if(!matches.some(m=>m.date===t||(m.live&&(m.live.status==="live"||m.live.status==="ht"))))return;
   try{const {data}=await sb.from("matches").select("id,us,them,live,played,assists,keepers,date").eq("date",t);
-    (data||[]).forEach(r=>{if(LV&&LV.id===r.id&&view==="live")return;const m=matches.find(x=>x.id===r.id);if(m)Object.assign(m,r)});}catch(e){}
+    (data||[]).forEach(r=>{if(LV&&LV.id===r.id&&view==="live")return;const m=matches.find(x=>x.id===r.id);if(m){if(m.us!=null&&+r.us>+m.us&&r.live&&r.live.status!=="ft"){const g=((r.live.events||[]).filter(e=>e.k==="goal").pop()||{});goalFlash(g.n,`Aycliffe ${r.us}-${r.them} ${m.opp}`)}Object.assign(m,r)}});}catch(e){}
   renderTicker();if(view==="tl")render()}
 setInterval(pollLive,15000);setInterval(()=>{renderTicker();if(view==="live"&&LV&&LV.status==="live"&&!LV.ask&&LV.subSlot==null){const b=document.querySelector(".live .board small");if(b)b.innerHTML=`<span class="lv">LIVE</span> ${minuteOf(LV)}`}},20000);
-async function liveGoal(n){const m=matches.find(x=>x.id===LV.id);const pl=Object.assign({},m.played||{});pl[n]=(pl[n]||0)+1;m.played=pl;m.us=(+m.us||0)+1;addEv({k:"goal",n});LV.ask=n;liveSaveLocal();render();await livePush({played:pl,us:m.us})}
+async function liveGoal(n){const m=matches.find(x=>x.id===LV.id);const pl=Object.assign({},m.played||{});pl[n]=(pl[n]||0)+1;m.played=pl;m.us=(+m.us||0)+1;addEv({k:"goal",n});LV.ask=n;liveSaveLocal();render();goalFlash(n,`Aycliffe ${m.us}-${+m.them||0} ${m.opp}`);await livePush({played:pl,us:m.us})}
 async function liveAssist(n){const m=matches.find(x=>x.id===LV.id);const ev=LV.events[LV.events.length-1];if(n){const a=Object.assign({},m.assists||{});a[n]=(a[n]||0)+1;m.assists=a;if(ev&&ev.k==="goal")ev.a=n}LV.ask=null;liveSaveLocal();render();await livePush({assists:m.assists||{}})}
 function liveFinishPlayed(m){const pl=Object.assign({},m.played||{});Object.keys(LV.mins).concat(Object.keys(LV.onSince)).forEach(n=>{if(!(n in pl))pl[n]=0});return pl}
 function liveHalves(){const h={};[1,2].forEach(q=>(LV.touched[q]||[]).forEach(n=>h[n]=(h[n]||0)+1));return h}
@@ -1015,7 +1027,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       await livePush({played:pl,halves:liveHalves(),us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
       const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
   }});
-document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files[0]){saveBadge(e.target.dataset.badge,e.target.files[0]);return}
+document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files[0]){saveBadge(e.target.dataset.badge,e.target.files[0]);return}if(e.target.dataset.photo&&e.target.files[0]){savePhoto(e.target.dataset.photo,e.target.files[0]);return}
   if(e.target.dataset.pk&&PICK){const n=e.target.dataset.pk;if(e.target.checked)PICK.set.add(n);else PICK.set.delete(n);const h=e.target.closest(".card").querySelector(".av + .hint");if(h)h.textContent=`${PICK.set.size} picked.`;return}
   if(!LV)return;
   if(e.target.dataset.slot!=null){const i=+e.target.dataset.slot,n=e.target.value;const j=LV.slots.indexOf(n);if(n&&j>=0&&j!==i)LV.slots[j]=LV.slots[i];LV.slots[i]=n;liveSaveLocal();render();return}
@@ -1095,7 +1107,7 @@ function playersView(){
   <section class="card"><h2>${what[0].toUpperCase()+what.slice(1)}</h2>
    <p class="hint" style="margin-bottom:10px">${list.length} game${list.length===1?"":"s"}${career?" across "+new Set(list.map(m=>seasonOf(m.date))).size+" seasons":""} · ${tot.g} goals${at?` · ${tot.a} assists`:""}.${tracked?(career?" Appearances only count games where the team sheet was recorded (most of last season wasn't).":""):" Appearances weren't recorded for these games, so only goals and awards show."}${career?" Assists are recorded from 2026-27.":""}</p>
    <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th>${at?"<th>Assists</th>":""}${showCs?"<th>Clean sheets <span class='hint'>/ in goal</span></th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${tracked?"<th>Goals per game</th>":""}</tr></thead><tbody>
-   ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
+   ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
    </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her record split by season and competition.</p></section>`;
 }
 function compSplit(n,list,ts){
@@ -1132,7 +1144,7 @@ function playerDetail(n){
   const games=sortMatches(matches.filter(m=>n in played(m)||m.potm===n||n in assistsOf(m))).reverse();
   const tot=playerStats(matches)[n]||{apps:0,goals:0,potm:0};
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
-  <section class="card"><div class="pcard"><div class="big">${esc(numOf(n))||"·"}</div><div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${tot.goals} career goals · ${tot.assists||0} assists · ${tot.potm} Coffey Coffee awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}</p></div></div></section>
+  <section class="card"><div class="pcard">${PHOTOS[n]?`<div class="pphoto">${pface(n,"")}<span>${esc(numOf(n))||""}</span></div>`:`<div class="big">${esc(numOf(n))||"·"}</div>`}<div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${tot.goals} career goals · ${tot.assists||0} assists · ${tot.potm} Coffey Coffee awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}</p>${canWrite?`<label class="bup btn ghost">${PHOTOS[n]?"Change photo":"Add photo"}<input type="file" accept="image/*" data-photo="${esc(n)}"></label> <span class="hint">Only coaches can see photos.</span>`:""}</div></div></section>
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
   <div class="grid2"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
   <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
@@ -1296,7 +1308,7 @@ async function checkCoach(){
   canWrite=false;
   if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
   if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book"].includes(view))view="home";
-  await loadAvail();
+  await loadAvail();await loadPhotos();
   authBox();render();
 }
 document.addEventListener("click",async e=>{

@@ -144,3 +144,10 @@ create table if not exists public.badges(key text primary key, name text, img te
 alter table public.badges enable row level security;
 create policy "public read badges" on public.badges for select using (true);
 create policy "coaches write badges" on public.badges for all using (public.is_coach()) with check (public.is_coach());
+
+-- Player photos: coaches only (never public)
+create table if not exists public.player_photos(player text primary key, img text not null, updated timestamptz default now());
+alter table public.player_photos enable row level security;
+create policy "coaches read photos" on public.player_photos for select using (public.is_coach());
+create policy "coaches write photos" on public.player_photos for all using (public.is_coach()) with check (public.is_coach());
+grant select, insert, update, delete on public.player_photos to authenticated;
