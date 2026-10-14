@@ -65,6 +65,7 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .match[class*=" c-"]{border:2px solid var(--cc);border-left-width:8px}
 .ctag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--cc);color:#fff;font:700 11px var(--body);text-transform:uppercase;letter-spacing:.05em;margin-right:6px;vertical-align:1px}
 .c-cup .ctag{color:#111}
+.ctag.c-league{--cc:#2235E8}.ctag.c-cup{--cc:#E0A800;color:#111}.ctag.c-friendly{--cc:#1AA8A0}.ctag.c-tournament{--cc:#8B3FD9}
 .ckey{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}.ckey .cf{all:unset;display:inline-flex;align-items:center;cursor:pointer;border-radius:8px;padding:2px;border:2px solid transparent;opacity:.55;font:700 12px var(--body)}
 .ckey .cf.on{opacity:1;border-color:var(--ink)}.ckey .cf:hover{opacity:1}.ckey .cf[data-cf=""]{padding:2px 9px;background:var(--card);border-color:var(--line)}.ckey .cf[data-cf=""].on{border-color:var(--ink)}
 .match.tcard{display:block;cursor:default}
@@ -762,6 +763,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.blay){BOOK_LAYOUT=b.dataset.blay;render()}
   if(b.id==="bookPrint")window.print();
   if(b.dataset.cf!=null&&b.closest(".ckey")){compFilter=b.dataset.cf||null;render()}
+  if(b.dataset.pscope){pScope=b.dataset.pscope;render()}
   if(b.dataset.live){liveStart(b.dataset.live)}
   if(b.dataset.gmonth){setView("gfx");GFX.loadMonth(new Date().toISOString().slice(0,7))}
   if(b.dataset.msg){msgMatch=b.dataset.msg;setView("msg")}
@@ -843,16 +845,30 @@ async function saveHonour(){
   try{await db.collection("honours").doc(H.id||`${body.date||"undated"}-${slug(body.title)}`).set(body);toast("Added to the honours board.");H=null;setView("honours")}catch(e){toast("Couldn't save. Try again.")}
 }
 
+let pScope="season";
+const COMPS=["League","Cup","Friendly","Tournament"];
+function pottCount(n,ts){return ts.filter(t=>t.potm===n).length}
 function playersView(){
-  const list=seasonMatches(),ps=playerStats(list),tracked=appsTracked(list),at=assistsTracked(season);
-  const all=matches,career=playerStats(all);
-  const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps)])];
-  const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,assists:0,potm:0},c:career[n]||{goals:0,potm:0}})).sort((a,b)=>b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
-  return `<section class="card"><h2>${season} players</h2>
-   ${tracked?"":`<p class="hint" style="margin-bottom:10px">Appearances weren't recorded this season, so only goals and awards show.</p>`}
-   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th>${at?"<th>Assists</th>":""}<th>PotM</th>${tracked?"<th>Per game</th>":""}<th>Career goals</th><th>Career PotM</th></tr></thead><tbody>
-   ${rows.map(({n,o,c})=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}<td>${o.potm}</td>${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}<td>${c.goals}</td><td>${c.potm}</td></tr>`).join("")}
-   </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her match-by-match record.</p></section>`;
+  const career=pScope==="career";
+  const base=career?sortMatches(matches.filter(m=>m.stage!=="placeholder")):seasonMatches();
+  const list=byComp(base),ps=playerStats(list),tracked=appsTracked(list),at=career||assistsTracked(season);
+  const ts=(!compFilter||compFilter==="Tournament")?(career?tournaments:seasonTournaments()):[];const showPott=ts.some(t=>t.potm);
+  const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps).filter(n=>{const o=ps[n];return o.apps||o.goals||o.assists||o.potm}),...ts.map(t=>t.potm).filter(Boolean)])];
+  const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,assists:0,potm:0},pt:pottCount(n,ts)})).sort((a,b)=>b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
+  const what=(compFilter?compFilter.toLowerCase()+" ":"")+(career?"career stats, all seasons":`stats, ${season}`);
+  const tot=rows.reduce((a,{o})=>({g:a.g+o.goals,a:a.a+o.assists}),{g:0,a:0});
+  return `<div class="btns" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Season or career"><button data-pscope="season" aria-pressed="${!career}">${esc(season)}</button><button data-pscope="career" aria-pressed="${career}">Career (all seasons)</button></div></div>
+  ${CKEY()}
+  <section class="card"><h2>${what[0].toUpperCase()+what.slice(1)}</h2>
+   <p class="hint" style="margin-bottom:10px">${list.length} game${list.length===1?"":"s"}${career?" across "+new Set(list.map(m=>seasonOf(m.date))).size+" seasons":""} · ${tot.g} goals${at?` · ${tot.a} assists`:""}.${tracked?(career?" Appearances only count games where the team sheet was recorded (most of last season wasn't).":""):" Appearances weren't recorded for these games, so only goals and awards show."}${career?" Assists are recorded from 2026-27.":""}</p>
+   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th>${at?"<th>Assists</th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${tracked?"<th>Goals per game</th>":""}</tr></thead><tbody>
+   ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
+   </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her record split by season and competition.</p></section>`;
+}
+function compSplit(n,list,ts){
+  const rows=COMPS.map(c=>{const l=list.filter(m=>m.comp===c);const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {c,o,tracked:appsTracked(l),pt:c==="Tournament"?pottCount(n,ts):0}}).filter(r=>r.o.apps||r.o.goals||r.o.assists||r.o.potm||r.pt);
+  if(!rows.length)return `<p class="hint">Nothing recorded yet.</p>`;
+  return `<table class="lb"><thead><tr><th></th><th>Apps</th><th>Goals</th><th>Assists</th><th>PotM</th></tr></thead><tbody>${rows.map(r=>`<tr><td><span class="ctag c-${r.c.toLowerCase()}">${r.c}</span></td><td>${r.tracked?r.o.apps:"–"}</td><td><b>${r.o.goals}</b></td><td>${r.o.assists}</td><td>${r.o.potm}${r.pt?` <span class="hint">+${r.pt} tournament</span>`:""}</td></tr>`).join("")}</tbody></table>`;
 }
 
 function oppsView(){
@@ -885,6 +901,8 @@ function playerDetail(n){
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
   <section class="card"><div class="pcard"><div class="big">${esc(numOf(n))||"·"}</div><div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${tot.goals} career goals · ${tot.assists||0} assists · ${tot.potm} Coffey Coffee awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}</p></div></div></section>
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
+  <div class="grid2"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
+  <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
   <section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>Goals</th><th>Assists</th><th>PotM</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps:"–"}</td><td>${r.o.goals}</td><td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.potm}</td></tr>`).join("")}</tbody></table></section>
   <section class="card"><h3>Matches</h3><div class="list">${games.map(matchRow).join("")||`<p class="hint">No matches logged yet.</p>`}</div></section></div>`;
