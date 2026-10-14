@@ -304,6 +304,60 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
+/* ---------- matchday theme (Oct 2026 refresh) ---------- */
+body{background:var(--bg) radial-gradient(1200px 500px at 50% -200px,rgba(34,53,232,.10),transparent) no-repeat}
+.mast{position:relative;overflow:hidden;border-bottom:0;background:
+  linear-gradient(115deg,transparent 0 80%,rgba(255,210,0,.95) 80% 81%,transparent 81% 82.6%,rgba(255,210,0,.55) 82.6% 83.1%,transparent 83.1%),
+  repeating-linear-gradient(115deg,rgba(255,255,255,.035) 0 22px,transparent 22px 44px),
+  radial-gradient(900px 300px at 10% 0%,#3446FF 0%,transparent 60%),
+  linear-gradient(160deg,#1A2BC9 0%,#0E1677 70%,#0A1052 100%)}
+.mast:after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:linear-gradient(90deg,var(--gold),#FFE980 50%,var(--gold))}
+.mast .in{position:relative;z-index:1;padding-block:20px 24px}
+.crest{width:96px;padding:4px;box-shadow:0 0 0 4px var(--gold),0 10px 30px rgba(0,0,0,.45)}
+.mast h1{font-size:clamp(24px,5vw,40px);text-transform:uppercase;letter-spacing:.02em;text-shadow:0 3px 0 rgba(0,0,0,.25)}
+.mast h1 em{font-style:normal;color:var(--gold)}
+.mast p{font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px;opacity:.9}
+.mast select{background:rgba(255,255,255,.12);backdrop-filter:blur(4px)}
+nav.tabs{position:sticky;top:0;z-index:30;max-width:none;margin:0;padding:10px max(16px,calc((100% - 1100px)/2 + 16px));background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav.tabs button{font:800 12.5px var(--body);text-transform:uppercase;letter-spacing:.06em;padding:9px 14px;border-color:transparent;background:transparent;transition:background .15s,color .15s}
+nav.tabs button:hover{background:var(--card);border-color:var(--line)}
+nav.tabs button[aria-current="page"]{background:linear-gradient(180deg,#3446FF,var(--club));box-shadow:0 4px 14px rgba(34,53,232,.35)}
+nav.tabs .add{box-shadow:0 4px 14px rgba(255,210,0,.35)}
+.card{border-radius:18px;border-color:transparent;box-shadow:0 1px 2px rgba(18,23,51,.06),0 8px 24px rgba(18,23,51,.06)}
+h3{display:flex;align-items:center;gap:8px;color:var(--ink)}
+h3:before{content:"";width:4px;height:14px;border-radius:2px;background:linear-gradient(var(--gold),#FFB800)}
+h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:10px}
+.rec{background:linear-gradient(180deg,var(--field),var(--card));border:1px solid var(--line);border-radius:14px;padding:12px 6px}
+.rec b{font-size:30px}
+.rec.w{background:linear-gradient(180deg,rgba(28,138,68,.14),transparent)}.rec.d{background:linear-gradient(180deg,rgba(176,122,0,.14),transparent)}.rec.l{background:linear-gradient(180deg,rgba(192,38,45,.14),transparent)}
+.chip{border-radius:8px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.bar i{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--club),#5C6CFF 70%,var(--gold))}
+.lb tbody tr:first-child td:first-child:before{content:"🥇 "}
+.match{border-radius:16px;transition:transform .12s,box-shadow .12s}
+.match:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(18,23,51,.12)}
+.match .sc{font-size:26px}
+/* next match hero */
+.hero{position:relative;overflow:hidden;border-radius:22px;color:#fff;padding:20px;background:
+  repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 40px,transparent 40px 80px),
+  radial-gradient(600px 220px at 50% 120%,rgba(255,210,0,.35),transparent 70%),
+  linear-gradient(160deg,#1A2BC9,#0B1260);box-shadow:0 14px 40px rgba(14,22,119,.35)}
+.hero:before{content:"";position:absolute;left:50%;top:-40px;width:180px;height:180px;margin-left:-90px;border:2px solid rgba(255,255,255,.12);border-radius:50%}
+.hero .kick{position:relative;font:800 12px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);text-align:center}
+.hero .vs{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin:14px 0}
+.hero .side{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;font:800 15px var(--body);min-width:0}
+.hero .side img,.hero .side .ini{width:78px;height:78px;border-radius:50%;background:#fff;object-fit:contain;padding:4px;box-shadow:0 0 0 3px var(--gold)}
+.hero .side .ini{display:grid;place-items:center;color:#111;font:400 26px var(--display);box-shadow:0 0 0 3px rgba(255,255,255,.6)}
+.hero .mid{text-align:center}
+.hero .mid b{display:block;font:400 clamp(34px,8vw,54px) var(--display);color:var(--gold);line-height:1}
+.hero .mid span{font:800 12px var(--body);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero .meta{position:relative;display:flex;justify-content:center;flex-wrap:wrap;gap:8px}
+.hero .pill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 12px;font:700 13px var(--body)}
+.hero .pill.cd{background:var(--gold);color:#111;border-color:var(--gold)}
+.hero .h2hrow{position:relative;text-align:center;margin-top:10px;font-size:13px;opacity:.9}
+.ctag{white-space:nowrap}
+@media (max-width:700px){nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}nav.tabs::-webkit-scrollbar{display:none}nav.tabs button{flex:none}
+  .mast .in{padding-block:14px 18px}.crest{width:70px}}
+.hero .btns{position:relative;justify-content:center;margin-top:12px}
 </style>
 
 <link rel="manifest" href="manifest.webmanifest">
@@ -317,8 +371,8 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
   <div class="in">
     <img class="crest" src="crest.png" alt="Newton Aycliffe Youth Football Club badge">
     <div>
-      <h1>Newton Aycliffe Under 9s</h1>
-      <p>Results, player stats and matchday graphics</p>
+      <h1>Newton Aycliffe <em>Under 9s</em></h1>
+      <p>Youth Football Club · Girls</p>
     </div>
     <div class="auth" id="auth"></div>
     <div class="season"><label class="f" style="color:inherit" for="season">Season<select id="season"></select></label></div>
@@ -524,6 +578,18 @@ function render(){
   document.body.classList.toggle("ro",!canWrite);
 }
 
+function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=live||nextFixture();if(!m)return "";
+  const d=new Date(m.date+"T12:00:00");const days=Math.round((d-new Date(todayLocal()+"T12:00:00"))/864e5);
+  const ini=(m.opp||"?").split(/\s+/).filter(w=>!/^(fc|afc|the)$/i.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase();
+  const us=`<div class="side"><img src="crest.png" alt=""><span>Newton Aycliffe</span></div>`,them=`<div class="side"><span class="ini">${esc(ini)}</span><span>${esc(m.opp)}</span></div>`;
+  const home=m.ha!=="A";const h=meetings(m.opp,m.date);
+  const mid=live?`<div class="mid"><b>${m.us??0}–${m.them??0}</b><span>${m.live.status==="ht"?"Half time":"Live "+minuteOf(m.live)}</span></div>`:`<div class="mid"><b>${m.ko?esc(m.ko):"VS"}</b><span>${m.ko?"Kick-off":"Kick-off TBC"}</span></div>`;
+  const cd=live?"🔴 Live now":days===0?"Today":days===1?"Tomorrow":`In ${days} days`;
+  return `<section class="hero"><div class="kick">${live?"Live now":"Next match"} · ${esc(compName(m.comp||""))}</div>
+    <div class="vs">${home?us:them}${mid}${home?them:us}</div>
+    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${m.venue?`<span class="pill">📍 ${esc(m.venue)}</span>`:""}<span class="pill">${m.ha==="A"?"Away":m.ha==="H"?"Home":"Venue TBC"}</span></div>
+    ${!live&&h.length?`<div class="h2hrow">Last time: ${h.slice(0,3).map(scChip).join(" ")}</div>`:""}
+    ${live?`<div class="btns"><button class="btn gold" data-tl="${esc(m.id)}">Follow live</button></div>`:""}</section>`}
 function homeView(){
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -540,6 +606,7 @@ function homeView(){
   const REC=t=>`<div class="record">${[["P","Played",""],["W","Won","w"],["D","Drawn","d"],["L","Lost","l"],["F","Scored",""],["A","Conceded",""],["GD","Goal diff",""]].map(([k,l,c])=>`<div class="rec ${c}"><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}</div>`;
   return `<div class="stack">
   ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
+  ${heroHtml()}
   <h2 class="sect"><span class="ctag c-league">${LEAGUE_NAME}</span> ${season}</h2>
   <section class="card"><h3>${LEAGUE_NAME} record</h3>${REC(lt)}
       ${ldone.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${ldone.slice(-6).map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}</section>
