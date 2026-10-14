@@ -193,6 +193,7 @@ ol.tl li.ft,ol.tl li.ht{font-weight:700}
 .kp[aria-pressed="true"]{background:#1AA8A0;border-color:#1AA8A0;color:#fff}
 .kp.cs[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#111}
 .kps{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+h2.sect{font:400 22px var(--display);margin:6px 2px -4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}h2.sect .ctag{font-size:14px;padding:3px 10px}
 .ptbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;min-width:80px}.ptbar i{display:block;height:100%;background:var(--club)}
 .h2h{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:4px;font:600 12px var(--body);color:var(--muted)}
 .sc-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:6px;font:700 12px var(--body);color:#fff}
@@ -533,19 +534,32 @@ function homeView(){
   const max=scorers[0]?.[1].goals||1;
   const latest=done[done.length-1];
   const upcoming=list.filter(m=>!result(m)&&!m.postponed&&m.date>=new Date().toISOString().slice(0,10))[0];
+  const lg=list.filter(m=>m.comp==="League"),lt=teamStats(lg),lps=playerStats(lg),ldone=lg.filter(result);
+  const lsc=Object.entries(lps).filter(([,o])=>o.goals>0).sort((a,b)=>b[1].goals-a[1].goals||a[0].localeCompare(b[0]));const lmax=lsc[0]?.[1].goals||1;
+  const lnext=lg.filter(m=>!result(m)&&!m.postponed&&m.date>=new Date().toISOString().slice(0,10))[0];
+  const REC=t=>`<div class="record">${[["P","Played",""],["W","Won","w"],["D","Drawn","d"],["L","Lost","l"],["F","Scored",""],["A","Conceded",""],["GD","Goal diff",""]].map(([k,l,c])=>`<div class="rec ${c}"><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}</div>`;
   return `<div class="stack">
   ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
-  <section class="card"><h3>${season} record</h3>
+  <h2 class="sect"><span class="ctag c-league">League</span> ${season}</h2>
+  <section class="card"><h3>League record</h3>${REC(lt)}
+      ${ldone.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${ldone.slice(-6).map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}</section>
+  <div class="cols">
+    <section class="card">${ldone.length?`<h3>Latest league result</h3>${matchRow(ldone[ldone.length-1])}`:""}
+      ${lnext?`<h3 style="margin-top:14px">Next league game</h3>${matchRow(lnext)}`:""}</section>
+    <section class="card"><h3>League goalscorers</h3>${lsc.length?`<table class="lb"><tbody>${lsc.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/lmax*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No league goals yet.</p>`}</section>
+  </div>
+  <h2 class="sect">All games ${season} <span class="hint">league, cup, friendlies and tournaments</span></h2>
+  <section class="card"><h3>Overall record</h3>
     <div class="record">
       ${[["P","Played",""],["W","Won","w"],["D","Drawn","d"],["L","Lost","l"],["F","Scored",""],["A","Conceded",""],["GD","Goal diff",""]].map(([k,l,c])=>`<div class="rec ${c}"><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}
     </div>
     ${last.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${last.map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}
   </section>
   <div class="cols">
-    <section class="card"><h3>Latest result</h3>${latest?matchRow(latest):`<p class="hint">No results yet this season.</p>`}
+    <section class="card"><h3>Latest result, any competition</h3>${latest?matchRow(latest):`<p class="hint">No results yet this season.</p>`}
       ${upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:""}</section>
     ${(ms=>ms.length?`<section class="card"><h3>Recent milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>(x.date||"")>=new Date(Date.now()-60*864e5).toISOString().slice(0,10)).slice(0,6))}
-    <section class="card"><h3>Top scorers</h3>${scorers.length?`<table class="lb"><tbody>${scorers.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/max*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No goals logged yet.</p>`}</section>
+    <section class="card"><h3>Top scorers, all games</h3>${scorers.length?`<table class="lb"><tbody>${scorers.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/max*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No goals logged yet.</p>`}</section>
     ${assistsTracked(season)?`<section class="card"><h3>Top assists</h3>${assisters.length?`<table class="lb"><tbody>${assisters.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.assists/assisters[0][1].assists*100)}%"></i><b>${o.assists}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No assists logged yet.</p>`}</section>`:""}
     <section class="card"><h3>Coffey Coffee player of the match</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td><span class="potm">${"☕".repeat(Math.min(o.potm,6))}</span> <b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No awards logged yet.</p>`}</section>
   </div></div>`;
