@@ -135,3 +135,6 @@ alter table public.matches add column if not exists keepers jsonb default '{}'::
 -- Halves played per player {"Name": 0-2} (replaces the unused quarters column), and the squad picked before a fixture
 alter table public.matches add column if not exists halves jsonb default '{}'::jsonb;
 alter table public.matches add column if not exists squad jsonb;
+
+-- Live match state, public so parents can follow: {status, half, halfStart, halfLen, form, slots, squad, events, mins}
+alter table public.matches add column if not exists live jsonb;

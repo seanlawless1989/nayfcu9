@@ -142,6 +142,28 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .live{display:flex;flex-direction:column;gap:12px}
 .live .board{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;background:var(--clubDeep);color:#fff;border-radius:14px;padding:14px}
 .live .board .tm{text-align:center;font-weight:800}.live .board .sc{font:400 54px var(--display);color:var(--gold);text-align:center;line-height:1}
+.live .board .sc small{display:block;font:800 13px var(--body);color:#fff;margin-top:6px;letter-spacing:.04em}
+.lv{background:#E53935;color:#fff;border-radius:4px;padding:1px 6px;margin-right:4px;animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.55}}
+.pitch{position:relative;width:100%;max-width:420px;aspect-ratio:3/4;margin:6px auto;border-radius:12px;background:repeating-linear-gradient(0deg,#2E8B3E 0 12.5%,#33963F 12.5% 25%);border:3px solid #fff;overflow:hidden}
+.pitch:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:2px solid rgba(255,255,255,.8)}
+.pitch:after{content:"";position:absolute;left:30%;right:30%;bottom:0;height:16%;border:2px solid rgba(255,255,255,.8);border-bottom:0}
+.spot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;z-index:1}
+.spot b{width:40px;height:40px;border-radius:50%;background:var(--gold);color:#111;display:grid;place-items:center;font:400 18px var(--display);border:2px solid #111}
+.spot.gk b{background:#1AA8A0;color:#fff}
+.spot span{background:rgba(0,0,0,.65);color:#fff;font:700 12px var(--body);padding:1px 6px;border-radius:6px;white-space:nowrap}
+.spot select{max-width:120px;font:700 13px var(--body);padding:6px;border-radius:8px}
+ol.tl{list-style:none;margin:0;padding:0}
+ol.tl li{display:grid;grid-template-columns:48px 26px 1fr;gap:6px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+ol.tl li .mn{font:400 16px var(--display);color:var(--muted)}
+ol.tl li.goal{background:linear-gradient(90deg,rgba(255,210,0,.25),transparent)}
+ol.tl li.ft,ol.tl li.ht{font-weight:700}
+.ticker{background:#111;color:#fff;overflow:hidden;white-space:nowrap;border-bottom:3px solid #E53935}
+.ticker .tkin{display:inline-block;animation:tick 28s linear infinite;padding:8px 0}
+.ticker:hover .tkin{animation-play-state:paused}
+.ticker .tk{background:none;border:0;color:#fff;font:800 15px var(--body);padding:0 40px;cursor:pointer}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker .tkin{animation:none}}
 .live .qbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .live .qbar .q{padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);font-weight:800}.live .qbar .q.on{background:var(--gold);color:#111;border-color:var(--gold)}
 .lp{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
@@ -301,6 +323,7 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
     <div class="season"><label class="f" style="color:inherit" for="season">Season<select id="season"></select></label></div>
   </div>
 </header>
+<div id="ticker" class="ticker" hidden></div>
 <nav class="tabs" aria-label="Sections">
   <button data-view="home" aria-current="page">Season</button>
   <button data-view="fixtures">Fixtures</button>
@@ -479,12 +502,14 @@ function render(){
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
   const main=$("#main");const gv=view==="gfx";main.hidden=gv;$("#gfxView").hidden=!gv;if(gv){window.GFX&&GFX.refresh();document.body.classList.toggle("ro",!canWrite);return}
   if(!db){main.innerHTML=`<div class="card empty">Loading the results…</div>`;return}
+  renderTicker();
   if(view==="home")main.innerHTML=homeView();
   else if(view==="results")main.innerHTML=resultsView();
   else if(view==="fixtures")main.innerHTML=fixturesView();
   else if(view==="honours")main.innerHTML=honoursView();
   else if(view==="review")main.innerHTML=reviewView();
   else if(view==="live")main.innerHTML=liveView();
+  else if(view==="tl")main.innerHTML=tlView();
   else if(view==="pick")main.innerHTML=pickView();
   else if(view==="avail")main.innerHTML=availView();
   else if(view==="msg")main.innerHTML=msgView();
@@ -539,7 +564,8 @@ function matchRow(m){
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}</div>
     <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:m.postponed?`<span class="chip P" title="Postponed">P</span>`:`<span class="chip N">${m.comp==="Tournament"?"T":"–"}</span>`}</div>
-    <div class="mg edit-only"><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${!r&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>
+    <div class="mg edit-only"><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${(!r||isLive(m))&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>
+    ${m.live&&m.live.events&&m.live.events.length?`<div class="mg"><button class="mini" data-tl="${esc(m.id)}">${m.live.status==="live"||m.live.status==="ht"?"🔴 Follow live":"Match timeline"}</button></div>`:""}
     ${!r&&!m.postponed&&canWrite&&AV[m.id]?`<div class="avsum">${avSummary(m.id)}</div>`:""}
   </div>`;
 }
@@ -570,7 +596,8 @@ function tCard(t){
 // one list of cards: plain matches plus one card per tournament
 function listItems(ms,ts){return [...ms.filter(m=>!m.tournament_id||!tournaments.some(t=>t.id===m.tournament_id)).map(m=>({date:m.date||"",pp:!!m.postponed,html:matchRow(m)})),...ts.map(t=>({date:t.date||"",pp:false,html:tCard(t)}))]}
 function monthList(items){let out="",cur="";items.forEach(it=>{const d=new Date(it.date+"T12:00:00");const k=isNaN(d)?"Date to add":LONGM[d.getMonth()]+" "+d.getFullYear();if(k!==cur){out+=`<div class="month">${k}</div>`;cur=k}out+=it.html});return out}
-function isFixture(m){return !result(m)&&(m.postponed||(m.date||"")>=new Date().toISOString().slice(0,10))}
+function isLive(m){return !!(m.live&&(m.live.status==="live"||m.live.status==="ht"))}
+function isFixture(m){if(isLive(m))return true;return !result(m)&&(m.postponed||(m.date||"")>=new Date().toISOString().slice(0,10))}
 // ---------- availability (parents answer; only coaches can read) ----------
 let AV={};// {match_id:{player:status}}
 async function loadAvail(){if(!sb||!canWrite){AV={};return}const {data}=await sb.from("availability").select("*");AV={};(data||[]).forEach(r=>{(AV[r.match_id]=AV[r.match_id]||{})[r.player]=r.status})}
@@ -602,7 +629,7 @@ async function pickSave(){const m=matches.find(x=>x.id===pickMatch);const roster
 window.monthFixtures=ym=>sortMatches(matches.filter(m=>(m.date||"").startsWith(ym||"")&&!m.postponed&&m.stage!=="placeholder")).map(m=>Object.assign({},m,{res:result(m)}));
 function nextFixture(){const today=new Date().toISOString().slice(0,10);return sortMatches(matches.filter(m=>!result(m)&&!m.postponed&&(m.date||"")>=today))[0]}
 function msgText(m){const d=new Date(m.date+"T12:00:00");
-  return `⚽ Under 9s: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${m.comp})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${m.venue?`📍 ${m.venue}`:"📍 Venue to be confirmed"}\n\nPlease let us know if your daughter can make it:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nThank you! 💙💛`}
+  return `⚽ Under 9s: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${m.comp})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${m.venue?`📍 ${m.venue}`:"📍 Venue to be confirmed"}\n\nFollow the game live on the day:\n${siteUrl()}?live=${encodeURIComponent(m.id)}\n\nPlease let us know if your daughter can make it:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nThank you! 💙💛`}
 function msgView(){const m=matches.find(x=>x.id===msgMatch)||nextFixture();if(!m)return `<div class="card empty">No upcoming fixtures.</div>`;
   return `<section class="card stack"><h2>Parents' message</h2><p class="hint">Copy this into the parents' WhatsApp group. The link lets each parent say whether their daughter can make it, and you'll see the answers on the Fixtures page.</p>
   <textarea id="msgText" rows="12" style="width:100%;font:15px var(--body)">${esc(msgText(m))}</textarea>
@@ -677,37 +704,98 @@ function backupCsv(){const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const ro
   sortMatches(matches).forEach(m=>{const tn=tournaments.find(t=>t.id===m.tournament_id);rows.push([m.date,seasonOf(m.date),m.opp,m.comp,tn?tn.name:"",m.stage||"",m.ha,m.venue,m.ko,m.us,m.them,result(m)||"",Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>`${n} ${g}`).join("; "),Object.entries(assistsOf(m)).map(([n,a])=>`${n} ${a}`).join("; "),m.potm,Object.entries(keepersOf(m)).map(([n,c])=>n+(+c?" (clean sheet)":"")).join("; "),m.saves,m.notes])});
   return rows.map(r=>r.map(q).join(",")).join("\r\n")}
 
-// ---------- live match ----------
-let LV=null;// {id, q, on:{name:true}, qs:{name:n}, startedQ:{q:true}}
-function liveKey(id){return "nayfc.live."+id}
+// ---------- live match (coach) + live timeline (everyone) ----------
+// matches.live = {status:"pre"|"live"|"ht"|"ft", half, halfStart (ms), halfLen, form, slots:[gk,...4], squad, events:[...], mins:{name:minutes}}
+const FORMS={"1-2-1":{label:["GK","DEF","LM","RM","FWD"],xy:[[50,88],[50,66],[24,44],[76,44],[50,20]]},"2-2":{label:["GK","LB","RB","LF","RF"],xy:[[50,88],[28,62],[72,62],[28,28],[72,28]]}};
+let LV=null;
+function liveKey(id){return "nayfc.live3."+id}
+function todayLocal(){return new Date().toLocaleDateString("en-CA")}
 function liveStart(id){const m=matches.find(x=>x.id===id);if(!m)return;let saved=null;try{saved=JSON.parse(localStorage.getItem(liveKey(id))||"null")}catch(e){}
   const out=Object.entries(AV[id]||{}).filter(([,v])=>v==="no").map(([n])=>n);
-  const squadNames=Object.keys(played(m)).length?Object.keys(played(m)):(m.squad&&m.squad.length)?m.squad.slice():players.filter(p=>p.current&&!out.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
-  LV=(saved&&saved.v===2)?saved:{v:2,id,q:1,squad:squadNames,on:Object.fromEntries(squadNames.map(n=>[n,true])),qs:{},counted:{}};setView("live")}
+  const sq=(m.squad&&m.squad.length)?m.squad.slice():Object.keys(played(m)).length?Object.keys(played(m)):players.filter(p=>p.current&&!out.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
+  const srv=m.live&&m.live.status&&m.live.status!=="pre"?m.live:null;
+  LV=saved&&saved.v===3?saved:srv?Object.assign({v:3,id,onSince:{},touched:{1:[],2:[]}},JSON.parse(JSON.stringify(srv))):{v:3,id,status:"pre",half:1,halfStart:null,halfLen:20,form:"1-2-1",squad:sq,slots:sq.slice(0,5).concat(["","","","",""]).slice(0,5),events:[],mins:{},onSince:{},touched:{1:[],2:[]}};
+  if(!LV.squad||!LV.squad.length)LV.squad=sq;setView("live")}
 function liveSaveLocal(){try{localStorage.setItem(liveKey(LV.id),JSON.stringify(LV))}catch(e){}}
+function livePublic(){return {status:LV.status,half:LV.half,halfStart:LV.halfStart,halfLen:LV.halfLen,form:LV.form,slots:LV.slots,squad:LV.squad,events:LV.events,mins:LV.mins}}
 async function livePush(extra){const m=matches.find(x=>x.id===LV.id);if(!m)return;
-  const body=Object.assign({played:m.played||{},assists:m.assists||{},us:m.us??0,them:m.them??0,halves:LV.qs,keepers:m.keepers||{},check:""},extra||{});
-  try{await db.collection("matches").doc(LV.id).update(body)}catch(e){toast("Saved on this phone. It'll sync when you're back online.")}}
-function liveCountQuarter(){if(LV.counted[LV.q])return;LV.counted[LV.q]=true;Object.keys(LV.on).forEach(n=>{if(LV.on[n])LV.qs[n]=(LV.qs[n]||0)+1})}
+  const body=Object.assign({played:m.played||{},assists:m.assists||{},us:m.us??0,them:m.them??0,keepers:m.keepers||{},live:livePublic(),check:""},extra||{});
+  m.live=body.live;try{await db.collection("matches").doc(LV.id).update(body)}catch(e){toast("Saved on this phone. It'll sync when you're back online.")}}
+function minuteOf(L,at){if(!L||!L.halfStart)return "";const len=+L.halfLen||20;const el=Math.max(0,Math.floor(((at||Date.now())-L.halfStart)/60000))+1;
+  if(L.status==="ht")return "HT";if(L.status==="ft")return "FT";
+  const base=L.half===2?len:0;return el>len?`${base+len}+${el-len}'`:`${base+el}'`}
+function onPitch(){return LV.slots.filter(Boolean)}
+function bench(){return LV.squad.filter(n=>!LV.slots.includes(n))}
+function clockOn(n,now){LV.onSince[n]=now;const t=LV.touched[LV.half]=LV.touched[LV.half]||[];if(!t.includes(n))t.push(n)}
+function clockOff(n,now){if(LV.onSince[n]){LV.mins[n]=Math.round(((LV.mins[n]||0)+(now-LV.onSince[n])/60000)*10)/10;delete LV.onSince[n]}}
+function addEv(e){const m=matches.find(x=>x.id===LV.id);e.m=minuteOf(LV);e.h=LV.half;e.s=`${m.us??0}–${m.them??0}`;e.at=Date.now();LV.events.push(e)}
+function pitchHtml(L,editable){const F=FORMS[L.form]||FORMS["1-2-1"];
+  return `<div class="pitch">${F.xy.map(([x,y],i)=>{const n=L.slots[i]||"";
+    return `<div class="spot${i===0?" gk":""}" style="left:${x}%;top:${y}%">${editable?`<select data-slot="${i}" aria-label="${F.label[i]}"><option value="">${F.label[i]}</option>${L.squad.map(p=>`<option${p===n?" selected":""}>${esc(p)}</option>`).join("")}</select>`:`<b>${esc(numOf(n)||"")}</b><span>${esc(n||F.label[i])}</span>`}</div>`}).join("")}</div>`}
+function commentary(e,m){const opp=esc(m.opp||"the opposition");
+  switch(e.k){case "ko":return `<b>Kick-off!</b> Newton Aycliffe line up in a ${esc(e.form)}: ${e.line.map(esc).join(", ")}.`;
+    case "goal":return `<b>GOAL!</b> ${esc(e.n)} scores for Newton Aycliffe${e.a?`, set up by ${esc(e.a)}`:""}. ${e.s}`;
+    case "them":return `Goal for ${opp}. ${e.s}`;
+    case "sub":return `Substitution: <b>${esc(e.on)}</b> comes on for ${esc(e.off)}.`;
+    case "gk":return `${esc(e.n)} goes in goal.`;
+    case "form":return `Newton Aycliffe switch to a ${esc(e.form)}.`;
+    case "ht":return `<b>Half time:</b> ${e.s}.`;
+    case "2h":return `The second half is under way.`;
+    case "ft":return `<b>Full time!</b> Newton Aycliffe ${e.s} ${opp}.`;}return ""}
+const EVI={ko:"🟢",goal:"⚽",them:"🥅",sub:"🔁",gk:"🧤",form:"📋",ht:"⏸",["2h"]:"▶️",ft:"🏁"};
+function timelineHtml(L,m){const ev=(L&&L.events||[]).slice().reverse();
+  return ev.length?`<ol class="tl">${ev.map(e=>`<li class="${e.k}"><span class="mn">${esc(e.k==="ht"?"HT":e.k==="ft"?"FT":e.m||"")}</span><span class="ic">${EVI[e.k]||""}</span><span>${commentary(e,m)}</span></li>`).join("")}</ol>`:`<p class="hint">Nothing yet. Updates appear here as they happen.</p>`}
+function liveBoard(m,L){const st=L&&L.status;const lab=st==="live"?`<span class="lv">LIVE</span> ${minuteOf(L)}`:st==="ht"?"Half time":st==="ft"?"Full time":"Not started";
+  return `<div class="board"><div class="tm">Newton Aycliffe</div><div class="sc">${m.us??0} – ${m.them??0}<small>${lab}</small></div><div class="tm">${esc(m.opp)}</div></div>`}
 function liveView(){
   const m=LV&&matches.find(x=>x.id===LV.id);if(!m)return `<div class="card empty">Pick a fixture and tap ▶ Live match.</div>`;
-  const us=m.us??0,them=m.them??0,pl=played(m),as=assistsOf(m);
-  return `<div class="live">
-  <div class="board"><div class="tm">Newton Aycliffe</div><div class="sc">${us} – ${them}</div><div class="tm">${esc(m.opp)}</div></div>
-  <div class="qbar">${[1,2].map(q=>`<span class="q${LV.q===q?" on":""}">${q===1?"1st":"2nd"} half</span>`).join("")}
-    ${LV.q===1?`<button class="btn" id="lvNextQ">Half time</button>`:""}
-    <button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" id="lvThemMinus">− undo theirs</button></div>
-  <p class="hint">Tap a name to mark her on or off the pitch for this half. Playing time is counted at half time and full time. Tap 🧤 for whoever goes in goal (you can have more than one); clean sheets are filled in at full time and you can change them on the match form.</p>
-  <div class="lp">${LV.squad.map(n=>`<div class="pl${LV.on[n]?" on":""}"><div class="nm" data-lvtog="${esc(n)}" role="button" tabindex="0"><span>${esc(n)}</span><span class="tag">${LV.on[n]?"On":"Off"} · ${LV.qs[n]||0} ${LV.qs[n]===1?"half":"halves"}</span></div>
-    <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">⚽ ${pl[n]||0}</button><button data-lvast="${esc(n)}">🅰️ ${as[n]||0}</button></div><button class="kp" data-lvgk="${esc(n)}" aria-pressed="${n in (m.keepers||{})}">🧤 ${n in (m.keepers||{})?"In goal":"Keeper?"}</button></div>`).join("")}</div>
-  ${(rest=>rest.length?`<label class="f" style="max-width:320px">Late change: add a player not in the picked squad<select id="lvAdd"><option value="">Choose…</option>${rest.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select></label>`:"")(players.filter(p=>p.current&&!LV.squad.includes(p.name)))}
-  <div class="btns"><button class="btn gold bigbtn" id="lvDone">Full time: save and finish</button><button class="btn ghost" id="lvUndo">Undo last goal</button><button class="btn ghost" data-view="fixtures">Leave (keeps progress)</button></div>
-  ${LV.ask?`<div class="ask"><b>Who assisted ${esc(LV.ask)}'s goal?</b><div class="chips">${LV.squad.filter(n=>n!==LV.ask).map(n=>`<button data-lvasg="${esc(n)}">${esc(n)}</button>`).join("")}<button data-lvasg="">No assist</button></div></div>`:""}
+  if(LV.status==="pre")return `<div class="live">${liveBoard(m,LV)}
+    <section class="card stack"><h3>Starting line-up</h3>
+    <div class="btns"><span class="hint">Formation</span><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}">${f}</button>`).join("")}</div>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px">Minutes each half<input type="number" id="lvLen" min="5" max="45" value="${LV.halfLen}" style="width:70px"></label></div>
+    ${pitchHtml(LV,true)}
+    <p class="hint">Subs: ${bench().map(esc).join(", ")||"none"}. Pick a player for each position. The keeper is the GK spot.</p>
+    <div class="btns"><button class="btn gold bigbtn" id="lvKo"${onPitch().length<5?" disabled":""}>Kick off</button><button class="btn ghost" data-view="fixtures">Back</button></div></section></div>`;
+  const pl=played(m),as=assistsOf(m),on=onPitch(),F=FORMS[LV.form];
+  return `<div class="live">${liveBoard(m,LV)}
+  <div class="btns">${LV.status==="live"&&LV.half===1?`<button class="btn" id="lvHt">Half time</button>`:""}${LV.status==="ht"?`<button class="btn gold" id="lv2h">Start 2nd half</button>`:""}
+    <button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" id="lvUndo">Undo last</button>
+    <div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}">${f}</button>`).join("")}</div></div>
+  ${pitchHtml(LV,false)}
+  <div class="lp">${LV.slots.map((n,i)=>n?`<div class="pl on"><div class="nm"><span>${esc(n)}</span><span class="tag">${F.label[i]}</span></div>
+    <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">⚽ ${pl[n]||0}</button><button data-lvsub="${i}">🔁 Sub</button></div></div>`:"").join("")}</div>
+  <p class="hint"><b>Subs bench:</b> ${bench().map(esc).join(", ")||"none"}. Rolling subs: tap 🔁 on the player coming off.</p>
+  ${(rest=>rest.length?`<label class="f" style="max-width:320px">Late arrival: add to the bench<select id="lvAdd"><option value="">Choose…</option>${rest.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select></label>`:"")(players.filter(p=>p.current&&!LV.squad.includes(p.name)))}
+  <div class="btns">${LV.half===2&&LV.status==="live"?`<button class="btn gold bigbtn" id="lvDone">Full time: save and finish</button>`:""}<button class="btn ghost" data-tl="${esc(m.id)}">Parents' view</button><button class="btn ghost" data-view="fixtures">Leave (keeps going)</button></div>
+  <section class="card"><h3>Timeline</h3>${timelineHtml(LV,m)}</section>
+  ${LV.ask?`<div class="ask"><b>Who assisted ${esc(LV.ask)}'s goal?</b><div class="chips">${on.filter(n=>n!==LV.ask).map(n=>`<button data-lvasg="${esc(n)}">${esc(n)}</button>`).join("")}<button data-lvasg="">No assist</button></div></div>`:""}
+  ${LV.subSlot!=null?`<div class="ask"><b>Who's coming on for ${esc(LV.slots[LV.subSlot])}?</b><div class="chips">${bench().map(n=>`<button data-lvon="${esc(n)}">${esc(n)}</button>`).join("")}</div>
+    <b style="display:block;margin-top:10px">Or swap positions with</b><div class="chips">${on.filter(n=>n!==LV.slots[LV.subSlot]).map(n=>`<button data-lvswap="${esc(n)}">${esc(n)} (${F.label[LV.slots.indexOf(n)]})</button>`).join("")}<button data-lvcancel="1">Cancel</button></div></div>`:""}
   </div>`;
 }
-async function liveGoal(n){const m=matches.find(x=>x.id===LV.id);const pl=Object.assign({},m.played||{});pl[n]=(pl[n]||0)+1;LV.squad.forEach(x=>{if(!(x in pl)&&LV.qs[x]!==undefined)pl[x]=0});
-  m.played=pl;m.us=(+m.us||0)+1;LV.last={n};LV.ask=n;liveSaveLocal();render();await livePush({played:pl,us:m.us})}
-async function liveAssist(n){const m=matches.find(x=>x.id===LV.id);if(n){const a=Object.assign({},m.assists||{});a[n]=(a[n]||0)+1;m.assists=a;LV.last.a=n}LV.ask=null;liveSaveLocal();render();if(n)await livePush({assists:m.assists})}
+function tlView(){const m=matches.find(x=>x.id===tlMatch);if(!m)return `<div class="card empty">Match not found.</div>`;const L=m.live||{};
+  const mins=L.status==="ft"&&L.mins&&Object.keys(L.mins).length?`<section class="card"><h3>Minutes played</h3><table class="lb"><tbody>${Object.entries(L.mins).sort((a,b)=>b[1]-a[1]).map(([n,v])=>`<tr><td>${esc(n)}</td><td>${Math.round(v)} min</td></tr>`).join("")}</tbody></table></section>`:"";
+  return `<div class="live">${liveBoard(m,L)}
+    ${L.slots?`<section class="card"><h3>On the pitch${L.form?` (${esc(L.form)})`:""}</h3>${pitchHtml(L,false)}${(b=>b.length?`<p class="hint">Subs: ${b.map(esc).join(", ")}</p>`:"")((L.squad||[]).filter(n=>!L.slots.includes(n)))}</section>`:""}
+    <section class="card"><h3>Live commentary</h3>${timelineHtml(L,m)}</section>${mins}
+    ${L.status==="live"||L.status==="ht"?`<p class="hint">This page updates by itself every few seconds.</p>`:""}</div>`}
+let tlMatch=null;
+function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
+function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
+  if(!L.length){el.hidden=true;el.innerHTML="";el.dataset.h="";return}
+  const items=L.map(m=>{const g=(m.live.events||[]).filter(e=>e.k==="goal").map(e=>`${e.n} ${e.m}`).join(", ");const st=m.live.status==="live"?`🔴 LIVE ${minuteOf(m.live)}`:m.live.status==="ht"?"⏸ HALF TIME":"🏁 FULL TIME";
+    return `<button class="tk" data-tl="${esc(m.id)}">${st} · Newton Aycliffe ${m.us??0}–${m.them??0} ${esc(m.opp)}${g?` · ⚽ ${esc(g)}`:""} · Tap to follow</button>`}).join("");
+  const h=`<div class="tkin">${items}${items}</div>`;el.hidden=false;if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
+async function pollLive(){if(!sb||!matches.length)return;const t=todayLocal();if(!matches.some(m=>m.date===t||(m.live&&(m.live.status==="live"||m.live.status==="ht"))))return;
+  try{const {data}=await sb.from("matches").select("id,us,them,live,played,assists,keepers,date").eq("date",t);
+    (data||[]).forEach(r=>{if(LV&&LV.id===r.id&&view==="live")return;const m=matches.find(x=>x.id===r.id);if(m)Object.assign(m,r)});}catch(e){}
+  renderTicker();if(view==="tl")render()}
+setInterval(pollLive,15000);setInterval(()=>{renderTicker();if(view==="live"&&LV&&LV.status==="live"&&!LV.ask&&LV.subSlot==null){const b=document.querySelector(".live .board small");if(b)b.innerHTML=`<span class="lv">LIVE</span> ${minuteOf(LV)}`}},20000);
+async function liveGoal(n){const m=matches.find(x=>x.id===LV.id);const pl=Object.assign({},m.played||{});pl[n]=(pl[n]||0)+1;m.played=pl;m.us=(+m.us||0)+1;addEv({k:"goal",n});LV.ask=n;liveSaveLocal();render();await livePush({played:pl,us:m.us})}
+async function liveAssist(n){const m=matches.find(x=>x.id===LV.id);const ev=LV.events[LV.events.length-1];if(n){const a=Object.assign({},m.assists||{});a[n]=(a[n]||0)+1;m.assists=a;if(ev&&ev.k==="goal")ev.a=n}LV.ask=null;liveSaveLocal();render();await livePush({assists:m.assists||{}})}
+function liveFinishPlayed(m){const pl=Object.assign({},m.played||{});Object.keys(LV.mins).concat(Object.keys(LV.onSince)).forEach(n=>{if(!(n in pl))pl[n]=0});return pl}
+function liveHalves(){const h={};[1,2].forEach(q=>(LV.touched[q]||[]).forEach(n=>h[n]=(h[n]||0)+1));return h}
+function liveKeepers(m){const ks={};LV.events.filter(e=>e.k==="ko"||e.k==="gk").forEach(e=>{const n=e.k==="ko"?e.line[0]:e.n;if(n)ks[n]=0});if(LV.slots[0])ks[LV.slots[0]]=0;const cs=+m.them===0?1:0;Object.keys(ks).forEach(n=>ks[n]=cs);return ks}
 function seasonTournaments(){return tournaments.filter(t=>seasonOf(t.date)===season)}
 function fixturesView(){
   const items=listItems(byComp(seasonMatches().filter(isFixture)),tByComp(seasonTournaments().filter(tIsFixture))).sort((a,b)=>a.date.localeCompare(b.date));
@@ -796,24 +884,33 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.msgfx){const [n,label]=b.dataset.msgfx.split("|");setView("gfx");GFX.loadMilestone(n,label)}
   if(b.id==="bkJson")dl(`NAYFC_U9s_backup_${new Date().toISOString().slice(0,10)}.json`,backupJson(),"application/json");
   if(b.id==="bkCsv")dl(`NAYFC_U9s_results_${new Date().toISOString().slice(0,10)}.csv`,backupCsv(),"text/csv");
-  if(view==="live"&&LV){const m=matches.find(x=>x.id===LV.id);if(!m)return;
+  if(b.dataset.tl){tlMatch=b.dataset.tl;setView("tl")}
+  if(view==="live"&&LV){const m=matches.find(x=>x.id===LV.id);if(!m)return;const now=Date.now();
+    if(b.dataset.lvform){const f=b.dataset.lvform;if(f!==LV.form){LV.form=f;if(LV.status!=="pre")addEv({k:"form",form:f});liveSaveLocal();render();if(LV.status!=="pre")livePush()}}
+    if(b.id==="lvKo"){LV.status="live";LV.half=1;LV.halfStart=now;onPitch().forEach(n=>clockOn(n,now));addEv({k:"ko",form:LV.form,line:LV.slots.slice()});liveSaveLocal();render();livePush()}
     if(b.dataset.lvgoal)liveGoal(b.dataset.lvgoal);
-    if(b.dataset.lvast){const a=Object.assign({},m.assists||{});a[b.dataset.lvast]=(a[b.dataset.lvast]||0)+1;m.assists=a;liveSaveLocal();render();livePush({assists:a})}
     if(b.dataset.lvasg!=null)liveAssist(b.dataset.lvasg);
-    if(b.dataset.lvgk){const k=Object.assign({},m.keepers||{});if(b.dataset.lvgk in k)delete k[b.dataset.lvgk];else k[b.dataset.lvgk]=0;m.keepers=k;liveSaveLocal();render();livePush({keepers:k})}
-    if(b.id==="lvThem"){m.them=(+m.them||0)+1;liveSaveLocal();render();livePush({them:m.them})}
-    if(b.id==="lvThemMinus"){m.them=Math.max(0,(+m.them||0)-1);render();livePush({them:m.them})}
-    if(b.id==="lvUndo"&&LV.last){const pl=Object.assign({},m.played);pl[LV.last.n]=Math.max(0,(pl[LV.last.n]||0)-1);m.played=pl;m.us=Math.max(0,(+m.us||0)-1);
-      if(LV.last.a){const a=Object.assign({},m.assists);a[LV.last.a]=Math.max(0,(a[LV.last.a]||0)-1);if(!a[LV.last.a])delete a[LV.last.a];m.assists=a}LV.last=null;liveSaveLocal();render();livePush({played:pl,us:m.us,assists:m.assists})}
-    if(b.id==="lvNextQ"){liveCountQuarter();LV.q++;liveSaveLocal();render();livePush({halves:LV.qs})}
-    if(b.id==="lvDone"){if(LV.q<=2)liveCountQuarter();const pl=Object.assign({},m.played);Object.keys(LV.qs).forEach(n=>{if(!(n in pl))pl[n]=0});
-      const kk=Object.fromEntries(Object.keys(m.keepers||{}).map(n=>[n,+m.them===0?1:0]));m.keepers=kk;
-      await livePush({played:pl,halves:LV.qs,us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
+    if(b.dataset.lvsub){LV.subSlot=+b.dataset.lvsub;render()}
+    if(b.dataset.lvcancel){LV.subSlot=null;render()}
+    if(b.dataset.lvon){const i=LV.subSlot,off=LV.slots[i],on=b.dataset.lvon;LV.slots[i]=on;LV.subSlot=null;if(LV.status==="live"){clockOff(off,now);clockOn(on,now)}addEv({k:"sub",off,on});if(i===0)addEv({k:"gk",n:on});liveSaveLocal();render();livePush()}
+    if(b.dataset.lvswap){const i=LV.subSlot,j=LV.slots.indexOf(b.dataset.lvswap),a=LV.slots[i];LV.slots[i]=LV.slots[j];LV.slots[j]=a;LV.subSlot=null;if(i===0||j===0)addEv({k:"gk",n:LV.slots[0]});liveSaveLocal();render();livePush()}
+    if(b.id==="lvThem"){m.them=(+m.them||0)+1;addEv({k:"them"});liveSaveLocal();render();livePush({them:m.them})}
+    if(b.id==="lvUndo"){const i=[...LV.events].reverse().findIndex(e=>["goal","them","sub"].includes(e.k));if(i<0)return;const k=LV.events.length-1-i,e=LV.events[k];
+      if(e.k==="goal"){const pl=Object.assign({},m.played);pl[e.n]=Math.max(0,(pl[e.n]||0)-1);m.played=pl;m.us=Math.max(0,(+m.us||0)-1);if(e.a){const a=Object.assign({},m.assists);a[e.a]=Math.max(0,(a[e.a]||0)-1);if(!a[e.a])delete a[e.a];m.assists=a}}
+      if(e.k==="them")m.them=Math.max(0,(+m.them||0)-1);
+      if(e.k==="sub"){const s=LV.slots.indexOf(e.on);if(s>=0){LV.slots[s]=e.off;if(LV.status==="live"){clockOff(e.on,now);clockOn(e.off,now)}}}
+      LV.events.splice(k,1);LV.ask=null;liveSaveLocal();render();livePush({played:m.played||{},us:m.us??0,them:m.them??0,assists:m.assists||{}})}
+    if(b.id==="lvHt"){onPitch().forEach(n=>clockOff(n,now));LV.status="ht";addEv({k:"ht"});liveSaveLocal();render();livePush({halves:liveHalves()})}
+    if(b.id==="lv2h"){LV.status="live";LV.half=2;LV.halfStart=now;onPitch().forEach(n=>clockOn(n,now));addEv({k:"2h"});liveSaveLocal();render();livePush()}
+    if(b.id==="lvDone"){onPitch().forEach(n=>clockOff(n,now));addEv({k:"ft"});LV.status="ft";const pl=liveFinishPlayed(m),kk=liveKeepers(m);m.keepers=kk;
+      await livePush({played:pl,halves:liveHalves(),us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
       const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
   }});
-document.addEventListener("click",e=>{const t=e.target.closest("[data-lvtog]");if(!t||!LV)return;const n=t.dataset.lvtog;LV.on[n]=!LV.on[n];liveSaveLocal();render()});
 document.addEventListener("change",e=>{if(e.target.dataset.pk&&PICK){const n=e.target.dataset.pk;if(e.target.checked)PICK.set.add(n);else PICK.set.delete(n);const h=e.target.closest(".card").querySelector(".av + .hint");if(h)h.textContent=`${PICK.set.size} picked.`;return}
-  if(e.target.id==="lvAdd"&&LV&&e.target.value){LV.squad.push(e.target.value);LV.on[e.target.value]=false;liveSaveLocal();render();return}
+  if(!LV)return;
+  if(e.target.dataset.slot!=null){const i=+e.target.dataset.slot,n=e.target.value;const j=LV.slots.indexOf(n);if(n&&j>=0&&j!==i)LV.slots[j]=LV.slots[i];LV.slots[i]=n;liveSaveLocal();render();return}
+  if(e.target.id==="lvLen"){LV.halfLen=Math.max(5,+e.target.value||20);liveSaveLocal();return}
+  if(e.target.id==="lvAdd"&&e.target.value){LV.squad.push(e.target.value);liveSaveLocal();render();return}
 });
 
 // ---------- honours ----------
@@ -1119,6 +1216,7 @@ document.addEventListener("submit",async e=>{
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await checkCoach();
+  const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
 })();
 })();
