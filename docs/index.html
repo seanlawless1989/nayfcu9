@@ -565,9 +565,10 @@ function slug(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").r
 function teamStats(list){const s={P:0,W:0,D:0,L:0,F:0,A:0};list.forEach(m=>{const r=result(m);if(!r)return;s.P++;s[r]++;s.F+=+m.us;s.A+=+m.them});s.GD=s.F-s.A;return s}
 // keepers: {name: 1 = kept a clean sheet, 0 = in goal but conceded}. Older rows only have a single gk name.
 function keepersOf(m){if(m.keepers&&Object.keys(m.keepers).length)return m.keepers;return m.gk?{[m.gk]:result(m)&&+m.them===0?1:0}:{}}
-function counted(m){return (result(m)||isLive(m))&&!m.postponed&&m.stage!=="placeholder"}
-function playerStats(list){list=list.filter(counted);const out={};const get=n=>out[n]||(out[n]={apps:0,goals:0,assists:0,potm:0,appsKnown:0,gk:0,cs:0});
-  list.forEach(m=>{const pl=played(m);for(const [n,g] of Object.entries(pl)){const o=get(n);if(m.apps!==false)o.apps++;o.goals+=+g||0}
+// a game counts once it has a score, is live, or its date has passed (some old games have no score recorded)
+function counted(m){return (result(m)||isLive(m)||(m.date||"9")<todayLocal())&&!m.postponed&&m.stage!=="placeholder"}
+function playerStats(list){list=list.filter(counted);const out={};const get=n=>out[n]||(out[n]={apps:0,goals:0,tg:0,assists:0,potm:0,appsKnown:0,gk:0,cs:0});
+  list.forEach(m=>{const pl=played(m);for(const [n,g] of Object.entries(pl)){const o=get(n);if(m.apps!==false){o.apps++;o.tg+=+g||0}o.goals+=+g||0}
     for(const [n,a] of Object.entries(assistsOf(m)))get(n).assists+=+a||0;
     for(const [n,c] of Object.entries(keepersOf(m))){const o=get(n);o.gk++;o.cs+=+c?1:0}
     if(m.potm)get(m.potm).potm++; if(m.apps!==false)Object.keys(out).forEach(()=>{})});
@@ -1107,15 +1108,15 @@ function playersView(){
   return `<div class="btns" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Season or career"><button data-pscope="season" aria-pressed="${!career}">${esc(season)}</button><button data-pscope="career" aria-pressed="${career}">Career (all seasons)</button></div></div>
   ${CKEY()}
   <section class="card"><h2>${what[0].toUpperCase()+what.slice(1)}</h2>
-   <p class="hint" style="margin-bottom:10px">${list.length} game${list.length===1?"":"s"}${career?" across "+new Set(list.map(m=>seasonOf(m.date))).size+" seasons":""} · ${tot.g} goals${at?` · ${tot.a} assists`:""}.${tracked?(career?" Appearances only count games where the team sheet was recorded (most of last season wasn't).":""):" Appearances weren't recorded for these games, so only goals and awards show."}${career?" Assists are recorded from 2026-27.":""}</p>
+   <p class="hint" style="margin-bottom:10px">${(c=>`${c.length} game${c.length===1?"":"s"}${career?" across "+new Set(c.map(m=>seasonOf(m.date))).size+" seasons":""}`)(list.filter(counted))} · ${tot.g} goals${at?` · ${tot.a} assists`:""}.${tracked?((k=>k<list.filter(counted).length?` Who played was only recorded for ${k} of these ${list.filter(counted).length} games (most of 2025-26 only has the scorers), so Apps and goals per game only cover those ${k}.`:"")(list.filter(m=>counted(m)&&m.apps!==false).length)):" Appearances weren't recorded for these games, so only goals and awards show."}${career?" Assists are recorded from 2026-27.":""}</p>
    <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th>${at?"<th>Assists</th>":""}${showCs?"<th>Clean sheets <span class='hint'>/ in goal</span></th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${tracked?"<th>Goals per game</th>":""}</tr></thead><tbody>
-   ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
+   ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.apps?(o.tg/o.apps).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
    </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her record split by season and competition.</p></section>`;
 }
 function compSplit(n,list,ts){
-  const rows=COMPS.map(c=>{const l=list.filter(m=>m.comp===c);const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {c,o,tracked:appsTracked(l),pt:c==="Tournament"?pottCount(n,ts):0}}).filter(r=>r.o.apps||r.o.goals||r.o.assists||r.o.potm||r.o.gk||r.pt);
+  const rows=COMPS.map(c=>{const l=list.filter(m=>m.comp===c);const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {c,o,tracked:appsTracked(l),partial:appsTracked(l)&&l.filter(counted).some(m=>m.apps===false),pt:c==="Tournament"?pottCount(n,ts):0}}).filter(r=>r.o.apps||r.o.goals||r.o.assists||r.o.potm||r.o.gk||r.pt);
   if(!rows.length)return `<p class="hint">Nothing recorded yet.</p>`;
-  return `<table class="lb"><thead><tr><th></th><th>Apps</th><th>Goals</th><th>Assists</th><th>Clean sheets</th><th>PotM</th></tr></thead><tbody>${rows.map(r=>`<tr><td><span class="ctag c-${r.c.toLowerCase()}">${compName(r.c)}</span></td><td>${r.tracked?r.o.apps:"–"}</td><td><b>${r.o.goals}</b></td><td>${r.o.assists}</td><td>${r.o.gk?r.o.cs:"–"}</td><td>${r.o.potm}${r.pt?` <span class="hint">+${r.pt} tournament</span>`:""}</td></tr>`).join("")}</tbody></table>`;
+  return `<table class="lb"><thead><tr><th></th><th>Apps</th><th>Goals</th><th>Assists</th><th>Clean sheets</th><th>PotM</th></tr></thead><tbody>${rows.map(r=>`<tr><td><span class="ctag c-${r.c.toLowerCase()}">${compName(r.c)}</span></td><td>${r.tracked?r.o.apps+(r.partial?"*":""):"–"}</td><td><b>${r.o.goals}</b></td><td>${r.o.assists}</td><td>${r.o.gk?r.o.cs:"–"}</td><td>${r.o.potm}${r.pt?` <span class="hint">+${r.pt} tournament</span>`:""}</td></tr>`).join("")}</tbody></table>${rows.some(r=>r.partial)?`<p class="hint">* Some of these games only recorded the scorers, not who played, so apps are undercounted.</p>`:""}`;
 }
 
 function oppsView(){
@@ -1142,7 +1143,7 @@ function oppDetail(name){
 
 function playerDetail(n){
   const ss=seasons().slice().reverse();
-  const rows=ss.map(s=>{const l=sortMatches(matches.filter(m=>seasonOf(m.date)===s));const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {s,o,tracked:appsTracked(l)}}).filter(r=>r.o.goals||r.o.apps||r.o.potm||r.o.assists||r.o.gk);
+  const rows=ss.map(s=>{const l=sortMatches(matches.filter(m=>seasonOf(m.date)===s));const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {s,o,tracked:appsTracked(l),partial:appsTracked(l)&&l.filter(counted).some(m=>m.apps===false)}}).filter(r=>r.o.goals||r.o.apps||r.o.potm||r.o.assists||r.o.gk);
   const games=sortMatches(matches.filter(m=>counted(m)&&n in played(m)||m.potm===n||n in assistsOf(m))).reverse();
   const tot=playerStats(matches)[n]||{apps:0,goals:0,potm:0};
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
@@ -1151,7 +1152,7 @@ function playerDetail(n){
   <div class="grid2"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
   <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
   <section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>Goals</th><th>Assists</th><th>Clean sheets</th><th>PotM</th></tr></thead><tbody>
-  ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps:"–"}</td><td>${r.o.goals}</td><td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.gk?r.o.cs:"–"}</td><td>${r.o.potm}</td></tr>`).join("")}</tbody></table></section>
+  ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps+(r.partial?"*":""):"–"}</td><td>${r.o.goals}</td><td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.gk?r.o.cs:"–"}</td><td>${r.o.potm}</td></tr>`).join("")}</tbody></table>${rows.some(r=>r.partial)?`<p class="hint">* Some of these games only recorded the scorers, not who played, so apps are undercounted.</p>`:""}</section>
   <section class="card"><h3>Matches</h3><div class="list">${games.map(matchRow).join("")||`<p class="hint">No matches logged yet.</p>`}</div></section></div>`;
 }
 
