@@ -324,6 +324,7 @@ body{background:var(--bg) radial-gradient(1200px 500px at 50% -200px,rgba(34,53,
 .mast .in{position:relative;z-index:1;padding-block:20px 24px}
 .crest{width:96px;padding:4px;box-shadow:0 0 0 4px var(--gold),0 10px 30px rgba(0,0,0,.45)}
 .mast h1{font-size:clamp(24px,5vw,40px);text-transform:uppercase;letter-spacing:.02em;text-shadow:0 3px 0 rgba(0,0,0,.25)}
+.homebtn{all:unset;cursor:pointer;display:block;border-radius:50%;flex:none}.homebtn:focus-visible{outline:3px solid #fff;outline-offset:4px}.homebtn:hover .crest{transform:scale(1.04)}.crest{transition:transform .15s}
 .mast h1 em{font-style:normal;color:var(--gold)}.mast h1 .lc{text-transform:none}
 .mast p{font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px;opacity:.9}
 .mast select{background:rgba(255,255,255,.12);backdrop-filter:blur(4px)}
@@ -384,7 +385,7 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 <body>
 <header class="mast">
   <div class="in">
-    <img class="crest" src="crest.png" alt="Newton Aycliffe Youth Football Club badge">
+    <button class="homebtn" data-view="home" aria-label="Home"><img class="crest" src="crest.png" alt="Newton Aycliffe Youth Football Club badge"></button>
     <div>
       <h1>Newton Aycliffe <em>Under 9<span class="lc">s</span></em></h1>
       <p>Youth Football Club · Girls</p>
@@ -395,7 +396,7 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 </header>
 <div id="ticker" class="ticker" hidden></div>
 <nav class="tabs" aria-label="Sections">
-  <button data-view="home" aria-current="page">Season</button>
+  <button data-view="home" aria-current="page">Home</button>
   <button data-view="fixtures">Fixtures</button>
   <button data-view="results">Results</button>
   <button data-view="players">Players</button>
