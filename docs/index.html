@@ -333,7 +333,7 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 .rec.w{background:linear-gradient(180deg,rgba(28,138,68,.14),transparent)}.rec.d{background:linear-gradient(180deg,rgba(176,122,0,.14),transparent)}.rec.l{background:linear-gradient(180deg,rgba(192,38,45,.14),transparent)}
 .chip{border-radius:8px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
 .bar i{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--club),#5C6CFF 70%,var(--gold))}
-.lb tbody tr:first-child td:first-child:before{content:"🥇 "}
+.lb:has(.bar) tbody tr:first-child td:first-child:before{content:"🥇 "}
 .match{border-radius:16px;transition:transform .12s,box-shadow .12s}
 .match:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(18,23,51,.12)}
 .match .sc{font-size:26px}
@@ -532,7 +532,7 @@ function assistsOf(m){return m.assists||{}}
 const ASSISTS_FROM="2026-27";
 function assistsTracked(s){return s>=ASSISTS_FROM}
 function sortMatches(a){return a.slice().sort((x,y)=>(x.date||"").localeCompare(y.date||""))}
-function seasonMatches(){return sortMatches(matches.filter(m=>seasonOf(m.date)===season))}
+function seasonMatches(){return sortMatches(matches.filter(m=>!m.practice&&seasonOf(m.date)===season))}
 function pname(id){return id}
 function numOf(name){const p=players.find(p=>p.name===name);return p&&p.num!=null&&p.num!==""?p.num:""}
 function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,3500)}
@@ -558,6 +558,7 @@ function render(){
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
   const main=$("#main");const gv=view==="gfx";main.hidden=gv;$("#gfxView").hidden=!gv;if(gv){window.GFX&&GFX.refresh();document.body.classList.toggle("ro",!canWrite);return}
   if(!db){main.innerHTML=`<div class="card empty">Loading the results…</div>`;return}
+  if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   renderTicker();
   if(view==="home")main.innerHTML=homeView();
   else if(view==="results")main.innerHTML=resultsView();
@@ -790,7 +791,7 @@ function backupCsv(){const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const ro
 // ---------- live match (coach) + live timeline (everyone) ----------
 // matches.live = {status:"pre"|"live"|"ht"|"ft", half, halfStart (ms), halfLen, form, slots:[gk,...4], squad, events:[...], mins:{name:minutes}}
 const FORMS={"1-2-1":{label:["GK","DEF","LM","RM","FWD"],xy:[[50,88],[50,66],[24,44],[76,44],[50,20]]},"2-2":{label:["GK","LB","RB","LF","RF"],xy:[[50,88],[28,62],[72,62],[28,28],[72,28]]}};
-let LV=null;
+let LV=null,PRACTICE=null;// PRACTICE = a pretend fixture that only lives on this phone; nothing is saved or shown to parents
 function liveKey(id){return "nayfc.live3."+id}
 function todayLocal(){return new Date().toLocaleDateString("en-CA")}
 function liveStart(id){const m=matches.find(x=>x.id===id);if(!m)return;let saved=null;try{saved=JSON.parse(localStorage.getItem(liveKey(id))||"null")}catch(e){}
@@ -801,7 +802,7 @@ function liveStart(id){const m=matches.find(x=>x.id===id);if(!m)return;let saved
   if(!LV.squad||!LV.squad.length)LV.squad=sq;setView("live")}
 function liveSaveLocal(){try{localStorage.setItem(liveKey(LV.id),JSON.stringify(LV))}catch(e){}}
 function livePublic(){return {status:LV.status,half:LV.half,halfStart:LV.halfStart,halfLen:LV.halfLen,form:LV.form,slots:LV.slots,squad:LV.squad,events:LV.events,mins:LV.mins}}
-async function livePush(extra){const m=matches.find(x=>x.id===LV.id);if(!m)return;
+async function livePush(extra){const m=matches.find(x=>x.id===LV.id);if(!m)return;if(m.practice){m.live=livePublic();return}
   const body=Object.assign({played:m.played||{},assists:m.assists||{},us:m.us??0,them:m.them??0,keepers:m.keepers||{},live:livePublic(),check:""},extra||{});
   m.live=body.live;try{await db.collection("matches").doc(LV.id).update(body)}catch(e){toast("Saved on this phone. It'll sync when you're back online.")}}
 function minuteOf(L,at){if(!L||!L.halfStart)return "";const len=+L.halfLen||20;const el=Math.max(0,Math.floor(((at||Date.now())-L.halfStart)/60000))+1;
@@ -832,7 +833,8 @@ function liveBoard(m,L){const st=L&&L.status;const lab=st==="live"?`<span class=
   return `<div class="board"><div class="tm">Newton Aycliffe</div><div class="sc">${m.us??0} – ${m.them??0}<small>${lab}</small></div><div class="tm">${esc(m.opp)}</div></div>`}
 function liveView(){
   const m=LV&&matches.find(x=>x.id===LV.id);if(!m)return `<div class="card empty">Pick a fixture and tap ▶ Live match.</div>`;
-  if(LV.status==="pre")return `<div class="live">${liveBoard(m,LV)}
+  const pr=m.practice?`<div class="note"><b>Practice match.</b> Try anything: nothing is saved and parents can't see it. Tap "Practice live match" on Fixtures to start again.</div>`:"";
+  if(LV.status==="pre")return `<div class="live">${pr}${liveBoard(m,LV)}
     <section class="card stack"><h3>Starting line-up</h3>
     <div class="btns"><span class="hint">Formation</span><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}">${f}</button>`).join("")}</div>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px">Minutes each half<input type="number" id="lvLen" min="5" max="45" value="${LV.halfLen}" style="width:70px"></label></div>
@@ -840,7 +842,7 @@ function liveView(){
     <p class="hint">Subs: ${bench().map(esc).join(", ")||"none"}. Pick a player for each position. The keeper is the GK spot.</p>
     <div class="btns"><button class="btn gold bigbtn" id="lvKo"${onPitch().length<5?" disabled":""}>Kick off</button><button class="btn ghost" data-view="fixtures">Back</button></div></section></div>`;
   const pl=played(m),as=assistsOf(m),on=onPitch(),F=FORMS[LV.form];
-  return `<div class="live">${liveBoard(m,LV)}
+  return `<div class="live">${pr}${liveBoard(m,LV)}
   <div class="btns">${LV.status==="live"&&LV.half===1?`<button class="btn" id="lvHt">Half time</button>`:""}${LV.status==="ht"?`<button class="btn gold" id="lv2h">Start 2nd half</button>`:""}
     <button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" id="lvUndo">Undo last</button>
     <div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}">${f}</button>`).join("")}</div></div>
@@ -849,7 +851,7 @@ function liveView(){
     <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">⚽ ${pl[n]||0}</button><button data-lvsub="${i}">🔁 Sub</button></div></div>`:"").join("")}</div>
   <p class="hint"><b>Subs bench:</b> ${bench().map(esc).join(", ")||"none"}. Rolling subs: tap 🔁 on the player coming off.</p>
   ${(rest=>rest.length?`<label class="f" style="max-width:320px">Late arrival: add to the bench<select id="lvAdd"><option value="">Choose…</option>${rest.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select></label>`:"")(players.filter(p=>p.current&&!LV.squad.includes(p.name)))}
-  <div class="btns">${LV.half===2&&LV.status==="live"?`<button class="btn gold bigbtn" id="lvDone">Full time: save and finish</button>`:""}<button class="btn ghost" data-tl="${esc(m.id)}">Parents' view</button><button class="btn ghost" data-view="fixtures">Leave (keeps going)</button></div>
+  <div class="btns">${LV.half===2&&LV.status==="live"?`<button class="btn gold bigbtn" id="lvDone">Full time: save and finish</button>`:""}<button class="btn ghost" data-tl="${esc(m.id)}">Parents' view</button><button class="btn ghost" data-view="fixtures">${m.practice?"End practice":"Leave (keeps going)"}</button></div>
   <section class="card"><h3>Timeline</h3>${timelineHtml(LV,m)}</section>
   ${LV.ask?`<div class="ask"><b>Who assisted ${esc(LV.ask)}'s goal?</b><div class="chips">${on.filter(n=>n!==LV.ask).map(n=>`<button data-lvasg="${esc(n)}">${esc(n)}</button>`).join("")}<button data-lvasg="">No assist</button></div></div>`:""}
   ${LV.subSlot!=null?`<div class="ask"><b>Who's coming on for ${esc(LV.slots[LV.subSlot])}?</b><div class="chips">${bench().map(n=>`<button data-lvon="${esc(n)}">${esc(n)}</button>`).join("")}</div>
@@ -867,7 +869,7 @@ function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
   if(!L.length){el.hidden=true;el.innerHTML="";el.dataset.h="";return}
   const items=L.map(m=>{const g=(m.live.events||[]).filter(e=>e.k==="goal").map(e=>`${e.n} ${e.m}`).join(", ");const st=m.live.status==="live"?`🔴 LIVE ${minuteOf(m.live)}`:m.live.status==="ht"?"⏸ HALF TIME":"🏁 FULL TIME";
-    return `<button class="tk" data-tl="${esc(m.id)}">${st} · Newton Aycliffe ${m.us??0}–${m.them??0} ${esc(m.opp)}${g?` · ⚽ ${esc(g)}`:""} · Tap to follow</button>`}).join("");
+    return `<button class="tk" data-tl="${esc(m.id)}">${m.practice?"PRACTICE · ":""}${st} · Newton Aycliffe ${m.us??0}–${m.them??0} ${esc(m.opp)}${g?` · ⚽ ${esc(g)}`:""} · Tap to follow</button>`}).join("");
   const h=`<div class="tkin">${items}${items}</div>`;el.hidden=false;if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
 async function pollLive(){if(!sb||!matches.length)return;const t=todayLocal();if(!matches.some(m=>m.date===t||(m.live&&(m.live.status==="live"||m.live.status==="ht"))))return;
   try{const {data}=await sb.from("matches").select("id,us,them,live,played,assists,keepers,date").eq("date",t);
@@ -885,7 +887,7 @@ function fixturesView(){
   if(!items.length)return `${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one.`:""}</div>`;
   const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
   const nx=nextFixture();
-  return `<div class="list">${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button></div>`:""}${CKEY()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
+  return `<div class="list">${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button></div>`:""}${CKEY()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
 }
 function resultsView(){
   const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
@@ -959,6 +961,9 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.id==="pickSave"){if(await pickSave())setView("fixtures")}
   if(b.id==="pickSavePost"){const m=await pickSave();if(m){setView("gfx");await GFX.loadMatch(m,"squad")}}
   if(b.dataset.live){liveStart(b.dataset.live)}
+  if(b.id==="practice"){try{localStorage.removeItem(liveKey("practice"))}catch(e){}matches=matches.filter(m=>!m.practice);
+    PRACTICE={id:"practice",practice:true,date:todayLocal(),opp:"Practice FC",ha:"H",comp:"Friendly",venue:"Practice",ko:"",us:0,them:0,played:{},assists:{},keepers:{},apps:false,squad:players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name)};
+    matches.push(PRACTICE);liveStart("practice");toast("Practice match: nothing is saved and parents won't see it.")}
   if(b.dataset.gmonth){setView("gfx");GFX.loadMonth(new Date().toISOString().slice(0,7))}
   if(b.dataset.msg){msgMatch=b.dataset.msg;setView("msg")}
   if(b.id==="copyMsg"){const ta=$("#msgText");try{navigator.clipboard.writeText(ta.value).then(()=>toast("Copied. Paste it into WhatsApp."),()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select()}}
@@ -985,6 +990,8 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       LV.events.splice(k,1);LV.ask=null;liveSaveLocal();render();livePush({played:m.played||{},us:m.us??0,them:m.them??0,assists:m.assists||{}})}
     if(b.id==="lvHt"){onPitch().forEach(n=>clockOff(n,now));LV.status="ht";addEv({k:"ht"});liveSaveLocal();render();livePush({halves:liveHalves()})}
     if(b.id==="lv2h"){LV.status="live";LV.half=2;LV.halfStart=now;onPitch().forEach(n=>clockOn(n,now));addEv({k:"2h"});liveSaveLocal();render();livePush()}
+    if(b.id==="lvDone"&&m.practice){onPitch().forEach(n=>clockOff(n,now));addEv({k:"ft"});LV.status="ft";m.live=livePublic();try{localStorage.removeItem(liveKey("practice"))}catch(e){}LV=null;tlMatch="practice";setView("tl");toast("Practice finished. This is what parents would see. Nothing was saved.");
+      setTimeout(()=>{},0);return}
     if(b.id==="lvDone"){onPitch().forEach(n=>clockOff(n,now));addEv({k:"ft"});LV.status="ft";const pl=liveFinishPlayed(m),kk=liveKeepers(m);m.keepers=kk;
       await livePush({played:pl,halves:liveHalves(),us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
       const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
@@ -1294,7 +1301,7 @@ document.addEventListener("submit",async e=>{
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login")render()},()=>toast("Couldn't load the squad. Reload the page."));
   const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit"].includes(view);
-  db.collection("matches").onSnapshot(s=>{matches=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
+  db.collection("matches").onSnapshot(s=>{matches=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
