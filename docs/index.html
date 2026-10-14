@@ -263,6 +263,8 @@ textarea{min-height:70px;resize:vertical}
 .gf-in{text-align:center;color:#fff;font-family:var(--display)}.gf-in b{display:block;font:400 clamp(72px,22vw,180px)/1 var(--display);color:#FFD400;letter-spacing:.04em;text-shadow:0 6px 0 #2235E8,0 0 30px rgba(255,212,0,.6);animation:gfblink .35s steps(1) infinite}
 .gf-in span{display:block;margin-top:14px;font-size:clamp(26px,7vw,48px)}.gf-in em{display:block;margin-top:8px;font:700 18px var(--body);font-style:normal;opacity:.85}
 @keyframes gfblink{50%{color:#fff;text-shadow:0 6px 0 #FFD400}}@keyframes gfbg{50%{background:rgba(34,53,232,.95)}}
+table.lb thead th{cursor:pointer;user-select:none;white-space:nowrap}table.lb thead th:hover{color:var(--club)}
+table.lb thead th[data-sort]{color:var(--club)}table.lb thead th[data-sort=desc]:after{content:" ▼";font-size:.8em}table.lb thead th[data-sort=asc]:after{content:" ▲";font-size:.8em}
 .pcard{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .pphoto{position:relative;width:96px;height:96px}.pphoto img{width:96px;height:96px;border-radius:16px;object-fit:cover;border:3px solid var(--gold)}.pphoto span:not(:empty){position:absolute;right:-6px;bottom:-6px;min-width:28px;height:28px;padding:0 4px;border-radius:8px;display:grid;place-items:center;background:var(--gold);color:var(--goldInk);font:400 14px var(--display)}
 .pthumb{width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;border:2px solid var(--gold)}
@@ -1237,6 +1239,12 @@ async function saveMatch(){
   catch(e){$("#saveM").disabled=false;toast(e&&e.code==="quota_exceeded"?"The results store is full.":"Couldn't save. Check your connection and try again.");if(e&&e.code==="invalid_argument"){canWrite=false;render()}}
 }
 
+// ---------- sortable stats tables: tap a column heading to sort, tap again to flip ----------
+function cellVal(td){const t=(td?td.textContent:"").trim();if(t===""||t==="–"||t==="-")return null;const n=parseFloat(t.replace(/^[^\d.-]+/,""));return isNaN(n)?t.toLowerCase():n}
+document.addEventListener("click",e=>{const th=e.target.closest("table.lb thead th");if(!th)return;const tr=th.parentElement,tb=th.closest("table").tBodies[0];if(!tb)return;
+  const i=[...tr.children].indexOf(th);const rows=[...tb.rows];const cv=(r)=>i===0&&r.dataset.player?r.dataset.player.toLowerCase():i===0&&r.dataset.opp?r.dataset.opp.toLowerCase():cellVal(r.cells[i]);const num=rows.some(r=>typeof cv(r)==="number");
+  const dir=th.dataset.sort==="desc"?"asc":th.dataset.sort==="asc"?"desc":(num?"desc":"asc");tr.querySelectorAll("th").forEach(x=>delete x.dataset.sort);th.dataset.sort=dir;
+  rows.sort((a,b)=>{const x=cv(a),y=cv(b);if(x===y)return 0;if(x===null)return 1;if(y===null)return -1;const c=typeof x==="number"&&typeof y==="number"?x-y:String(x).localeCompare(String(y));return dir==="asc"?c:-c}).forEach(r=>tb.appendChild(r))});
 // ---------- events ----------
 document.addEventListener("click",async e=>{
   const t=e.target.closest("button,tr.click,[data-edit],.match");if(!t)return;
