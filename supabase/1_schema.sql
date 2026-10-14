@@ -131,3 +131,7 @@ grant execute on function public.set_availability(text,text,text) to anon, authe
 
 -- Keepers per game (more than one allowed): {"Name": 1 = clean sheet, 0 = conceded}
 alter table public.matches add column if not exists keepers jsonb default '{}'::jsonb;
+
+-- Halves played per player {"Name": 0-2} (replaces the unused quarters column), and the squad picked before a fixture
+alter table public.matches add column if not exists halves jsonb default '{}'::jsonb;
+alter table public.matches add column if not exists squad jsonb;
