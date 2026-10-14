@@ -540,13 +540,13 @@ function homeView(){
   const REC=t=>`<div class="record">${[["P","Played",""],["W","Won","w"],["D","Drawn","d"],["L","Lost","l"],["F","Scored",""],["A","Conceded",""],["GD","Goal diff",""]].map(([k,l,c])=>`<div class="rec ${c}"><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}</div>`;
   return `<div class="stack">
   ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
-  <h2 class="sect"><span class="ctag c-league">League</span> ${season}</h2>
-  <section class="card"><h3>League record</h3>${REC(lt)}
+  <h2 class="sect"><span class="ctag c-league">${LEAGUE_NAME}</span> ${season}</h2>
+  <section class="card"><h3>${LEAGUE_NAME} record</h3>${REC(lt)}
       ${ldone.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${ldone.slice(-6).map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}</section>
   <div class="cols">
-    <section class="card">${ldone.length?`<h3>Latest league result</h3>${matchRow(ldone[ldone.length-1])}`:""}
-      ${lnext?`<h3 style="margin-top:14px">Next league game</h3>${matchRow(lnext)}`:""}</section>
-    <section class="card"><h3>League goalscorers</h3>${lsc.length?`<table class="lb"><tbody>${lsc.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/lmax*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No league goals yet.</p>`}</section>
+    <section class="card">${ldone.length?`<h3>Latest ${LEAGUE_NAME} result</h3>${matchRow(ldone[ldone.length-1])}`:""}
+      ${lnext?`<h3 style="margin-top:14px">Next ${LEAGUE_NAME} game</h3>${matchRow(lnext)}`:""}</section>
+    <section class="card"><h3>${LEAGUE_NAME} goalscorers</h3>${lsc.length?`<table class="lb"><tbody>${lsc.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/lmax*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No league goals yet.</p>`}</section>
   </div>
   <h2 class="sect">All games ${season} <span class="hint">league, cup, friendlies and tournaments</span></h2>
   <section class="card"><h3>Overall record</h3>
@@ -573,7 +573,7 @@ function matchRow(m){
   return `<div class="match${cc}" role="button" tabindex="0" data-edit="${esc(m.id)}">
     <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
-      <div class="meta">${cc?`<span class="ctag">${esc(m.comp)}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
+      <div class="meta">${cc?`<span class="ctag">${esc(compName(m.comp))}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
       ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}</div>
@@ -585,7 +585,8 @@ function matchRow(m){
 }
 
 let compFilter=null;
-const CKEY=()=>`<div class="ckey" role="group" aria-label="Filter by competition"><button class="cf${compFilter?"":" on"}" data-cf="">All</button>${["League","Cup","Friendly","Tournament"].map(c=>`<button class="cf match c-${c.toLowerCase()}${compFilter===c?" on":""}" data-cf="${c}" aria-pressed="${compFilter===c}"><span class="ctag">${c}</span></button>`).join("")}</div>`;
+const LEAGUE_NAME="Russell Foster League";const compName=c=>c==="League"?LEAGUE_NAME:c;
+const CKEY=()=>`<div class="ckey" role="group" aria-label="Filter by competition"><button class="cf${compFilter?"":" on"}" data-cf="">All</button>${["League","Cup","Friendly","Tournament"].map(c=>`<button class="cf match c-${c.toLowerCase()}${compFilter===c?" on":""}" data-cf="${c}" aria-pressed="${compFilter===c}"><span class="ctag">${compName(c)}</span></button>`).join("")}</div>`;
 const byComp=ms=>compFilter?ms.filter(m=>m.comp===compFilter):ms;
 const tByComp=ts=>!compFilter||compFilter==="Tournament"?ts:[];
 const STAGES=["Group stage","Round of 16","Quarter final","Semi final","Final","3rd place play-off","Plate","Shield","Friendly game"];
@@ -643,7 +644,7 @@ async function pickSave(){const m=matches.find(x=>x.id===pickMatch);const roster
 window.monthFixtures=ym=>sortMatches(matches.filter(m=>(m.date||"").startsWith(ym||"")&&!m.postponed&&m.stage!=="placeholder")).map(m=>Object.assign({},m,{res:result(m)}));
 function nextFixture(){const today=new Date().toISOString().slice(0,10);return sortMatches(matches.filter(m=>!result(m)&&!m.postponed&&(m.date||"")>=today))[0]}
 function msgText(m){const d=new Date(m.date+"T12:00:00");
-  return `⚽ Under 9s: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${m.comp})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${m.venue?`📍 ${m.venue}`:"📍 Venue to be confirmed"}\n\nFollow the game live on the day:\n${siteUrl()}?live=${encodeURIComponent(m.id)}\n\nPlease let us know if your daughter can make it:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nThank you! 💙💛`}
+  return `⚽ Under 9s: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${compName(m.comp)})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${m.venue?`📍 ${m.venue}`:"📍 Venue to be confirmed"}\n\nFollow the game live on the day:\n${siteUrl()}?live=${encodeURIComponent(m.id)}\n\nPlease let us know if your daughter can make it:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nThank you! 💙💛`}
 function msgView(){const m=matches.find(x=>x.id===msgMatch)||nextFixture();if(!m)return `<div class="card empty">No upcoming fixtures.</div>`;
   return `<section class="card stack"><h2>Parents' message</h2><p class="hint">Copy this into the parents' WhatsApp group. The link lets each parent say whether their daughter can make it, and you'll see the answers on the Fixtures page.</p>
   <textarea id="msgText" rows="12" style="width:100%;font:15px var(--body)">${esc(msgText(m))}</textarea>
@@ -1005,7 +1006,7 @@ function playersView(){
 function compSplit(n,list,ts){
   const rows=COMPS.map(c=>{const l=list.filter(m=>m.comp===c);const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {c,o,tracked:appsTracked(l),pt:c==="Tournament"?pottCount(n,ts):0}}).filter(r=>r.o.apps||r.o.goals||r.o.assists||r.o.potm||r.o.gk||r.pt);
   if(!rows.length)return `<p class="hint">Nothing recorded yet.</p>`;
-  return `<table class="lb"><thead><tr><th></th><th>Apps</th><th>Goals</th><th>Assists</th><th>Clean sheets</th><th>PotM</th></tr></thead><tbody>${rows.map(r=>`<tr><td><span class="ctag c-${r.c.toLowerCase()}">${r.c}</span></td><td>${r.tracked?r.o.apps:"–"}</td><td><b>${r.o.goals}</b></td><td>${r.o.assists}</td><td>${r.o.gk?r.o.cs:"–"}</td><td>${r.o.potm}${r.pt?` <span class="hint">+${r.pt} tournament</span>`:""}</td></tr>`).join("")}</tbody></table>`;
+  return `<table class="lb"><thead><tr><th></th><th>Apps</th><th>Goals</th><th>Assists</th><th>Clean sheets</th><th>PotM</th></tr></thead><tbody>${rows.map(r=>`<tr><td><span class="ctag c-${r.c.toLowerCase()}">${compName(r.c)}</span></td><td>${r.tracked?r.o.apps:"–"}</td><td><b>${r.o.goals}</b></td><td>${r.o.assists}</td><td>${r.o.gk?r.o.cs:"–"}</td><td>${r.o.potm}${r.pt?` <span class="hint">+${r.pt} tournament</span>`:""}</td></tr>`).join("")}</tbody></table>`;
 }
 
 function oppsView(){
@@ -1483,7 +1484,7 @@ function drawMonth(){
     X.fillStyle=C.ink;X.textAlign="center";X.font=font(Math.round(h*.42),DISPLAY);X.fillText(String(d.getDate()),125,y+h*.55);
     X.font=font(Math.round(h*.2),DISPLAY);X.fillText(d.toLocaleDateString("en-GB",{weekday:"short"}).toUpperCase(),125,y+h*.85);
     X.textAlign="left";const opp=(m.ha==="A"?"AT ":"V ")+(m.opp||"").toUpperCase();fit(opp,600,Math.round(h*.36),DISPLAY);X.fillText(opp,225,y+h*.46);
-    X.fillStyle="#555";const sub=[m.ko?m.ko+" KO":"KO TBC",m.venue,m.comp].filter(Boolean).join("  ·  ").toUpperCase();fit(sub,600,Math.round(h*.22),BODY,800);X.fillText(sub,225,y+h*.8);
+    X.fillStyle="#555";const sub=[m.ko?m.ko+" KO":"KO TBC",m.venue,m.comp==="League"?"Russell Foster League":m.comp].filter(Boolean).join("  ·  ").toUpperCase();fit(sub,600,Math.round(h*.22),BODY,800);X.fillText(sub,225,y+h*.8);
     const pill=m.res?`${m.res} ${m.us}-${m.them}`:(m.ha==="A"?"AWAY":"HOME");const pc=m.res?({W:"#1E8E3E",D:"#888",L:"#C62828"})[m.res]:(m.ha==="A"?C.blue:C.yellow);
     X.fillStyle=pc;X.beginPath();X.roundRect(870,y+h/2-26,140,52,26);X.fill();X.fillStyle=(!m.res&&m.ha!=="A")?C.ink:C.white;X.textAlign="center";X.font=font(28,DISPLAY);X.fillText(pill,940,y+h/2+10)});
   X.fillStyle=C.yellow;X.fillRect(0,950,W,130);X.fillStyle=C.ink;X.textAlign="left";X.font=font(28,BODY,800);X.fillText("Proudly sponsored by",60,1025);
