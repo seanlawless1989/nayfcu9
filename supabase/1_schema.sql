@@ -128,3 +128,6 @@ begin
   on conflict (match_id, player) do update set status = excluded.status, updated = now();
 end $$;
 grant execute on function public.set_availability(text,text,text) to anon, authenticated;
+
+-- Keepers per game (more than one allowed): {"Name": 1 = clean sheet, 0 = conceded}
+alter table public.matches add column if not exists keepers jsonb default '{}'::jsonb;

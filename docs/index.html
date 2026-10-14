@@ -167,6 +167,10 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
 .kv div{background:var(--field);border-radius:10px;padding:10px 12px}.kv b{display:block;font:400 22px var(--display)}.kv span{font:700 11px var(--body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .kv small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.kp{min-height:36px;padding:0 10px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:700 13px var(--body);cursor:pointer}
+.kp[aria-pressed="true"]{background:#1AA8A0;border-color:#1AA8A0;color:#fff}
+.kp.cs[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#111}
+.kps{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .ptbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;min-width:80px}.ptbar i{display:block;height:100%;background:var(--club)}
 .h2h{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:4px;font:600 12px var(--body);color:var(--muted)}
 .sc-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:6px;font:700 12px var(--body);color:#fff}
@@ -457,9 +461,12 @@ function slug(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").r
 
 // ---------- stats ----------
 function teamStats(list){const s={P:0,W:0,D:0,L:0,F:0,A:0};list.forEach(m=>{const r=result(m);if(!r)return;s.P++;s[r]++;s.F+=+m.us;s.A+=+m.them});s.GD=s.F-s.A;return s}
-function playerStats(list){const out={};const get=n=>out[n]||(out[n]={apps:0,goals:0,assists:0,potm:0,appsKnown:0});
+// keepers: {name: 1 = kept a clean sheet, 0 = in goal but conceded}. Older rows only have a single gk name.
+function keepersOf(m){if(m.keepers&&Object.keys(m.keepers).length)return m.keepers;return m.gk?{[m.gk]:result(m)&&+m.them===0?1:0}:{}}
+function playerStats(list){const out={};const get=n=>out[n]||(out[n]={apps:0,goals:0,assists:0,potm:0,appsKnown:0,gk:0,cs:0});
   list.forEach(m=>{const pl=played(m);for(const [n,g] of Object.entries(pl)){const o=get(n);if(m.apps!==false)o.apps++;o.goals+=+g||0}
     for(const [n,a] of Object.entries(assistsOf(m)))get(n).assists+=+a||0;
+    for(const [n,c] of Object.entries(keepersOf(m))){const o=get(n);o.gk++;o.cs+=+c?1:0}
     if(m.potm)get(m.potm).potm++; if(m.apps!==false)Object.keys(out).forEach(()=>{})});
   return out}
 function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boolean));set.add(todaySeason());return [...set].sort().reverse()}
@@ -527,7 +534,7 @@ function matchRow(m){
     <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
       <div class="meta">${cc?`<span class="ctag">${esc(m.comp)}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
-      ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}
+      ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}</div>
     <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:m.postponed?`<span class="chip P" title="Postponed">P</span>`:`<span class="chip N">${m.comp==="Tournament"?"T":"–"}</span>`}</div>
@@ -589,18 +596,18 @@ function msgView(){const m=matches.find(x=>x.id===msgMatch)||nextFixture();if(!m
 let msgMatch=null;
 
 // ---------- milestones ----------
-const MS={apps:[[10,"10 games"],[25,"25 games"],[50,"50 games"],[75,"75 games"],[100,"100 games"]],goals:[[1,"First goal"],[10,"10 goals"],[25,"25 goals"],[50,"50 goals"],[100,"100 goals"]],assists:[[1,"First assist"],[10,"10 assists"],[25,"25 assists"]],potm:[[1,"First player of the match"],[5,"5 player of the match awards"],[10,"10 player of the match awards"]]};
+const MS={apps:[[10,"10 games"],[25,"25 games"],[50,"50 games"],[75,"75 games"],[100,"100 games"]],goals:[[1,"First goal"],[10,"10 goals"],[25,"25 goals"],[50,"50 goals"],[100,"100 goals"]],assists:[[1,"First assist"],[10,"10 assists"],[25,"25 assists"]],cs:[[1,"First clean sheet"],[5,"5 clean sheets"],[10,"10 clean sheets"]],potm:[[1,"First player of the match"],[5,"5 player of the match awards"],[10,"10 player of the match awards"]]};
 function milestones(){const tot={},out=[];sortMatches(matches.filter(m=>result(m)||Object.keys(played(m)).length)).forEach(m=>{
-    const bump=(n,k,by)=>{if(!by)return;const t=tot[n]=tot[n]||{apps:0,goals:0,assists:0,potm:0};const before=t[k];t[k]+=by;MS[k].forEach(([v,label])=>{if(before<v&&t[k]>=v)out.push({n,label,date:m.date,opp:m.opp,id:m.id})})};
+    const bump=(n,k,by)=>{if(!by)return;const t=tot[n]=tot[n]||{apps:0,goals:0,assists:0,potm:0,cs:0};const before=t[k];t[k]+=by;MS[k].forEach(([v,label])=>{if(before<v&&t[k]>=v)out.push({n,label,date:m.date,opp:m.opp,id:m.id})})};
     if(m.apps!==false)Object.keys(played(m)).forEach(n=>bump(n,"apps",1));
-    Object.entries(played(m)).forEach(([n,g])=>bump(n,"goals",+g||0));Object.entries(assistsOf(m)).forEach(([n,a])=>bump(n,"assists",+a||0));if(m.potm)bump(m.potm,"potm",1)});
+    Object.entries(played(m)).forEach(([n,g])=>bump(n,"goals",+g||0));Object.entries(assistsOf(m)).forEach(([n,a])=>bump(n,"assists",+a||0));Object.entries(keepersOf(m)).forEach(([n,c])=>bump(n,"cs",+c?1:0));if(m.potm)bump(m.potm,"potm",1)});
   return out.reverse()}
 function msRow(x){return `<div class="ms"><span>🎉 <b>${esc(x.n)}</b>: ${esc(x.label)} <span class="hint">v ${esc(x.opp||"")}, ${esc(x.date||"")}</span></span><button class="mini edit-only" data-msgfx="${esc(x.n)}|${esc(x.label)}">Make graphic</button></div>`}
 
 // ---------- playing time ----------
 function quartersOf(m){return m.quarters||{}}
 function ptStats(list){const t=list.filter(m=>Object.keys(quartersOf(m)).length);const out={};t.forEach(m=>{Object.keys(played(m)).forEach(n=>{const o=out[n]=out[n]||{q:0,poss:0};o.poss+=4});Object.entries(quartersOf(m)).forEach(([n,q])=>{const o=out[n]=out[n]||{q:0,poss:0};o.q+=+q||0})});return {games:t.length,out}}
-function keeperStats(list){const out={};list.filter(m=>m.gk&&result(m)).forEach(m=>{const o=out[m.gk]=out[m.gk]||{g:0,cs:0,saves:0,conc:0};o.g++;if(+m.them===0)o.cs++;o.saves+=+m.saves||0;o.conc+=+m.them||0});return out}
+function keeperStats(list){const out={};list.filter(result).forEach(m=>{const k=Object.entries(keepersOf(m));k.forEach(([n,c])=>{const o=out[n]=out[n]||{g:0,cs:0,saves:0,shared:0};o.g++;if(+c)o.cs++;if(k.length>1)o.shared++;else o.saves+=+m.saves||0})});return out}
 
 // ---------- season review + club records ----------
 function runs(list,ok){let best=0,cur=0,bs=null,cs=null,be=null;list.forEach(m=>{if(ok(result(m))){if(!cur)cs=m;cur++;if(cur>best){best=cur;bs=cs;be=m}}else cur=0});return {n:best,from:bs,to:be}}
@@ -637,7 +644,7 @@ function reviewView(){
   <section class="card"><h3>Goals scored by month</h3>${mk.length?`<div class="bars">${mk.map(k=>`<div><b>${months[k]}</b><i style="height:${months[k]/mx*100}%"></i>${MONTHS[+k.slice(5)-1]}</div>`).join("")}</div>`:`<p class="hint">No goals yet.</p>`}</section>
   <section class="card"><h3>Playing time</h3>${pt.games?`<p class="hint" style="margin-bottom:8px">Quarters played out of quarters available, from the ${pt.games} game${pt.games>1?"s":""} where it was recorded (Live match mode records it for you). Lowest first, so you can see who's due more time.</p>
     <table class="lb"><tbody>${Object.entries(pt.out).sort((a,b)=>a[1].q/a[1].poss-b[1].q/b[1].poss).map(([n,o])=>`<tr><td>${esc(n)}</td><td style="width:50%"><div class="ptbar"><i style="width:${o.poss?o.q/o.poss*100:0}%"></i></div></td><td>${o.q}/${o.poss}</td><td>${o.poss?Math.round(o.q/o.poss*100):0}%</td></tr>`).join("")}</tbody></table>`:`<p class="hint">Not recorded yet. Use <b>▶ Live match</b> on a fixture, or the quarters counter on the match form, and it'll show here.</p>`}</section>
-  <section class="card"><h3>Goalkeepers</h3>${Object.keys(ks).length?`<table class="lb"><thead><tr><th>Keeper</th><th>Games</th><th>Clean sheets</th><th>Saves</th><th>Conceded</th></tr></thead><tbody>${Object.entries(ks).sort((a,b)=>b[1].g-a[1].g).map(([n,o])=>`<tr><td>🧤 ${esc(n)}</td><td>${o.g}</td><td>${o.cs}</td><td>${o.saves}</td><td>${o.conc}</td></tr>`).join("")}</tbody></table>`:`<p class="hint">Pick the goalkeeper on the match form (or in Live match) to start keeper stats.</p>`}</section>
+  <section class="card"><h3>Goalkeepers</h3>${Object.keys(ks).length?`<table class="lb"><thead><tr><th>Keeper</th><th>Games in goal</th><th>Shared games</th><th>Clean sheets</th><th>Saves</th></tr></thead><tbody>${Object.entries(ks).sort((a,b)=>b[1].cs-a[1].cs||b[1].g-a[1].g).map(([n,o])=>`<tr><td>🧤 ${esc(n)}</td><td>${o.g}</td><td>${o.shared}</td><td><b>${o.cs}</b></td><td>${o.saves}</td></tr>`).join("")}</tbody></table><p class="hint" style="margin-top:6px">Saves only count games with one keeper.</p>`:`<p class="hint">Tap 🧤 next to a player on the match form (or in Live match) to start keeper stats.</p>`}</section>
   <section class="card"><h3>Milestones</h3>${(ms=>ms.length?ms.map(msRow).join(""):`<p class="hint">None yet this season.</p>`)(milestones().filter(x=>seasonOf(x.date)===season))}</section>
   <section class="card"><h2>All-time club records</h2><div class="kv" style="margin-top:10px">
       <div><span>Most goals in a game</span><b>${bestGame&&bestGame.g?`${esc(bestGame.n)} (${bestGame.g})`:"–"}</b>${bestGame&&bestGame.g?`<small>v ${esc(bestGame.m.opp)}, ${esc(bestGame.m.date)}</small>`:""}</div>
@@ -652,8 +659,8 @@ function reviewView(){
 }
 function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}
 function backupJson(){return JSON.stringify({exported:new Date().toISOString(),players,matches,tournaments,honours},null,1)}
-function backupCsv(){const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const rows=[["date","season","opponent","competition","tournament","stage","home/away","venue","kick-off","us","them","result","scorers","assists","player of the match","goalkeeper","saves","notes"]];
-  sortMatches(matches).forEach(m=>{const tn=tournaments.find(t=>t.id===m.tournament_id);rows.push([m.date,seasonOf(m.date),m.opp,m.comp,tn?tn.name:"",m.stage||"",m.ha,m.venue,m.ko,m.us,m.them,result(m)||"",Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>`${n} ${g}`).join("; "),Object.entries(assistsOf(m)).map(([n,a])=>`${n} ${a}`).join("; "),m.potm,m.gk,m.saves,m.notes])});
+function backupCsv(){const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const rows=[["date","season","opponent","competition","tournament","stage","home/away","venue","kick-off","us","them","result","scorers","assists","player of the match","goalkeepers","saves","notes"]];
+  sortMatches(matches).forEach(m=>{const tn=tournaments.find(t=>t.id===m.tournament_id);rows.push([m.date,seasonOf(m.date),m.opp,m.comp,tn?tn.name:"",m.stage||"",m.ha,m.venue,m.ko,m.us,m.them,result(m)||"",Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>`${n} ${g}`).join("; "),Object.entries(assistsOf(m)).map(([n,a])=>`${n} ${a}`).join("; "),m.potm,Object.entries(keepersOf(m)).map(([n,c])=>n+(+c?" (clean sheet)":"")).join("; "),m.saves,m.notes])});
   return rows.map(r=>r.map(q).join(",")).join("\r\n")}
 
 // ---------- live match ----------
@@ -665,7 +672,7 @@ function liveStart(id){const m=matches.find(x=>x.id===id);if(!m)return;let saved
   LV=saved||{id,q:1,squad:squadNames,on:Object.fromEntries(squadNames.map(n=>[n,true])),qs:{},counted:{}};setView("live")}
 function liveSaveLocal(){try{localStorage.setItem(liveKey(LV.id),JSON.stringify(LV))}catch(e){}}
 async function livePush(extra){const m=matches.find(x=>x.id===LV.id);if(!m)return;
-  const body=Object.assign({played:m.played||{},assists:m.assists||{},us:m.us??0,them:m.them??0,quarters:LV.qs,gk:m.gk||null,check:""},extra||{});
+  const body=Object.assign({played:m.played||{},assists:m.assists||{},us:m.us??0,them:m.them??0,quarters:LV.qs,keepers:m.keepers||{},check:""},extra||{});
   try{await db.collection("matches").doc(LV.id).update(body)}catch(e){toast("Saved on this phone. It'll sync when you're back online.")}}
 function liveCountQuarter(){if(LV.counted[LV.q])return;LV.counted[LV.q]=true;Object.keys(LV.on).forEach(n=>{if(LV.on[n])LV.qs[n]=(LV.qs[n]||0)+1})}
 function liveView(){
@@ -676,10 +683,9 @@ function liveView(){
   <div class="qbar">${[1,2,3,4].map(q=>`<span class="q${LV.q===q?" on":""}">Q${q}</span>`).join("")}
     <button class="btn" id="lvNextQ"${LV.q>4?" disabled":""}>${LV.q<4?`End Q${LV.q}, start Q${LV.q+1}`:LV.q===4?"End Q4":"Finished"}</button>
     <button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" id="lvThemMinus">− undo theirs</button></div>
-  <label class="f" style="max-width:320px">Goalkeeper<select id="lvGk"><option value="">Not set</option>${LV.squad.map(n=>`<option${n===m.gk?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
-  <p class="hint">Tap a name to mark her on or off the pitch for this quarter. Playing time is counted at the end of each quarter.</p>
+  <p class="hint">Tap a name to mark her on or off the pitch for this quarter. Playing time is counted at the end of each quarter. Tap 🧤 for whoever goes in goal (you can have more than one); clean sheets are filled in at full time and you can change them on the match form.</p>
   <div class="lp">${LV.squad.map(n=>`<div class="pl${LV.on[n]?" on":""}"><div class="nm" data-lvtog="${esc(n)}" role="button" tabindex="0"><span>${esc(n)}</span><span class="tag">${LV.on[n]?"On":"Off"} · ${LV.qs[n]||0}Q</span></div>
-    <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">⚽ ${pl[n]||0}</button><button data-lvast="${esc(n)}">🅰️ ${as[n]||0}</button></div></div>`).join("")}</div>
+    <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">⚽ ${pl[n]||0}</button><button data-lvast="${esc(n)}">🅰️ ${as[n]||0}</button></div><button class="kp" data-lvgk="${esc(n)}" aria-pressed="${n in (m.keepers||{})}">🧤 ${n in (m.keepers||{})?"In goal":"Keeper?"}</button></div>`).join("")}</div>
   ${(rest=>rest.length?`<label class="f" style="max-width:320px">Add a player to today's squad<select id="lvAdd"><option value="">Choose…</option>${rest.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select></label>`:"")(players.filter(p=>p.current&&!LV.squad.includes(p.name)))}
   <div class="btns"><button class="btn gold bigbtn" id="lvDone">Full time: save and finish</button><button class="btn ghost" id="lvUndo">Undo last goal</button><button class="btn ghost" data-view="fixtures">Leave (keeps progress)</button></div>
   ${LV.ask?`<div class="ask"><b>Who assisted ${esc(LV.ask)}'s goal?</b><div class="chips">${LV.squad.filter(n=>n!==LV.ask).map(n=>`<button data-lvasg="${esc(n)}">${esc(n)}</button>`).join("")}<button data-lvasg="">No assist</button></div></div>`:""}
@@ -777,18 +783,20 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     if(b.dataset.lvgoal)liveGoal(b.dataset.lvgoal);
     if(b.dataset.lvast){const a=Object.assign({},m.assists||{});a[b.dataset.lvast]=(a[b.dataset.lvast]||0)+1;m.assists=a;liveSaveLocal();render();livePush({assists:a})}
     if(b.dataset.lvasg!=null)liveAssist(b.dataset.lvasg);
+    if(b.dataset.lvgk){const k=Object.assign({},m.keepers||{});if(b.dataset.lvgk in k)delete k[b.dataset.lvgk];else k[b.dataset.lvgk]=0;m.keepers=k;liveSaveLocal();render();livePush({keepers:k})}
     if(b.id==="lvThem"){m.them=(+m.them||0)+1;liveSaveLocal();render();livePush({them:m.them})}
     if(b.id==="lvThemMinus"){m.them=Math.max(0,(+m.them||0)-1);render();livePush({them:m.them})}
     if(b.id==="lvUndo"&&LV.last){const pl=Object.assign({},m.played);pl[LV.last.n]=Math.max(0,(pl[LV.last.n]||0)-1);m.played=pl;m.us=Math.max(0,(+m.us||0)-1);
       if(LV.last.a){const a=Object.assign({},m.assists);a[LV.last.a]=Math.max(0,(a[LV.last.a]||0)-1);if(!a[LV.last.a])delete a[LV.last.a];m.assists=a}LV.last=null;liveSaveLocal();render();livePush({played:pl,us:m.us,assists:m.assists})}
     if(b.id==="lvNextQ"){liveCountQuarter();LV.q++;liveSaveLocal();render();livePush({quarters:LV.qs})}
     if(b.id==="lvDone"){if(LV.q<=4)liveCountQuarter();const pl=Object.assign({},m.played);Object.keys(LV.qs).forEach(n=>{if(!(n in pl))pl[n]=0});
-      await livePush({played:pl,quarters:LV.qs,us:+m.us||0,them:+m.them||0});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
-      const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.quarters=F.quarters||{};F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
+      const kk=Object.fromEntries(Object.keys(m.keepers||{}).map(n=>[n,+m.them===0?1:0]));m.keepers=kk;
+      await livePush({played:pl,quarters:LV.qs,us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
+      const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.quarters=F.quarters||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
   }});
 document.addEventListener("click",e=>{const t=e.target.closest("[data-lvtog]");if(!t||!LV)return;const n=t.dataset.lvtog;LV.on[n]=!LV.on[n];liveSaveLocal();render()});
 document.addEventListener("change",e=>{if(e.target.id==="lvAdd"&&LV&&e.target.value){LV.squad.push(e.target.value);LV.on[e.target.value]=false;liveSaveLocal();render();return}
-  if(e.target.id==="lvGk"&&LV){const m=matches.find(x=>x.id===LV.id);m.gk=e.target.value||null;livePush({gk:m.gk})}});
+});
 
 // ---------- honours ----------
 function honoursView(){
@@ -856,19 +864,19 @@ function playersView(){
   const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps).filter(n=>{const o=ps[n];return o.apps||o.goals||o.assists||o.potm}),...ts.map(t=>t.potm).filter(Boolean)])];
   const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,assists:0,potm:0},pt:pottCount(n,ts)})).sort((a,b)=>b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
   const what=(compFilter?compFilter.toLowerCase()+" ":"")+(career?"career stats, all seasons":`stats, ${season}`);
-  const tot=rows.reduce((a,{o})=>({g:a.g+o.goals,a:a.a+o.assists}),{g:0,a:0});
+  const tot=rows.reduce((a,{o})=>({g:a.g+o.goals,a:a.a+o.assists}),{g:0,a:0});const showCs=rows.some(r=>r.o.gk);
   return `<div class="btns" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Season or career"><button data-pscope="season" aria-pressed="${!career}">${esc(season)}</button><button data-pscope="career" aria-pressed="${career}">Career (all seasons)</button></div></div>
   ${CKEY()}
   <section class="card"><h2>${what[0].toUpperCase()+what.slice(1)}</h2>
    <p class="hint" style="margin-bottom:10px">${list.length} game${list.length===1?"":"s"}${career?" across "+new Set(list.map(m=>seasonOf(m.date))).size+" seasons":""} · ${tot.g} goals${at?` · ${tot.a} assists`:""}.${tracked?(career?" Appearances only count games where the team sheet was recorded (most of last season wasn't).":""):" Appearances weren't recorded for these games, so only goals and awards show."}${career?" Assists are recorded from 2026-27.":""}</p>
-   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th>${at?"<th>Assists</th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${tracked?"<th>Goals per game</th>":""}</tr></thead><tbody>
-   ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
+   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th>${at?"<th>Assists</th>":""}${showCs?"<th>Clean sheets <span class='hint'>/ in goal</span></th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${tracked?"<th>Goals per game</th>":""}</tr></thead><tbody>
+   ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.apps?(o.goals/o.apps).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
    </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her record split by season and competition.</p></section>`;
 }
 function compSplit(n,list,ts){
-  const rows=COMPS.map(c=>{const l=list.filter(m=>m.comp===c);const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {c,o,tracked:appsTracked(l),pt:c==="Tournament"?pottCount(n,ts):0}}).filter(r=>r.o.apps||r.o.goals||r.o.assists||r.o.potm||r.pt);
+  const rows=COMPS.map(c=>{const l=list.filter(m=>m.comp===c);const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {c,o,tracked:appsTracked(l),pt:c==="Tournament"?pottCount(n,ts):0}}).filter(r=>r.o.apps||r.o.goals||r.o.assists||r.o.potm||r.o.gk||r.pt);
   if(!rows.length)return `<p class="hint">Nothing recorded yet.</p>`;
-  return `<table class="lb"><thead><tr><th></th><th>Apps</th><th>Goals</th><th>Assists</th><th>PotM</th></tr></thead><tbody>${rows.map(r=>`<tr><td><span class="ctag c-${r.c.toLowerCase()}">${r.c}</span></td><td>${r.tracked?r.o.apps:"–"}</td><td><b>${r.o.goals}</b></td><td>${r.o.assists}</td><td>${r.o.potm}${r.pt?` <span class="hint">+${r.pt} tournament</span>`:""}</td></tr>`).join("")}</tbody></table>`;
+  return `<table class="lb"><thead><tr><th></th><th>Apps</th><th>Goals</th><th>Assists</th><th>Clean sheets</th><th>PotM</th></tr></thead><tbody>${rows.map(r=>`<tr><td><span class="ctag c-${r.c.toLowerCase()}">${r.c}</span></td><td>${r.tracked?r.o.apps:"–"}</td><td><b>${r.o.goals}</b></td><td>${r.o.assists}</td><td>${r.o.gk?r.o.cs:"–"}</td><td>${r.o.potm}${r.pt?` <span class="hint">+${r.pt} tournament</span>`:""}</td></tr>`).join("")}</tbody></table>`;
 }
 
 function oppsView(){
@@ -895,7 +903,7 @@ function oppDetail(name){
 
 function playerDetail(n){
   const ss=seasons().slice().reverse();
-  const rows=ss.map(s=>{const l=sortMatches(matches.filter(m=>seasonOf(m.date)===s));const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {s,o,tracked:appsTracked(l)}}).filter(r=>r.o.goals||r.o.apps||r.o.potm||r.o.assists);
+  const rows=ss.map(s=>{const l=sortMatches(matches.filter(m=>seasonOf(m.date)===s));const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {s,o,tracked:appsTracked(l)}}).filter(r=>r.o.goals||r.o.apps||r.o.potm||r.o.assists||r.o.gk);
   const games=sortMatches(matches.filter(m=>n in played(m)||m.potm===n||n in assistsOf(m))).reverse();
   const tot=playerStats(matches)[n]||{apps:0,goals:0,potm:0};
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
@@ -903,8 +911,8 @@ function playerDetail(n){
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
   <div class="grid2"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
   <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
-  <section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>Goals</th><th>Assists</th><th>PotM</th></tr></thead><tbody>
-  ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps:"–"}</td><td>${r.o.goals}</td><td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.potm}</td></tr>`).join("")}</tbody></table></section>
+  <section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>Goals</th><th>Assists</th><th>Clean sheets</th><th>PotM</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps:"–"}</td><td>${r.o.goals}</td><td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.gk?r.o.cs:"–"}</td><td>${r.o.potm}</td></tr>`).join("")}</tbody></table></section>
   <section class="card"><h3>Matches</h3><div class="list">${games.map(matchRow).join("")||`<p class="hint">No matches logged yet.</p>`}</div></section></div>`;
 }
 
@@ -923,7 +931,7 @@ function squadView(){
 
 // ---------- the match form ----------
 let F=null;
-function blankForm(){return {id:null,date:new Date().toISOString().slice(0,10),opp:"",ha:"H",venue:"",comp:"League",ko:"",us:"",them:"",potm:"",played:{},assists:{},quarters:{},gk:"",saves:"",notes:"",check:"",apps:true,postponed:false,tournament_id:null,stage:""}}
+function blankForm(){return {id:null,date:new Date().toISOString().slice(0,10),opp:"",ha:"H",venue:"",comp:"League",ko:"",us:"",them:"",potm:"",played:{},assists:{},quarters:{},keepers:{},gk:"",saves:"",notes:"",check:"",apps:true,postponed:false,tournament_id:null,stage:""}}
 function formView(){
   if(!F)F=blankForm();
   const opps=[...new Set(matches.map(m=>m.opp).filter(Boolean))].sort(), venues=[...new Set(matches.map(m=>m.venue).filter(Boolean))].sort();
@@ -951,20 +959,20 @@ function formView(){
     <div class="seg" role="group" aria-label="Home or away"><button type="button" data-ha="H" aria-pressed="${F.ha==="H"}">Home</button><button type="button" data-ha="A" aria-pressed="${F.ha==="A"}">Away</button><button type="button" data-ha="N" aria-pressed="${F.ha==="N"}">Neutral</button></div>
   </section>
   <section class="card stack" style="gap:12px"><h3>Who played, scored and assisted</h3>
-    <p class="hint">Tick everyone who played, then tap + for each goal (⚽) and each assist (🅰️).</p>
+    <p class="hint">Tick everyone who played, then tap + for each goal (⚽) and each assist (🅰️). Tap 🧤 for whoever went in goal (more than one is fine), then tick Clean sheet for each keeper who didn't concede.</p>
     <div class="pp">${roster.map(p=>{const on=p.name in F.played;const g=F.played[p.name]||0;return `<div class="pr${on?" on":""}">
       <label for="pl-${esc(p.id)}"><input type="checkbox" id="pl-${esc(p.id)}" data-play="${esc(p.name)}"${on?" checked":""}><span class="n">${esc(p.num??"")}</span><span>${esc(p.name)}</span></label>
       <div class="step"><span class="ball" aria-hidden="true">⚽</span><button type="button" data-goal="-1" data-n="${esc(p.name)}" aria-label="One less goal for ${esc(p.name)}"${g?"":" disabled"}>−</button><output>${g}</output><button type="button" data-goal="1" data-n="${esc(p.name)}" aria-label="One more goal for ${esc(p.name)}">+</button></div>
       <div class="step"><span class="ball" aria-hidden="true">🅰️</span><button type="button" data-assist="-1" data-n="${esc(p.name)}" aria-label="One less assist for ${esc(p.name)}"${(F.assists[p.name]||0)?"":" disabled"}>−</button><output>${F.assists[p.name]||0}</output><button type="button" data-assist="1" data-n="${esc(p.name)}" aria-label="One more assist for ${esc(p.name)}">+</button></div>
-      <div class="step"><span class="ball" aria-hidden="true" title="Quarters played">⏱</span><button type="button" data-qtr="-1" data-n="${esc(p.name)}" aria-label="One less quarter for ${esc(p.name)}"${(F.quarters[p.name]||0)?"":" disabled"}>−</button><output>${F.quarters[p.name]||0}</output><button type="button" data-qtr="1" data-n="${esc(p.name)}" aria-label="One more quarter for ${esc(p.name)}"${(F.quarters[p.name]||0)>=4?" disabled":""}>+</button></div></div>`}).join("")}</div>
+      <div class="step"><span class="ball" aria-hidden="true" title="Quarters played">⏱</span><button type="button" data-qtr="-1" data-n="${esc(p.name)}" aria-label="One less quarter for ${esc(p.name)}"${(F.quarters[p.name]||0)?"":" disabled"}>−</button><output>${F.quarters[p.name]||0}</output><button type="button" data-qtr="1" data-n="${esc(p.name)}" aria-label="One more quarter for ${esc(p.name)}"${(F.quarters[p.name]||0)>=4?" disabled":""}>+</button></div>
+      <div class="kps"><button type="button" class="kp" data-kp="${esc(p.name)}" aria-pressed="${p.name in F.keepers}">🧤 In goal</button>${p.name in F.keepers?`<button type="button" class="kp cs" data-kcs="${esc(p.name)}" aria-pressed="${!!+F.keepers[p.name]}">Clean sheet</button>`:""}</div></div>`}).join("")}</div>
     <p class="hint">⏱ = quarters played (optional, for fair playing time).</p>
   </section>
   <section class="card stack" style="gap:12px"><h3>Final score</h3>
     <div class="score"><label class="f">Newton Aycliffe<input type="number" min="0" id="f-us" value="${esc(F.us)}" placeholder="${goalSum}"></label><span>–</span><label class="f">${esc(F.opp||"Them")}<input type="number" min="0" id="f-them" value="${esc(F.them)}"></label></div>
     ${mism?`<p class="hint" style="color:var(--warnInk)">The scorers add up to ${goalSum}. Fine if there was an own goal; add it in the notes.</p>`:""}
     <label class="f"${F.comp==="Tournament"?" hidden":""}>Coffey Coffee player of the match<select id="f-potm"><option value="">Not chosen yet</option>${(playedNames.length?playedNames:roster.map(p=>p.name)).map(n=>`<option${n===F.potm?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
-    <div class="grid2"><label class="f">Goalkeeper<select id="f-gk"><option value="">Not recorded</option>${(playedNames.length?playedNames:roster.map(p=>p.name)).map(n=>`<option${n===F.gk?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
-      <label class="f">Saves<input type="number" min="0" id="f-saves" value="${esc(F.saves??"")}"></label></div>
+    <div class="grid2"><label class="f">Keeper saves (optional)<input type="number" min="0" id="f-saves" value="${esc(F.saves??"")}"></label></div>
     <label class="f">Notes<textarea id="f-notes">${esc(F.notes)}</textarea></label>
   </section>
   <div class="btns"><button class="btn gold" type="submit" id="saveM">${F.id?"Save changes":"Save match"}</button><button type="button" class="btn ghost" data-cancel>Cancel</button>
@@ -972,7 +980,7 @@ function formView(){
   </form>`;
 }
 function readForm(){const v=id=>$("#"+id)?.value??"";F.opp=v("f-opp").trim();F.date=v("f-date");F.ko=v("f-ko");F.venue=v("f-venue").trim();F.comp=v("f-comp");
-  F.us=v("f-us")===""?"":+v("f-us");F.them=v("f-them")===""?"":+v("f-them");F.potm=v("f-potm");F.notes=v("f-notes");F.gk=v("f-gk");F.saves=v("f-saves")===""?"":+v("f-saves");if($("#f-pp"))F.postponed=$("#f-pp").checked;
+  F.us=v("f-us")===""?"":+v("f-us");F.them=v("f-them")===""?"":+v("f-them");F.potm=v("f-potm");F.notes=v("f-notes");F.saves=v("f-saves")===""?"":+v("f-saves");if($("#f-pp"))F.postponed=$("#f-pp").checked;
   if($("#f-tid")){F.tournament_id=$("#f-tid").value||null;F.stage=$("#f-stage").value}else if(F.comp!=="Tournament"){F.tournament_id=null;F.stage=""}}
 async function saveMatch(){
   readForm();
@@ -981,7 +989,7 @@ async function saveMatch(){
   if(F.comp==="Tournament")F.potm="";
   const goalSum=Object.values(F.played).reduce((a,b)=>a+(+b||0),0);
   const body={date:F.date,opp:F.opp,ha:F.ha,venue:F.venue,comp:F.comp,ko:F.ko,us:F.us===""?(Object.keys(F.played).length&&F.them!==""?goalSum:null):F.us,them:F.them===""?null:F.them,
-    potm:F.potm||null,played:F.played,assists:F.assists||{},postponed:!!F.postponed&&F.us===""&&F.them==="",tournament_id:F.tournament_id||null,stage:F.stage||"",quarters:F.quarters||{},gk:F.gk||null,saves:F.saves===""||F.saves==null?null:+F.saves,notes:F.notes,apps:F.apps!==false,check:"",updated:new Date().toISOString()};
+    potm:F.potm||null,played:F.played,assists:F.assists||{},postponed:!!F.postponed&&F.us===""&&F.them==="",tournament_id:F.tournament_id||null,stage:F.stage||"",quarters:F.quarters||{},keepers:F.keepers||{},gk:Object.keys(F.keepers||{})[0]||null,saves:F.saves===""||F.saves==null?null:+F.saves,notes:F.notes,apps:F.apps!==false,check:"",updated:new Date().toISOString()};
   const id=F.id||`${F.date}-${slug(F.opp)}-${Math.random().toString(36).slice(2,6)}`;
   $("#saveM").disabled=true;
   try{await db.collection("matches").doc(id).set(body);toast("Match saved.");season=seasonOf(F.date);F=null;editing=null;setView(isFixture(body)?"fixtures":"results")}
@@ -996,7 +1004,7 @@ document.addEventListener("click",async e=>{
   if(t.dataset.view){F=null;T=null;H=null;playerView=null;oppView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
   if(t.dataset.edit){const m=matches.find(x=>x.id===t.dataset.edit);if(!m)return;
     if(!canWrite){return}
-    F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.assists=F.assists||{};F.quarters=F.quarters||{};F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
+    F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.assists=F.assists||{};F.quarters=F.quarters||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
   if(t.dataset.player){playerView=t.dataset.player;setView("players");return}
   if(t.dataset.tedit){const x=tournaments.find(y=>y.id===t.dataset.tedit);if(x&&canWrite){T=JSON.parse(JSON.stringify(x));setView("tedit")}return}
   if(t.dataset.hedit){const x=honours.find(y=>y.id===t.dataset.hedit);if(x&&canWrite){H=JSON.parse(JSON.stringify(x));setView("hedit")}return}
@@ -1011,6 +1019,8 @@ document.addEventListener("click",async e=>{
   if(t.dataset.ha&&F){readForm();F.ha=t.dataset.ha;render();return}
   if(t.dataset.goal&&F){readForm();const n=t.dataset.n;const g=Math.max(0,(F.played[n]||0)+ +t.dataset.goal);F.played[n]=g;
     if(F.us!==""&&F.us!=null&&!F._usTouched){F.us=Object.values(F.played).reduce((a,b)=>a+(+b||0),0)}render();return}
+  if(t.dataset.kp&&F){readForm();const n=t.dataset.kp;F.keepers=F.keepers||{};if(n in F.keepers)delete F.keepers[n];else{F.keepers[n]=F.them!==""&&+F.them===0?1:0;if(!(n in F.played))F.played[n]=0}render();return}
+  if(t.dataset.kcs&&F){readForm();const n=t.dataset.kcs;F.keepers[n]=+F.keepers[n]?0:1;render();return}
   if(t.dataset.qtr&&F){readForm();const n=t.dataset.n;F.quarters=F.quarters||{};const q=Math.min(4,Math.max(0,(F.quarters[n]||0)+ +t.dataset.qtr));if(q)F.quarters[n]=q;else delete F.quarters[n];if(q&&!(n in F.played))F.played[n]=0;render();return}
   if(t.dataset.assist&&F){readForm();const n=t.dataset.n;F.assists=F.assists||{};const a=Math.max(0,(F.assists[n]||0)+ +t.dataset.assist);if(a)F.assists[n]=a;else delete F.assists[n];
     if(a&&!(n in F.played))F.played[n]=0;render();return}
@@ -1024,7 +1034,7 @@ document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.tar
 document.addEventListener("change",async e=>{
   const t=e.target;if(t.closest&&t.closest("#gfxView"))return;
   if(t.id==="season"){season=t.value;playerView=null;render();return}
-  if(t.dataset.play&&F){readForm();const n=t.dataset.play;if(t.checked)F.played[n]=F.played[n]||0;else{delete F.played[n];if(F.assists)delete F.assists[n];if(F.quarters)delete F.quarters[n];if(F.potm===n)F.potm=""}render();return}
+  if(t.dataset.play&&F){readForm();const n=t.dataset.play;if(t.checked)F.played[n]=F.played[n]||0;else{delete F.played[n];if(F.assists)delete F.assists[n];if(F.quarters)delete F.quarters[n];if(F.keepers)delete F.keepers[n];if(F.potm===n)F.potm=""}render();return}
   if(t.id==="f-us"&&F){F._usTouched=true}
   if(t.id==="f-comp"&&F){readForm();F.comp=t.value;if(F.comp==="Tournament")F.ha="N";render();return}
   if(t.id==="f-tid"&&F){readForm();const x=tournaments.find(y=>y.id===t.value);if(x){F.date=x.date||F.date;if(!F.venue)F.venue=x.venue||""}render();return}
