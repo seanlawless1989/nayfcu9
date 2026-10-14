@@ -144,6 +144,8 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .live .board{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;background:var(--clubDeep);color:#fff;border-radius:14px;padding:14px}
 .live .board .tm{text-align:center;font-weight:800}.live .board .sc{font:400 54px var(--display);color:var(--gold);text-align:center;line-height:1}
 .live .board .sc small{display:block;font:800 13px var(--body);color:#fff;margin-top:6px;letter-spacing:.04em}
+.live .board .scorers{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid rgba(255,255,255,.2);padding-top:10px;font:700 13px var(--body)}
+.live .board .scorers div{display:flex;flex-direction:column;gap:3px}.live .board .scorers div:last-child{text-align:right;opacity:.85}
 .lv{background:#E53935;color:#fff;border-radius:4px;padding:1px 6px;margin-right:4px;animation:blink 1.6s infinite}
 @keyframes blink{50%{opacity:.55}}
 .pitch{position:relative;width:100%;max-width:420px;aspect-ratio:3/4;margin:6px auto;border-radius:12px;background:repeating-linear-gradient(0deg,#2E8B3E 0 12.5%,#33963F 12.5% 25%);border:3px solid #fff;overflow:hidden}
@@ -830,7 +832,10 @@ const EVI={ko:"🟢",goal:"⚽",them:"🥅",sub:"🔁",gk:"🧤",form:"📋",ht:
 function timelineHtml(L,m){const ev=(L&&L.events||[]).slice().reverse();
   return ev.length?`<ol class="tl">${ev.map(e=>`<li class="${e.k}"><span class="mn">${esc(e.k==="ht"?"HT":e.k==="ft"?"FT":e.m||"")}</span><span class="ic">${EVI[e.k]||""}</span><span>${commentary(e,m)}</span></li>`).join("")}</ol>`:`<p class="hint">Nothing yet. Updates appear here as they happen.</p>`}
 function liveBoard(m,L){const st=L&&L.status;const lab=st==="live"?`<span class="lv">LIVE</span> ${minuteOf(L)}`:st==="ht"?"Half time":st==="ft"?"Full time":"Not started";
-  return `<div class="board"><div class="tm">Newton Aycliffe</div><div class="sc">${m.us??0} – ${m.them??0}<small>${lab}</small></div><div class="tm">${esc(m.opp)}</div></div>`}
+  const ev=(L&&L.events)||[];const by={};ev.filter(e=>e.k==="goal").forEach(e=>{(by[e.n]=by[e.n]||[]).push(e.m)});
+  const ours=Object.entries(by).map(([n,ms])=>`${esc(n)} ${ms.map(esc).join(", ")}`);const theirs=ev.filter(e=>e.k==="them").map(e=>esc(e.m));
+  const sc=ours.length||theirs.length?`<div class="scorers"><div>${ours.map(x=>`<span>⚽ ${x}</span>`).join("")}</div><div>${theirs.length?`<span>⚽ ${theirs.join(", ")}</span>`:""}</div></div>`:"";
+  return `<div class="board"><div class="tm">Newton Aycliffe</div><div class="sc">${m.us??0} – ${m.them??0}<small>${lab}</small></div><div class="tm">${esc(m.opp)}</div>${sc}</div>`}
 function liveView(){
   const m=LV&&matches.find(x=>x.id===LV.id);if(!m)return `<div class="card empty">Pick a fixture and tap ▶ Live match.</div>`;
   const pr=m.practice?`<div class="note"><b>Practice match.</b> Try anything: nothing is saved and parents can't see it. Tap "Practice live match" on Fixtures to start again.</div>`:"";
