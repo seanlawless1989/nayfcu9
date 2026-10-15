@@ -45,3 +45,10 @@ Any change committed to the `docs` folder goes live a minute or two later. Your 
 ## Children's details
 
 The public pages show players' first names, goals and awards. Check that parents have agreed to this, in line with the club's safeguarding and photo policy. To make the whole site coaches-only, open `supabase/1_schema.sql`, follow the note above the "read players" and "read matches" rules, and run those lines again.
+
+## The U9s Manager game
+
+`docs/manager` holds Aycliffe U9s Manager, a Football Manager style game for the squad. It lives at https://seanlawless1989.github.io/nayfcu9/manager/ and can be installed from the browser: in Safari use **Share → Add to Home Screen**, or in Chrome use **Install app**. Games save on each device. To move a game to another device, use the backup code under **Home → Your game**.
+
+The game is built from a single source file elsewhere and copied in here. To update it, replace the files in `docs/manager` with the new build.
+
