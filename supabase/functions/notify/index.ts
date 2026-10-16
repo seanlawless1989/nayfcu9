@@ -1,5 +1,5 @@
 // Sends match alerts to families' phones (web push).
-//   POST {}               every 5 minutes from pg_cron: kick-off reminders, plus any live update not yet sent
+//   POST {}               every minute from pg_cron: kick-off reminders, plus any live update not yet sent
 //   POST {match: "<id>"}  from the coach's phone straight after a live update: sends it at once
 //   POST {test: "<endpoint>"} from a parent's phone after turning alerts on: a "you're all set" alert
 // Only names already shown on the site go in an alert. See supabase/3_notifications.sql.
@@ -94,16 +94,16 @@ async function flushLive(m: Match) {
   return sent;
 }
 
-// ---- kick-off reminders (about an hour before) ----
+// ---- kick-off reminders (5 minutes before) ----
 async function reminders(list: Match[]) {
   let sent = 0; const now = Date.now();
   for (const m of list) {
     if (m.postponed || m.us != null || m.stage === "placeholder" || (m.live?.status && m.live.status !== "pre")) continue;
     const ko = kickOff(m.date, m.ko); if (ko == null) continue;
-    const mins = (ko - now) / 60_000; if (mins <= 0 || mins > 65) continue;
+    const mins = (ko - now) / 60_000; if (mins <= 0 || mins > 5.5) continue;
     const { data: claimed } = await db.rpc("push_claim_reminder", { p_match: m.id }); if (!claimed) continue;
     const where = m.venue ? ` at ${m.venue}` : m.ha === "A" ? " (away)" : m.ha === "H" ? " (home)" : "";
-    await send("reminders", { title: `⏰ Kick-off at ${m.ko.trim()}`, body: `${US} v ${m.opp}${where}. Follow it live on the site.`, url: `${SITE}?live=${encodeURIComponent(m.id)}`, tag: `ko-${m.id}` });
+    await send("reminders", { title: `⏰ Kick-off in 5 minutes`, body: `${US} v ${m.opp}${where}, ${m.ko.trim()}. Tap to follow it live.`, url: `${SITE}?live=${encodeURIComponent(m.id)}`, tag: `ko-${m.id}` });
     sent++;
   }
   return sent;

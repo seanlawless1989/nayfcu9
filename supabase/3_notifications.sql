@@ -77,12 +77,12 @@ end $$;
 revoke all on function public.push_claim_events(text, bigint, bigint) from public, anon, authenticated;
 revoke all on function public.push_claim_reminder(text) from public, anon, authenticated;
 
--- Every 5 minutes: send kick-off reminders, and catch any live update the coach's phone didn't pass on.
+-- Every minute: send kick-off reminders (5 minutes before), and catch any live update the coach's phone didn't pass on.
 -- Needs the pg_cron and pg_net extensions (Database > Extensions). The key below is the public anon key from docs/config.js.
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 select cron.unschedule('nayfc-notify') where exists (select 1 from cron.job where jobname = 'nayfc-notify');
-select cron.schedule('nayfc-notify', '*/5 * * * *', $cron$
+select cron.schedule('nayfc-notify', '* * * * *', $cron$
   select net.http_post(
     url := 'https://elqwksyqwezhkekdqivn.supabase.co/functions/v1/notify',
     headers := jsonb_build_object('Content-Type', 'application/json',

@@ -756,7 +756,7 @@ function msgView(){const m=matches.find(x=>x.id===msgMatch)||nextFixture();if(!m
 let msgMatch=null;
 
 // ---------- match alerts (phone notifications) ----------
-// Families turn these on per phone. The "notify" Supabase function sends kick-off reminders about an hour
+// Families turn these on per phone. The "notify" Supabase function sends kick-off reminders 5 minutes
 // before and live updates (kick-off, goals, half time, full time). iPhones only allow it from the home-screen app.
 const AL={sub:null,checked:false,busy:false,prefs:{reminders:true,live:true}};
 try{Object.assign(AL.prefs,JSON.parse(localStorage.getItem("nayfc.alerts")||"{}"))}catch(e){}
@@ -772,16 +772,16 @@ async function alOn(){if(AL.busy)return;AL.busy=true;render();
     const ep=await alSave(sub);AL.sub=sub;sb.functions.invoke("notify",{body:{test:ep}}).catch(()=>{});toast("Alerts are on. You should get a test one now.")}
   catch(e){toast("Couldn't turn alerts on. Try again in a moment.")}finally{AL.busy=false;render()}}
 async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.sub.endpoint;await AL.sub.unsubscribe();await sb.rpc("push_unsubscribe",{p_endpoint:ep});AL.sub=null;toast("Alerts are off on this phone.")}catch(e){toast("Couldn't turn alerts off. Try again.")}finally{AL.busy=false;render()}}
-// after a live update from the coach's phone: send any new alerts straight away (the 5-minute check is the back-up)
+// after a live update from the coach's phone: send any new alerts straight away (the every-minute check is the back-up)
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:{match:id}}).catch(()=>{})}
 function alertsView(){if(!AL.checked)alCheck();
-  const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone about an hour before kick-off, and live updates on match day: kick-off, every goal, half time and full time.</p>`;
+  const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone 5 minutes before kick-off, and live updates on match day: kick-off, every goal, half time and full time.</p>`;
   let bodyHtml;
   if(alIos()&&!alStandalone())bodyHtml=`<div class="note">On an iPhone or iPad, alerts only work from the club app on your home screen:<br>1. Tap the Share button <b>⬆︎</b> at the bottom of Safari.<br>2. Tap <b>Add to Home Screen</b>, then <b>Add</b>.<br>3. Open <b>NAYFC U9s</b> from your home screen and come back to this page.</div>`;
   else if(!alSupported())bodyHtml=`<div class="note">This browser can't show alerts. On Android use Chrome; on iPhone add the site to your home screen first.</div>`;
   else if(Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
   else{const on=!!AL.sub;
-    bodyHtml=`<div class="av"><label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-rem"${AL.prefs.reminders?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Kick-off reminders</span><span class="hint">about an hour before</span></label>
+    bodyHtml=`<div class="av"><label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-rem"${AL.prefs.reminders?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Kick-off reminders</span><span class="hint">5 minutes before</span></label>
       <label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-live"${AL.prefs.live?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Live scores</span><span class="hint">kick-off, goals, HT, FT</span></label></div>
       <div class="btns">${on?`<span class="pill">✅ On for this phone</span><button class="btn ghost" id="alOff"${AL.busy?" disabled":""}>Turn off</button>`:`<button class="btn gold" id="alOn"${AL.busy?" disabled":""}>${AL.busy?"Turning on…":"Turn on alerts"}</button>`}</div>`}
   return `<section class="card stack">${head}${bodyHtml}<p class="hint">Each phone is set up on its own. We don't ask for your name, number or email, and alerts only use first names already on this site.</p></section>`}
