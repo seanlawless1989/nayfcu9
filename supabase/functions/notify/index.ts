@@ -55,7 +55,7 @@ async function send(kind: "reminders" | "live" | null, alert: Alert, only?: stri
 }
 
 // ---- live match events ----
-type Ev = { k: string; at?: number; n?: string; a?: string; na?: number; s?: string; m?: string };
+type Ev = { k: string; at?: number; n?: string; a?: string; na?: number; on?: string; off?: string; s?: string; m?: string };
 type Match = { id: string; date: string; opp: string; ko: string; venue: string; ha: string; us: number | null; them: number | null; postponed: boolean; stage: string | null; live: { status?: string; events?: Ev[] } | null };
 
 function liveAlert(e: Ev, m: Match): Alert | null {
@@ -64,6 +64,7 @@ function liveAlert(e: Ev, m: Match): Alert | null {
   switch (e.k) {
     case "ko": return { title: "🟢 Kick-off!", body: `${US} v ${opp} is under way. Tap to follow live.`, url, tag };
     case "goal": return { title: `⚽ GOAL! ${e.n ?? US} scores`, body: score + (e.a ? `. Set up by ${e.a}.` : ""), url, tag };
+    case "sub": return e.on ? { title: `🔁 Substitution`, body: `${e.on} comes on for ${e.off ?? "a teammate"}${e.m ? ` (${e.m})` : ""}. ${score}`, url, tag } : null;
     case "them": return { title: `Goal for ${opp}`, body: score, url, tag };
     case "ht": return { title: "⏸ Half time", body: score, url, tag };
     case "ft": return { title: "🏁 Full time", body: score, url, tag };
