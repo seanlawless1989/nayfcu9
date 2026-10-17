@@ -207,6 +207,7 @@ ol.tl li.ft,ol.tl li.ht{font-weight:700}
 
 /* home page menu */
 .hm-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.helpreq{border-top:1px solid var(--line);padding-top:10px}.helpreq:first-of-type{border-top:0;padding-top:0}.helpreq p{margin:6px 0;white-space:pre-wrap}.hr-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.helpreq .pill{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font:700 12px var(--body)}.hst-done{background:var(--win);color:#fff}.hst-waiting{background:var(--warn);color:var(--warnInk)}.hr-reply{background:var(--bg);border-radius:10px;padding:8px 10px}.hr-reply p{margin:4px 0}
 .hm-tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:14px;border-radius:16px;border:0;background:var(--card);color:var(--ink);cursor:pointer;box-shadow:0 1px 2px rgba(18,23,51,.06),0 8px 24px rgba(18,23,51,.06);font:inherit;min-height:104px}
 .hm-tile .ic{font-size:26px;line-height:1}.hm-tile b{font:700 15px var(--body)}.hm-tile span{font-size:13px;color:var(--muted)}
 .hm-tile.coach{background:var(--clubDeep);color:#fff}.hm-tile.coach span{color:#c9cff7}
@@ -651,6 +652,7 @@ function render(){
   else if(view==="gallery")main.innerHTML=galleryView();
   else if(view==="calendar")main.innerHTML=calendarView();
   else if(view==="training")main.innerHTML=trainingView();
+  else if(view==="help")main.innerHTML=helpView();
   else if(view==="book")main.innerHTML=bookView();
   else if(view==="tnew"||view==="tedit")main.innerHTML=tFormView();
   else if(view==="hnew"||view==="hedit")main.innerHTML=hFormView();
@@ -675,7 +677,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players","👧","Players","Goals, games and awards for each girl"],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records, milestones and playing time"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse();
   return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.map(x=>tile(x,"")).join("")}${canWrite?HOME_COACH.map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2><section class="card">${galGrid(pics)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos</button></div></section>`:""}`}
@@ -974,6 +976,32 @@ function trFormView(){const F2=trEdit;const off=(F2.off||[]).slice().sort();
     <p class="hint">Changes show here and in everyone's calendar (phones check every few hours).</p>
     <div class="btns"><button class="btn gold" id="trSave">Save training</button><button class="btn ghost" id="trCancel">Cancel</button></div></section>`}
 function trRead(){if(!trEdit)return;const v=id=>{const el=$("#"+id);return el?el.value:""};Object.assign(trEdit,{day:v("tr-day"),start:v("tr-start"),finish:v("tr-finish"),until:v("tr-until")||null,venue:v("tr-venue").trim(),kit:v("tr-kit").trim(),notes:v("tr-notes").trim()})}
+// help and changes: coaches send requests (public.help_requests); a scheduled Claude task answers them in "reply"
+let HELP=[],helpShot=null,helpBusy=false;
+const HELP_KINDS={fix:"Fix something wrong",change:"Change or add something",question:"Ask a question",problem:"Something isn't working"};
+const HELP_STATUS={new:["📨","Sent"],working:["🛠️","Being worked on"],waiting:["⏳","Waiting for Sean"],done:["✅","Done"],declined:["💬","Answered"]};
+async function loadHelp(){HELP=[];if(!sb||!canWrite)return;try{const {data}=await sb.from("help_requests").select("id,created,email,kind,body,page,status,reply,link,updated").order("created",{ascending:false}).limit(50);HELP=data||[]}catch(e){}}
+function shrinkShot(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.7))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
+function helpView(){
+  if(!canWrite)return `<div class="card empty">Sign in as a coach to send help requests.</div>`;
+  const when=t=>new Date(t).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  const row=h=>{const [ic,st]=HELP_STATUS[h.status]||HELP_STATUS.new;return `<div class="helpreq"><div class="hr-top"><span class="pill hst-${esc(h.status)}">${ic} ${st}</span><span class="hint">${esc(HELP_KINDS[h.kind]||"")} · ${esc(when(h.created))} · ${esc((h.email||"").split("@")[0])}</span></div>
+    <p>${esc(h.body)}</p>${h.reply?`<div class="hr-reply"><b>Reply</b><p>${esc(h.reply)}</p>${/^https:\/\//.test(h.link||"")?`<a href="${esc(h.link)}" target="_blank" rel="noopener">Have a look</a>`:""}</div>`:""}</div>`};
+  return `<div class="stack"><section class="card stack"><h2>🛟 Help and changes</h2>
+    <p class="hint" style="margin:0">Spotted a mistake, want something changed, or stuck? Send it here. Claude checks for new requests about every hour, fixes data straight away, and builds bigger changes for Sean to approve. You'll see the answer on this page.</p>
+    <label class="f">What's it about?<select id="help-kind">${Object.entries(HELP_KINDS).map(([k,t])=>`<option value="${k}">${t}</option>`).join("")}</select></label>
+    <label class="f">Tell us what you need<textarea id="help-body" rows="5" maxlength="4000" placeholder="e.g. The score for Saturday's game should be 3-2, not 3-1"></textarea></label>
+    <label class="f">Screenshot (optional)<input type="file" id="help-shot" accept="image/*"></label>${helpShot?`<img src="${helpShot}" alt="Screenshot to send" style="max-width:180px;border-radius:8px">`:""}
+    <div class="btns"><button class="btn gold" id="helpSend"${helpBusy?" disabled":""}>${helpBusy?"Sending…":"Send request"}</button></div>
+    <p class="hint" style="margin:0">On matchday, if something's broken and you need it now, message Sean as well.</p></section>
+    <section class="card stack"><h3>Requests</h3>${HELP.length?HELP.map(row).join(""):`<p class="hint">Nothing sent yet.</p>`}</section></div>`}
+document.addEventListener("change",async e=>{if(e.target.id!=="help-shot"||!e.target.files[0])return;try{helpShot=await shrinkShot(e.target.files[0]);if(helpShot.length>600000){helpShot=null;toast("That screenshot is too big. Try a smaller one.")}}catch(er){helpShot=null;toast("Couldn't read that picture.")}const b=$("#help-body").value,k=$("#help-kind").value;render();$("#help-body").value=b;$("#help-kind").value=k});
+document.addEventListener("click",async e=>{const t=e.target.closest("#helpSend");if(!t||!canWrite||helpBusy)return;
+  const body=$("#help-body").value.trim(),kind=$("#help-kind").value;if(body.length<3){toast("Say what you need first.");return}
+  helpBusy=true;t.disabled=true;t.textContent="Sending…";
+  const {error}=await sb.from("help_requests").insert({kind,body,page:location.search||"home",screenshot:helpShot});
+  helpBusy=false;if(error){toast("Couldn't send that. Check your connection and try again.");render();return}
+  helpShot=null;toast("Sent. You'll see the answer here.");await loadHelp();render()});
 
 // ---------- milestones ----------
 const MS={apps:[[10,"10 games"],[25,"25 games"],[50,"50 games"],[75,"75 games"],[100,"100 games"]],goals:[[1,"First goal"],[10,"10 goals"],[25,"25 goals"],[50,"50 goals"],[100,"100 goals"]],assists:[[1,"First assist"],[10,"10 assists"],[25,"25 assists"]],cs:[[1,"First clean sheet"],[5,"5 clean sheets"],[10,"10 clean sheets"]],potm:[[1,"First player of the match"],[5,"5 player of the match awards"],[10,"10 player of the match awards"]]};
@@ -1631,8 +1659,8 @@ function authBox(){
 async function checkCoach(){
   canWrite=false;
   if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book"].includes(view))view="home";
-  await loadAvail();await loadPhotos();await loadViews();
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help"].includes(view))view="home";
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
@@ -1666,7 +1694,7 @@ document.addEventListener("submit",async e=>{
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["gallery","calendar","training"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["gallery","calendar","training","help"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
