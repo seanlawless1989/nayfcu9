@@ -169,6 +169,7 @@ ol.tl li.ft,ol.tl li.ht{font-weight:700}
 .ticker .tk{background:none;border:0;color:#fff;font:800 15px var(--body);padding:0 40px;cursor:pointer}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){.ticker .tkin{animation:none}}
+.homelive .hlk{font:800 13px var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .live .qbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .live .qbar .q{padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);font-weight:800}.live .qbar .q.on{background:var(--gold);color:#111;border-color:var(--gold)}
 .lp{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
@@ -639,7 +640,7 @@ function homeView(){
   const REC=t=>`<div class="record">${[["P","Played",""],["W","Won","w"],["D","Drawn","d"],["L","Lost","l"],["F","Scored",""],["A","Conceded",""],["GD","Goal diff",""]].map(([k,l,c])=>`<div class="rec ${c}"><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}</div>`;
   return `<div class="stack">
   ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
-  ${heroHtml()}
+  ${homeLive()||heroHtml()}
   <h2 class="sect"><span class="ctag c-league">${LEAGUE_NAME}</span> ${season}</h2>
   <section class="card"><h3>${LEAGUE_NAME} record</h3>${REC(lt)}
       ${ldone.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${ldone.slice(-6).map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}</section>
@@ -929,12 +930,19 @@ function liveView(){
     <b style="display:block;margin-top:10px">Or swap positions with</b><div class="chips">${on.filter(n=>n!==LV.slots[LV.subSlot]).map(n=>`<button data-lvswap="${esc(n)}">${esc(n)} (${F.label[LV.slots.indexOf(n)]})</button>`).join("")}<button data-lvcancel="1">Cancel</button></div></div>`:""}
   </div>`;
 }
-function tlView(){const m=matches.find(x=>x.id===tlMatch);if(!m)return `<div class="card empty">Match not found.</div>`;const L=m.live||{};
+function tlView(){const m=matches.find(x=>x.id===tlMatch);if(!m)return `<div class="card empty">Match not found.</div>`;return `<div class="live">${tlBody(m)}</div>`}
+// While a game is live, Home leads with the whole match (score, pitch, commentary) and refreshes in place
+let homeLiveHtml="";
+function homeLive(){const ms=liveNow().filter(m=>m.live.status!=="ft");
+  homeLiveHtml=ms.length?`<div id="homeLive" class="stack">${ms.map(m=>`<div class="live homelive"><div class="hlk"><span class="lv">LIVE</span> ${esc(compName(m.comp||""))}${m.venue?` · 📍 ${esc(m.venue)}`:""}</div>${tlBody(m,true)}</div>`).join("")}</div>`:"";return homeLiveHtml}
+function refreshHomeLive(){if(view!=="home"||!db)return;const el=document.getElementById("homeLive"),prev=homeLiveHtml,h=homeLive();
+  if(!!el!==!!h){render();return}if(el&&h!==prev)el.outerHTML=h}
+function tlBody(m,home){const L=m.live||{};
   const mins=L.status==="ft"&&L.mins&&Object.keys(L.mins).length?`<section class="card"><h3>Minutes played</h3><table class="lb"><tbody>${Object.entries(L.mins).sort((a,b)=>b[1]-a[1]).map(([n,v])=>`<tr><td>${esc(n)}</td><td>${Math.round(v)} min</td></tr>`).join("")}</tbody></table></section>`:"";
-  return `<div class="live">${liveBoard(m,L)}
+  return `${liveBoard(m,L)}
     ${L.slots?`<section class="card"><h3>On the pitch${L.form?` (${esc(L.form)})`:""}</h3>${pitchHtml(L,false)}${(b=>b.length?`<p class="hint">Subs: ${b.map(esc).join(", ")}</p>`:"")((L.squad||[]).filter(n=>!L.slots.includes(n)))}</section>`:""}
     <section class="card"><h3>Live commentary</h3>${timelineHtml(L,m)}</section>${mins}
-    ${L.status==="live"||L.status==="ht"?`<p class="hint">This page updates by itself every few seconds. <button class="mini" data-view="alerts">🔔 Get goal alerts</button></p>`:""}</div>`}
+    ${L.status==="live"||L.status==="ht"?`<p class="hint">This page updates by itself every few seconds. ${home?`<button class="mini" data-tl="${esc(m.id)}">Follow live</button> `:""}<button class="mini" data-view="alerts">🔔 Get goal alerts</button></p>`:""}`}
 let tlMatch=null;
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
@@ -946,8 +954,8 @@ window.goalFlash=goalFlash;function goalFlash(n,score){document.querySelectorAll
 async function pollLive(){if(!sb||!matches.length)return;const t=todayLocal();if(!matches.some(m=>m.date===t||(m.live&&(m.live.status==="live"||m.live.status==="ht"))))return;
   try{const {data}=await sb.from("matches").select("id,us,them,live,played,assists,keepers,date").eq("date",t);
     (data||[]).forEach(r=>{if(LV&&LV.id===r.id&&view==="live")return;const m=matches.find(x=>x.id===r.id);if(m){if(m.us!=null&&+r.us>+m.us&&r.live&&r.live.status!=="ft"){const g=((r.live.events||[]).filter(e=>e.k==="goal").pop()||{});goalFlash(g.n,`Aycliffe ${r.us}-${r.them} ${m.opp}`)}Object.assign(m,r)}});}catch(e){}
-  renderTicker();if(view==="tl")render()}
-setInterval(pollLive,15000);setInterval(()=>{renderTicker();if(view==="live"&&LV&&LV.status==="live"&&!LV.ask&&LV.subSlot==null){const b=document.querySelector(".live .board small");if(b)b.innerHTML=`<span class="lv">LIVE</span> ${minuteOf(LV)}`}},20000);
+  renderTicker();if(view==="tl")render();else refreshHomeLive()}
+setInterval(pollLive,15000);setInterval(()=>{renderTicker();refreshHomeLive();if(view==="live"&&LV&&LV.status==="live"&&!LV.ask&&LV.subSlot==null){const b=document.querySelector(".live .board small");if(b)b.innerHTML=`<span class="lv">LIVE</span> ${minuteOf(LV)}`}},20000);
 async function liveGoal(n){const m=matches.find(x=>x.id===LV.id);const pl=Object.assign({},m.played||{});pl[n]=(pl[n]||0)+1;m.played=pl;m.us=(+m.us||0)+1;addEv({k:"goal",n});LV.ask=n;liveSaveLocal();render();goalFlash(n,`Aycliffe ${m.us}-${+m.them||0} ${m.opp}`);await livePush({played:pl,us:m.us})}
 async function liveAssist(n){const m=matches.find(x=>x.id===LV.id);const ev=LV.events[LV.events.length-1];if(n){const a=Object.assign({},m.assists||{});a[n]=(a[n]||0)+1;m.assists=a;if(ev&&ev.k==="goal")ev.a=n}else if(ev&&ev.k==="goal")ev.na=1;LV.ask=null;liveSaveLocal();render();await livePush({assists:m.assists||{}})}
 function liveFinishPlayed(m){const pl=Object.assign({},m.played||{});Object.keys(LV.mins).concat(Object.keys(LV.onSince)).forEach(n=>{if(!(n in pl))pl[n]=0});return pl}
