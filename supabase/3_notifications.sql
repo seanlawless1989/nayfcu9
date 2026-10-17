@@ -67,17 +67,21 @@ begin
   return found;
 end $$;
 
-create or replace function public.push_claim_reminder(p_match text)
+-- Kick-off reminders go at 10 and 2 minutes before; reminders_sent records which have gone for each match.
+alter table public.push_log add column if not exists reminders_sent int[] not null default '{}';
+drop function if exists public.push_claim_reminder(text);
+create or replace function public.push_claim_reminder(p_match text, p_mins int)
 returns boolean language plpgsql security definer set search_path = public as $$
 begin
   insert into public.push_log (match_id) values (p_match) on conflict do nothing;
-  update public.push_log set reminded = true where match_id = p_match and not reminded;
+  update public.push_log set reminders_sent = reminders_sent || p_mins
+    where match_id = p_match and not (p_mins = any(reminders_sent));
   return found;
 end $$;
 revoke all on function public.push_claim_events(text, bigint, bigint) from public, anon, authenticated;
-revoke all on function public.push_claim_reminder(text) from public, anon, authenticated;
+revoke all on function public.push_claim_reminder(text, int) from public, anon, authenticated;
 
--- Every minute: send kick-off reminders (5 minutes before), and catch any live update the coach's phone didn't pass on.
+-- Every minute: send kick-off reminders (10 and 2 minutes before), and catch any live update the coach's phone didn't pass on.
 -- Needs the pg_cron and pg_net extensions (Database > Extensions). The key below is the public anon key from docs/config.js.
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
