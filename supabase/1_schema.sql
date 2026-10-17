@@ -151,3 +151,6 @@ alter table public.player_photos enable row level security;
 create policy "coaches read photos" on public.player_photos for select using (public.is_coach());
 create policy "coaches write photos" on public.player_photos for all using (public.is_coach()) with check (public.is_coach());
 grant select, insert, update, delete on public.player_photos to authenticated;
+
+-- Added 2026-10-17: match report written by a coach on the match page (public, unlike notes).
+alter table public.matches add column if not exists report text;

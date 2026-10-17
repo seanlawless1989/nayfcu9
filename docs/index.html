@@ -76,6 +76,7 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .tgames{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
 .tgame{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:var(--field)}
 .tgame[data-edit]{cursor:pointer}
+.md .report p{margin:0 0 10px;line-height:1.55}.md .report textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;resize:vertical}
 .md .mdinfo{display:flex;flex-direction:column;gap:6px;font-weight:600}.md .mdinfo span{display:inline-block;width:26px}
 .md .mdteam td:first-child{white-space:nowrap}.md .mdteam td:not(:first-child),.md .mdteam th:not(:first-child){text-align:center}
 .md .mdnav{display:grid;grid-template-columns:1fr 1fr;gap:8px}.md .mdnav .btn{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.md .mdnav .btn:last-child:not(:first-child){justify-self:end}
@@ -603,6 +604,7 @@ function render(){
   else if(view==="live")main.innerHTML=liveView();
   else if(view==="tl")main.innerHTML=tlView();
   else if(view==="md")main.innerHTML=mdView();
+  else if(view==="reports")main.innerHTML=reportsView();
   else if(view==="pick")main.innerHTML=pickView();
   else if(view==="avail")main.innerHTML=availView();
   else if(view==="msg")main.innerHTML=msgView();
@@ -680,7 +682,7 @@ function matchRow(m){
     <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
       <div class="meta">${cc?`<span class="ctag">${esc(compName(m.comp))}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
-      ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}
+      ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}${m.report&&m.report.trim()?`<div class="meta">📝 Match report</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}</div>
     <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:m.postponed?`<span class="chip P" title="Postponed">P</span>`:`<span class="chip N">${m.comp==="Tournament"?"T":"–"}</span>`}</div>
@@ -857,8 +859,8 @@ function reviewView(){
 }
 function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}
 function backupJson(){return JSON.stringify({exported:new Date().toISOString(),players,matches,tournaments,honours},null,1)}
-function backupCsv(){const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const rows=[["date","season","opponent","competition","tournament","stage","home/away","venue","kick-off","us","them","result","scorers","assists","player of the match","goalkeepers","saves","notes"]];
-  sortMatches(matches).forEach(m=>{const tn=tournaments.find(t=>t.id===m.tournament_id);rows.push([m.date,seasonOf(m.date),m.opp,m.comp,tn?tn.name:"",m.stage||"",m.ha,m.venue,m.ko,m.us,m.them,result(m)||"",Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>`${n} ${g}`).join("; "),Object.entries(assistsOf(m)).map(([n,a])=>`${n} ${a}`).join("; "),m.potm,Object.entries(keepersOf(m)).map(([n,c])=>n+(+c?" (clean sheet)":"")).join("; "),m.saves,m.notes])});
+function backupCsv(){const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const rows=[["date","season","opponent","competition","tournament","stage","home/away","venue","kick-off","us","them","result","scorers","assists","player of the match","goalkeepers","saves","notes","match report"]];
+  sortMatches(matches).forEach(m=>{const tn=tournaments.find(t=>t.id===m.tournament_id);rows.push([m.date,seasonOf(m.date),m.opp,m.comp,tn?tn.name:"",m.stage||"",m.ha,m.venue,m.ko,m.us,m.them,result(m)||"",Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>`${n} ${g}`).join("; "),Object.entries(assistsOf(m)).map(([n,a])=>`${n} ${a}`).join("; "),m.potm,Object.entries(keepersOf(m)).map(([n,c])=>n+(+c?" (clean sheet)":"")).join("; "),m.saves,m.notes,m.report||""])});
   return rows.map(r=>r.map(q).join(",")).join("\r\n")}
 
 // ---------- live match (coach) + live timeline (everyone) ----------
@@ -951,9 +953,24 @@ function tlBody(m,home){const L=m.live||{};
     ${L.status==="live"||L.status==="ht"?`<p class="hint">This page updates by itself every few seconds. ${home?`<button class="mini" data-tl="${esc(m.id)}">Follow live</button> `:""}<button class="mini" data-view="alerts">🔔 Get goal alerts</button></p>`:""}`}
 let tlMatch=null;
 // ---------- match details (tap any game) ----------
-let mdMatch=null,mdFrom="results";
+let mdMatch=null,mdFrom="results",mdWrite=false;
+// match reports: written by coaches on the match page, public once saved
+function reportHtml(t){return String(t||"").trim().split(/\n\s*\n/).map(p=>`<p>${esc(p.trim()).replace(/\n/g,"<br>")}</p>`).join("")}
+function reportCard(m){const has=!!(m.report&&m.report.trim());
+  if(canWrite&&mdWrite)return `<section class="card report"><h3>Match report</h3><textarea id="mdReport" rows="10" placeholder="How did the game go? Everyone can read this once it's saved.">${esc(m.report||"")}</textarea>
+    <p class="hint">Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdReportSave">Save report</button><button class="btn ghost" id="mdReportCancel">Cancel</button></div></section>`;
+  if(has)return `<section class="card report"><h3>Match report</h3>${reportHtml(m.report)}${canWrite?`<button class="mini edit-only" id="mdReportEdit">Edit report</button>`:""}</section>`;
+  return canWrite&&(result(m)||isLive(m))?`<section class="card report edit-only"><h3>Match report</h3><p class="hint">No report yet.</p><button class="btn gold" id="mdReportEdit">Write match report</button></section>`:""}
+function reportsView(){const list=sortMatches(matches.filter(m=>m.report&&m.report.trim()&&!m.practice)).reverse();
+  const back=`<button class="btn ghost" data-view="results" style="align-self:flex-start">← Results</button>`;
+  if(!list.length)return `<div class="stack">${back}<div class="card empty">No match reports yet.${canWrite?" Open a result and tap <b>Write match report</b>.":""}</div></div>`;
+  let cur="",out="";list.forEach(m=>{const s=seasonOf(m.date);if(s!==cur){out+=`<div class="month">${s} season</div>`;cur=s}const r=result(m);const txt=m.report.trim().replace(/\s+/g," ");
+    out+=`<div class="match rep" role="button" tabindex="0" data-edit="${esc(m.id)}"><div class="d">${(d=>isNaN(d)?"?":`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`)(new Date(m.date+"T12:00:00"))}</div>
+      <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"")}</div><div class="meta">${esc(txt.length>220?txt.slice(0,220).replace(/\s\S*$/,"")+"…":txt)}</div></div>
+      <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:""}</div></div>`});
+  return `<div class="list">${back}<h2 style="margin:6px 0 0">Match reports</h2><p class="hint">Every report, newest first. Tap one to read it with the rest of the match.</p>${out}</div>`}
 function longDate(iso){const d=new Date((iso||"")+"T12:00:00");return isNaN(d)?"Date to add":`${["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()]} ${d.getDate()} ${LONGM[d.getMonth()]} ${d.getFullYear()}`}
-function openMatch(id){mdFrom=view==="md"?mdFrom:view;mdMatch=id;setView("md");try{history.replaceState(null,"",location.pathname+"?match="+encodeURIComponent(id))}catch(e){}}
+function openMatch(id){mdWrite=false;mdFrom=view==="md"?mdFrom:view;mdMatch=id;setView("md");try{history.replaceState(null,"",location.pathname+"?match="+encodeURIComponent(id))}catch(e){}}
 // a full team sheet exists when someone is down as playing without scoring, or halves/live data were kept
 function teamSheet(m){return m.apps!==false&&(Object.values(played(m)).some(g=>!+g)||Object.keys(halvesOf(m)).length>0||!!(m.live&&m.live.squad&&m.live.squad.length))}
 function mdView(){const m=matches.find(x=>x.id===mdMatch);
@@ -985,7 +1002,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
   const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&AV[m.id]?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
-  return `<div class="live md">${back}${board}${info}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
+  return `<div class="live md">${back}${board}${info}${reportCard(m)}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
@@ -1015,7 +1032,7 @@ function fixturesView(){
 function resultsView(){
   const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
   if(!items.length)return `${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
-  return `<div class="list">${CKEY()}${monthList(items)}</div>`;
+  return `<div class="list">${matches.some(m=>m.report&&m.report.trim())?`<div class="btns" style="margin-bottom:8px"><button class="btn ghost" data-view="reports">📝 Match reports</button></div>`:""}${CKEY()}${monthList(items)}</div>`;
 }
 
 
@@ -1346,6 +1363,10 @@ document.addEventListener("click",async e=>{
   if(t.dataset.gfx){const m=matches.find(x=>x.id===t.dataset.mid);if(m){F=null;playerView=null;setView("gfx");await GFX.loadMatch(m,t.dataset.gfx)}return}
   if(t.dataset.view){F=null;T=null;H=null;playerView=null;oppView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
   if(t.dataset.edit||t.dataset.md){const id=t.dataset.edit||t.dataset.md;if(matches.some(x=>x.id===id))openMatch(id);return}
+  if(t.id==="mdReportEdit"){mdWrite=true;render();const ta=$("#mdReport");if(ta){ta.focus();ta.scrollIntoView({block:"center"})}return}
+  if(t.id==="mdReportCancel"){mdWrite=false;render();return}
+  if(t.id==="mdReportSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdReport").value.trim();t.disabled=true;
+    try{await db.collection("matches").doc(m.id).update({report:txt||null});m.report=txt||null;mdWrite=false;toast(txt?"Match report saved.":"Match report removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the report. Check your connection and try again.")}return}
   if("mdback" in t.dataset){setView(mdFrom||"results");return}
   if(t.dataset.medit){const m=matches.find(x=>x.id===t.dataset.medit);if(!m||!canWrite)return;
     F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
@@ -1439,7 +1460,7 @@ document.addEventListener("submit",async e=>{
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit"].includes(view);
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit"].includes(view)||(view==="md"&&mdWrite);
   db.collection("matches").onSnapshot(s=>{matches=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
