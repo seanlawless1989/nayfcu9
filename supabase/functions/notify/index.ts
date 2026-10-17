@@ -55,13 +55,14 @@ async function send(kind: "reminders" | "live" | null, alert: Alert, only?: stri
 }
 
 // ---- live match events ----
-type Ev = { k: string; at?: number; n?: string; a?: string; na?: number; on?: string; off?: string; s?: string; m?: string };
+type Ev = { k: string; at?: number; n?: string; a?: string; na?: number; on?: string; off?: string; s?: string; m?: string; form?: string; line?: string[]; bench?: string[] };
 type Match = { id: string; date: string; opp: string; ko: string; venue: string; ha: string; us: number | null; them: number | null; postponed: boolean; stage: string | null; live: { status?: string; events?: Ev[] } | null };
 
 function liveAlert(e: Ev, m: Match): Alert | null {
   const url = `${SITE}?live=${encodeURIComponent(m.id)}`, tag = `live-${m.id}`, opp = m.opp || "the opposition";
   const score = `${US} ${e.s ?? `${m.us ?? 0}–${m.them ?? 0}`} ${opp}`;
   switch (e.k) {
+    case "lu": return e.line?.length ? { title: "📋 Starting line-up", body: `${US} v ${opp}${e.form ? ` (${e.form})` : ""}: ${e.line[0]} in goal, ${e.line.slice(1).filter(Boolean).join(", ")}.${e.bench?.length ? ` Subs: ${e.bench.join(", ")}.` : ""}`, url, tag: `lu-${m.id}` } : null;
     case "ko": return { title: "🟢 Kick-off!", body: `${US} v ${opp} is under way. Tap to follow live.`, url, tag };
     case "goal": return { title: `⚽ GOAL! ${e.n ?? US} scores`, body: score + (e.a ? `. Set up by ${e.a}.` : ""), url, tag };
     case "sub": return e.on ? { title: `🔁 Substitution`, body: `${e.on} comes on for ${e.off ?? "a teammate"}${e.m ? ` (${e.m})` : ""}. ${score}`, url, tag } : null;
@@ -95,16 +96,17 @@ async function flushLive(m: Match) {
   return sent;
 }
 
-// ---- kick-off reminders (5 minutes before) ----
+// ---- kick-off reminders (10 and 2 minutes before) ----
 async function reminders(list: Match[]) {
   let sent = 0; const now = Date.now();
   for (const m of list) {
     if (m.postponed || m.us != null || m.stage === "placeholder" || (m.live?.status && m.live.status !== "pre")) continue;
     const ko = kickOff(m.date, m.ko); if (ko == null) continue;
-    const mins = (ko - now) / 60_000; if (mins <= 0 || mins > 5.5) continue;
-    const { data: claimed } = await db.rpc("push_claim_reminder", { p_match: m.id }); if (!claimed) continue;
+    const mins = (ko - now) / 60_000; if (mins <= 0 || mins > 10.5) continue;
+    const at = mins > 2.5 ? 10 : 2; // the cron runs every minute, so each reminder lands within a minute of its time
+    const { data: claimed } = await db.rpc("push_claim_reminder", { p_match: m.id, p_mins: at }); if (!claimed) continue;
     const where = m.venue ? ` at ${m.venue}` : m.ha === "A" ? " (away)" : m.ha === "H" ? " (home)" : "";
-    await send("reminders", { title: `⏰ Kick-off in 5 minutes`, body: `${US} v ${m.opp}${where}, ${m.ko.trim()}. Tap to follow it live.`, url: `${SITE}?live=${encodeURIComponent(m.id)}`, tag: `ko-${m.id}` });
+    await send("reminders", { title: `⏰ Kick-off in ${Math.max(1, Math.round(mins))} minute${Math.round(mins) > 1 ? "s" : ""}`, body: `${US} v ${m.opp}${where}, ${m.ko.trim()}. Tap to follow it live.`, url: `${SITE}?live=${encodeURIComponent(m.id)}`, tag: `ko-${m.id}` });
     sent++;
   }
   return sent;
