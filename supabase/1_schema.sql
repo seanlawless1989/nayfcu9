@@ -151,3 +151,18 @@ alter table public.player_photos enable row level security;
 create policy "coaches read photos" on public.player_photos for select using (public.is_coach());
 create policy "coaches write photos" on public.player_photos for all using (public.is_coach()) with check (public.is_coach());
 grant select, insert, update, delete on public.player_photos to authenticated;
+
+-- Website visits: one row per day (UK time), counts only, nothing about who visited.
+-- views = times the site was opened; visitors = phones/computers that opened it that day (the site remembers "seen today" in the browser).
+create table if not exists public.page_views(day date primary key, views int not null default 0, visitors int not null default 0);
+alter table public.page_views enable row level security;
+create policy "coaches read page views" on public.page_views for select to authenticated using (public.is_coach());
+grant select on public.page_views to authenticated;
+
+create or replace function public.log_view(p_new boolean)
+returns void language sql security definer set search_path = public as $$
+  insert into page_views(day, views, visitors) values ((now() at time zone 'Europe/London')::date, 1, case when p_new then 1 else 0 end)
+  on conflict (day) do update set views = page_views.views + 1, visitors = page_views.visitors + case when p_new then 1 else 0 end;
+$$;
+revoke execute on function public.log_view(boolean) from public;
+grant execute on function public.log_view(boolean) to anon, authenticated;
