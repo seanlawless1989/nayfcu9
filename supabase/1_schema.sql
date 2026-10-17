@@ -148,7 +148,9 @@ create policy "coaches write badges" on public.badges for all using (public.is_c
 -- Player photos: coaches only (never public)
 create table if not exists public.player_photos(player text primary key, img text not null, updated timestamptz default now());
 alter table public.player_photos enable row level security;
-create policy "coaches read photos" on public.player_photos for select using (public.is_coach());
+-- 2026-10-17: Sean asked for photos to be visible to everyone (they were coach-only); only coaches can add or change them.
+create policy "everyone reads photos" on public.player_photos for select using (true);
+grant select on public.player_photos to anon;
 create policy "coaches write photos" on public.player_photos for all using (public.is_coach()) with check (public.is_coach());
 grant select, insert, update, delete on public.player_photos to authenticated;
 
@@ -166,3 +168,6 @@ returns void language sql security definer set search_path = public as $$
 $$;
 revoke execute on function public.log_view(boolean) from public;
 grant execute on function public.log_view(boolean) to anon, authenticated;
+
+-- Added 2026-10-17: match report written by a coach on the match page (public, unlike notes).
+alter table public.matches add column if not exists report text;
