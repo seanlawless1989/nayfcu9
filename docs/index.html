@@ -559,7 +559,15 @@ function oppKey(n){return String(n||"").toLowerCase().replace(/\bcls\b/g,"cheste
 // opposition badges: public.badges {key: oppKey(name), name, img: small PNG data URL}; coaches upload, everyone sees
 // built-in club logos (docs/badges/); a coach upload for the same key replaces one
 const BADGE_FILES={"beamish lionesses":"beamish-lionesses","brandon community":"brandon-community","chester le street town":"chester-le-street-town",
-  "felling magpies":"felling-magpies","chester le street hilda park":"chester-le-street-hilda-park","chester le street amazons":"chester-le-street-amazons"};
+  "felling magpies":"felling-magpies","chester le street hilda park":"chester-le-street-hilda-park","chester le street amazons":"chester-le-street-amazons",
+  "belmont united bluebirds":"belmont-united","birtley town":"birtley-town","bishop auckland":"bishop-auckland","clegwell buzzards":"clegwell",
+  "darlington locomotive arrows":"darlington-locomotive","darlington locomotive rockets":"darlington-locomotive","durham united leopards":"durham-united",
+  "east end":"newcastle-east-end","hartlepool divas":"fc-hartlepool","gateshead cleveland hall":"gateshead-cleveland-hall",
+  "gateshead leam rangers":"leam-rangers","gateshead leam rangers boys":"leam-rangers","guisborough town":"guisborough-town",
+  "heaton stannington":"heaton-stannington","hebburn":"hebburn","horden cw":"horden-cw","middleton rangers":"middleton-rangers",
+  "newcastle city":"newcastle-city-juniors","north east sports sapphires":"north-east-sport-youth","rutherford":"rutherford-afc",
+  "seaham reds":"seaham-afc","washington wildcats":"washington-afc","washington association":"washington-afc","washington":"washington-juniors",
+  "washington united":"washington-united","wearside pinks":"wearside-fc","whickham phoenix":"whickham-fc","whitley bay sporting":"whitley-bay-sporting"};
 const badgeDefaults=()=>Object.fromEntries(Object.entries(BADGE_FILES).map(([k,f])=>[k,`badges/${f}.png`]));
 let BADGES=badgeDefaults();
 async function loadBadges(){try{const {data}=await sb.from("badges").select("*");BADGES=badgeDefaults();(data||[]).forEach(r=>BADGES[r.key]=r.img)}catch(e){}}
