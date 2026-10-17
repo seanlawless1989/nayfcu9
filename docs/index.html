@@ -205,18 +205,11 @@ ol.tl li.ft,ol.tl li.ht{font-weight:700}
 .kp.cs[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#111}
 .kps{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 
-/* home page menu (preview styles a/b/c) */
+/* home page menu */
 .hm-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .hm-tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:14px;border-radius:16px;border:0;background:var(--card);color:var(--ink);cursor:pointer;box-shadow:0 1px 2px rgba(18,23,51,.06),0 8px 24px rgba(18,23,51,.06);font:inherit;min-height:104px}
 .hm-tile .ic{font-size:26px;line-height:1}.hm-tile b{font:700 15px var(--body)}.hm-tile span{font-size:13px;color:var(--muted)}
 .hm-tile.coach{background:var(--clubDeep);color:#fff}.hm-tile.coach span{color:#c9cff7}
-.hm-list{display:flex;flex-direction:column;gap:0;padding:4px 0}
-.hm-row{display:flex;align-items:center;gap:14px;width:100%;padding:12px 16px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
-.hm-row:last-child{border-bottom:0}.hm-row .ic{font-size:22px;width:32px;text-align:center}.hm-row b{display:block;font-weight:700}.hm-row span{display:block;color:var(--muted);font-size:13px}.hm-row i{margin-left:auto;color:var(--muted);font-style:normal;font-size:20px}
-.hm-big{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.hm-big button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 6px;border-radius:16px;border:0;background:var(--club);color:#fff;font:700 14px var(--body);cursor:pointer}
-.hm-big button .ic{font-size:28px}.hm-big button.gold{background:var(--gold);color:var(--goldInk)}
-.hm-more{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}.hm-more button{flex:0 0 auto}
 h2.sect{font:400 22px var(--display);margin:6px 2px -4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}h2.sect .ctag{font-size:14px;padding:3px 10px}
 .ptbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;min-width:80px}.ptbar i{display:block;height:100%;background:var(--club)}
 .h2h{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:4px;font:600 12px var(--body);color:var(--muted)}
@@ -645,15 +638,10 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
     ${!live&&h.length?`<div class="h2hrow">Last time: ${h.slice(0,3).map(scChip).join(" ")}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_STYLE=(location.search.match(/[?&]home=([abc])/)||[])[1]||"";
 const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players","👧","Players","Goals, games and awards for each girl"],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records, milestones and playing time"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"]];
-function homeMenu(){if(!HOME_STYLE)return "";const items=HOME_ITEMS,coach=canWrite?HOME_COACH:[];
-  if(HOME_STYLE==="a")return `<h2 class="sect">What's on the site</h2><div class="hm-tiles" id="hmEnd">${items.map(([v,ic,t,d])=>`<button class="hm-tile" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${d}</span></button>`).join("")}${coach.map(([v,ic,t,d])=>`<button class="hm-tile coach" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${d}</span></button>`).join("")}</div>`;
-  if(HOME_STYLE==="b")return `<section class="card" style="padding:0" id="hmEnd"><div class="hm-list">${[...items,...coach].map(([v,ic,t,d])=>`<button class="hm-row" data-view="${v}"><span class="ic">${ic}</span><div><b>${t}</b><span>${d}</span></div><i>›</i></button>`).join("")}</div></section>`;
-  const big=[["fixtures","📅","Fixtures"],["results","⚽","Results"],["players","👧","Players"]];
-  return `<div class="hm-big">${big.map(([v,ic,t],i)=>`<button data-view="${v}" class="${i===1?"gold":""}"><span class="ic">${ic}</span>${t}</button>`).join("")}</div>
-  <div class="hm-more">${[...items.filter(([v])=>!big.some(b=>b[0]===v)),...coach].map(([v,ic,t])=>`<button class="btn ghost" data-view="${v}">${ic} ${t}</button>`).join("")}</div>`}
+function homeMenu(){const tile=([v,ic,t,d],c)=>`<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${d}</span></button>`;
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.map(x=>tile(x,"")).join("")}${canWrite?HOME_COACH.map(x=>tile(x," coach")).join(""):""}</div>`}
 function homeView(){
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -668,9 +656,6 @@ function homeView(){
   const lsc=Object.entries(lps).filter(([,o])=>o.goals>0).sort((a,b)=>b[1].goals-a[1].goals||a[0].localeCompare(b[0]));const lmax=lsc[0]?.[1].goals||1;
   const lnext=lg.filter(m=>!result(m)&&!m.postponed&&m.date>=new Date().toISOString().slice(0,10))[0];
   const REC=t=>`<div class="record">${[["P","Played",""],["W","Won","w"],["D","Drawn","d"],["L","Lost","l"],["F","Scored",""],["A","Conceded",""],["GD","Goal diff",""]].map(([k,l,c])=>`<div class="rec ${c}"><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}</div>`;
-  if(HOME_STYLE==="c")return `<div class="stack">${homeMenu()}${homeLive()||heroHtml()}
-  <div class="cols"><section class="card"><h3>Latest result</h3>${latest?matchRow(latest):`<p class="hint">No results yet this season.</p>`}</section>
-  <section class="card"><h3>${LEAGUE_NAME} ${season}</h3>${REC(lt)}</section></div></div>`;
   return `<div class="stack">
   ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
   ${homeLive()||heroHtml()}
