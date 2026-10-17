@@ -17,7 +17,7 @@ create table if not exists public.matches (
   ko         text default '',          -- kick-off, e.g. 10:15
   us         integer,                  -- our goals
   them       integer,                  -- their goals
-  potm       text,                     -- Coffey Coffee player of the match
+  potm       text,                     -- player of the match
   played     jsonb not null default '{}'::jsonb,  -- {"Daisy": 3, "Chloe": 0} = played, with goals
   apps       boolean not null default true,       -- false = appearances weren't recorded
   notes      text default '',
