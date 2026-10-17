@@ -7,14 +7,14 @@ import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
-const US = "Newton Aycliffe";
+const US = Deno.env.get("TEAM_NAME") ?? "Newton Aycliffe";
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 // the key pair lives in public.push_keys (service role only)
 let keysReady: Promise<void> | null = null;
 function loadKeys() {
   return keysReady ??= db.from("push_keys").select("public_key,private_key").eq("id", 1).single().then(({ data, error }) => {
     if (error || !data) { keysReady = null; throw new Error("Match-alert keys are missing from push_keys"); }
-    webpush.setVapidDetails("https://nayfootball.club", data.public_key, data.private_key);
+    webpush.setVapidDetails(SITE.replace(/\/$/, ""), data.public_key, data.private_key);
   });
 }
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };

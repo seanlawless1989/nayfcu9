@@ -7,7 +7,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
-const TEAM = "NAYFC U9s";
+// Team details come from the function's secrets so the same code serves any team; defaults are Newton Aycliffe's.
+const TEAM = Deno.env.get("APP_NAME") ?? "NAYFC U9s";
+const FULL = Deno.env.get("TEAM_FULL_NAME") ?? "Newton Aycliffe Youth FC";
+const AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
+const HOST = new URL(SITE).hostname;
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { auth: { persistSession: false } });
 const compName = (c: string) => (c === "League" ? "Russell Foster League" : c);
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -47,7 +51,7 @@ function when(date: string, ko: string, mins: number) {
     : [`DTSTART;VALUE=DATE:${ymd(date)}`, `DTEND;VALUE=DATE:${ymd(addDays(date, 1))}`];
 }
 function event(uid: string, lines: string[], fields: Record<string, string>) {
-  const out = ["BEGIN:VEVENT", `UID:${uid}@nayfootball.club`, `DTSTAMP:${stamp(new Date())}`, ...lines];
+  const out = ["BEGIN:VEVENT", `UID:${uid}@${HOST}`, `DTSTAMP:${stamp(new Date())}`, ...lines];
   for (const [k, v] of Object.entries(fields)) if (v) out.push(`${k}:${k === "URL" ? v : esc(v)}`);
   out.push("END:VEVENT");
   return out;
@@ -103,8 +107,8 @@ Deno.serve(async (req) => {
   const matches = (mq.data as Match[]).filter((m) => !m.postponed && m.stage !== "placeholder");
   const tours = (tq.data as Tournament[]) || [];
   const tIds = new Set(tours.map((t) => t.id));
-  const out = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Newton Aycliffe Youth FC//U9s fixtures//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-    "X-WR-CALNAME:NAYFC U9s", "X-WR-CALDESC:Newton Aycliffe Youth FC Under 9s fixtures" + (withTraining ? " and training" : ""), "X-WR-TIMEZONE:Europe/London",
+  const out = ["BEGIN:VCALENDAR", "VERSION:2.0", `PRODID:-//${FULL}//${TEAM} fixtures//EN`, "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    `X-WR-CALNAME:${TEAM}`, `X-WR-CALDESC:${FULL} ${AGE} fixtures` + (withTraining ? " and training" : ""), "X-WR-TIMEZONE:Europe/London",
     "REFRESH-INTERVAL;VALUE=DURATION:PT6H", "X-PUBLISHED-TTL:PT6H", ...TZ];
   for (const m of matches) if (!m.tournament_id || !tIds.has(m.tournament_id)) out.push(...matchEvent(m));
   for (const t of tours) out.push(...tournamentEvent(t, matches.filter((m) => m.tournament_id === t.id)));
