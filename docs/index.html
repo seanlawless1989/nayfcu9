@@ -723,6 +723,30 @@ function isFixture(m){if(isLive(m))return true;return !result(m)&&(m.postponed||
 let AV={};// {match_id:{player:status}}
 let PHOTOS={};// coach-only player photos {name:dataURL}
 async function loadPhotos(){if(!sb||!canWrite){PHOTOS={};return}const {data}=await sb.from("player_photos").select("player,img");PHOTOS={};(data||[]).forEach(r=>PHOTOS[r.player]=r.img)}
+// Website visits: counts only (see page_views in supabase/1_schema.sql). Coaches' phones don't count.
+let VIEWS=null;
+async function loadViews(){if(!sb||!canWrite){VIEWS=null;return}const {data}=await sb.from("page_views").select("day,views,visitors").order("day");VIEWS=data||[]}
+function logView(){try{
+  if(canWrite)localStorage.setItem("nayfc.coachDevice","1");
+  if(localStorage.getItem("nayfc.coachDevice"))return;
+  const today=new Date().toLocaleDateString("en-CA",{timeZone:"Europe/London"}),isNew=localStorage.getItem("nayfc.seen")!==today;
+  localStorage.setItem("nayfc.seen",today);sb.rpc("log_view",{p_new:isNew}).then(()=>{},()=>{});
+}catch(e){}}
+function viewsCard(){
+  if(!VIEWS)return "";if(!VIEWS.length)return `<section class="card edit-only"><h3>Website visits</h3><p class="hint">Counting starts now. Check back tomorrow.</p></section>`;
+  const today=new Date().toLocaleDateString("en-CA",{timeZone:"Europe/London"}),ago=n=>new Date(Date.now()-n*864e5).toLocaleDateString("en-CA",{timeZone:"Europe/London"});
+  const sum=(from,k)=>VIEWS.filter(r=>r.day>=from).reduce((t,r)=>t+r[k],0),t0=VIEWS.find(r=>r.day===today)||{views:0,visitors:0};
+  const last=VIEWS.slice(-14),mx=Math.max(1,...last.map(r=>r.views));
+  return `<section class="card edit-only"><h3>Website visits</h3>
+    <div class="kv" style="margin-top:10px">
+      <div><span>Today</span><b>${t0.views}</b><small>${t0.visitors} ${t0.visitors===1?"person":"people"}</small></div>
+      <div><span>Last 7 days</span><b>${sum(ago(6),"views")}</b></div>
+      <div><span>Last 30 days</span><b>${sum(ago(29),"views")}</b></div>
+      <div><span>Since ${esc(VIEWS[0].day)}</span><b>${sum("",'views')}</b></div>
+    </div>
+    <h3 style="margin-top:14px">Last 14 days</h3><div class="bars">${last.map(r=>`<div title="${r.visitors} people"><b>${r.views}</b><i style="height:${r.views/mx*100}%"></i>${+r.day.slice(8)}</div>`).join("")}</div>
+    <p class="hint" style="margin-top:6px">Times the site was opened. "People" counts each phone or computer once a day. Coaches' phones aren't counted, and nothing about who visited is stored.</p></section>`;
+}
 function pface(n,cls){return PHOTOS[n]?`<img class="${cls}" src="${PHOTOS[n]}" alt="">`:""}
 function shrinkPhoto(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=300,c=document.createElement("canvas"),k=Math.min(im.width,im.height);c.width=c.height=S;c.getContext("2d").drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,0,0,S,S);ok(c.toDataURL("image/jpeg",.82))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function savePhoto(n,file){try{const img=await shrinkPhoto(file);const {error}=await sb.from("player_photos").upsert({player:n,img});if(error)throw error;PHOTOS[n]=img;toast(`Photo saved for ${n}.`);render()}catch(e){toast("Couldn't save that photo. Try a JPG or PNG.")}}
@@ -852,6 +876,7 @@ function reviewView(){
       <div><span>Most appearances</span><b>${mostApps&&mostApps[1].apps?`${esc(mostApps[0])} (${mostApps[1].apps})`:"–"}</b><small>Counts only games where appearances were recorded</small></div>
     </div>
     <h3 style="margin-top:14px">All-time top scorers</h3><table class="lb"><tbody>${Object.entries(career).filter(([,o])=>o.goals).sort((a,b)=>b[1].goals-a[1].goals).slice(0,10).map(([n,o],i)=>`<tr class="click" data-player="${esc(n)}"><td>${i+1}. ${esc(n)}</td><td><b>${o.goals}</b></td></tr>`).join("")}</tbody></table></section>
+  ${viewsCard()}
   <section class="card edit-only"><h3>Backup</h3><p class="hint">Download everything (matches, players, tournaments, honours) to keep a copy. A copy is also saved automatically each month.</p><div class="btns" style="margin-top:8px"><button class="btn" id="bkJson">Download full backup</button><button class="btn ghost" id="bkCsv">Download results as a spreadsheet (CSV)</button></div></section>
   </div>`;
 }
@@ -1415,7 +1440,7 @@ async function checkCoach(){
   canWrite=false;
   if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
   if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book"].includes(view))view="home";
-  await loadAvail();await loadPhotos();
+  await loadAvail();await loadPhotos();await loadViews();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
@@ -1446,6 +1471,7 @@ document.addEventListener("submit",async e=>{
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
   await checkCoach();
+  logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
