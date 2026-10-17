@@ -210,6 +210,25 @@ ol.tl li.ft,ol.tl li.ht{font-weight:700}
 .hm-tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:14px;border-radius:16px;border:0;background:var(--card);color:var(--ink);cursor:pointer;box-shadow:0 1px 2px rgba(18,23,51,.06),0 8px 24px rgba(18,23,51,.06);font:inherit;min-height:104px}
 .hm-tile .ic{font-size:26px;line-height:1}.hm-tile b{font:700 15px var(--body)}.hm-tile span{font-size:13px;color:var(--muted)}
 .hm-tile.coach{background:var(--clubDeep);color:#fff}.hm-tile.coach span{color:#c9cff7}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.gal-th{padding:0;border:0;border-radius:10px;overflow:hidden;aspect-ratio:1;background:var(--field);cursor:pointer;display:block}
+.gal-th img{width:100%;height:100%;object-fit:cover;display:block}
+.gal-h{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;border:0;padding:0 0 10px;font:700 15px var(--body);color:var(--ink);cursor:pointer;text-align:left}.gal-h span{color:var(--muted);font-size:13px;white-space:nowrap}
+label.galadd{display:inline-block}
+body.lb-on{overflow:hidden}
+.lb-ov{position:fixed;inset:0;z-index:200;background:rgba(5,8,20,.97);display:flex;flex-direction:column;color:#fff;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.lb-top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 8px 8px 16px;font:600 14px var(--body)}
+.lb-x{background:none;border:0;color:#fff;font-size:24px;cursor:pointer;padding:6px 12px}
+.lb-img{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 8px}
+.lb-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+.lb-cap{text-align:center;margin:10px 16px 0;font-size:15px}
+.lb-bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:12px 12px 16px}
+.lb-bar .btn.ghost{color:#fff;border-color:rgba(255,255,255,.4);text-decoration:none}
+.calopts{display:flex;flex-wrap:wrap;gap:8px}.calopts a.btn{text-decoration:none}
+.trbig{display:flex;flex-direction:column;gap:2px;background:var(--clubDeep);color:#fff;border-radius:14px;padding:16px;border-bottom:4px solid var(--gold)}
+.trbig b{font:400 26px var(--display)}.trbig span{font:700 18px var(--body);color:var(--gold)}
+.trfacts{display:flex;flex-direction:column;gap:8px;font-weight:600}.trfacts>div{display:flex;gap:8px}.trfacts>div>span:first-child{flex:0 0 24px}
+.train a.btn{text-decoration:none}.trfacts a{color:var(--club);font-weight:700}
 h2.sect{font:400 22px var(--display);margin:6px 2px -4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}h2.sect .ctag{font-size:14px;padding:3px 10px}
 .ptbar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;min-width:80px}.ptbar i{display:block;height:100%;background:var(--club)}
 .h2h{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:4px;font:600 12px var(--body);color:var(--muted)}
@@ -418,9 +437,11 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
   <button data-view="players">Players</button>
   <button data-view="opps">Opponents</button>
   <button data-view="honours">Honours</button>
+  <button data-view="gallery">Photos</button>
   <button data-view="review">Review</button>
   <button data-view="book" class="edit-only">Sticker book</button>
   <button data-view="squad">Squad</button>
+  <button data-view="training">Training</button>
   <button data-view="gfx" class="edit-only">Graphics</button>
   <button data-view="new" class="add edit-only">+ Add a match</button>
   <button data-view="tnew" class="edit-only">+ Tournament</button>
@@ -627,6 +648,9 @@ function render(){
   else if(view==="avail")main.innerHTML=availView();
   else if(view==="msg")main.innerHTML=msgView();
   else if(view==="alerts")main.innerHTML=alertsView();
+  else if(view==="gallery")main.innerHTML=galleryView();
+  else if(view==="calendar")main.innerHTML=calendarView();
+  else if(view==="training")main.innerHTML=trainingView();
   else if(view==="book")main.innerHTML=bookView();
   else if(view==="tnew"||view==="tedit")main.innerHTML=tFormView();
   else if(view==="hnew"||view==="hedit")main.innerHTML=hFormView();
@@ -650,10 +674,11 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
     ${!live&&h.length?`<div class="h2hrow">Last time: ${h.slice(0,3).map(scChip).join(" ")}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players","👧","Players","Goals, games and awards for each girl"],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records, milestones and playing time"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
+const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players","👧","Players","Goals, games and awards for each girl"],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records, milestones and playing time"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"]];
-function homeMenu(){const tile=([v,ic,t,d],c)=>`<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${d}</span></button>`;
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.map(x=>tile(x,"")).join("")}${canWrite?HOME_COACH.map(x=>tile(x," coach")).join(""):""}</div>`}
+function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
+  const pics=GAL.slice(-6).reverse();
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.map(x=>tile(x,"")).join("")}${canWrite?HOME_COACH.map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2><section class="card">${galGrid(pics)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos</button></div></section>`:""}`}
 function homeView(){
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -842,6 +867,113 @@ function alertsView(){if(!AL.checked)alCheck();
       <label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-live"${AL.prefs.live?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Live scores</span><span class="hint">line-up, goals, subs, HT, FT</span></label></div>
       <div class="btns">${on?`<span class="pill">✅ On for this phone</span><button class="btn ghost" id="alOff"${AL.busy?" disabled":""}>Turn off</button>`:`<button class="btn gold" id="alOn"${AL.busy?" disabled":""}>${AL.busy?"Turning on…":"Turn on alerts"}</button>`}</div>`}
   return `<section class="card stack">${head}${bodyHtml}<p class="hint">Each phone is set up on its own. We don't ask for your name, number or email, and alerts only use first names already on this site.</p></section>`}
+
+// ---------- photo gallery ----------
+// public.match_photos rows point at files in the public "gallery" storage bucket (supabase/4_gallery_training.sql).
+// Coaches add photos from a match page or the Photos page. Each one is re-drawn (1600px max, plus a 480px thumbnail),
+// which also drops the location data phones put in pictures.
+let GAL=[],galMatch="",LB=null;
+const galUrl=p=>CFG.supabaseUrl+"/storage/v1/object/public/gallery/"+String(p).split("/").map(encodeURIComponent).join("/");
+async function loadGallery(){if(!sb)return;try{const {data}=await sb.from("match_photos").select("*").order("created");GAL=data||[]}catch(e){GAL=[]}}
+const galOf=id=>GAL.filter(p=>p.match_id===id);
+function galGrid(list){return `<div class="gal">${list.map(p=>`<button class="gal-th" data-photo="${esc(p.id)}" aria-label="${esc(p.caption||"Open photo")}"><img src="${galUrl(p.thumb)}" alt="" loading="lazy"></button>`).join("")}</div>`}
+function galAdd(id){return canWrite&&id?`<label class="btn gold galadd edit-only">📷 Add photos<input type="file" accept="image/*" multiple data-galup="${esc(id)}" hidden></label>`:""}
+function photosCard(m){const ps=galOf(m.id);if(!ps.length&&!(canWrite&&!isFixture(m)))return "";
+  return `<section class="card"><h3>Photos${ps.length>1?` (${ps.length})`:""}</h3>${ps.length?galGrid(ps):`<p class="hint">No photos from this game yet.</p>`}${canWrite?`<div class="btns edit-only" style="margin-top:10px">${galAdd(m.id)}</div>`:""}</section>`}
+function galLabel(m){return `${shortDay(m.date)} · v ${esc(m.opp||"")}${result(m)?` · ${m.us}–${m.them}`:""}`}
+function shortDay(iso){const d=new Date((iso||"")+"T12:00:00");return isNaN(d)?"":d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}
+function galleryView(){
+  const ids=new Set(GAL.map(p=>p.match_id));const ms=sortMatches(matches.filter(m=>ids.has(m.id))).reverse();
+  let up="";
+  if(canWrite){const recent=sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&(result(m)||isLive(m)||(m.date||"")<=todayLocal()))).reverse().slice(0,15);
+    if(!recent.some(m=>m.id===galMatch))galMatch=recent[0]?recent[0].id:"";
+    up=`<section class="card edit-only"><h3>Add photos</h3><label class="f">Which game?<select id="galPick">${recent.map(m=>`<option value="${esc(m.id)}"${m.id===galMatch?" selected":""}>${galLabel(m)}</option>`).join("")}</select></label>
+      <div class="btns" style="margin-top:10px">${galAdd(galMatch)}</div><p class="hint" style="margin-top:8px">Everyone can see photos once they're added. You can also add them from any match page.</p></section>`}
+  const body=ms.length?ms.map(m=>`<section class="card"><button class="gal-h" data-md="${esc(m.id)}">${galLabel(m)} <span>Match page →</span></button>${galGrid(galOf(m.id))}</section>`).join("")
+    :`<div class="card empty">No photos yet. The coaches will add match-day pictures here.</div>`;
+  return `<div class="stack"><h2 style="margin:6px 0 -6px">📸 Photos</h2><p class="hint">Match-day pictures, newest game first. Tap a photo to see it full size.</p>${up}${body}</div>`}
+function galShrink(file,max,q){return new Promise((ok,bad)=>{const url=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(b=>b?ok({b,w:c.width,h:c.height}):bad(new Error("encode")),"image/jpeg",q)};
+  im.onerror=()=>{URL.revokeObjectURL(url);bad(new Error("decode"))};im.src=url})}
+async function galUpload(mid,files){files=[...files];if(!files.length||!canWrite||!mid)return;let ok=0;
+  for(let i=0;i<files.length;i++){toast(`Adding photo ${i+1} of ${files.length}…`);
+    try{const id=crypto.randomUUID(),big=await galShrink(files[i],1600,.85),sm=await galShrink(files[i],480,.75),path=`${mid}/${id}.jpg`,thumb=`${mid}/${id}_t.jpg`;
+      for(const [p,b] of [[path,big.b],[thumb,sm.b]]){const {error}=await sb.storage.from("gallery").upload(p,b,{contentType:"image/jpeg",cacheControl:"31536000"});if(error)throw error}
+      const {data,error}=await sb.from("match_photos").insert({id,match_id:mid,path,thumb,w:big.w,h:big.h}).select().single();if(error)throw error;GAL.push(data);ok++}
+    catch(e){console.warn("photo upload",e)}}
+  toast(ok===files.length?`${ok} photo${ok>1?"s":""} added.`:ok?`${ok} of ${files.length} photos added. Try the others again.`:"Couldn't add those photos. Check your signal and try again.");render()}
+// full-screen viewer: arrows or swipe for the next photo, Esc or ✕ to close
+function lbOpen(id){const p=GAL.find(x=>x.id===id);if(!p)return;const list=galOf(p.match_id);LB={list,i:list.indexOf(p)};lbDraw()}
+function lbClose(){LB=null;document.querySelectorAll(".lb-ov").forEach(x=>x.remove());document.body.classList.remove("lb-on")}
+function lbStep(n){if(!LB||LB.list.length<2)return;LB.i=(LB.i+n+LB.list.length)%LB.list.length;lbDraw()}
+function lbDraw(){document.querySelectorAll(".lb-ov").forEach(x=>x.remove());const p=LB&&LB.list[LB.i];if(!p){lbClose();return}
+  const m=matches.find(x=>x.id===p.match_id),many=LB.list.length>1,d=document.createElement("div");d.className="lb-ov";d.setAttribute("role","dialog");d.setAttribute("aria-label","Photo");
+  d.innerHTML=`<div class="lb-top"><span>${many?`${LB.i+1} of ${LB.list.length}`:""}${m?`${many?" · ":""}v ${esc(m.opp)}, ${shortDay(m.date)}`:""}</span><button class="lb-x" data-lb="x" aria-label="Close">✕</button></div>
+    <div class="lb-img"><img src="${galUrl(p.path)}" alt="${esc(p.caption||"Match photo")}"></div>${p.caption?`<p class="lb-cap">${esc(p.caption)}</p>`:""}
+    <div class="lb-bar">${many?`<button class="btn ghost" data-lb="prev" aria-label="Previous photo">←</button>`:""}<a class="btn ghost" href="${galUrl(p.path)}?download=nayfc-u9s-${esc(p.id.slice(0,8))}.jpg">Save</a>${canWrite?`<button class="btn ghost" data-lb="cap">${p.caption?"Edit caption":"Add caption"}</button><button class="btn ghost" data-lb="del">Delete</button>`:""}${many?`<button class="btn ghost" data-lb="next" aria-label="Next photo">→</button>`:""}</div>`;
+  let sx=null;d.addEventListener("touchstart",e=>{sx=e.touches[0].clientX},{passive:true});d.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)lbStep(dx<0?1:-1)});
+  document.body.appendChild(d);document.body.classList.add("lb-on")}
+async function lbAction(a){const p=LB&&LB.list[LB.i];if(a==="x"||a==="bg"){lbClose();return}if(a==="prev"){lbStep(-1);return}if(a==="next"){lbStep(1);return}if(!p||!canWrite)return;
+  if(a==="cap"){const c=prompt("Caption (first names only)",p.caption||"");if(c==null)return;const {error}=await sb.from("match_photos").update({caption:c.trim()}).eq("id",p.id);if(error){toast("Couldn't save the caption.");return}p.caption=c.trim();lbDraw();return}
+  if(a==="del"){if(!confirm("Delete this photo for everyone?"))return;const {error}=await sb.from("match_photos").delete().eq("id",p.id);if(error){toast("Couldn't delete it. Try again.");return}
+    sb.storage.from("gallery").remove([p.path,p.thumb]).catch(()=>{});GAL=GAL.filter(x=>x.id!==p.id);LB.list.splice(LB.i,1);if(LB.i>=LB.list.length)LB.i=0;toast("Photo deleted.");lbDraw();render()}}
+document.addEventListener("keydown",e=>{if(!LB)return;if(e.key==="Escape")lbClose();else if(e.key==="ArrowRight")lbStep(1);else if(e.key==="ArrowLeft")lbStep(-1)});
+
+// ---------- calendar ----------
+// The "calendar" Supabase function serves every fixture, tournament and training session as a feed that phones
+// subscribe to and re-check by themselves (supabase/functions/calendar).
+let calTraining=true;
+const CAL_URL=()=>CFG.supabaseUrl+"/functions/v1/calendar"+(calTraining?"":"?training=0");
+function calendarView(){const https=CAL_URL(),web=https.replace(/^https:/,"webcal:");
+  return `<section class="card stack"><h2>🗓️ Fixtures in your calendar</h2>
+    <p style="margin:0">Add every game to your phone's calendar in one go. When a kick-off time or venue is added or changes, your calendar updates by itself.</p>
+    <label class="row" style="cursor:pointer;font-weight:700"><input type="checkbox" id="calTr"${calTraining?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Include Wednesday training</label>
+    <div class="calopts"><a class="btn gold" href="${web}">📱 iPhone or iPad</a><a class="btn gold" href="https://calendar.google.com/calendar/render?cid=${encodeURIComponent(web)}" target="_blank" rel="noopener">Google Calendar (Android)</a><a class="btn ghost" href="https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(https)}&name=${encodeURIComponent("NAYFC U9s")}" target="_blank" rel="noopener">Outlook</a><button class="btn ghost" id="calCopy" data-url="${esc(https)}">Copy link</button></div>
+    <div class="note"><b>iPhone:</b> tap the button, then <b>Subscribe</b> and <b>Add</b>.<br><b>Android:</b> Google Calendar opens in your browser. Sign in if asked, tap <b>Add</b>, and the games appear in your Calendar app.<br><b>Anything else:</b> copy the link and add it as a calendar "from the internet" or "by URL".</div>
+    <p class="hint">iPhones check for changes every few hours; Google can take up to a day. Games with no kick-off time yet show as all-day until the time is known.</p></section>`}
+const ICS_TZ="BEGIN:VTIMEZONE\r\nTZID:Europe/London\r\nBEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0000\r\nTZOFFSETTO:+0100\r\nTZNAME:BST\r\nDTSTART:19700329T010000\r\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nEND:DAYLIGHT\r\nBEGIN:STANDARD\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0000\r\nTZNAME:GMT\r\nDTSTART:19701025T020000\r\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nEND:STANDARD\r\nEND:VTIMEZONE";
+// one game as a file, for "Add to calendar" on a match page (the feed above keeps it up to date; this doesn't)
+function matchIcs(m){const e=s=>String(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"),k=/^(\d{1,2}):(\d{2})/.exec(m.ko||""),d=m.date.replace(/-/g,"");
+  const nx=new Date(m.date+"T12:00:00Z");nx.setUTCDate(nx.getUTCDate()+1);const url=`https://nayfootball.club/?match=${encodeURIComponent(m.id)}`;
+  const when=k?[`DTSTART;TZID=Europe/London:${d}T${k[1].padStart(2,"0")}${k[2]}00`,`DTEND;TZID=Europe/London:${d}T${String(Math.min(23,+k[1]+1)).padStart(2,"0")}${k[2]}00`]:[`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${nx.toISOString().slice(0,10).replace(/-/g,"")}`];
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Newton Aycliffe Youth FC//U9s//EN",ICS_TZ,"BEGIN:VEVENT",`UID:match-${m.id}@nayfootball.club`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"")}`,...when,
+    `SUMMARY:${e(`⚽ NAYFC U9s v ${m.opp}${k?"":" (kick-off TBC)"}`)}`,m.venue?`LOCATION:${e(m.venue)}`:"",`DESCRIPTION:${e(`${compName(m.comp||"")}\n${k?`Kick-off ${m.ko}`:"Kick-off time to be confirmed"}\n${url}`)}`,`URL:${url}`,"END:VEVENT","END:VCALENDAR"].filter(Boolean).join("\r\n")+"\r\n"}
+function downloadIcs(m){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([matchIcs(m)],{type:"text/calendar"}));a.download=`nayfc-u9s-${slug(m.opp||"match")}-${m.date}.ics`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+
+// ---------- training ----------
+// public.training holds one row: the weekly session shown here and added to the calendar feed until "until".
+const WEEKDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+let TR=null,trEdit=null;
+async function loadTraining(){if(!sb)return;try{const {data}=await sb.from("training").select("*").eq("id",1).maybeSingle();TR=data||null}catch(e){}}
+function clock(t){const m=/^(\d{1,2}):(\d{2})/.exec(t||"");if(!m)return t||"";const h=+m[1];return `${h%12||12}${m[2]!=="00"?":"+m[2]:""}${h<12?"am":"pm"}`}
+function trUpcoming(n){if(!TR)return [];const di=WEEKDAYS.indexOf(TR.day);if(di<0)return [];const out=[],off=TR.off||[],now=new Date(),hm=now.toTimeString().slice(0,5),d=new Date(todayLocal()+"T12:00:00");
+  for(let i=0;i<120&&out.length<n;i++,d.setDate(d.getDate()+1)){const iso=d.toLocaleDateString("en-CA");if(TR.until&&iso>TR.until)break;if(d.getDay()!==di||(i===0&&hm>=TR.finish))continue;out.push({iso,off:off.includes(iso)})}return out}
+function trainingView(){
+  if(trEdit&&canWrite)return trFormView();
+  if(!TR)return `<div class="card empty">Training details are on their way.</div>`;
+  const up=trUpcoming(6),next=up.find(x=>!x.off),offSoon=up.filter(x=>x.off);
+  const maps=TR.venue?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(TR.venue)}`:"";
+  const facts=[["📍",TR.venue?`<a href="${maps}" target="_blank" rel="noopener">${esc(TR.venue)}</a>`:""],["🎒",TR.kit?`<b>Bring:</b> ${esc(TR.kit)}`:""],["📅",next?`<b>Next session:</b> ${longDate(next.iso)}`:""],
+    ...offSoon.map(x=>["🚫",`<b>No training</b> on ${longDate(x.iso)}`]),["⏳",TR.until?`This runs until ${longDate(TR.until)}, then we move outside.`:""]].filter(([,v])=>v);
+  return `<div class="stack"><section class="card stack train"><h2>🏃 Training</h2>
+    <div class="trbig"><b>Every ${esc(TR.day)}</b><span>${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span></div>
+    <div class="trfacts">${facts.map(([i,v])=>`<div><span>${i}</span><span>${v}</span></div>`).join("")}</div>
+    ${TR.notes?`<p style="margin:0">${esc(TR.notes)}</p>`:""}
+    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section></div>`}
+function trFormView(){const F2=trEdit;const off=(F2.off||[]).slice().sort();
+  return `<section class="card stack"><h2>Edit training</h2>
+    <div class="grid2"><label class="f">Day<select id="tr-day">${WEEKDAYS.map(d=>`<option${d===F2.day?" selected":""}>${d}</option>`).join("")}</select></label>
+    <label class="f">Starts<input type="time" id="tr-start" value="${esc(F2.start)}"></label><label class="f">Finishes<input type="time" id="tr-finish" value="${esc(F2.finish)}"></label>
+    <label class="f">Same every week until<input type="date" id="tr-until" value="${esc(F2.until||"")}"></label></div>
+    <label class="f">Where<input type="text" id="tr-venue" value="${esc(F2.venue||"")}"></label>
+    <label class="f">What to bring<input type="text" id="tr-kit" value="${esc(F2.kit||"")}"></label>
+    <label class="f">Anything else parents should know<textarea id="tr-notes" rows="3">${esc(F2.notes||"")}</textarea></label>
+    <div><b>Weeks off</b><div class="btns" style="margin-top:6px">${off.length?off.map(d=>`<span class="pill">${esc(shortDay(d))} <button class="mini" data-troff="${esc(d)}" aria-label="Remove">✕</button></span>`).join(""):`<span class="hint">None</span>`}</div>
+      <div class="btns" style="margin-top:8px"><input type="date" id="tr-offnew"><button class="mini" id="trOffAdd">Add a week off</button></div></div>
+    <p class="hint">Changes show here and in everyone's calendar (phones check every few hours).</p>
+    <div class="btns"><button class="btn gold" id="trSave">Save training</button><button class="btn ghost" id="trCancel">Cancel</button></div></section>`}
+function trRead(){if(!trEdit)return;const v=id=>{const el=$("#"+id);return el?el.value:""};Object.assign(trEdit,{day:v("tr-day"),start:v("tr-start"),finish:v("tr-finish"),until:v("tr-until")||null,venue:v("tr-venue").trim(),kit:v("tr-kit").trim(),notes:v("tr-notes").trim()})}
 
 // ---------- milestones ----------
 const MS={apps:[[10,"10 games"],[25,"25 games"],[50,"50 games"],[75,"75 games"],[100,"100 games"]],goals:[[1,"First goal"],[10,"10 goals"],[25,"25 goals"],[50,"50 goals"],[100,"100 goals"]],assists:[[1,"First assist"],[10,"10 assists"],[25,"25 assists"]],cs:[[1,"First clean sheet"],[5,"5 clean sheets"],[10,"10 clean sheets"]],potm:[[1,"First player of the match"],[5,"5 player of the match awards"],[10,"10 player of the match awards"]]};
@@ -1051,7 +1183,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
   const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&AV[m.id]?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
-  return `<div class="live md">${back}${board}${info}${reportCard(m)}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
+  return `<div class="live md">${back}${board}${info}${reportCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
@@ -1073,10 +1205,11 @@ function liveKeepers(m){const ks={};LV.events.filter(e=>e.k==="ko"||e.k==="gk").
 function seasonTournaments(){return tournaments.filter(t=>seasonOf(t.date)===season)}
 function fixturesView(){
   const items=listItems(byComp(seasonMatches().filter(isFixture)),tByComp(seasonTournaments().filter(tIsFixture))).sort((a,b)=>a.date.localeCompare(b.date));
-  if(!items.length)return `${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one.`:""}</div>`;
+  const calBtn=`<div class="btns" style="margin-bottom:8px"><button class="btn ghost" data-view="calendar">🗓️ Add all fixtures to my calendar</button><button class="btn ghost" data-view="training">🏃 Training</button></div>`;
+  if(!items.length)return `${calBtn}${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one.`:""}</div>`;
   const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
   const nx=nextFixture();
-  return `<div class="list">${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button></div>`:""}${CKEY()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
+  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button></div>`:""}${CKEY()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
 }
 function resultsView(){
   const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
@@ -1409,8 +1542,18 @@ document.addEventListener("click",e=>{const th=e.target.closest("table.lb thead 
 document.addEventListener("click",async e=>{
   const t=e.target.closest("button,tr.click,[data-edit],.match");if(!t)return;
   if(t.closest("#gfxView"))return;
+  if(t.dataset.lb){lbAction(t.dataset.lb);return}
+  if(t.dataset.photo){lbOpen(t.dataset.photo);return}
+  if(t.dataset.ics){const m=matches.find(x=>x.id===t.dataset.ics);if(m)downloadIcs(m);return}
+  if(t.id==="calCopy"){try{await navigator.clipboard.writeText(t.dataset.url);toast("Calendar link copied.")}catch(err){prompt("Copy this link",t.dataset.url)}return}
+  if(t.id==="trEditBtn"&&canWrite){trEdit=JSON.parse(JSON.stringify(TR||{day:"Wednesday",start:"18:00",finish:"19:00",off:[]}));render();return}
+  if(t.id==="trCancel"){trEdit=null;render();return}
+  if(t.id==="trOffAdd"&&trEdit){trRead();const d=$("#tr-offnew").value;if(!d){toast("Pick a date first.");return}trEdit.off=[...new Set([...(trEdit.off||[]),d])];render();return}
+  if(t.dataset.troff&&trEdit){trRead();trEdit.off=(trEdit.off||[]).filter(x=>x!==t.dataset.troff);render();return}
+  if(t.id==="trSave"&&trEdit&&canWrite){trRead();const row=Object.assign({},trEdit,{id:1,updated:new Date().toISOString()});if(!/^\d{1,2}:\d{2}/.test(row.start)||!/^\d{1,2}:\d{2}/.test(row.finish)){toast("Add a start and finish time.");return}t.disabled=true;
+    const {data,error}=await sb.from("training").upsert(row).select().single();if(error){t.disabled=false;toast("Couldn't save training. Try again.");return}TR=data;trEdit=null;toast("Training saved.");render();return}
   if(t.dataset.gfx){const m=matches.find(x=>x.id===t.dataset.mid);if(m){F=null;playerView=null;setView("gfx");await GFX.loadMatch(m,t.dataset.gfx)}return}
-  if(t.dataset.view){F=null;T=null;H=null;playerView=null;oppView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
+  if(t.dataset.view){F=null;T=null;H=null;trEdit=null;playerView=null;oppView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
   if(t.dataset.edit||t.dataset.md){const id=t.dataset.edit||t.dataset.md;if(matches.some(x=>x.id===id))openMatch(id);return}
   if(t.id==="mdReportEdit"){mdWrite=true;render();const ta=$("#mdReport");if(ta){ta.focus();ta.scrollIntoView({block:"center"})}return}
   if(t.id==="mdReportCancel"){mdWrite=false;render();return}
@@ -1444,10 +1587,14 @@ document.addEventListener("click",async e=>{
   if(t.id==="addP"){const name=$("#newName").value.trim();if(!name){toast("Type a first name.");return}if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast(`${name} is already in the squad.`);return}
     const num=$("#newNum").value;try{await db.collection("players").doc(slug(name)).set({name,num:num===""?null:+num,current:true});toast(`${name} added.`)}catch(err){toast("Couldn't add her. Try again.")}return}
 });
+document.addEventListener("click",e=>{if(LB&&e.target.classList&&e.target.classList.contains("lb-img"))lbClose()});
 document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList&&(e.target.classList.contains("match")||e.target.classList.contains("tgame"))){e.preventDefault();e.target.click()}});
 document.addEventListener("change",async e=>{
   const t=e.target;if(t.closest&&t.closest("#gfxView"))return;
   if(t.id==="season"){season=t.value;playerView=null;render();return}
+  if(t.dataset.galup){const fs=[...t.files];t.value="";galUpload(t.dataset.galup,fs);return}
+  if(t.id==="galPick"){galMatch=t.value;render();return}
+  if(t.id==="calTr"){calTraining=t.checked;render();return}
   if(t.dataset.play&&F){readForm();const n=t.dataset.play;if(t.checked)F.played[n]=F.played[n]||0;else{delete F.played[n];if(F.assists)delete F.assists[n];if(F.halves)delete F.halves[n];if(F.keepers)delete F.keepers[n];if(F.potm===n)F.potm=""}render();return}
   if(t.id==="f-us"&&F){F._usTouched=true}
   if(t.id==="f-comp"&&F){readForm();F.comp=t.value;if(F.comp==="Tournament")F.ha="N";render();return}
@@ -1509,15 +1656,17 @@ document.addEventListener("submit",async e=>{
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit"].includes(view)||(view==="md"&&mdWrite);
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit"].includes(view)||(view==="md"&&mdWrite)||(view==="training"&&!!trEdit);
   db.collection("matches").onSnapshot(s=>{matches=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
+  await Promise.all([loadGallery(),loadTraining()]);
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
+  for(const v of ["gallery","calendar","training"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
