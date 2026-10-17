@@ -120,6 +120,7 @@ Deno.serve(async (req) => {
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": 'inline; filename="nayfc-u9s.ics"',
       "Cache-Control": "public, max-age=900",
+      "X-Robots-Tag": "noindex, nofollow",
       "Access-Control-Allow-Origin": "*",
     },
   });
