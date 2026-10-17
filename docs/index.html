@@ -1428,7 +1428,7 @@ document.addEventListener("click",async e=>{
 document.addEventListener("submit",async e=>{
   if(e.target.id!=="loginForm")return;e.preventDefault();
   const email=document.getElementById("loginEmail").value.trim();if(!email){toast("Type your email.");return}
-  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}});
+  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
   toast(error?"That email isn't on the club's coach list.":"Check your email for the sign-in link.");
 });
 (async function(){
