@@ -17,6 +17,10 @@ self.TEAM = {
   assistsFrom: "2026-27",                        // first season assists were recorded
   format: "5v5",                                 // 5v5, 7v7, 9v9 or 11v11: sets Live mode line-ups
   halfLength: 20,                                // minutes
+  // Show scores, results and scorers to visitors? FA rules don't allow it for U7-U11, so each club chooses.
+  // false: visitors and match alerts get games without scores; signed-in coaches still see everything.
+  // Set the PUBLIC_SCORES secret on the edge functions to match.
+  publicScores: true,                            // Newton Aycliffe chose to keep scores public (Oct 2026)
 
   colours: { club: "#2235E8", clubDeep: "#16239E", clubInk: "#FFFFFF", gold: "#FFD200", goldInk: "#1A1A1A",
              accent: "#F7A3D3", accentDeep: "#E5559F" },   // accent = player of the match graphic background

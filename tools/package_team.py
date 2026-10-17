@@ -161,7 +161,7 @@ Allow about an hour. Do the steps in order.
 ## 2. Edge functions (match alerts and calendar)
 With the Supabase CLI (`supabase link --project-ref <ref>`):
 ```
-supabase secrets set SITE_URL={site}/ TEAM_NAME="{name}" APP_NAME="{app}" TEAM_FULL_NAME="{full}" AGE_GROUP="{age}"
+supabase secrets set SITE_URL={site}/ TEAM_NAME="{name}" APP_NAME="{app}" TEAM_FULL_NAME="{full}" AGE_GROUP="{age}" PUBLIC_SCORES={scores}
 supabase functions deploy notify
 supabase functions deploy calendar --no-verify-jwt
 ```
@@ -184,6 +184,8 @@ Turn on custom SMTP (**Authentication > Emails**) with a sending service; Supaba
 - Sign the data processing agreement with the club before any children's details go in.
 
 Settings used for this build: format {format}, halves of {half} minutes, league "{league}".
+
+{scores_note}
 """
 
 
@@ -199,6 +201,13 @@ def main():
     for k in ("name", "ageGroup", "siteUrl", "storageKey"):
         if not team.get(k):
             sys.exit(f"team.js needs a {k}")
+    if "publicScores" not in team:
+        sys.exit("team.js needs publicScores: true or false (the club's choice; see docs/team.js)")
+    ages = [int(n) for n in re.findall(r"\d+", team["ageGroup"])]
+    young = bool(ages) and 7 <= ages[0] <= 11
+    if team["publicScores"] and young:
+        print(f"Note: {team['ageGroup']} with publicScores on. FA rules don't allow U7-U11 scores, results or scorers "
+              "to be published; make sure the club has chosen this.", file=sys.stderr)
     if team["storageKey"] == "nayfc" and team["name"] != "Newton Aycliffe":
         sys.exit("Give this team its own storageKey in team.js")
     slug = slugify(f"{team['name']} {team.get('ageShort', '')}")
@@ -214,6 +223,13 @@ def main():
         title=f"{team['name']} {team.get('ageGroup', '')}".strip(), full=team.get("fullName", team["name"]), slug=slug, site=site,
         name=team["name"], app=team.get("appName", ""), age=team.get("ageGroup", ""), format=team.get("format", "5v5"),
         half=team.get("halfLength", 20), league=team.get("league", "League"),
+        scores="true" if team["publicScores"] else "false",
+        scores_note=("Scores are **public**: visitors see results, scorers and goal alerts."
+                     + (" FA rules don't allow this for U7 to U11 teams, so the club has chosen to take that on." if young else ""))
+                    if team["publicScores"] else
+                    "Scores are **hidden** from visitors (FA rules for U7 to U11): the public site, match alerts and calendar show "
+                    "games, line-ups and awards without scores or scorers. Signed-in coaches still see and record everything. "
+                    "To change it, set publicScores in docs/team.js and the PUBLIC_SCORES secret.",
         cname="" if host.endswith("github.io") else f"\n   Custom domain: `{host}` (the CNAME file is included; point the domain's DNS at GitHub Pages)."))
     if a.zip:
         shutil.make_archive(str(out), "zip", out)

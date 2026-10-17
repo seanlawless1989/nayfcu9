@@ -11,6 +11,7 @@ const SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
 const TEAM = Deno.env.get("APP_NAME") ?? "NAYFC U9s";
 const FULL = Deno.env.get("TEAM_FULL_NAME") ?? "Newton Aycliffe Youth FC";
 const AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
+const SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";   // false: no scores in event titles
 const HOST = new URL(SITE).hostname;
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { auth: { persistSession: false } });
 const compName = (c: string) => (c === "League" ? "Russell Foster League" : c);
@@ -62,7 +63,7 @@ const TZ = ["BEGIN:VTIMEZONE", "TZID:Europe/London",
   "END:VTIMEZONE"];
 
 function matchEvent(m: Match) {
-  const played = m.us != null && m.them != null;
+  const played = SCORES && m.us != null && m.them != null;
   const title = played ? `${TEAM} ${m.us}-${m.them} ${m.opp}` : `${TEAM} v ${m.opp || "opponent to be confirmed"}${hm(m.ko) ? "" : " (kick-off TBC)"}`;
   const where = m.ha === "H" ? "Home" : m.ha === "A" ? "Away" : "";
   const desc = [[compName(m.comp), where].filter(Boolean).join(" · "), hm(m.ko) ? `Kick-off ${m.ko}` : "Kick-off time to be confirmed",

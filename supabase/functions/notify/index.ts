@@ -8,6 +8,9 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
 const US = Deno.env.get("TEAM_NAME") ?? "Newton Aycliffe";
+// PUBLIC_SCORES=false: no goal alerts and no scores in alerts (FA rules for U7-U11). Matches the site's TEAM.publicScores.
+const SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";
+const AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 // the key pair lives in public.push_keys (service role only)
 let keysReady: Promise<void> | null = null;
@@ -60,7 +63,8 @@ type Match = { id: string; date: string; opp: string; ko: string; venue: string;
 
 function liveAlert(e: Ev, m: Match): Alert | null {
   const url = `${SITE}?live=${encodeURIComponent(m.id)}`, tag = `live-${m.id}`, opp = m.opp || "the opposition";
-  const score = `${US} ${e.s ?? `${m.us ?? 0}–${m.them ?? 0}`} ${opp}`;
+  const score = SCORES ? `${US} ${e.s ?? `${m.us ?? 0}–${m.them ?? 0}`} ${opp}` : `${US} v ${opp}`;
+  if (!SCORES && (e.k === "goal" || e.k === "them")) return null;
   switch (e.k) {
     case "lu": return e.line?.length ? { title: "📋 Starting line-up", body: `${US} v ${opp}${e.form ? ` (${e.form})` : ""}: ${e.line[0]} in goal, ${e.line.slice(1).filter(Boolean).join(", ")}.${e.bench?.length ? ` Subs: ${e.bench.join(", ")}.` : ""}`, url, tag: `lu-${m.id}` } : null;
     case "ko": return { title: "🟢 Kick-off!", body: `${US} v ${opp} is under way. Tap to follow live.`, url, tag };
@@ -120,7 +124,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const out: Record<string, number> = {};
     if (typeof body.test === "string") {
-      out.test = await send(null, { title: "🔔 Match alerts are on", body: "You'll get kick-off reminders and live scores for the Under 9s.", url: SITE, tag: "welcome" }, body.test);
+      out.test = await send(null, { title: "🔔 Match alerts are on", body: `You'll get kick-off reminders and ${SCORES ? "live scores" : "live updates"} for the ${AGE}.`, url: SITE, tag: "welcome" }, body.test);
     } else if (typeof body.match === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.match).maybeSingle();
       out.live = data ? await flushLive(data as Match) : 0;
