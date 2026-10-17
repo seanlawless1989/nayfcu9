@@ -76,6 +76,10 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .tgames{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
 .tgame{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:var(--field)}
 .tgame[data-edit]{cursor:pointer}
+.md .mdinfo{display:flex;flex-direction:column;gap:6px;font-weight:600}.md .mdinfo span{display:inline-block;width:26px}
+.md .mdteam td:first-child{white-space:nowrap}.md .mdteam td:not(:first-child),.md .mdteam th:not(:first-child){text-align:center}
+.md .mdnav{display:grid;grid-template-columns:1fr 1fr;gap:8px}.md .mdnav .btn{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.md .mdnav .btn:last-child:not(:first-child){justify-self:end}
+.md .h2h{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.md .sc-btn{border:0;background:none;padding:0;cursor:pointer}
 .tgame .o{font-weight:700;overflow:hidden;text-overflow:ellipsis}
 .tgame .sc{font:400 18px var(--display);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .stag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--card);border:1px solid var(--line);font:700 11px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:6px;vertical-align:1px}
@@ -583,7 +587,7 @@ function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boo
 function appsTracked(list){return list.length>0}// scorers and PotM count as apps even without a team sheet
 
 // ---------- views ----------
-function setView(v){view=v;document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));render();window.scrollTo({top:0})}
+function setView(v){view=v;if(v!=="md"&&/[?&]match=/.test(location.search))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));render();window.scrollTo({top:0})}
 function render(){
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
@@ -598,6 +602,7 @@ function render(){
   else if(view==="review")main.innerHTML=reviewView();
   else if(view==="live")main.innerHTML=liveView();
   else if(view==="tl")main.innerHTML=tlView();
+  else if(view==="md")main.innerHTML=mdView();
   else if(view==="pick")main.innerHTML=pickView();
   else if(view==="avail")main.innerHTML=availView();
   else if(view==="msg")main.innerHTML=msgView();
@@ -703,7 +708,7 @@ function tCard(t){
       <div class="meta"><span class="ctag">Tournament</span>${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
       ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}</div>
     <div></div></div>
-    ${g.length?`<div class="tgames">${g.map(m=>{const r=result(m);return `<div class="tgame"${canWrite?` role="button" tabindex="0" data-edit="${esc(m.id)}"`:""}><div style="min-width:0"><div class="o"><span class="stag">${esc(m.stage||"Group stage")}</span>${esc(m.opp||"Opponent to add")}</div>
+    ${g.length?`<div class="tgames">${g.map(m=>{const r=result(m);return `<div class="tgame" role="button" tabindex="0" data-edit="${esc(m.id)}"><div style="min-width:0"><div class="o"><span class="stag">${esc(m.stage||"Group stage")}</span>${esc(m.opp||"Opponent to add")}</div>
       ${(sc=>sc?`<div class="meta">⚽ ${esc(sc)}</div>`:"")(Object.entries(played(m)).filter(([,x])=>x>0).map(([n,x])=>n+(x>1?` ×${x}`:"")).join(", "))}</div>
       <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:`<span class="chip N">–</span>`}</div></div>`}).join("")}</div>`:`<p class="hint" style="margin-top:8px">No games added yet.</p>`}
     <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div>
@@ -896,7 +901,7 @@ function commentary(e,m){const opp=esc(m.opp||"the opposition");
     case "2h":return `The second half is under way.`;
     case "ft":return `<b>Full time!</b> Newton Aycliffe ${e.s} ${opp}.`;}return ""}
 const EVI={ko:"🟢",goal:"⚽",them:"🥅",sub:"🔁",gk:"🧤",form:"📋",ht:"⏸",["2h"]:"▶️",ft:"🏁"};
-function timelineHtml(L,m){const ev=(L&&L.events||[]).slice().reverse();
+function timelineHtml(L,m,asc){const ev=(L&&L.events||[]).slice();if(!asc)ev.reverse();
   return ev.length?`<ol class="tl">${ev.map(e=>`<li class="${e.k}"><span class="mn">${esc(e.k==="ht"?"HT":e.k==="ft"?"FT":e.m||"")}</span><span class="ic">${EVI[e.k]||""}</span><span>${commentary(e,m)}</span></li>`).join("")}</ol>`:`<p class="hint">Nothing yet. Updates appear here as they happen.</p>`}
 function liveBoard(m,L){const st=L&&L.status;const lab=st==="live"?`<span class="lv">LIVE</span> ${minuteOf(L)}`:st==="ht"?"Half time":st==="ft"?"Full time":"Not started";
   const ev=(L&&L.events)||[];const by={};ev.filter(e=>e.k==="goal").forEach(e=>{(by[e.n]=by[e.n]||[]).push(e.m)});
@@ -944,6 +949,43 @@ function tlBody(m,home){const L=m.live||{};
     <section class="card"><h3>Live commentary</h3>${timelineHtml(L,m)}</section>${mins}
     ${L.status==="live"||L.status==="ht"?`<p class="hint">This page updates by itself every few seconds. ${home?`<button class="mini" data-tl="${esc(m.id)}">Follow live</button> `:""}<button class="mini" data-view="alerts">🔔 Get goal alerts</button></p>`:""}`}
 let tlMatch=null;
+// ---------- match details (tap any game) ----------
+let mdMatch=null,mdFrom="results";
+function longDate(iso){const d=new Date((iso||"")+"T12:00:00");return isNaN(d)?"Date to add":`${["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()]} ${d.getDate()} ${LONGM[d.getMonth()]} ${d.getFullYear()}`}
+function openMatch(id){mdFrom=view==="md"?mdFrom:view;mdMatch=id;setView("md");try{history.replaceState(null,"",location.pathname+"?match="+encodeURIComponent(id))}catch(e){}}
+// a full team sheet exists when someone is down as playing without scoring, or halves/live data were kept
+function teamSheet(m){return m.apps!==false&&(Object.values(played(m)).some(g=>!+g)||Object.keys(halvesOf(m)).length>0||!!(m.live&&m.live.squad&&m.live.squad.length))}
+function mdView(){const m=matches.find(x=>x.id===mdMatch);
+  const back=`<button class="btn ghost" data-mdback style="align-self:flex-start">← Back</button>`;
+  if(!m)return `<div class="stack">${back}<div class="card empty">Match not found.</div></div>`;
+  const r=result(m),L=m.live||{},ev=L.events||[],pl=played(m),as=assistsOf(m),hv=halvesOf(m),ks=keepersOf(m),mins=L.mins||{};
+  const tn=tournaments.find(t=>t.id===m.tournament_id);const fx=isFixture(m)&&!isLive(m);
+  const lab=isLive(m)?`<span class="lv">LIVE</span> ${L.status==="ht"?"Half time":minuteOf(L)}`:r?{W:"Won",D:"Drew",L:"Lost"}[r]:m.postponed?"Postponed":m.ko?`${esc(m.ko)} KO`:"Kick-off TBC";
+  const ours=Object.entries(pl).filter(([,g])=>+g>0).map(([n,g])=>{const t=ev.filter(e=>e.k==="goal"&&e.n===n).map(e=>e.m).filter(Boolean);return `${esc(n)}${t.length?" "+t.map(esc).join(", "):+g>1?` ×${g}`:""}`});
+  const theirs=ev.filter(e=>e.k==="them").map(e=>esc(e.m)).filter(Boolean);
+  const board=`<div class="board"><div class="tm"><img src="crest.png" alt="">Newton Aycliffe</div><div class="sc">${r||isLive(m)?`${m.us??0} – ${m.them??0}`:"v"}<small>${lab}</small></div><div class="tm">${badge(m.opp)}${esc(m.opp||"Opponent to add")}</div>${ours.length||theirs.length?`<div class="scorers"><div>${ours.map(x=>`<span>⚽ ${x}</span>`).join("")}</div><div>${theirs.length?`<span>⚽ ${theirs.join(", ")}</span>`:""}</div></div>`:""}</div>`;
+  const facts=[["📅",longDate(m.date)],["⏰",m.ko?`${m.ko} kick-off`:""],["📍",[m.venue,m.ha==="H"?"Home":m.ha==="A"?"Away":""].filter(Boolean).join(" · ")],["🏆",tn?`${tn.name}${m.stage?` · ${m.stage}`:""}`:compName(m.comp||"")]].filter(([,v])=>v);
+  const info=`<section class="card mdinfo">${facts.map(([i,v])=>`<div><span>${i}</span>${esc(v)}</div>`).join("")}${m.postponed?`<div><span>⚠️</span><b>Postponed.</b> New date to be confirmed.</div>`:""}${tn&&tn.trophy?`<div><span>${trophyIcon(tn.trophy)}</span>${esc(tn.trophy)}</div>`:""}</section>`;
+  // the team
+  const sheet=teamSheet(m),ko=ev.find(e=>e.k==="ko"),starters=ko&&ko.line||null;let names=Object.keys(pl);
+  if(m.potm&&!names.includes(m.potm))names.push(m.potm);Object.keys(as).forEach(n=>{if(!names.includes(n))names.push(n)});
+  names.sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b));
+  const showA=assistsTracked(seasonOf(m.date))||Object.keys(as).length,showH=Object.keys(hv).length>0,showM=Object.keys(mins).length>0;
+  const team=!fx&&names.length?`<section class="card"><h3>${sheet?"The team":"What we know"}</h3><table class="lb mdteam"><thead><tr><th>Player</th><th>Goals</th>${showA?"<th>Assists</th>":""}${showH?"<th>Halves</th>":""}${showM?"<th>Minutes</th>":""}</tr></thead><tbody>
+    ${names.map(n=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}${n in ks?` <span title="In goal">🧤</span>`:""}${m.potm===n?` <span class="potm" title="Coffey Coffee player of the match">☕</span>`:""}${starters&&!starters.includes(n)?` <span class="hint">sub</span>`:""}</td><td>${+pl[n]?`<b>${pl[n]}</b>`:"–"}</td>${showA?`<td>${+as[n]||"–"}</td>`:""}${showH?`<td>${n in hv?hv[n]:"–"}</td>`:""}${showM?`<td>${n in mins?Math.round(mins[n]):"–"}</td>`:""}</tr>`).join("")}</tbody></table>
+    ${sheet?"":`<p class="hint">Only the scorers${m.potm?" and player of the match":""} were written down for this game, so the full team isn't known.</p>`}</section>`:!fx&&r?`<section class="card"><h3>The team</h3><p class="hint">The team wasn't written down for this game.</p></section>`:"";
+  const awards=!fx&&(m.potm||Object.keys(ks).length)?`<section class="card"><h3>Awards</h3>${m.potm?`<div class="potm">☕ Coffey Coffee player of the match: <b>${esc(m.potm)}</b></div>`:""}${Object.entries(ks).map(([n,c])=>`<div class="meta">🧤 ${esc(n)} in goal${+c?", clean sheet":""}</div>`).join("")}</section>`:"";
+  const lineup=ko&&ko.line?`<section class="card"><h3>Starting line-up${ko.form?` (${esc(ko.form)})`:""}</h3>${pitchHtml({form:ko.form,slots:ko.line},false)}${(b=>b.length?`<p class="hint">Subs: ${b.map(esc).join(", ")}</p>`:"")((L.squad||[]).filter(n=>!ko.line.includes(n)))}</section>`:"";
+  const story=ev.length?`<section class="card"><h3>How the game went</h3>${timelineHtml(L,m,!isLive(m))}</section>`:!fx&&r?`<section class="card"><h3>How the game went</h3><p class="hint">There's no minute-by-minute story for this game. Games run with Live match mode will show one here.</p></section>`:"";
+  const ms=milestones().filter(x=>x.id===m.id);
+  const msHtml=ms.length?`<section class="card"><h3>Milestones in this game</h3>${ms.map(x=>`<div class="ms"><span>🎉 <b>${esc(x.n)}</b>: ${esc(x.label)}</span></div>`).join("")}</section>`:"";
+  const h=m.opp?meetings(m.opp).filter(x=>x.id!==m.id):[];
+  const h2h=m.opp?`<section class="card"><h3>Against ${esc(m.opp)}</h3>${h.length?`<div class="h2h">${h.slice(0,8).map(x=>`<button class="sc-btn" data-md="${esc(x.id)}">${scChip(x)}</button>`).join("")}</div>`:`<p class="hint">${fx?"First time we've played them.":"No other games against them yet."}</p>`}<button class="mini" data-opp="${esc(m.opp)}">All about ${esc(m.opp)}</button></section>`:"";
+  const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
+  const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
+  const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&AV[m.id]?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
+  return `<div class="live md">${back}${board}${info}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
+}
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
   if(!L.length){el.hidden=true;el.innerHTML="";el.dataset.h="";return}
@@ -1299,8 +1341,9 @@ document.addEventListener("click",async e=>{
   if(t.closest("#gfxView"))return;
   if(t.dataset.gfx){const m=matches.find(x=>x.id===t.dataset.mid);if(m){F=null;playerView=null;setView("gfx");await GFX.loadMatch(m,t.dataset.gfx)}return}
   if(t.dataset.view){F=null;T=null;H=null;playerView=null;oppView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
-  if(t.dataset.edit){const m=matches.find(x=>x.id===t.dataset.edit);if(!m)return;
-    if(!canWrite){return}
+  if(t.dataset.edit||t.dataset.md){const id=t.dataset.edit||t.dataset.md;if(matches.some(x=>x.id===id))openMatch(id);return}
+  if("mdback" in t.dataset){setView(mdFrom||"results");return}
+  if(t.dataset.medit){const m=matches.find(x=>x.id===t.dataset.medit);if(!m||!canWrite)return;
     F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
   if(t.dataset.player){playerView=t.dataset.player;setView("players");return}
   if(t.dataset.tedit){const x=tournaments.find(y=>y.id===t.dataset.tedit);if(x&&canWrite){T=JSON.parse(JSON.stringify(x));setView("tedit")}return}
@@ -1327,7 +1370,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="addP"){const name=$("#newName").value.trim();if(!name){toast("Type a first name.");return}if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast(`${name} is already in the squad.`);return}
     const num=$("#newNum").value;try{await db.collection("players").doc(slug(name)).set({name,num:num===""?null:+num,current:true});toast(`${name} added.`)}catch(err){toast("Couldn't add her. Try again.")}return}
 });
-document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("match")){e.preventDefault();e.target.click()}});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList&&(e.target.classList.contains("match")||e.target.classList.contains("tgame"))){e.preventDefault();e.target.click()}});
 document.addEventListener("change",async e=>{
   const t=e.target;if(t.closest&&t.closest("#gfxView"))return;
   if(t.id==="season"){season=t.value;playerView=null;render();return}
@@ -1400,6 +1443,7 @@ document.addEventListener("submit",async e=>{
   await loadBadges();
   await checkCoach();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
+  const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
 })();
