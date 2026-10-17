@@ -1,0 +1,21 @@
+# Private team site for parents and coaches. Please don't list it in search results.
+# Pages stay crawlable so search engines can read their "noindex" tag and drop them;
+# pictures are blocked outright so they never show up in image search.
+User-agent: *
+Disallow: /badges/
+Disallow: /*.png$
+Disallow: /*.jpg$
+Disallow: /*.jpeg$
+Disallow: /*.webp$
+
+# AI crawlers: not wanted at all.
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: CCBot
+User-agent: Google-Extended
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: PerplexityBot
+User-agent: Bytespider
+User-agent: Applebot-Extended
+Disallow: /
