@@ -18,7 +18,8 @@ self.TEAM = {
   format: "5v5",                                 // 5v5, 7v7, 9v9 or 11v11: sets Live mode line-ups
   halfLength: 20,                                // minutes
 
-  colours: { club: "#2235E8", clubDeep: "#16239E", clubInk: "#FFFFFF", gold: "#FFD200", goldInk: "#1A1A1A" },
+  colours: { club: "#2235E8", clubDeep: "#16239E", clubInk: "#FFFFFF", gold: "#FFD200", goldInk: "#1A1A1A",
+             accent: "#F7A3D3", accentDeep: "#E5559F" },   // accent = player of the match graphic background
   crest: "crest.png",
 
   // Main sponsor, shown in the sticker book and graphics captions. Set to null if there isn't one.

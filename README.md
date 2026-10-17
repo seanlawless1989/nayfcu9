@@ -52,3 +52,19 @@ The public pages show players' first names, goals and awards. Check that parents
 
 The game is built from a single source file elsewhere and copied in here. To update it, replace the files in `docs/manager` with the new build.
 
+
+## Team settings (`docs/team.js`)
+
+Everything that makes this site Newton Aycliffe's lives in `docs/team.js`: the name, age group, colours, crest, sponsors, kits, league name, match format (5v5, 7v7, 9v9 or 11v11), half length and hashtags. Change a value there and the whole site, the graphics maker and the sticker book follow it.
+
+## Help and changes
+
+Coaches can send fixes, change requests and questions from **Help and changes** on the home page (coach tiles). Requests are stored in the `help_requests` table (`supabase/5_help_requests.sql`). A scheduled Claude task checks for new ones every hour from 7am to 10pm. It makes small data fixes itself, opens a pull request for code changes (never merging them), and writes its answer back so the coach sees it on the same page. Anything big, unclear or destructive is left waiting for Sean.
+
+## Making a copy for another team
+
+1. Copy `teams/demo` to `teams/<team-name>`, then edit `team.js` and swap in the team's crest and logos.
+2. Run `python3 tools/package_team.py teams/<team-name> --zip` (needs Node and Python with Pillow).
+3. Everything is written to `dist/<team-name>/`: `site/` is the website, `supabase/setup.sql` and the functions set up a fresh database, and `SETUP.md` lists the steps filled in for that team.
+
+The copy leaves out Newton Aycliffe's data, logos, opponent badges, domain and the U9s Manager game. Add `--keep-badges` to include the North East opponent badges.

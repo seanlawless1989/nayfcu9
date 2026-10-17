@@ -21,6 +21,7 @@
 :root{
   --bg:#F2F4FB; --card:#FFFFFF; --panel:var(--card); --ink:#121733; --muted:#5A6283; --line:#DADEEE; --field:#F8F9FE;
   --club:#2235E8; --clubDeep:#16239E; --clubInk:#FFFFFF; --gold:#FFD200; --goldInk:#1A1A1A;
+  --clubRGB:34 53 232; --goldRGB:255 210 0; --shadowRGB:14 22 119; --clubHi:#3446FF; --clubMid:#1A2BC9; --clubSoft:#5C6CFF; --clubDark:#0E1677; --clubDarker:#0A1052;
   --win:#1C8A44; --draw:#B07A00; --loss:#C0262D; --pink:#E94E9E; --warn:#FFF1C7; --warnInk:#7A5300;
   --display:"Archivo Black","Arial Black",Impact,sans-serif;
   --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -65,11 +66,11 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .rec.w b{color:var(--win)}.rec.d b{color:var(--draw)}.rec.l b{color:var(--loss)}
 .form{display:flex;gap:5px;flex-wrap:wrap}
 .chip{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;border-radius:7px;font:800 13px var(--body);color:#fff}
-.match.c-league{--cc:#2235E8}.match.c-cup{--cc:#E0A800}.match.c-friendly{--cc:#1AA8A0}.match.c-tournament{--cc:#8B3FD9}
+.match.c-league{--cc:var(--club)}.match.c-cup{--cc:#E0A800}.match.c-friendly{--cc:#1AA8A0}.match.c-tournament{--cc:#8B3FD9}
 .match[class*=" c-"]{border:2px solid var(--cc);border-left-width:8px}
 .ctag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--cc);color:#fff;font:700 11px var(--body);text-transform:uppercase;letter-spacing:.05em;margin-right:6px;vertical-align:1px}
 .c-cup .ctag{color:#111}
-.ctag.c-league{--cc:#2235E8}.ctag.c-cup{--cc:#E0A800;color:#111}.ctag.c-friendly{--cc:#1AA8A0}.ctag.c-tournament{--cc:#8B3FD9}
+.ctag.c-league{--cc:var(--club)}.ctag.c-cup{--cc:#E0A800;color:#111}.ctag.c-friendly{--cc:#1AA8A0}.ctag.c-tournament{--cc:#8B3FD9}
 .ckey{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}.ckey .cf{all:unset;display:inline-flex;align-items:center;cursor:pointer;border-radius:8px;padding:2px;border:2px solid transparent;opacity:.55;font:700 12px var(--body)}
 .ckey .cf.on{opacity:1;border-color:var(--ink)}.ckey .cf:hover{opacity:1}.ckey .cf[data-cf=""]{padding:2px 9px;background:var(--card);border-color:var(--line)}.ckey .cf[data-cf=""].on{border-color:var(--ink)}
 .match.tcard{display:block;cursor:default}
@@ -85,7 +86,7 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .tgame .o{font-weight:700;overflow:hidden;text-overflow:ellipsis}
 .tgame .sc{font:400 18px var(--display);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .stag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--card);border:1px solid var(--line);font:700 11px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:6px;vertical-align:1px}
-.trophy{display:inline-block;padding:2px 9px;border-radius:999px;background:#FFD200;color:#111;font:800 12px var(--body);margin-left:6px;vertical-align:2px}
+.trophy{display:inline-block;padding:2px 9px;border-radius:999px;background:var(--gold);color:#111;font:800 12px var(--body);margin-left:6px;vertical-align:2px}
 .hon{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
 .hon .ic{font-size:36px;text-align:center;line-height:1}
 .hon .t{font:400 18px var(--display)}
@@ -99,20 +100,20 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 #book{display:flex;flex-direction:column;align-items:center;gap:22px}
 .bp{width:210mm;height:297mm;background:#FFF8E6;color:#14182E;position:relative;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.18);font-family:"Archivo",Arial,sans-serif;padding:14mm;box-sizing:border-box;display:flex;flex-direction:column}
 .bp h1,.bp h2,.bp h3{font-family:"Archivo Black","Arial Black",sans-serif;margin:0;letter-spacing:.01em;color:#14182E}
-.bp .band{position:absolute;left:0;right:0;height:9mm;background:#2235E8}.bp .band.t{top:0;border-bottom:3mm solid #FFD200}.bp .band.b{bottom:0;border-top:3mm solid #FFD200}
+.bp .band{position:absolute;left:0;right:0;height:9mm;background:var(--club)}.bp .band.t{top:0;border-bottom:3mm solid var(--gold)}.bp .band.b{bottom:0;border-top:3mm solid var(--gold)}
 .bp .pno{position:absolute;bottom:2.4mm;right:8mm;color:#fff;font:700 10pt "Archivo",sans-serif;z-index:2}
 .bp .inner{flex:1;display:flex;flex-direction:column;margin:8mm 0 10mm;min-height:0}
-.bp.cover{background:#2235E8;color:#fff;align-items:center;justify-content:center;text-align:center;padding:18mm}
-.bp.cover h1{color:#FFD200;font-size:44pt;line-height:1;text-transform:uppercase;transform:rotate(-3deg)}
+.bp.cover{background:var(--club);color:#fff;align-items:center;justify-content:center;text-align:center;padding:18mm}
+.bp.cover h1{color:var(--gold);font-size:44pt;line-height:1;text-transform:uppercase;transform:rotate(-3deg)}
 .bp.cover h2{color:#fff;font-size:20pt;margin-top:8mm}
 .bp.cover .crest{width:95mm;background:#fff;border-radius:50%;padding:4mm;margin:10mm 0}
-.bp.cover .burst{display:inline-block;background:#FFD200;color:#14182E;font:900 15pt "Archivo Black",sans-serif;padding:4mm 8mm;border-radius:999px;transform:rotate(4deg);margin-top:6mm}
+.bp.cover .burst{display:inline-block;background:var(--gold);color:#14182E;font:900 15pt "Archivo Black",sans-serif;padding:4mm 8mm;border-radius:999px;transform:rotate(4deg);margin-top:6mm}
 .bp.cover .spons{display:flex;gap:10mm;align-items:center;justify-content:center;margin-top:auto}
 .bp.cover .spons img{height:20mm;background:#fff;border-radius:50%;padding:1.5mm}
-.bp .ttl{font-size:26pt;text-transform:uppercase;border-bottom:2mm solid #FFD200;padding-bottom:2mm;margin-bottom:6mm}
+.bp .ttl{font-size:26pt;text-transform:uppercase;border-bottom:2mm solid var(--gold);padding-bottom:2mm;margin-bottom:6mm}
 .bp .rec{display:grid;grid-template-columns:repeat(7,1fr);gap:3mm;margin-bottom:7mm}
-.bp .rec div{background:#2235E8;color:#fff;border-radius:3mm;padding:3mm 0;text-align:center}
-.bp .rec b{display:block;font:400 22pt "Archivo Black",sans-serif;color:#FFD200}.bp .rec span{font-size:8pt;text-transform:uppercase;letter-spacing:.06em}
+.bp .rec div{background:var(--club);color:#fff;border-radius:3mm;padding:3mm 0;text-align:center}
+.bp .rec b{display:block;font:400 22pt "Archivo Black",sans-serif;color:var(--gold)}.bp .rec span{font-size:8pt;text-transform:uppercase;letter-spacing:.06em}
 .bp .two{display:grid;grid-template-columns:1fr 1fr;gap:7mm}
 .bp table{width:100%;border-collapse:collapse;font-size:10pt}.bp td,.bp th{padding:1.6mm 2mm;border-bottom:.3mm solid #d9cfb5;text-align:left}
 .bp th{font-size:8pt;text-transform:uppercase;letter-spacing:.06em;color:#5b5f78}.bp td.n{text-align:right;font-weight:800}
@@ -120,21 +121,21 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .bp .wdl{display:inline-block;width:5.5mm;text-align:center;border-radius:1mm;color:#fff;font-weight:800;font-size:8pt}
 .bp .W{background:#1F8A4C}.bp .D{background:#B7791F}.bp .L{background:#C53030}.bp .N{background:#888}
 .bp.player .top{display:grid;grid-template-columns:78mm 1fr;gap:8mm;align-items:start}
-.bp .slot{width:78mm;height:100mm;border:1mm dashed #2235E8;border-radius:4mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#fff 0 6mm,#F4EEDC 6mm 12mm);color:#2235E8;text-align:center;position:relative}
+.bp .slot{width:78mm;height:100mm;border:1mm dashed var(--club);border-radius:4mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#fff 0 6mm,#F4EEDC 6mm 12mm);color:var(--club);text-align:center;position:relative}
 .bp .slot .sn{font:400 34pt "Archivo Black",sans-serif}.bp .slot .sl{font:700 10pt "Archivo",sans-serif;text-transform:uppercase;letter-spacing:.1em}
 .bp .slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:3mm}
-.bp .big{font:400 46pt/1 "Archivo Black",sans-serif;color:#2235E8}
+.bp .big{font:400 46pt/1 "Archivo Black",sans-serif;color:var(--club)}
 .bp .pname{font-size:32pt;text-transform:uppercase;line-height:1}
 .bp .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;margin-top:6mm}
 .bp .stats div{border:.6mm solid #14182E;border-radius:3mm;padding:2.5mm;text-align:center;background:#fff}
-.bp .stats b{display:block;font:400 20pt "Archivo Black",sans-serif;color:#2235E8}.bp .stats span{font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.bp .stats b{display:block;font:400 20pt "Archivo Black",sans-serif;color:var(--club)}.bp .stats span{font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
 .bp .lines{margin-top:8mm}.bp .lines h3{font-size:13pt;margin-bottom:2mm}
 .bp .lines i{display:block;border-bottom:.4mm solid #bfb291;height:9mm}
-.bp .hl{background:#FFD200;border-radius:3mm;padding:3mm 4mm;margin-top:6mm;font-weight:700}
+.bp .hl{background:var(--gold);border-radius:3mm;padding:3mm 4mm;margin-top:6mm;font-weight:700}
 .bp .sheet{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:84mm;gap:4mm}
 .bp .stk{border:.4mm solid #999;border-radius:3mm;overflow:hidden;display:flex;flex-direction:column;background:#fff;position:relative}
-.bp .stk .ph{flex:1;background:#2235E8 center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#FFD200;font:400 40pt "Archivo Black",sans-serif}
-.bp .stk .cap{background:#FFD200;padding:1.5mm 2mm;display:flex;justify-content:space-between;font:400 11pt "Archivo Black",sans-serif;text-transform:uppercase}
+.bp .stk .ph{flex:1;background:var(--club) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--gold);font:400 40pt "Archivo Black",sans-serif}
+.bp .stk .cap{background:var(--gold);padding:1.5mm 2mm;display:flex;justify-content:space-between;font:400 11pt "Archivo Black",sans-serif;text-transform:uppercase}
 .bp .stk .no{position:absolute;top:1.5mm;left:1.5mm;background:#fff;border-radius:1.5mm;padding:.3mm 1.6mm;font:800 8pt "Archivo",sans-serif;color:#14182E}
 .bp .stk.shiny .ph{background:linear-gradient(135deg,#f6f6f6,#d5d9ff 30%,#fff2b3 55%,#ffd1ef 80%,#f6f6f6)}
 .bp .stk.shiny img{max-width:80%;max-height:80%}
@@ -167,7 +168,7 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 ol.tl{list-style:none;margin:0;padding:0}
 ol.tl li{display:grid;grid-template-columns:48px 26px 1fr;gap:6px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
 ol.tl li .mn{font:400 16px var(--display);color:var(--muted)}
-ol.tl li.goal{background:linear-gradient(90deg,rgba(255,210,0,.25),transparent)}
+ol.tl li.goal{background:linear-gradient(90deg,rgb(var(--goldRGB) / .25),transparent)}
 ol.tl li.ft,ol.tl li.ht{font-weight:700}
 .ticker{background:#111;color:#fff;overflow:hidden;white-space:nowrap;border-bottom:3px solid #E53935}
 .ticker .tkin{display:inline-block;animation:tick 28s linear infinite;padding:8px 0}
@@ -295,9 +296,9 @@ textarea{min-height:70px;resize:vertical}
 .empty{padding:28px 16px;text-align:center;color:var(--muted)}
 .sq{display:grid;grid-template-columns:minmax(0,1fr) 80px auto;gap:8px;align-items:center}
 .gflash{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:rgba(8,14,60,.94);cursor:pointer;animation:gfbg .35s steps(1) 8}
-.gf-in{text-align:center;color:#fff;font-family:var(--display)}.gf-in b{display:block;font:400 clamp(72px,22vw,180px)/1 var(--display);color:#FFD400;letter-spacing:.04em;text-shadow:0 6px 0 #2235E8,0 0 30px rgba(255,212,0,.6);animation:gfblink .35s steps(1) infinite}
+.gf-in{text-align:center;color:#fff;font-family:var(--display)}.gf-in b{display:block;font:400 clamp(72px,22vw,180px)/1 var(--display);color:var(--gold);letter-spacing:.04em;text-shadow:0 6px 0 var(--club),0 0 30px rgb(var(--goldRGB) / .6);animation:gfblink .35s steps(1) infinite}
 .gf-in span{display:block;margin-top:14px;font-size:clamp(26px,7vw,48px)}.gf-in em{display:block;margin-top:8px;font:700 18px var(--body);font-style:normal;opacity:.85}
-@keyframes gfblink{50%{color:#fff;text-shadow:0 6px 0 #FFD400}}@keyframes gfbg{50%{background:rgba(34,53,232,.95)}}
+@keyframes gfblink{50%{color:#fff;text-shadow:0 6px 0 var(--gold)}}@keyframes gfbg{50%{background:rgb(var(--clubRGB) / .95)}}
 table.lb thead th{cursor:pointer;user-select:none;white-space:nowrap}table.lb thead th:hover{color:var(--club)}
 table.lb thead th[data-sort]{color:var(--club)}table.lb thead th[data-sort=desc]:after{content:" ▼";font-size:.8em}table.lb thead th[data-sort=asc]:after{content:" ▲";font-size:.8em}
 .pcard{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
@@ -351,12 +352,12 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 /* ---------- matchday theme (Oct 2026 refresh) ---------- */
-body{background:var(--bg) radial-gradient(1200px 500px at 50% -200px,rgba(34,53,232,.10),transparent) no-repeat}
+body{background:var(--bg) radial-gradient(1200px 500px at 50% -200px,rgb(var(--clubRGB) / .10),transparent) no-repeat}
 .mast{position:relative;overflow:hidden;border-bottom:0;background:
-  linear-gradient(115deg,transparent 0 88%,rgba(255,210,0,.95) 88% 89%,transparent 89% 90.6%,rgba(255,210,0,.55) 90.6% 91.1%,transparent 91.1%),
+  linear-gradient(115deg,transparent 0 88%,rgb(var(--goldRGB) / .95) 88% 89%,transparent 89% 90.6%,rgb(var(--goldRGB) / .55) 90.6% 91.1%,transparent 91.1%),
   repeating-linear-gradient(115deg,rgba(255,255,255,.035) 0 22px,transparent 22px 44px),
-  radial-gradient(900px 300px at 10% 0%,#3446FF 0%,transparent 60%),
-  linear-gradient(160deg,#1A2BC9 0%,#0E1677 70%,#0A1052 100%)}
+  radial-gradient(900px 300px at 10% 0%,var(--clubHi) 0%,transparent 60%),
+  linear-gradient(160deg,var(--clubMid) 0%,var(--clubDark) 70%,var(--clubDarker) 100%)}
 .mast:after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:linear-gradient(90deg,var(--gold),#FFE980 50%,var(--gold))}
 .mast .in{position:relative;z-index:1;padding-block:20px 24px}
 .crest{width:96px;padding:4px;box-shadow:0 0 0 4px var(--gold),0 10px 30px rgba(0,0,0,.45)}
@@ -368,8 +369,8 @@ body{background:var(--bg) radial-gradient(1200px 500px at 50% -200px,rgba(34,53,
 nav.tabs{position:sticky;top:0;z-index:30;max-width:none;margin:0;padding:10px max(16px,calc((100% - 1100px)/2 + 16px));background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 nav.tabs button{font:800 12.5px var(--body);text-transform:uppercase;letter-spacing:.06em;padding:9px 14px;border-color:transparent;background:transparent;transition:background .15s,color .15s}
 nav.tabs button:hover{background:var(--card);border-color:var(--line)}
-nav.tabs button[aria-current="page"]{background:linear-gradient(180deg,#3446FF,var(--club));box-shadow:0 4px 14px rgba(34,53,232,.35)}
-nav.tabs .add{box-shadow:0 4px 14px rgba(255,210,0,.35)}
+nav.tabs button[aria-current="page"]{background:linear-gradient(180deg,var(--clubHi),var(--club));box-shadow:0 4px 14px rgb(var(--clubRGB) / .35)}
+nav.tabs .add{box-shadow:0 4px 14px rgb(var(--goldRGB) / .35)}
 .card{border-radius:18px;border-color:transparent;box-shadow:0 1px 2px rgba(18,23,51,.06),0 8px 24px rgba(18,23,51,.06)}
 h3{display:flex;align-items:center;gap:8px;color:var(--ink)}
 h3:before{content:"";width:4px;height:14px;border-radius:2px;background:linear-gradient(var(--gold),#FFB800)}
@@ -378,7 +379,7 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 .rec b{font-size:30px}
 .rec.w{background:linear-gradient(180deg,rgba(28,138,68,.14),transparent)}.rec.d{background:linear-gradient(180deg,rgba(176,122,0,.14),transparent)}.rec.l{background:linear-gradient(180deg,rgba(192,38,45,.14),transparent)}
 .chip{border-radius:8px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
-.bar i{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--club),#5C6CFF 70%,var(--gold))}
+.bar i{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--club),var(--clubSoft) 70%,var(--gold))}
 .lb:has(.bar) tbody tr:first-child td:first-child:before{content:"🥇 "}
 .match{border-radius:16px;transition:transform .12s,box-shadow .12s}
 .match:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(18,23,51,.12)}
@@ -386,8 +387,8 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 /* next match hero */
 .hero{position:relative;overflow:hidden;border-radius:22px;color:#fff;padding:20px;background:
   repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 40px,transparent 40px 80px),
-  radial-gradient(600px 220px at 50% 120%,rgba(255,210,0,.35),transparent 70%),
-  linear-gradient(160deg,#1A2BC9,#0B1260);box-shadow:0 14px 40px rgba(14,22,119,.35)}
+  radial-gradient(600px 220px at 50% 120%,rgb(var(--goldRGB) / .35),transparent 70%),
+  linear-gradient(160deg,var(--clubMid),var(--clubDarker));box-shadow:0 14px 40px rgb(var(--shadowRGB) / .35)}
 .hero:before{content:"";position:absolute;left:50%;top:-40px;width:180px;height:180px;margin-left:-90px;border:2px solid rgba(255,255,255,.12);border-radius:50%}
 .hero .kick{position:relative;font:800 12px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);text-align:center}
 .hero .vs{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin:14px 0}
@@ -503,7 +504,7 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
         <p class="hint">Tap + for each goal. Our score fills in from the scorers; change it if there was an own goal.</p>
         <h2>Assists</h2>
         <div class="goals" id="astPick"></div>
-        <label class="f"><span data-potm>Coffey Coffee player of the match</span><select id="ftPotm"></select></label>
+        <label class="f"><span data-potm>Player of the match</span><select id="ftPotm"></select></label>
         <div class="file"><span class="thumb" id="ftPhotoThumb"></span><label class="f">Team photo<input type="file" id="ftPhoto" accept="image/*"></label></div>
       </section>
 
@@ -519,19 +520,19 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
         <p class="hint">Milestones are listed on the Review page and each player's page, with a Make graphic button.</p>
       </section>
       <section class="panel" data-for="potm" hidden>
-        <h2 data-potm>Coffey Coffee player of the match</h2>
+        <h2 data-potm>Player of the match</h2>
         <label class="f">Player<select id="potmPlayer"></select></label>
         <div class="btns">
           <span class="hint">Shirt</span>
           <div class="seg" role="group" aria-label="Shirt colour" id="pkitSeg">
           </div>
         </div>
-        <div class="file"><span class="thumb" id="potmPhotoThumb"></span><label class="f">Her photo with the award<input type="file" id="potmPhoto" accept="image/*"></label></div>
+        <div class="file"><span class="thumb" id="potmPhotoThumb"></span><label class="f"><span id="potmPhotoLabel">Her photo with the award</span><input type="file" id="potmPhoto" accept="image/*"></label></div>
       </section>
 
       <section class="panel" data-for="setup" hidden>
         <h2>Badges and logos</h2>
-        <p class="hint" id="logoHint">The club badge, Grey-Smith Legal and Coffey Coffee logos are built in. Upload a replacement here only if one changes; it's kept in this browser.</p>
+        <p class="hint" id="logoHint">The club badge and sponsor logos are built in. Upload a replacement here only if one changes; it's kept in this browser.</p>
         <div class="file" id="octopusRow"><span class="thumb" id="octopusThumb"></span><label class="f"><span id="octopusLabel">Octopus Energy logo (shown on the purple kit; a white logo works best)</span><input type="file" id="octopusUp" accept="image/*"></label></div>
         <div class="file"><span class="thumb" id="crestThumb"></span><label class="f">Club badge<input type="file" id="crestUp" accept="image/*"></label></div>
         <div class="file"><span class="thumb" id="sponsorThumb"></span><label class="f">Sponsor logo<input type="file" id="sponsorUp" accept="image/*"></label></div>
@@ -567,6 +568,8 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 let db=null, canWrite=false;
 // team settings (docs/team.js)
 const TEAM=window.TEAM||{},SK=TEAM.storageKey||"team",PL=TEAM.players||"players";
+// pronouns for a player: "Can she make it?", "Can he make it?", or they for mixed teams
+const PRN=/girl/i.test(PL)?{s:"she",p:"her",o:"her",sh:"she's"}:/boy|lad/i.test(PL)?{s:"he",p:"his",o:"him",sh:"he's"}:{s:"they",p:"their",o:"them",sh:"they've"};
 const POTM=((TEAM.potm&&TEAM.potm.sponsor)?TEAM.potm.sponsor+" ":"")+"player of the match",POTM_IC=(TEAM.potm&&TEAM.potm.icon)||"⭐";
 const SITE=(TEAM.siteUrl||location.origin).replace(/\/$/,""),APP=TEAM.appName||document.title,CREST=TEAM.crest||"crest.png";
 const fileTag=APP.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
@@ -575,6 +578,11 @@ const fileTag=APP.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
   const tl=document.getElementById("teamTagline");if(tl)tl.textContent=t.tagline||"";
   document.querySelectorAll("[data-potm]").forEach(el=>el.textContent=POTM.charAt(0).toUpperCase()+POTM.slice(1));
   const c=t.colours||{},css={club:"--club",clubDeep:"--clubDeep",clubInk:"--clubInk",gold:"--gold",goldInk:"--goldInk"};Object.entries(css).forEach(([k,v])=>c[k]&&document.documentElement.style.setProperty(v,c[k]));
+  const rgb=h=>{const m=/^#?([0-9a-f]{6})$/i.exec(h||"");return m?[0,2,4].map(i=>parseInt(m[1].substr(i,2),16)):null},set=(k,v)=>document.documentElement.style.setProperty(k,v);
+  const mix=(a,b,k)=>"#"+a.map((v,i)=>Math.round(v*(1-k)+b[i]*k).toString(16).padStart(2,"0")).join("");
+  const cl=rgb(c.club),gd=rgb(c.gold);if(gd)set("--goldRGB",gd.join(" "));
+  // the masthead and hero use lighter and darker shades of the club colour; Newton Aycliffe's are tuned by hand in the CSS
+  if(cl&&c.club.toUpperCase()!=="#2235E8"){const W=[255,255,255],K=[0,0,0];set("--clubRGB",cl.join(" "));set("--clubHi",mix(cl,W,.15));set("--clubMid",mix(cl,K,.12));set("--clubSoft",mix(cl,W,.3));set("--clubDark",mix(cl,K,.45));set("--clubDarker",mix(cl,K,.6));set("--shadowRGB",cl.map(v=>Math.round(v*.45)).join(" "))}
   document.querySelectorAll('img.crest,link[rel=icon]').forEach(el=>el.tagName==="LINK"?el.href=CREST:el.src=CREST)})();
 let tournaments=[], honours=[], T=null, H=null;
 let matches=[], players=[], view="home", season=null, editing=null, playerView=null, oppView=null;
@@ -686,7 +694,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
     ${!live&&h.length?`<div class="h2hrow">Last time: ${h.slice(0,3).map(scChip).join(" ")}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players","👧","Players","Goals, games and awards for each girl"],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records, milestones and playing time"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
+const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players","👧","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records, milestones and playing time"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse();
@@ -820,7 +828,7 @@ function siteUrl(){return location.origin+location.pathname}
 function availView(){
   const m=matches.find(x=>x.id===availMatch);if(!m)return `<div class="card empty">That fixture couldn't be found. Ask the coach for a new link.</div>`;
   const d=new Date(m.date+"T12:00:00");const roster=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99));
-  return `<section class="card stack"><h2>Can she make it?</h2>
+  return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>
     <p><b>${esc(m.ha==="A"?"at ":"v ")}${esc(m.opp)}</b><br>${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}${m.ko?` · ${esc(m.ko)} kick-off`:""}${m.venue?` · ${esc(m.venue)}`:""}</p>
     <p class="hint">Tap the answer next to your daughter's name. Only the coaches can see the answers.</p>
     <div class="av">${roster.map(p=>{const v=(AV_MINE[m.id]||{})[p.name];return `<div class="row"><span>${esc(p.name)}</span><div class="seg" role="group" aria-label="${esc(p.name)}"><button data-av="yes" data-n="${esc(p.name)}" aria-pressed="${v==="yes"}">Yes</button><button data-av="maybe" data-n="${esc(p.name)}" aria-pressed="${v==="maybe"}">Maybe</button><button data-av="no" data-n="${esc(p.name)}" aria-pressed="${v==="no"}">No</button></div></div>`}).join("")}</div></section>`;
@@ -989,7 +997,7 @@ function trRead(){if(!trEdit)return;const v=id=>{const el=$("#"+id);return el?el
 // help and changes: coaches send requests (public.help_requests); a scheduled Claude task answers them in "reply"
 let HELP=[],helpShot=null,helpBusy=false;
 const HELP_KINDS={fix:"Fix something wrong",change:"Change or add something",question:"Ask a question",problem:"Something isn't working"};
-const HELP_STATUS={new:["📨","Sent"],working:["🛠️","Being worked on"],waiting:["⏳","Waiting for Sean"],done:["✅","Done"],declined:["💬","Answered"]};
+const HELP_STATUS={new:["📨","Sent"],working:["🛠️","Being worked on"],waiting:["⏳","Waiting for "+(TEAM.supportName||"a reply")],done:["✅","Done"],declined:["💬","Answered"]};
 async function loadHelp(){HELP=[];if(!sb||!canWrite)return;try{const {data}=await sb.from("help_requests").select("id,created,email,kind,body,page,status,reply,link,updated").order("created",{ascending:false}).limit(50);HELP=data||[]}catch(e){}}
 function shrinkShot(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",.7))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 function helpView(){
@@ -998,12 +1006,12 @@ function helpView(){
   const row=h=>{const [ic,st]=HELP_STATUS[h.status]||HELP_STATUS.new;return `<div class="helpreq"><div class="hr-top"><span class="pill hst-${esc(h.status)}">${ic} ${st}</span><span class="hint">${esc(HELP_KINDS[h.kind]||"")} · ${esc(when(h.created))} · ${esc((h.email||"").split("@")[0])}</span></div>
     <p>${esc(h.body)}</p>${h.reply?`<div class="hr-reply"><b>Reply</b><p>${esc(h.reply)}</p>${/^https:\/\//.test(h.link||"")?`<a href="${esc(h.link)}" target="_blank" rel="noopener">Have a look</a>`:""}</div>`:""}</div>`};
   return `<div class="stack"><section class="card stack"><h2>🛟 Help and changes</h2>
-    <p class="hint" style="margin:0">Spotted a mistake, want something changed, or stuck? Send it here. Claude checks for new requests about every hour, fixes data straight away, and builds bigger changes for Sean to approve. You'll see the answer on this page.</p>
+    <p class="hint" style="margin:0">Spotted a mistake, want something changed, or stuck? Send it here. Claude checks for new requests about every hour, fixes data straight away, and builds bigger changes for ${esc(TEAM.supportName||"the site admin")} to approve. You'll see the answer on this page.</p>
     <label class="f">What's it about?<select id="help-kind">${Object.entries(HELP_KINDS).map(([k,t])=>`<option value="${k}">${t}</option>`).join("")}</select></label>
     <label class="f">Tell us what you need<textarea id="help-body" rows="5" maxlength="4000" placeholder="e.g. The score for Saturday's game should be 3-2, not 3-1"></textarea></label>
     <label class="f">Screenshot (optional)<input type="file" id="help-shot" accept="image/*"></label>${helpShot?`<img src="${helpShot}" alt="Screenshot to send" style="max-width:180px;border-radius:8px">`:""}
     <div class="btns"><button class="btn gold" id="helpSend"${helpBusy?" disabled":""}>${helpBusy?"Sending…":"Send request"}</button></div>
-    <p class="hint" style="margin:0">On matchday, if something's broken and you need it now, message Sean as well.</p></section>
+    <p class="hint" style="margin:0">On matchday, if something's broken and you need it now, message ${esc(TEAM.supportName||"the site admin")} as well.</p></section>
     <section class="card stack"><h3>Requests</h3>${HELP.length?HELP.map(row).join(""):`<p class="hint">Nothing sent yet.</p>`}</section></div>`}
 document.addEventListener("change",async e=>{if(e.target.id!=="help-shot"||!e.target.files[0])return;try{helpShot=await shrinkShot(e.target.files[0]);if(helpShot.length>600000){helpShot=null;toast("That screenshot is too big. Try a smaller one.")}}catch(er){helpShot=null;toast("Couldn't read that picture.")}const b=$("#help-body").value,k=$("#help-kind").value;render();$("#help-body").value=b;$("#help-kind").value=k});
 document.addEventListener("click",async e=>{const t=e.target.closest("#helpSend");if(!t||!canWrite||helpBusy)return;
@@ -1451,7 +1459,7 @@ function playersView(){
    <p class="hint" style="margin-bottom:10px">${(c=>`${c.length} game${c.length===1?"":"s"}${career?" across "+new Set(c.map(m=>seasonOf(m.date))).size+" seasons":""}`)(list.filter(counted))} · ${tot.g} goals${at?` · ${tot.a} assists`:""}.${tracked?((k=>k<list.filter(counted).length?` Full team sheets only exist for ${k} of these ${list.filter(counted).length} games (most of 2025-26 only recorded the scorers). In the others, the scorers and player of the match count as playing, so Apps are a minimum, and goals per game only uses the ${k} full team sheets.`:"")(list.filter(m=>counted(m)&&m.apps!==false).length)):" Appearances weren't recorded for these games, so only goals and awards show."}${career?" Assists are recorded from 2026-27.":""}</p>
    <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>Goals</th>${at?"<th>Assists</th>":""}${showCs?"<th>Clean sheets <span class='hint'>/ in goal</span></th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${tracked?"<th>Goals per game</th>":""}</tr></thead><tbody>
    ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.ta?(o.tg/o.ta).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
-   </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her record split by season and competition.</p></section>`;
+   </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see ${PRN.p} record split by season and competition.</p></section>`;
 }
 function compSplit(n,list,ts){
   const rows=COMPS.map(c=>{const l=list.filter(m=>m.comp===c);const o=playerStats(l)[n]||{apps:0,goals:0,assists:0,potm:0};return {c,o,tracked:appsTracked(l),partial:appsTracked(l)&&l.filter(counted).some(m=>m.apps===false),pt:c==="Tournament"?pottCount(n,ts):0}}).filter(r=>r.o.apps||r.o.goals||r.o.assists||r.o.potm||r.o.gk||r.pt);
@@ -1506,7 +1514,7 @@ function squadView(){
     <div class="seg edit-only"><button data-cur="1" aria-pressed="${!!p.current}">In squad</button><button data-cur="0" aria-pressed="${!p.current}">Left</button></div>
   </div>`).join("")}</div>
   <div class="btns edit-only" style="margin-top:14px"><input type="text" id="newName" placeholder="New player's first name" style="max-width:240px"><input type="number" id="newNum" placeholder="No." style="max-width:90px"><button class="btn" id="addP">Add player</button></div>
-  <p class="hint" style="margin-top:12px">Renaming here doesn't change old match records, so keep each name the same once she's played.</p></section>`;
+  <p class="hint" style="margin-top:12px">Renaming here doesn't change old match records, so keep each name the same once ${PRN.sh} played.</p></section>`;
 }
 
 // ---------- the match form ----------
@@ -1629,7 +1637,7 @@ document.addEventListener("click",async e=>{
     else{t.dataset.sure="1";t.textContent="Tap again to delete";setTimeout(()=>{if(t.isConnected){delete t.dataset.sure;t.textContent="Delete match"}},4000)}return}
   if(t.dataset.cur!=null){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);try{await db.collection("players").doc(p.id).update({current:t.dataset.cur==="1"})}catch(err){toast("Couldn't update. Try again.")}return}
   if(t.id==="addP"){const name=$("#newName").value.trim();if(!name){toast("Type a first name.");return}if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast(`${name} is already in the squad.`);return}
-    const num=$("#newNum").value;try{await db.collection("players").doc(slug(name)).set({name,num:num===""?null:+num,current:true});toast(`${name} added.`)}catch(err){toast("Couldn't add her. Try again.")}return}
+    const num=$("#newNum").value;try{await db.collection("players").doc(slug(name)).set({name,num:num===""?null:+num,current:true});toast(`${name} added.`)}catch(err){toast(`Couldn't add ${PRN.o}. Try again.`)}return}
 });
 document.addEventListener("click",e=>{if(LB&&e.target.classList&&e.target.classList.contains("lb-img"))lbClose()});
 document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList&&(e.target.classList.contains("match")||e.target.classList.contains("tgame"))){e.preventDefault();e.target.click()}});
@@ -1725,8 +1733,11 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v)
              set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
 
 const TEAM=window.TEAM||{},SK=TEAM.storageKey||"team",TC=TEAM.colours||{};
+const PP=/girl/i.test(TEAM.players||"")?"her":/boy|lad/i.test(TEAM.players||"")?"his":"their";
+document.getElementById("potmPhotoLabel").textContent=PP.charAt(0).toUpperCase()+PP.slice(1)+" photo with the award";
 const POTM_UP=(((TEAM.potm&&TEAM.potm.sponsor)?TEAM.potm.sponsor+" ":"")+"player of the match").toUpperCase();
-const C={blue:TC.club||"#2235E8",blueDeep:TC.clubDeep||"#1424B8",yellow:TC.gold||"#FFD200",ink:"#111111",white:"#FFFFFF",pink:"#F7A3D3",pinkDeep:"#E5559F",teal:"#1AA8A0",faint:"#E7EAF4"};
+const OWN=!!TC.club&&TC.club.toUpperCase()!=="#2235E8";// another team's colours: derive the extra graphics shades from theirs
+const C={blue:TC.club||"#2235E8",blueDeep:OWN?(TC.clubDeep||TC.club):"#1424B8",yellow:TC.gold||"#FFD200",ink:"#111111",white:"#FFFFFF",pink:TC.accent||"#F7A3D3",pinkDeep:TC.accentDeep||"#E5559F",teal:"#1AA8A0",faint:"#E7EAF4"};
 const KITS=TEAM.kits||{home:{label:"Home",body:C.blue,trim:C.yellow,ink:C.white,band:C.yellow,bandInk:C.ink}};
 Object.values(KITS).forEach(k=>{if(k.sponsor&&TEAM.kitSponsor)k.octopus=true});// "octopus" = draw the shirt sponsor
 // kit buttons and sponsor-dependent upload rows come from the team settings
@@ -1838,7 +1849,9 @@ function drawCrest(x,y,w,h){
   X.strokeStyle=C.white;X.lineWidth=Math.max(2,h*.012);X.beginPath();X.arc(cx,cy,h*.055,0,Math.PI*2);X.stroke();
   X.restore();
 }
+const HAS_SP=()=>!!(IMG.sponsor||TEAM.sponsor);
 function drawSponsor(cx,cy,r){
+  if(!HAS_SP())return;
   if(IMG.sponsor){contain(IMG.sponsor,cx-r,cy-r,r*2,r*2);return}
   X.save();X.beginPath();X.arc(cx,cy,r,0,Math.PI*2);X.fillStyle=C.teal;X.fill();
   X.fillStyle=C.white;X.textAlign="center";X.textBaseline="middle";X.font=`700 ${Math.round(r*.9)}px Georgia,serif`;X.fillText((TEAM.sponsor&&TEAM.sponsor.mark)||"",cx,cy+r*.05);
@@ -1867,10 +1880,11 @@ function drawCoffey(cx,cy,r){
   X.fillStyle="#141414";X.font=font(Math.round(rh*.55),DISPLAY);X.fillText((TEAM.potm&&TEAM.potm.ribbon)||`${TEAM.abbr||""} ${TEAM.ageShort||""}`.trim(),cx,ry+rh*.54);
   X.restore();
 }
+const tint=a=>{const h=C.blue.replace("#","");return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`};// club colour, see-through
 function photoSlot(img,x,y,w,h,label){
   if(img){X.save();X.beginPath();X.rect(x,y,w,h);X.clip();cover(img,x,y,w,h);X.restore();return}
-  X.save();X.fillStyle="rgba(34,53,232,.08)";X.fillRect(x,y,w,h);X.setLineDash([16,12]);X.strokeStyle="rgba(34,53,232,.45)";X.lineWidth=4;X.strokeRect(x+8,y+8,w-16,h-16);
-  X.fillStyle="rgba(34,53,232,.7)";X.font=font(30,BODY,800);X.textAlign="center";X.textBaseline="middle";
+  X.save();X.fillStyle=tint(.08);X.fillRect(x,y,w,h);X.setLineDash([16,12]);X.strokeStyle=tint(.45);X.lineWidth=4;X.strokeRect(x+8,y+8,w-16,h-16);
+  X.fillStyle=tint(.7);X.font=font(30,BODY,800);X.textAlign="center";X.textBaseline="middle";
   label.split("\n").forEach((l,i,a)=>X.fillText(l,x+w/2,y+h/2+(i-(a.length-1)/2)*38));X.restore();
 }
 function playerNum(name){const p=squad.find(p=>p.name===name);return p?p.num:""}
@@ -1902,7 +1916,7 @@ function drawSquad(){
   const opp=("v "+(S.opp||"Opponent")).toUpperCase();fit(opp,560,48,DISPLAY);X.fillText(opp,215,940);
   X.fillStyle=C.white;X.font=font(38,DISPLAY);fit(niceDate(S.date),560,38,DISPLAY);X.fillText(niceDate(S.date),215,992);
   X.font=font(38,DISPLAY);const ln=[koText(S.ko),S.venue].filter(Boolean).join("  ·  ");fit(ln,560,38,DISPLAY);X.fillText(ln,215,1040);
-  X.fillStyle=C.white;X.font=font(26,BODY,800);X.textAlign="center";X.fillText("Proudly sponsored by",925,860);
+  X.fillStyle=C.white;X.font=font(26,BODY,800);X.textAlign="center";if(HAS_SP())X.fillText("Proudly sponsored by",925,860);
   drawSponsor(925,965,95);
 }
 
@@ -1949,7 +1963,7 @@ function drawPotm(){
   X.fillStyle=C.pinkDeep;X.beginPath();X.moveTo(0,190);X.lineTo(500,0);X.lineTo(540,0);X.lineTo(0,220);X.closePath();X.fill();
   X.fillStyle=C.yellow;X.beginPath();X.moveTo(W,880);X.lineTo(W,960);X.lineTo(640,W);X.lineTo(560,W);X.closePath();X.fill();
   X.fillStyle=C.pinkDeep;X.beginPath();X.moveTo(W,990);X.lineTo(W,1030);X.lineTo(880,W);X.lineTo(840,W);X.closePath();X.fill();
-  photoSlot(IMG.potmPhoto,0,0,560,W,"Add her photo\nwith the award");
+  photoSlot(IMG.potmPhoto,0,0,560,W,`Add ${PP} photo\nwith the award`);
   drawCrest(30,24,250,150);
   drawCoffey(810,240,215);
   const nm=S.potm||"";shirt(820,500,390,S.pkit,nm,playerNum(nm),nm===S.captain);
@@ -1975,7 +1989,7 @@ function drawMonth(){
     X.fillStyle="#555";const sub=[m.ko?m.ko+" KO":"KO TBC",m.venue,m.comp==="League"?(TEAM.league||"League"):m.comp].filter(Boolean).join("  ·  ").toUpperCase();fit(sub,600,Math.round(h*.22),BODY,800);X.fillText(sub,225,y+h*.8);
     const pill=m.res?`${m.res} ${m.us}-${m.them}`:(m.ha==="A"?"AWAY":"HOME");const pc=m.res?({W:"#1E8E3E",D:"#888",L:"#C62828"})[m.res]:(m.ha==="A"?C.blue:C.yellow);
     X.fillStyle=pc;X.beginPath();X.roundRect(870,y+h/2-26,140,52,26);X.fill();X.fillStyle=(!m.res&&m.ha!=="A")?C.ink:C.white;X.textAlign="center";X.font=font(28,DISPLAY);X.fillText(pill,940,y+h/2+10)});
-  X.fillStyle=C.yellow;X.fillRect(0,950,W,130);X.fillStyle=C.ink;X.textAlign="left";X.font=font(28,BODY,800);X.fillText("Proudly sponsored by",60,1025);
+  X.fillStyle=C.yellow;X.fillRect(0,950,W,130);X.fillStyle=C.ink;X.textAlign="left";X.font=font(28,BODY,800);if(HAS_SP())X.fillText("Proudly sponsored by",60,1025);
   drawSponsor(960,1015,60);
 }
 function drawMilestone(){
@@ -1988,7 +2002,7 @@ function drawMilestone(){
   fit(nm.toUpperCase(),440,96,DISPLAY);X.fillText(nm.toUpperCase(),790,420);
   X.fillStyle=C.blue;X.beginPath();X.roundRect(570,470,440,130,65);X.fill();X.fillStyle=C.white;fit(lab||"MILESTONE",380,64,DISPLAY);X.fillText(lab||"MILESTONE",790,560);
   X.fillStyle=C.ink;X.font=font(30,BODY,800);X.fillText("WHAT A STAR!",790,680);
-  X.fillStyle=C.blue;X.fillRect(0,900,W,180);X.fillStyle=C.white;X.textAlign="left";X.font=font(28,BODY,800);X.fillText("Proudly sponsored by",60,1000);drawSponsor(960,990,62);
+  X.fillStyle=C.blue;X.fillRect(0,900,W,180);X.fillStyle=C.white;X.textAlign="left";X.font=font(28,BODY,800);if(HAS_SP())X.fillText("Proudly sponsored by",60,1000);drawSponsor(960,990,62);
 }
 function render(){
   X.save();X.clearRect(0,0,W,W);
