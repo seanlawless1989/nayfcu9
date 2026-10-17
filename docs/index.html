@@ -557,8 +557,12 @@ function played(m){return m.played||{}}
 function oppKey(n){return String(n||"").toLowerCase().replace(/\bcls\b/g,"chester le street").replace(/[^a-z0-9 ]+/g," ")
   .replace(/\b(a?fc|jfc|youth|juniors?|girls|the|c ?a|football club|club)\b/g," ").replace(/\s+/g," ").trim()}
 // opposition badges: public.badges {key: oppKey(name), name, img: small PNG data URL}; coaches upload, everyone sees
-let BADGES={};
-async function loadBadges(){try{const {data}=await sb.from("badges").select("*");BADGES={};(data||[]).forEach(r=>BADGES[r.key]=r.img)}catch(e){}}
+// built-in club logos (docs/badges/); a coach upload for the same key replaces one
+const BADGE_FILES={"beamish lionesses":"beamish-lionesses","brandon community":"brandon-community","chester le street town":"chester-le-street-town",
+  "felling magpies":"felling-magpies","chester le street hilda park":"chester-le-street-hilda-park","chester le street amazons":"chester-le-street-amazons"};
+const badgeDefaults=()=>Object.fromEntries(Object.entries(BADGE_FILES).map(([k,f])=>[k,`badges/${f}.png`]));
+let BADGES=badgeDefaults();
+async function loadBadges(){try{const {data}=await sb.from("badges").select("*");BADGES=badgeDefaults();(data||[]).forEach(r=>BADGES[r.key]=r.img)}catch(e){}}
 function oppIni(n){return (n||"?").split(/\s+/).filter(w=>w&&!/^(fc|afc|the)$/i.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase()}
 function badge(n,cls){const b=BADGES[oppKey(n)];return b?`<img class="badge ${cls||""}" src="${b}" alt="">`:`<span class="badge ini ${cls||""}">${esc(oppIni(n))}</span>`}
 window.oppBadge=n=>BADGES[oppKey(n)]||null;window.saveBadgeFile=(n,f)=>canWrite&&saveBadge(n,f);
