@@ -302,6 +302,69 @@ main.hasbar{padding-bottom:110px}
 .tie .w{font-weight:800}
 .tie .usr{color:var(--club)}
 @media (max-width:520px){.fx{grid-template-columns:52px minmax(0,1fr)}.fx .s{grid-column:2}.meter{grid-template-columns:90px minmax(0,1fr) 30px}}
+/* v9 phone layout: slim header, bottom tabs, a docked Continue bar, a match screen that fits a phone */
+body{font-size:16px}
+.hint{font-size:14px}
+.mast{border-bottom-width:4px;position:sticky;top:0;z-index:9}
+.mast .wrap{padding-block:8px;flex-wrap:nowrap;gap:10px}
+.mast .crest{width:40px;height:40px;padding:2px}
+.mast .mid{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.2}
+.mast .mid b{font:400 18px var(--display)}
+.mast .mid span{font-size:13px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bell{position:relative;flex:none;width:46px;height:46px;border:0;border-radius:12px;background:transparent;color:#fff;display:grid;place-items:center;cursor:pointer}
+.bell svg{width:26px;height:26px}
+.bell .badge{position:absolute;top:2px;right:0;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--gold);color:var(--goldInk);font:800 12px var(--body);display:grid;place-items:center}
+.srh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.tabwrap{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;padding:0;max-width:640px;margin:0 auto}
+nav.tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:62px;border:0;border-radius:0;background:transparent;color:var(--muted);font:600 12px var(--body);padding:0;position:relative}
+nav.tabs button[aria-current="page"]{background:transparent;color:var(--club);font-weight:800}
+nav.tabs button[aria-current="page"]::before{content:"";position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--club)}
+nav.tabs svg{width:25px;height:25px}
+body.inmatch .tabwrap,body.inmatch .mast{display:none}
+.actbar{bottom:calc(63px + env(safe-area-inset-bottom,0px));padding:10px 0;background:var(--clubDeep);box-shadow:0 -6px 18px rgba(14,26,107,.22)}
+body.inmatch .actbar{bottom:0;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 10px)}
+main.hasbar{padding-bottom:170px}
+body.inmatch main.hasbar{padding-bottom:100px}
+.actbar .in{justify-content:center;max-width:640px;gap:10px}
+.actbar .cont{flex:1 1 auto;width:auto;min-height:56px;border-radius:16px;box-shadow:0 4px 0 #C9A400;flex-direction:row;gap:10px}
+.actbar .cont b{font:400 23px var(--shirt);letter-spacing:.03em;padding-top:4px;white-space:nowrap}
+.actbar .cont small{display:none}
+.actbar .cont::after{content:"";width:12px;height:12px;border:solid currentColor;border-width:3.5px 3.5px 0 0;transform:rotate(45deg);margin-left:-2px}
+.actbar .btn.ghost,.actbar .skip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:66px;max-width:96px;padding:4px 8px;border-radius:16px;border:2px solid rgba(255,255,255,.45);background:transparent;color:#fff;font:700 12px/1.15 var(--body);white-space:normal;text-align:center;cursor:pointer}
+.actbar .skip svg{width:22px;height:22px}
+@media (max-width:600px){.actbar .cont{flex-basis:auto;width:auto}.actbar .btn.ghost{flex:0 0 auto;font-size:12px}main.hasbar{padding-bottom:170px}}
+.toast{bottom:calc(env(safe-area-inset-bottom,0px) + 150px)}
+body.inmatch .toast{bottom:calc(env(safe-area-inset-bottom,0px) + 90px)}
+.subtabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px}
+.subtabs button{flex:none;font:700 14px var(--body);padding:10px 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;white-space:nowrap}
+.subtabs button[aria-current="page"]{background:var(--club);border-color:var(--club);color:#fff}
+.stars{color:#D49B00;letter-spacing:1px;font-size:13px;white-space:nowrap}
+.bp{min-height:56px}
+.tok.off .sh{background:#FF9F43}
+details.tacd summary{cursor:pointer;display:flex;flex-direction:column;gap:2px;list-style:none}
+details.tacd summary::-webkit-details-marker{display:none}
+details.tacd summary b{font:400 18px var(--display)}
+details.tacd summary b::after{content:" ▾";font-size:14px;color:var(--muted)}
+details.tacd[open] summary b::after{content:" ▴"}
+details.tacd .tg{margin-top:14px}
+.board .side span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.15}
+.board .spd{margin-top:6px;border:0;border-radius:999px;padding:4px 12px;background:var(--gold);color:var(--goldInk);font:800 12px var(--body);cursor:pointer}
+.mp .dot.them{border:2.5px solid #fff}
+.mshouts .shouts{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mshouts .shout{min-height:52px;justify-content:center;align-items:center;text-align:center}
+.goalfx{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;overflow:hidden;background:color-mix(in srgb,#2235E8 94%,transparent);color:#fff;text-align:center;animation:gfIn .3s ease-out;cursor:pointer}
+.goalfx h2{position:relative;font:400 clamp(76px,26vw,124px)/1 var(--shirt);color:var(--gold);margin:0 0 18px;text-shadow:0 6px 0 #16239E;transform:rotate(-4deg)}
+.goalfx .sh{position:relative;width:132px;height:132px;border-radius:50%;background:var(--gold);border:7px solid #fff;display:grid;place-items:center;font:400 70px var(--shirt);color:#16239E;padding-top:8px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:gfPop .5s .1s both cubic-bezier(.3,1.6,.6,1)}
+.goalfx .who{position:relative;font:400 42px var(--shirt);letter-spacing:.03em;margin-top:8px}
+.goalfx .sub{position:relative;font-size:17px;font-weight:600}
+.goalfx .scr{position:relative;margin-top:18px;font:400 22px var(--display);background:#16239E;padding:6px 16px;border-radius:999px}
+.goalfx i{position:absolute;top:-20px;width:11px;height:5px;border-radius:2px;animation:conf2 2.6s linear both}
+@keyframes gfIn{from{opacity:0}}
+@keyframes gfPop{from{transform:scale(.3)}}
+@keyframes conf2{to{transform:translateY(105vh) rotate(720deg)}}
+@media (max-width:760px){body.inmatch .mp{max-width:min(440px,calc(38vh*.75))}body.inmatch .mpwrap{padding:6px}body.inmatch .mpwrap .legend{display:none}body.inmatch .mstack{gap:10px}}
+.actbar .cont[data-m="pause"]::after{display:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -311,14 +374,12 @@ main.hasbar{padding-bottom:110px}
 <header class="mast">
   <div class="wrap">
     <img class="crest" src="crest.png" alt="Newton Aycliffe Youth Football Club badge">
-    <div style="min-width:0">
-      <h1>Aycliffe U9s Manager</h1>
-      <p id="mastSub">Newton Aycliffe Youth · Under 9s girls · 5v5</p>
-    </div>
-    <div class="when" id="when"></div>
+    <h1 class="srh">Aycliffe U9s Manager</h1>
+    <div class="mid"><b id="when"></b><span id="mastSub">Newton Aycliffe Youth · Under 9s girls</span></div>
+    <button class="bell" id="bell" data-view="inbox" aria-label="Messages"></button>
   </div>
 </header>
-<div class="wrap"><nav class="tabs" id="tabs" aria-label="Sections"></nav></div>
+<div class="tabwrap"><nav class="tabs" id="tabs" aria-label="Sections"></nav></div>
 <main class="wrap" id="main"></main>
 <div class="actbar" id="actbar"></div>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -737,7 +798,7 @@ function tick(){
           let line=pick([`GOAL!!! ${N} smashes it in with her ${foot} foot!`,`GOAL!!! ${N} slots it past the keeper!`,`GOAL!!! What a finish from ${N}!`,`GOAL!!! ${N} pokes it home!`,`GOAL!!! ${N} curls it into the corner with her ${foot}!`]);
           const ast=passer&&passer!==sh?passer:null;
           if(ast){M.ast[ast]++;M.rt[ast]+=.55;line+=` Great pass from ${P(ast).name}.`}
-          beat(line,"goal",[rnd(44,56),3],"us",null,{side:"us",name:N,ast:ast?P(ast).name:null,min:M.min},{kind:"goal",id:sh});beat("Back to the middle for the restart.","",[50,50],null,null,null,{kind:"kickoff",side:"them"});
+          beat(line,"goal",[rnd(44,56),3],"us",null,{side:"us",id:sh,name:N,ast:ast?P(ast).name:null,min:M.min},{kind:"goal",id:sh});beat("Back to the middle for the restart.","",[50,50],null,null,null,{kind:"kickoff",side:"them"});
         }else{const r=R();
           if(r<.45){M.sot[0]++;beat(pick([`...saved by their keeper!`,`...tipped round the post!`,`...straight at the keeper.`]),"",[50,8],null,null,null,{kind:"save"})}
           else beat(pick([`...just wide!`,`...over the bar.`,`...off the post! So close!`]),"",[pick([rnd(30,42),rnd(58,70)]),3],null,null,null,{kind:"miss"});
@@ -1041,18 +1102,29 @@ function nextSeason(){
 }
 
 // ---------------- rendering ----------------
-const TABS=[["home","Home"],["squad","Squad"],["tactics","Matchday squad"],["training","Training"],["fixtures","Fixtures"],["table","League"],["cup","County Cup"],["tours","Tournaments"]];
+// five tabs along the bottom; Team and Games each hold a few screens
+const ICO={home:'<path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/>',team:'<path d="M8 3L3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z"/>',games:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  table:'<path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8"/>',club:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'};
+const svgI=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
+const TABS=[["home","Home","home"],["team","Team","tactics"],["games","Games","fixtures"],["table","League","table"],["club","Club","club"]];
+const SUBTABS={team:[["tactics","Pick your team"],["squad","Squad"],["training","Training"]],games:[["fixtures","Games"],["cup","County Cup"],["tours","Tournaments"]]};
+const GROUP={home:"home",inbox:"home",tactics:"team",squad:"team",training:"team",fixtures:"games",cup:"games",tours:"games",table:"table",club:"club"};
 function render(){
-  $("#when").innerHTML=S.seasonOver?`<b>Season over</b>${seasonStr()}`:`<b>${DAYNAME[S.day]} ${fmt(curDate()).replace(/^\w+ /,"")}</b>Under ${S.age}s · ${seasonStr()}`;
-  $("#mastSub").textContent=`${S.manager?`Manager: ${S.manager} · `:""}Newton Aycliffe Youth · Under ${S.age}s girls · ${divName()}`;
+  $("#when").textContent=S.seasonOver?`Season over · ${seasonStr()}`:fmt(curDate());
+  $("#mastSub").textContent=`${S.manager?`${S.manager} · `:""}Under ${S.age}s · ${divName()} · ${seasonStr()}`;
   const unread=S.inbox.filter(m=>!m.read).length;
-  $("#tabs").hidden=view==="match";
-  $("#tabs").innerHTML=TABS.map(([v,n])=>`<button data-view="${v}" aria-current="${v===view?"page":"false"}">${n}${v==="home"&&unread?`<span class="badge">${unread}</span>`:""}</button>`).join("")+`<button data-act="save" title="Save game">💾 Save</button>`;
+  $("#bell").innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>${unread?`<span class="badge">${unread}</span>`:""}`;
+  $("#bell").setAttribute("aria-label",unread?`Messages, ${unread} new`:"Messages");
+  document.body.classList.toggle("inmatch",view==="match"&&!!M);
+  const grp=GROUP[view]||"home";
+  $("#tabs").innerHTML=TABS.map(([g,n,v])=>`<button data-view="${v}" aria-current="${g===grp?"page":"false"}">${svgI(g)}${n}</button>`).join("");
   const main=$("#main");
   main.classList.add("hasbar");
   if(view==="match"&&M){renderMatch();return}
   if(view==="match")view="home";
-  main.innerHTML=({home:homeV,squad:squadV,tactics:tacticsV,training:trainingV,fixtures:fixturesV,table:tableV,cup:cupV,tours:toursV,inbox:inboxV}[view]||homeV)();
+  const sub=SUBTABS[GROUP[view]];
+  main.innerHTML=(sub&&!(view==="squad"&&playerView)?`<nav class="subtabs" aria-label="${GROUP[view]==="team"?"Team":"Games"}">${sub.map(([v,n])=>`<button data-view="${v}" aria-current="${v===view?"page":"false"}">${n}</button>`).join("")}</nav>`:"")+
+    ({home:homeV,squad:squadV,tactics:tacticsV,training:trainingV,fixtures:fixturesV,table:tableV,cup:cupV,tours:toursV,inbox:inboxV,club:clubV}[view]||homeV)();
   setBar();
 }
 function compLabel(comp,round){return comp==="L"?`League · Round ${round+1}`:comp==="C"?`County Cup · ${CUPNAME[round]}`:S.tours[round].name}
@@ -1078,7 +1150,7 @@ function satPreview(){
 }
 function heroV(){
   const ev=curEvent(),of=ourFixture(ev);const d=S.day;
-  const head=`<h3>${DAYNAME[d]} ${fmt(curDate()).replace(/^\w+ /,"")} · week ${S.wk+1} of ${S.cal.length}</h3>${weekStrip()}`;
+  const head=`<h3>Week ${S.wk+1} of ${S.cal.length}</h3>${weekStrip()}`;
   const todays=S.inbox.filter(m=>m.date===curDate()&&m.from!=="Match report"&&m.from!=="Tournament report");
   const notes=[...S.today.map(t=>`<div class="note tip">${esc(t)}</div>`),...todays.slice(0,4).map(m=>`<button class="msg" data-msg="${m.id}" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff"><span class="f" style="color:rgba(255,255,255,.75)">${esc(m.from)}${m.read?"":" · new"}</span><span class="s">${esc(m.subj)}</span></button>`)].join("");
   const towLine=S.trainRep&&S.trainRep.tow&&d>3?`<p style="margin:0">⭐ Trainer of the week: <b>${esc(P(S.trainRep.tow).name)}</b></p>`:"";
@@ -1123,24 +1195,26 @@ function heroV(){
 // the same buttons in the same place every day
 // FM-style Continue: one button, same size, bottom right of every screen
 function contBtn(attr,big,sub){return `<button class="btn gold cont" ${attr}><b>${big}</b>${sub?`<small>${sub}</small>`:""}</button>`}
+const SKIP_I='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5l7 7-7 7M13 5l7 7-7 7"/></svg>';
 function actBar(){
-  if(S.seasonOver)return contBtn(`data-act="nextseason"`,"Continue",`Start the Under ${Math.min(S.age+1,12)}s season`);
+  if(S.seasonOver)return contBtn(`data-act="nextseason"`,`Start the U${Math.min(S.age+1,12)}s`);
   const ev=curEvent(),of=ourFixture(ev);const d=S.day;let main,extra=[];
-  if(d===3&&!S.trained){main=contBtn(`data-act="train"`,"Continue","Run training");extra.push(`<button class="btn ghost" data-act="tosat">Skip to match day</button>`)}
-  else if(d<6){main=contBtn(`data-act="day"`,"Continue",`To ${DAYNAME[d+1]}${d+1===3?" (training)":d+1===6?" (match day)":""}`);
-    if(d<3)extra.push(`<button class="btn ghost" data-act="totrain">Skip to training</button>`);
-    if(d<5)extra.push(`<button class="btn ghost" data-act="tosat">Skip to match day</button>`)}
-  else if(ev.type==="T"){const t=S.tours[ev.round];main=t.stage==="done"?contBtn(`data-act="endtour"`,"Continue","Head home"):contBtn(`data-act="play"`,"Continue",t.stage==="final"?"Play the final":"Play the next game");
-    if(t.stage!=="done"&&view!=="tactics")extra.push(`<button class="btn ghost" data-view="tactics">Change the squad</button>`)}
-  else if(!of.f)main=contBtn(`data-act="skip"`,"Continue","No game, on to next week");
-  else{main=contBtn(`data-act="play"`,"Continue","Go to the match");if(view!=="tactics")extra.push(`<button class="btn ghost" data-view="tactics">Change the squad</button>`)}
+  const skip=(act,where)=>`<button class="skip" data-act="${act}">${SKIP_I}Skip to ${where}</button>`;
+  if(d===3&&!S.trained){main=contBtn(`data-act="train"`,"Run training");extra.push(skip("tosat","Saturday"))}
+  else if(d<6){main=contBtn(`data-act="day"`,d+1===3?"To training":d+1===6?"To match day":`On to ${DAYNAME[d+1]}`);
+    if(d<2)extra.push(skip("totrain","training"));
+    else if(d<5)extra.push(skip("tosat","Saturday"))}
+  else if(ev.type==="T"){const t=S.tours[ev.round];main=t.stage==="done"?contBtn(`data-act="endtour"`,"Head home"):contBtn(`data-act="play"`,t.stage==="final"?"Play the final":"Next game");
+    if(t.stage!=="done"&&view!=="tactics")extra.push(`<button class="btn ghost" data-view="tactics">Pick your team</button>`)}
+  else if(!of.f)main=contBtn(`data-act="skip"`,"On to next week");
+  else{main=contBtn(`data-act="play"`,"Go to the match");if(view!=="tactics")extra.push(`<button class="btn ghost" data-view="tactics">Pick your team</button>`)}
   return extra.join("")+main;
 }
 function matchBar(){
   const st=M.state;
-  const main=st==="pre"?contBtn(`data-m="go"`,"Continue","Kick off"):st==="live"?contBtn(`data-m="pause"`,"Pause","Make changes"):
-    st==="paused"?contBtn(`data-m="go"`,"Continue","Carry on"):st==="break"?contBtn(`data-m="go"`,"Continue","Start the second half"):
-    contBtn(`data-m="done"`,"Continue",M.comp==="T"?"Back to the tournament":"Leave the ground");
+  const main=st==="pre"?contBtn(`data-m="go"`,"Kick off!"):st==="live"?contBtn(`data-m="pause"`,"Pause"):
+    st==="paused"?contBtn(`data-m="go"`,"Carry on"):st==="break"?contBtn(`data-m="go"`,"Second half"):
+    contBtn(`data-m="done"`,M.comp==="T"?"Back to the tournament":"Leave the ground");
   return main;
 }
 function setBar(){const el=$("#actbar");if(!el)return;const h=view==="match"&&M?matchBar():actBar();if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=`<div class="wrap in">${h}</div>`}}
@@ -1191,10 +1265,8 @@ function homeV(){
       <button class="fx" data-view="cup" style="font:inherit;color:inherit;text-align:left;cursor:pointer"><div class="d">County<br>Cup</div><div class="t"><span>${cupState}</span></div><div class="s"></div></button>
       <button class="fx" data-view="tours" style="font:inherit;color:inherit;text-align:left;cursor:pointer"><div class="d">Tourna-<br>ments</div><div class="t"><span>${tourNextI>=0?`Next: ${esc(S.tours[S.cal[tourNextI].round].name)}, ${fmt(S.cal[tourNextI].date)}`:"All played"}</span></div><div class="s"></div></button>
      </div>
-     <h3 style="margin-top:14px">Trophy cabinet</h3>${cabinet()}
    </section>
   </div>
-  ${gameCard()}
   </div>`;
 }
 function nameCard(){return `<section class="card hero"><h3>Before we start</h3><div class="nm" style="font:400 24px var(--display)">What's your name, gaffer?</div>
@@ -1219,6 +1291,9 @@ function gameCard(){
     <textarea id="loadCode" rows="3" placeholder="Paste a backup code here" style="width:100%;font:12px monospace;border-radius:9px;padding:8px;border:1.5px solid var(--line);background:var(--field);color:inherit"></textarea>
     <div class="btns" style="margin-top:6px"><button class="btn ghost small" data-act="loadcode">Load this game</button></div></details>
    <div class="btns" style="margin-top:14px"><button class="btn ghost small" data-act="${confirmNew?"newgo":"new"}">${confirmNew?"Tap again to wipe this save and start over":"Start a new game"}</button></div></section>`;
+}
+function clubV(){
+  return `<div class="stack">${S.manager?"":nameCard()}<section class="card"><h2>Trophy cabinet</h2>${cabinet()}</section>${gameCard()}</div>`;
 }
 function backupCode(){try{return btoa(unescape(encodeURIComponent(JSON.stringify(S))))}catch(e){return ""}}
 function reviewV(){
@@ -1269,23 +1344,27 @@ function pitchHTML(xi,form,opts){
      return `<button class="tok${role==="GK"?" gk":""}${s?" sel":""}${p?"":" empty"}${off?" off":""}" style="left:${x}%;top:${y}%" data-slot="${i}" aria-label="${POSN[code]}${p?": "+esc(p.name)+(off?", out of position":""):", empty"}">
       <span class="rl">${code}${off?" ⚠":""}</span><span class="sh">${p?p.num:"+"}${p&&p.id===S.tac.cap?`<span class="cap">C</span>`:""}</span><span class="nm">${p?esc(p.name):"Empty"}</span></button>`}).join("")}</div>`;
 }
-function bpBtn(id,attr,selKey,extra){const p=P(id);const dr=p.dropped?` · left out ${p.dropped}×`:"";return `<button class="bp${sel===selKey?" sel":""}" ${attr}><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)}</b><small>${p.posD.join(" ")} · ${p.foot}F · ${ovr(p).toFixed(1)} · ${face(p.morale)}${extra||dr}</small></span></button>`}
+// 1 to 5 stars from the overall rating (out of 20), so the cards read easily on a phone
+function starN(p){return clamp(Math.round((ovr(p)-8)/1.6),1,5)}
+function starsHTML(p){const k=starN(p);return `<span class="stars" role="img" aria-label="${k} out of 5 stars">${"★".repeat(k)}${"☆".repeat(5-k)}</span>`}
+function bpBtn(id,attr,selKey,extra){const p=P(id);const dr=p.dropped?` · left out ${p.dropped}×`:"";return `<button class="bp${sel===selKey?" sel":""}" ${attr}><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)} <span class="face">${face(p.morale)}</span></b><small>${POSN[p.posD[0]]} · ${starsHTML(p)}${extra||dr}</small></span></button>`}
+let tacOpen=false;
 function tacticsV(){
   const away=S.players.filter(p=>!p.avail);const out=outIds();
-  const ev=curEvent();const canPlay=!S.seasonOver&&S.day===6&&ourFixture(ev)?.f;
-  return `<div class="stack"><div class="cols">
+  return `<div class="stack"><div class="btns"><button class="btn ghost" data-act="auto">Pick my best eight</button><button class="btn ghost" data-act="share">Share it around</button></div><div class="cols">
   <section class="card"><h2>Starting five</h2>${pitchHTML(S.tac.xi,S.tac.form,{sel})}
-   <p class="hint" style="margin-top:10px">Tap a player, then tap another to swap them. ⚠ means she is out of position. That works between the pitch, the subs and the girls not in the squad.</p></section>
+   <p class="hint" style="margin-top:10px">Tap a player, then tap another to swap them. An orange shirt with ⚠ means she is out of position.</p></section>
   <div class="stack">
    <section class="card"><h3>Subs (3)</h3><div class="bench">${S.tac.subs.map((id,i)=>id?bpBtn(id,`data-sub="${i}"`,`u${i}`):`<button class="bp${sel===`u${i}`?" sel":""}" data-sub="${i}"><span class="num">+</span><span class="x"><b>Empty</b><small>Tap to fill</small></span></button>`).join("")}</div></section>
    <section class="card"><h3>Not in the squad${out.length?` (${out.length})`:""}</h3><div class="bench">${out.map(id=>bpBtn(id,`data-out="${id}"`,`o${id}`)).join("")||`<p class="hint">Everyone available is in the eight.</p>`}
     ${away.map(p=>`<div class="bp na"><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)}</b><small>Away: ${esc(p.away)}${p.awayWks>1?` (${p.awayWks} weeks)`:""}</small></span></div>`).join("")}</div>
     ${out.length?`<p class="hint" style="margin-top:8px">Girls left out lose a bit of morale, more if it keeps happening.</p>`:""}</section>
-   <section class="card"><h3>Formation</h3><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-form="${f}" aria-pressed="${f===S.tac.form}">${f}</button>`).join("")}</div><p class="hint" style="margin-top:8px">${FORM_NOTE[S.tac.form]}</p></section>
-   <section class="card"><h3>Approach</h3><div class="seg" role="group" aria-label="Approach">${MENT.map((m,i)=>`<button data-ment="${i}" aria-pressed="${i===S.tac.ment}">${m}</button>`).join("")}</div>
-    <p class="hint" style="margin-top:8px">Go for it makes more chances at both ends and tires legs faster.</p></section>
-   <section class="card"><h3>Captain</h3><select id="capSel" aria-label="Captain">${squadIds().map(id=>P(id)).map(p=>`<option value="${p.id}"${p.id===S.tac.cap?" selected":""}>${esc(p.name)}</option>`).join("")}</select><p class="hint" style="margin-top:8px">Sharing the armband around gives a little lift to whoever wears it.</p></section>
-   <div class="btns"><button class="btn ghost" data-act="auto">Pick my best eight</button><button class="btn ghost" data-act="share">Share it around</button>${canPlay?`<button class="btn gold" data-act="play">Go to the match</button>`:""}</div>
+   <details class="card tacd"${tacOpen?" open":""}><summary><b>Tactics</b><span class="hint">${S.tac.form} · ${MENT[S.tac.ment]} · ${esc(P(S.tac.cap)?.name||"no")} captain</span></summary>
+    <div class="tg"><h3>Formation</h3><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-form="${f}" aria-pressed="${f===S.tac.form}">${f}</button>`).join("")}</div><p class="hint" style="margin-top:8px">${FORM_NOTE[S.tac.form]}</p></div>
+    <div class="tg"><h3>Approach</h3><div class="seg" role="group" aria-label="Approach">${MENT.map((m,i)=>`<button data-ment="${i}" aria-pressed="${i===S.tac.ment}">${m}</button>`).join("")}</div>
+     <p class="hint" style="margin-top:8px">Go for it makes more chances at both ends and tires legs faster.</p></div>
+    <div class="tg"><h3>Captain</h3><select id="capSel" aria-label="Captain">${squadIds().map(id=>P(id)).map(p=>`<option value="${p.id}"${p.id===S.tac.cap?" selected":""}>${esc(p.name)}</option>`).join("")}</select><p class="hint" style="margin-top:8px">Sharing the armband around gives a little lift to whoever wears it.</p></div>
+   </details>
   </div></div></div>`;
 }
 function trainingV(){
@@ -1356,7 +1435,7 @@ function renderMatch(){
   const compT=M.comp==="L"?"League":M.comp==="C"?`County Cup ${CUPNAME[M.round]}`:`${S.tours[M.tour].name}${M.final?" · Final":""}`;
   const gl=M.goalLog;
   $("#main").innerHTML=`<div class="stack mstack">
-  <div class="board${fresh&&top.cls==="goal"?" gflash":""}${fresh&&top.cls==="them"?" tflash":""}" style="${dly}"><div class="side">${badge(US)}<span>Newton Aycliffe</span></div><div><div class="sc">${M.dUs}–${M.dThem}</div><span class="clk">${quarter}</span></div><div class="side r"><span>${esc(t.name)}</span>${badge(M.opp)}</div>
+  <div class="board${fresh&&top.cls==="goal"?" gflash":""}${fresh&&top.cls==="them"?" tflash":""}" style="${dly}"><div class="side">${badge(US)}<span>Newton Aycliffe</span></div><div style="display:flex;flex-direction:column;align-items:center"><div class="sc">${M.dUs}–${M.dThem}</div><span class="clk">${quarter}</span>${M.state!=="ft"?`<button class="spd" data-speed="${M.speed%3+1}" aria-label="Game speed ${["slow","normal","fast"][M.speed-1]}. Tap to change">${["Slow","Normal","Fast"][M.speed-1]} ▸</button>`:""}</div><div class="side r"><span>${esc(t.name)}</span>${badge(M.opp)}</div>
    ${gl.length?`<div class="scorers" aria-label="Goals"><div>${gl.filter(g=>g.side==="us").map(g=>`<span>⚽ ${esc(g.name)} ${g.min}'${g.ast?` <small>(${esc(g.ast)})</small>`:""}</span>`).join("")}</div><div class="r">${gl.filter(g=>g.side==="them").map(g=>`<span>${esc(g.name)} ${g.min}' ⚽</span>`).join("")}</div></div>`:""}</div>
   <div class="mtop">
    <div class="mpwrap"><div id="mpitchSlot"></div><div class="legend"><span><i style="background:#FFD200;border-color:#16239E"></i>Newton Aycliffe</span><span><i style="background:${kitBg(kit(M.opp))}"></i>${esc(t.name)}</span></div>
@@ -1364,18 +1443,17 @@ function renderMatch(){
    <div class="stack" style="gap:12px">
     ${M.state!=="pre"&&top?`<div class="flash ${flashCls}${fresh?" anim":""}" style="${dly}" role="status" aria-live="polite"><span class="fm">${top.m}'</span><span>${top.cls==="goal"?"⚽ ":""}${esc(top.text)}</span></div>`:""}
     ${M.state!=="pre"&&top?`<div class="roll" aria-hidden="true" style="margin:0">${M.feed.slice(1,4).map((e,i)=>`<div style="opacity:${[.85,.6,.4][i]}"><span>${e.m}'</span> ${esc(e.text)}</div>`).join("")}</div>`:""}
-    <div class="btns">${M.state!=="ft"?`<div class="seg" role="group" aria-label="Speed">${["Slow","Normal","Fast"].map((n,i)=>`<button data-speed="${i+1}" aria-pressed="${M.speed===i+1}">${n}</button>`).join("")}</div>`:""}</div>
+    ${M.state==="live"||M.state==="paused"?`<div class="mshouts"><div class="shouts">${Object.entries(SHOUTS).map(([k,v])=>`<button class="shout${shoutOn()===k?" on":""}" data-shout="${k}"${M.min<(M.shoutCd||0)?" disabled":""}><b>${v.n}</b><small>${shoutOn()===k?`Working · ${M.shout.until-M.min} min left`:v.d}</small></button>`).join("")}</div>
+      <p class="hint" style="margin-top:6px">${M.min<(M.shoutCd||0)?`Catch your breath. You can shout again in ${M.shoutCd-M.min} min.`:M.shoutN>6?"The girls have stopped listening to all the shouting. Shouts only work a little now.":"Shouts work for about 5 minutes. Don't overdo it."}</p></div>`:""}
     ${M.state==="pre"?talkCard("pre","Pre-match team talk"):""}
     ${M.state==="break"?talkCard("ht","Half-time team talk"):""}
     ${M.state==="ft"?talkCard("ft","Full-time team talk"):""}
-    ${M.state!=="ft"&&M.state!=="pre"?`<section class="card"><h3>Subs</h3><div class="bench">${bench.map(id=>{const p=P(id);return `<button class="bp${M.selTok===`b${id}`?" sel":""}" data-mbench="${id}"${canChange?"":" disabled"}><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)}</b><small>${M.mins[id]} min · legs ${Math.round(M.cond[id])}%</small></span></button>`}).join("")||`<p class="hint">No subs today.</p>`}</div>
+    ${canChange&&M.state!=="pre"?`<section class="card"><h3>Subs</h3><div class="bench">${bench.map(id=>{const p=P(id);return `<button class="bp${M.selTok===`b${id}`?" sel":""}" data-mbench="${id}"${canChange?"":" disabled"}><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)}</b><small>${M.mins[id]} min · legs ${Math.round(M.cond[id])}%</small></span></button>`}).join("")||`<p class="hint">No subs today.</p>`}</div>
      ${canChange?`<div class="btns" style="margin-top:10px"><button class="btn ghost small" data-m="rotate">Freshen up tired legs</button></div>`:`<p class="hint" style="margin-top:8px">Pause to make a change.</p>`}</section>`:""}
     ${canChange&&M.state!=="pre"?`<section class="card"><h3>Changes</h3><div class="btns"><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-mform="${f}" aria-pressed="${f===M.form}">${f}</button>`).join("")}</div></div>
       <div class="seg" role="group" aria-label="Approach" style="margin-top:8px">${MENT.map((m,i)=>`<button data-mment="${i}" aria-pressed="${i===M.ment}">${m}</button>`).join("")}</div></section>`:""}
    </div>
   </div>
-    ${M.state==="live"||M.state==="paused"?`<section class="card"><h3>Touchline shouts</h3><div class="shouts">${Object.entries(SHOUTS).map(([k,v])=>`<button class="shout${shoutOn()===k?" on":""}" data-shout="${k}"${M.min<(M.shoutCd||0)?" disabled":""}><b>${v.n}</b><small>${shoutOn()===k?`Working · ${M.shout.until-M.min} min left`:v.d}</small></button>`).join("")}</div>
-      <p class="hint" style="margin-top:8px">${M.min<(M.shoutCd||0)?`Catch your breath. You can shout again in ${M.shoutCd-M.min} min.`:M.shoutN>6?"The girls have stopped listening to all the shouting. Shouts only work a little now.":"Shouts work for about 5 minutes. Don't overdo it, or they stop listening."}</p></section>`:""}
   ${M.state==="ft"?ftPanel():""}
   <div class="mview">
     <section class="card"><h3>Minutes and legs</h3><div class="mins">${M.squad.map(id=>`<div class="mn${M.cond[id]<55&&M.xi.includes(id)&&M.state!=="ft"?" low":""}"><span>${esc(P(id).name)}</span><b>${M.mins[id]}' · ${Math.round(M.cond[id])}%</b></div>`).join("")}</div>
@@ -1383,7 +1461,19 @@ function renderMatch(){
     <section class="card"><h3>${M.state==="pre"?`${esc(compT)} · ${M.comp==="T"?"Neutral":M.home?"Home":"Away"} · ${esc(M.weather)}`:"Commentary"}</h3><div class="feed">${M.state==="pre"?`<div class="ev"><span class="m"></span><span>The girls are warmed up. ${esc(P(S.tac.cap)?.name||"")} leads them out as captain.</span></div>${M.feed.map(e=>`<div class="ev ${e.cls}"><span class="m"></span><span>${esc(e.text)}</span></div>`).join("")}`:M.feed.map((e,i)=>`<div class="ev ${e.cls}${i===0&&evNew?" new":""}"${i===0?` style="${dly}"`:""}><span class="m">${e.m}'</span><span>${esc(e.text)}</span></div>`).join("")}</div></section>
   </div></div>`;
   const slot=document.getElementById("mpitchSlot");if(slot){if(!M.pitchEl)M.pitchEl=buildMPitch();slot.replaceWith(M.pitchEl);updateMPitch()}
+  const ours=M.goalLog.filter(g=>g.side==="us");if(ours.length>(M.gfx||0)){M.gfx=ours.length;showGoal(ours[ours.length-1])}
   setBar();
+}
+// our goal takes over the screen for a moment: big GOAL!, her shirt number and name, confetti
+function showGoal(g){
+  document.querySelectorAll(".goalfx").forEach(x=>x.remove());
+  const p=g.id&&P(g.id);const el=document.createElement("div");el.className="goalfx";el.setAttribute("role","status");
+  const cols=["#FFD200","#FFFFFF","#FF5FA2","#7CC4FF"];
+  el.innerHTML=Array.from({length:36},(_,i)=>`<i aria-hidden="true" style="left:${Math.round(R()*100)}%;background:${cols[i%4]};animation-delay:${(R()*1.2).toFixed(2)}s"></i>`).join("")+
+   `<h2>GOAL!</h2>${p?`<div class="sh" aria-hidden="true">${p.num}</div>`:""}<div class="who">${esc(g.name)}</div><div class="sub">${g.min} min${g.ast?` · set up by ${esc(g.ast)}`:""}</div><div class="scr">Aycliffe ${M.dUs}–${M.dThem} ${esc(team(M.opp).short)}</div>`;
+  el.addEventListener("click",()=>el.remove());document.body.appendChild(el);
+  try{navigator.vibrate&&navigator.vibrate([120,60,120])}catch(e){}
+  setTimeout(()=>el.remove(),2600);
 }
 // ---- Championship Manager style 2D: players run at their own pace, the ball is passed, shot and saved ----
 let rafId=null,lastT=0;
@@ -1558,7 +1648,7 @@ function swapTac(a,b){
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,tr.click");if(!t||t.disabled)return;
   const d=t.dataset;
-  if(d.view){view=d.view;playerView=null;sel=null;confirmNew=false;render();window.scrollTo({top:0});return}
+  if(d.view){view=d.view;tacOpen=false;playerView=null;sel=null;confirmNew=false;render();window.scrollTo({top:0});return}
   if(d.player){view="squad";playerView=d.player;render();window.scrollTo({top:0});return}
   if(d.act==="back"){playerView=null;render();return}
   if(d.act==="day"){advanceDay();render();return}
@@ -1588,8 +1678,8 @@ document.addEventListener("click",e=>{
   if(d.act==="inboxall"){inboxAll=!inboxAll;render();return}
   if(d.act==="totrain"){jumpTo(3);render();toast("It's training night.");return}
   if(d.cap){S.tac.cap=d.cap;saveGame();render();toast(`${P(d.cap).name} is captain this week.`);return}
-  if(d.form){S.tac.form=d.form;saveGame();render();return}
-  if(d.ment){S.tac.ment=+d.ment;saveGame();render();return}
+  if(d.form){S.tac.form=d.form;tacOpen=true;saveGame();render();return}
+  if(d.ment){S.tac.ment=+d.ment;tacOpen=true;saveGame();render();return}
   if(d.train){S.train.focus=d.train;saveGame();render();return}
   if(d.int){S.train.int=+d.int;saveGame();render();return}
   if(view==="tactics"&&(d.slot!=null||d.sub!=null||d.out)){const k=d.slot!=null?`s${d.slot}`:d.sub!=null?`u${d.sub}`:`o${d.out}`;
@@ -1621,7 +1711,7 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",e=>{
   const t=e.target;
   if(t.id==="indiv"){if(t.value)S.train.indiv[t.dataset.indiv]=t.value;else delete S.train.indiv[t.dataset.indiv];saveGame();toast("Extra coaching set.");return}
-  if(t.id==="capSel"){S.tac.cap=t.value;saveGame();render();return}
+  if(t.id==="capSel"){S.tac.cap=t.value;tacOpen=true;saveGame();render();return}
 });
 
 // ---------------- boot ----------------
