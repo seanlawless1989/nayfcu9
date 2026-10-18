@@ -2,6 +2,8 @@
 //   POST {}               every minute from pg_cron: kick-off reminders, plus any live update not yet sent
 //   POST {match: "<id>"}  from the coach's phone straight after a live update: sends it at once
 //   POST {test: "<endpoint>"} from a parent's phone after turning alerts on: a "you're all set" alert
+//   POST {squad: "<id>"}  from a coach's phone after saving Pick squad: "squad announced" (again only if it changed)
+//   POST {potm: "<id>"}   from a coach's phone after saving the player of the match
 // Only names already shown on the site go in an alert. See supabase/3_notifications.sql.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -11,6 +13,10 @@ const US = Deno.env.get("TEAM_NAME") ?? "Newton Aycliffe";
 // PUBLIC_SCORES=false: no goal alerts and no scores in alerts (FA rules for U7-U11). Matches the site's TEAM.publicScores.
 const SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";
 const AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
+// The player of the match sponsor (TEAM.potm.sponsor and .icon in docs/team.js). POTM_SPONSOR=none for a plain "Player of the match".
+const POTM_SPONSOR = (Deno.env.get("POTM_SPONSOR") ?? "Coffey Coffee").trim();
+const POTM = POTM_SPONSOR && POTM_SPONSOR !== "none" ? `${POTM_SPONSOR} Player of the Match` : "Player of the Match";
+const POTM_ICON = Deno.env.get("POTM_ICON") ?? (POTM_SPONSOR === "Coffey Coffee" ? "☕" : "⭐");
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 // the key pair lives in public.push_keys (service role only)
 let keysReady: Promise<void> | null = null;
@@ -58,15 +64,16 @@ async function send(kind: "reminders" | "live" | null, alert: Alert, only?: stri
 }
 
 // ---- live match events ----
-type Ev = { k: string; at?: number; n?: string; a?: string; na?: number; on?: string; off?: string; s?: string; m?: string; form?: string; line?: string[]; bench?: string[] };
-type Match = { id: string; date: string; opp: string; ko: string; venue: string; ha: string; us: number | null; them: number | null; postponed: boolean; stage: string | null; live: { status?: string; events?: Ev[] } | null };
+type Ev = { k: string; at?: number; n?: string; a?: string; na?: number; on?: string; off?: string; s?: string; m?: string; form?: string; line?: string[]; bench?: string[]; re?: number };
+type Match = { id: string; date: string; opp: string; ko: string; venue: string; ha: string; us: number | null; them: number | null; postponed: boolean; stage: string | null; comp?: string; squad?: string[] | null; potm?: string | null; live: { status?: string; events?: Ev[] } | null };
 
 function liveAlert(e: Ev, m: Match): Alert | null {
   const url = `${SITE}?live=${encodeURIComponent(m.id)}`, tag = `live-${m.id}`, opp = m.opp || "the opposition";
   const score = SCORES ? `${US} ${e.s ?? `${m.us ?? 0}–${m.them ?? 0}`} ${opp}` : `${US} v ${opp}`;
   if (!SCORES && (e.k === "goal" || e.k === "them")) return null;
   switch (e.k) {
-    case "lu": return e.line?.length ? { title: "📋 Starting line-up", body: `${US} v ${opp}${e.form ? ` (${e.form})` : ""}: ${e.line[0]} in goal, ${e.line.slice(1).filter(Boolean).join(", ")}.${e.bench?.length ? ` Subs: ${e.bench.join(", ")}.` : ""}`, url, tag: `lu-${m.id}` } : null;
+    // re = the coaches unlocked the line-up and locked a different one
+    case "lu": return e.line?.length ? { title: e.re ? "🔁 Line-up change" : "✅ Line-up confirmed", body: `${US} v ${opp}${e.form ? ` (${e.form})` : ""}: ${e.line[0]} in goal, ${e.line.slice(1).filter(Boolean).join(", ")}.${e.bench?.length ? ` Subs: ${e.bench.join(", ")}.` : ""}`, url, tag: `lu-${m.id}` } : null;
     case "ko": return { title: "🟢 Kick-off!", body: `${US} v ${opp} is under way. Tap to follow live.`, url, tag };
     case "goal": return { title: `⚽ GOAL! ${e.n ?? US} scores`, body: score + (e.a ? `. Set up by ${e.a}.` : ""), url, tag };
     case "sub": return e.on ? { title: `🔁 Substitution`, body: `${e.on} comes on for ${e.off ?? "a teammate"}${e.m ? ` (${e.m})` : ""}. ${score}`, url, tag } : null;
@@ -116,7 +123,28 @@ async function reminders(list: Match[]) {
   return sent;
 }
 
-const COLS = "id,date,opp,ko,venue,ha,us,them,postponed,stage,live";
+// ---- squad picked (usually midweek) ----
+const dayName = (date: string) => new Date(date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+async function squadAlert(m: Match) {
+  const sq = (m.squad ?? []).filter(Boolean);
+  if (!sq.length || m.postponed || m.us != null || m.stage === "placeholder" || m.date < londonDate(Date.now()) || (m.live?.status && m.live.status !== "pre")) return -1;
+  const { data: kind } = await db.rpc("push_claim_squad", { p_match: m.id, p_squad: sq });
+  if (!kind) return -1; // already sent as it is
+  const when = `${dayName(m.date)}${/\d[:.]\d\d/.test(m.ko || "") ? `, ${m.ko.trim()} KO` : ""}`;
+  return await send("reminders", { title: kind === 2 ? "📋 Squad update" : "📋 Squad announced", body: `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"}, ${when}: ${sq.join(", ")}.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `squad-${m.id}` });
+}
+
+// ---- player of the match, after the game ----
+async function potmAlert(m: Match) {
+  const ft = m.us != null || m.live?.status === "ft";
+  // only for a game just played: editing an old game doesn't alert anyone
+  if (!m.potm || !ft || m.comp === "Tournament" || m.date < londonDate(Date.now() - 3 * 864e5) || m.date > londonDate(Date.now())) return -1;
+  const { data: claimed } = await db.rpc("push_claim_potm", { p_match: m.id, p_potm: m.potm }); if (!claimed) return -1;
+  const score = SCORES && m.us != null && m.them != null ? ` (${m.us}–${m.them})` : "";
+  return await send("live", { title: `${POTM_ICON} ${POTM}: ${m.potm}`, body: `Well done ${m.potm}! ${US} v ${m.opp || "the opposition"}${score}.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `potm-${m.id}` });
+}
+
+const COLS = "id,date,opp,ko,venue,ha,us,them,postponed,stage,comp,squad,potm,live";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
@@ -125,6 +153,11 @@ Deno.serve(async (req) => {
     const out: Record<string, number> = {};
     if (typeof body.test === "string") {
       out.test = await send(null, { title: "🔔 Match alerts are on", body: `You'll get kick-off reminders and ${SCORES ? "live scores" : "live updates"} for the ${AGE}.`, url: SITE, tag: "welcome" }, body.test);
+    } else if (typeof body.squad === "string" || typeof body.potm === "string") {
+      const id = typeof body.squad === "string" ? body.squad : body.potm;
+      const { data } = await db.from("matches").select(COLS).eq("id", id).maybeSingle();
+      if (typeof body.squad === "string") out.squad = data ? await squadAlert(data as Match) : -1;
+      else out.potm = data ? await potmAlert(data as Match) : -1;
     } else if (typeof body.match === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.match).maybeSingle();
       out.live = data ? await flushLive(data as Match) : 0;
