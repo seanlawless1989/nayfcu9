@@ -764,7 +764,7 @@ function startMatch(){
   squad.forEach(id=>{M.mins[id]=0;M.rt[id]=6.2;M.goals[id]=0;M.ast[id]=0});
   view="match";render();startAnim();
 }
-function feed(text,cls){M.evId=(M.evId||0)+1;M.feed.unshift({id:M.evId,m:M.min,text,cls:cls||""})}
+function feed(text,cls,hl){M.evId=(M.evId||0)+1;M.feed.unshift({id:M.evId,m:M.min,text,cls:cls||"",hl:hl?1:0})}
 function onPitch(){return M.xi.filter(Boolean)}
 function roleOf(id){const i=M.xi.indexOf(id);return i<0?null:FORMS[M.form][i][0]}
 function pickOur(roleW,attr){const ids=onPitch();return wpick(ids,ids.map(id=>{const r=roleOf(id);return (roleW[r]||0)*Math.max(1,P(id).a[attr])+.0001}))}
@@ -776,13 +776,13 @@ function tick(){
   onPitch().forEach(id=>{M.mins[id]++;const p=P(id);M.cond[id]=clamp(M.cond[id]-((1.75-p.a.STA*.055)+(M.ment===2?.2:0))*(shoutOn()==="breathe"?.5:1),20,100)});
   M.squad.forEach(id=>{if(!M.xi.includes(id))M.cond[id]=clamp(M.cond[id]+2.4,0,100)});
   const A=usAtt?us:th,D=usAtt?th:us;
-  const chanceP=.24*Math.pow(A.atk/D.def,1.25)*(usAtt?[.85,1,1.12][M.ment]:[.9,1,1.08][M.ment])*(usAtt&&shoutOn()==="shoot"?1+.25*shoutPow():1)*(M.half<20?1.5:1);
+  const chanceP=.22*Math.pow(A.atk/D.def,1.25)*(usAtt?[.85,1,1.12][M.ment]:[.9,1,1.08][M.ment])*(usAtt&&shoutOn()==="shoot"?1+.25*shoutPow():1)*(M.half<20?1.5:1);
   const zone=()=>pick(["in midfield","out on the left","out on the right","just inside our half","in the middle"]);
   if(R()<chanceP){
     if(usAtt){
       M.shots[0]++;
       const sh=pickOur({ATT:3,MID:1.2,DEF:.25,GK:0},"SHO");const p=P(sh);const N=p.name;
-      const q=eff(p,"SHO",M.cond[sh],1);const wf=R()<.22;const foot=(p.foot==="L")!==wf?"left":"right";const conv=.88*q/(q+th.gk*.78)*(wf?.85:1);
+      const q=eff(p,"SHO",M.cond[sh],1);const wf=R()<.12;const foot=(p.foot==="L")!==wf?"left":"right";const conv=.88*q/(q+th.gk*.78)*(wf?.6:1.03);
       const passer=R()<.65?pickOur({ATT:1,MID:2.2,DEF:.6,GK:.1},"PAS"):null;
       const st=passer&&passer!==sh?passer:pickOur({DEF:1,MID:2,ATT:.4,GK:.2},"PAS");
       const S1=P(st).name;
@@ -793,15 +793,15 @@ function tick(){
       const crowded=R()<.12;
       if(crowded){beat(`...but she's crowded out before she can shoot.`,"",[rnd(30,70),rnd(25,35)],null,null,null,{kind:"block"});M.shots[0]--;M.rt[sh]+=.05}
       else{
-        beat(wf?pick([`${N} has to use her weaker ${foot} foot...`,`It's on her ${foot} foot, not her best... ${N} shoots...`]):pick([`${N} shoots...`,`${N} opens up her ${foot} foot...`,`${N} lines it up on her ${foot}...`,`${N} has a go...`]),"shot",[rnd(40,60),16],null,null,null,{id:sh});
+        beat(wf?pick([`${N} has to use her weaker ${foot} foot...`,`It's on her ${foot} foot, not her best... ${N} shoots...`]):pick([`${N} shoots...`,`${N} opens up her ${foot} foot...`,`${N} gets it onto her favourite ${foot} foot...`,`${N} lines it up on her stronger ${foot}...`,`${N} has a go...`]),"shot",[rnd(40,60),16],null,null,null,{id:sh});
         if(R()<conv){M.us++;M.sot[0]++;M.goals[sh]++;M.rt[sh]+=1;
-          let line=pick([`GOAL!!! ${N} smashes it in with her ${foot} foot!`,`GOAL!!! ${N} slots it past the keeper!`,`GOAL!!! What a finish from ${N}!`,`GOAL!!! ${N} pokes it home!`,`GOAL!!! ${N} curls it into the corner with her ${foot}!`]);
+          let line=wf?pick([`GOAL!!! ${N} scores with her weaker ${foot} foot! Didn't see that coming!`,`GOAL!!! Not her best foot, but ${N} sneaks it in with her ${foot}!`]):pick([`GOAL!!! ${N} smashes it in with her ${foot} foot!`,`GOAL!!! ${N} slots it past the keeper with her ${foot}!`,`GOAL!!! What a finish from ${N}!`,`GOAL!!! ${N} pokes it home!`,`GOAL!!! ${N} curls it into the corner with her ${foot}!`]);
           const ast=passer&&passer!==sh?passer:null;
           if(ast){M.ast[ast]++;M.rt[ast]+=.55;line+=` Great pass from ${P(ast).name}.`}
           beat(line,"goal",[rnd(44,56),3],"us",null,{side:"us",id:sh,name:N,ast:ast?P(ast).name:null,min:M.min},{kind:"goal",id:sh});beat("Back to the middle for the restart.","",[50,50],null,null,null,{kind:"kickoff",side:"them"});
         }else{const r=R();
           if(r<.45){M.sot[0]++;beat(pick([`...saved by their keeper!`,`...tipped round the post!`,`...straight at the keeper.`]),"",[50,8],null,null,null,{kind:"save"})}
-          else beat(pick([`...just wide!`,`...over the bar.`,`...off the post! So close!`]),"",[pick([rnd(30,42),rnd(58,70)]),3],null,null,null,{kind:"miss"});
+          else{beat(pick([`...just wide!`,`...over the bar.`,`...off the post! So close!`]),"",[pick([rnd(30,42),rnd(58,70)]),3],null,null,null,{kind:"miss"});goalKick("them")}
           M.rt[sh]+=.12}
       }
     }else{
@@ -815,26 +815,87 @@ function tick(){
         if(R()<conv){M.them++;M.sot[1]++;beat(pick([`Goal for ${T}. Number ${num} scores.`,`It's in. Number ${num} finishes it off.`,`They score. Number ${num} finds the corner.`]),"them",[rnd(44,56),97],"them",null,{side:"them",name:`No. ${num}`,min:M.min},{kind:"ogoal"});beat("Heads up, girls. Kick-off again.","",[50,50],null,null,null,{kind:"kickoff",side:"us"});
           onPitch().forEach(id=>{const r=roleOf(id);M.rt[id]-=r==="GK"?.3:r==="DEF"?.2:.06})}
         else{const r=R();if(gkId&&r<.5){M.sot[1]++;M.rt[gkId]+=.4;const G=P(gkId).name;beat(pick([`...super save from ${G}!`,`...${G} dives and holds it!`,`...${G} gets down well to stop it!`]),"save",[50,91],null,null,null,{kind:"gksave",id:gkId})}
-          else beat(pick([`...wide. Phew!`,`...over the bar.`,`...it rolls past the post.`]),"",[pick([rnd(30,42),rnd(58,70)]),97],null,null,null,{kind:"omiss"})}
+          else{beat(pick([`...wide. Phew!`,`...over the bar.`,`...it rolls past the post.`]),"",[pick([rnd(30,42),rnd(58,70)]),97],null,null,null,{kind:"omiss"});goalKick("us")}}
       }
     }
   }else{
     const ball=usAtt?[rnd(20,80),rnd(25,55)]:[rnd(20,80),rnd(50,78)];M.poss=usAtt?"us":"them";
-    if(R()<.06)beat(pick(["The parents on the touchline are making plenty of noise.","The ball's gone over the fence. Short wait while someone fetches it.","Corner to Aycliffe. Cleared.","Goal kick.","A bit of a scramble in the middle.","Throw-in. Lots of shouting about whose it is."]),"",ball);
+    if(R()<.13)moment(usAtt,us,th);
+    else if(R()<.05)beat(pick(["The parents on the touchline are making plenty of noise.","The ball's gone over the fence. Short wait while someone fetches it.","A bit of a scramble in the middle."]),"",ball);
+    else if(R()<.1)restart(usAtt);
     else if(R()<.22){
       if(usAtt){const id=pickOur({MID:2,ATT:1,DEF:.6},"PAS");M.rt[id]+=.06;beat(pick([`${P(id).name} spreads it wide.`,`Nice touch from ${P(id).name}.`,`${P(id).name} dribbles past one.`,`${P(id).name} keeps it moving.`]),"pass",ball,null,null,null,{id})}
-      else{const id=pickOur({DEF:2.5,MID:1.2,ATT:.3},"TAC");M.rt[id]+=.08;beat(pick([`${P(id).name} wins it back.`,`Good tracking back from ${P(id).name}.`,`${P(id).name} shepherds it out for a throw.`]),"win",ball,null,null,null,{id})}
+      else{const id=pickOur({DEF:2.5,MID:1.2,ATT:.3},"TAC");M.rt[id]+=.08;beat(pick([`${P(id).name} wins it back.`,`Good tracking back from ${P(id).name}.`,`${P(id).name} shepherds it out for a kick-in.`]),"win",ball,null,null,null,{id})}
     }else M.ball=ball;
   }
-  if(M.min===M.half){M.q++;beat(`Half-time. ${M.us}-${M.them}.`,"brk",[50,50],null,"ht")}
+  if(M.min===M.half){M.q++;beat(`Half-time. ${M.us}-${M.them}. The teams will swap ends for the second half.`,"brk",[50,50],null,"ht")}
   if(M.min===M.half*2){M.q++;beat(`The referee blows for full time!`,"brk",[50,50],null,"ft")}
 }
+// goals from set pieces and other moments
+function ourGoal(sh,ast,line,bx){M.us++;M.sot[0]++;M.shots[0]++;M.goals[sh]++;M.rt[sh]+=1;if(ast){M.ast[ast]++;M.rt[ast]+=.55}
+  beat(line,"goal",[bx||rnd(44,56),3],"us",null,{side:"us",id:sh,name:P(sh).name,ast:ast?P(ast).name:null,min:M.min},{kind:"goal",id:sh});
+  beat("Back to the middle for the restart.","",[50,50],null,null,null,{kind:"kickoff",side:"them"})}
+function theirGoal(num,line){M.them++;M.sot[1]++;M.shots[1]++;
+  beat(line,"them",[rnd(44,56),97],"them",null,{side:"them",name:`No. ${num}`,min:M.min},{kind:"ogoal"});
+  beat("Heads up, girls. Kick-off again.","",[50,50],null,null,null,{kind:"kickoff",side:"us"});
+  onPitch().forEach(id=>{const r=roleOf(id);M.rt[id]-=r==="GK"?.3:r==="DEF"?.2:.06})}
+// a goal kick: the other side drops back into their own half until it's taken
+function goalKick(side){const T=team(M.opp).short;
+  beat(side==="us"?pick([`Goal kick to Aycliffe. ${T} have to drop back behind halfway.`,`Goal kick. ${T} retreat into their own half.`]):pick([`Goal kick to ${T}. Back into our own half, girls.`,`Goal kick to ${T}. Aycliffe drop back behind halfway.`]),"",side==="us"?[50,84]:[50,16],null,null,null,{kind:"goalkick",side})}
+// a kick-in from the touchline (5v5 has no throw-ins)
+function restart(usAtt){const T=team(M.opp).short;const lft=R()<.5;const x=lft?1:99;
+  if(usAtt){const id=pickOur({MID:2,DEF:1.2,ATT:1},"PAS");const N=P(id).name;
+    beat(pick([`Kick-in to Aycliffe ${lft?"on the left":"on the right"}. ${N} takes it.`,`Out for a kick-in. ${N} passes it back into play.`,`${N} takes a quick kick-in.`]),"pass",[x,rnd(25,60)],null,null,null,{kind:"kickin",side:"us",id})}
+  else beat(pick([`Kick-in to ${T}.`,`${T} take a kick-in down the line.`,`Out for a kick-in. Lots of shouting about whose it is. ${T}'s.`]),"",[x,rnd(40,75)],null,null,null,{kind:"kickin",side:"them"})}
+// highlight moments: corners, free kicks, skills, long shots, big defending
+function moment(usAtt,us,th){
+  const T=team(M.opp).short;const r=R();
+  if(usAtt){
+    if(r<.32){const tk=pickOur({MID:2,ATT:1,DEF:.5},"PAS");const lft=R()<.5;
+      beat(pick([`Corner to Aycliffe. ${P(tk).name} swings it in...`,`${P(tk).name} jogs over to take the corner...`]),"build",[lft?1:99,1],null,null,null,{kind:"corner",side:"us",id:tk});
+      const sh=pickOur({ATT:3,MID:1.2,DEF:.8,GK:0},"SHO");const N=P(sh).name;const q=eff(P(sh),"SHO",M.cond[sh],1);
+      if(sh!==tk&&R()<.13*q/11){ourGoal(sh,tk,pick([`GOAL!!! ${N} gets on the end of the corner and bundles it in!`,`GOAL!!! ${N} volleys it in from the corner!`]))}
+      else{M.shots[0]++;beat(pick([`...${N} gets a touch but it's cleared.`,`...their keeper punches it away.`,`...a big scramble in the box... and they hack it clear!`,`...${N} hits it first time, just over!`]),"chance",[rnd(35,65),rnd(10,18)],null,null,null,{kind:"cleared",id:sh})}}
+    else if(r<.58){const id=pickOur({ATT:2,MID:2,DEF:.4},"DRI");const N=P(id).name;M.rt[id]+=.15;
+      beat(pick([`Ooh! ${N} nutmegs her defender! The parents love that.`,`${N} does a lovely turn and leaves two of them behind.`,`${N} dances past one, then another!`,`What a bit of skill from ${N}! She flicks it over a defender.`]),"chance",[rnd(25,75),rnd(25,45)],null,null,null,{id})}
+    else if(r<.8){const sh=pickOur({ATT:2,MID:2,DEF:.6},"SHO");const N=P(sh).name;const p=P(sh);const foot=p.foot==="L"?"left":"right";M.shots[0]++;
+      beat(pick([`${N} tries her luck from distance with her ${foot} foot...`,`${N} has a pop from way out...`]),"shot",[rnd(35,65),38],null,null,null,{id:sh});
+      if(R()<.09*eff(p,"SHO",M.cond[sh],1)/11)ourGoal(sh,null,pick([`GOAL!!! A screamer from ${N}! Right into the top corner!`,`GOAL!!! ${N} catches the keeper out from miles away!`]),rnd(40,60));
+      else if(R()<.5){M.sot[0]++;M.rt[sh]+=.08;beat(pick([`...the keeper gathers it.`,`...a good save, pushed round the post.`]),"",[50,8],null,null,null,{kind:"save"})}
+      else{beat(pick([`...it sails over the bar.`,`...wide of the post.`]),"",[pick([rnd(30,42),rnd(58,70)]),3],null,null,null,{kind:"miss"});goalKick("them")}}
+    else{const fo=pickOur({ATT:2,MID:1.5,DEF:.5},"DRI");const tk=pickOur({ATT:1.5,MID:1.5,DEF:1},"SHO");const N=P(tk).name;
+      beat(`Free kick to Aycliffe! ${P(fo).name} is tripped just outside the area.`,"build",[rnd(40,60),26],null,null,null,{kind:"fk",side:"us",id:fo});
+      beat(`${N} stands over it...`,"shot",[rnd(42,58),24],null,null,null,{id:tk});M.shots[0]++;
+      if(R()<.12*eff(P(tk),"SHO",M.cond[tk],1)/11)ourGoal(tk,null,pick([`GOAL!!! ${N} curls the free kick in!`,`GOAL!!! ${N} smashes the free kick past the wall!`]));
+      else if(R()<.5){M.sot[0]++;beat(`...the keeper tips it over!`,"",[50,8],null,null,null,{kind:"save"})}
+      else beat(`...it hits the wall.`,"",[50,20],null,null,null,{kind:"block"})}
+  }else{
+    const num=pick(M.oppNums.slice(0,4));const gk=M.xi[0];
+    if(r<.35){beat(`Corner to ${T}. Their number ${num} curls it in...`,"danger",[R()<.5?1:99,99],null,null,null,{kind:"corner",side:"them",opp:M.oppNums.indexOf(num)+1});
+      const d=pickOur({DEF:3,MID:1,ATT:.3,GK:0},"TAC");
+      if(R()<.08*M.oppStr/11){theirGoal(num,pick([`Goal for ${T}. It drops in the box and number ${num} knocks it in.`,`${T} score from the corner. Number ${num} gets there first.`]))}
+      else if(gk&&R()<.45){M.rt[gk]+=.15;beat(pick([`...${P(gk).name} comes out and claims it. Brave!`,`...${P(gk).name} catches it cleanly.`]),"save",[50,92],null,null,null,{kind:"gksave",id:gk})}
+      else if(d){M.rt[d]+=.12;beat(pick([`...${P(d).name} heads it away!`,`...${P(d).name} boots it clear.`]),"save",[rnd(35,65),80],null,null,null,{kind:"tackle",id:d})}}
+    else if(r<.6&&gk){M.rt[gk]+=.25;beat(`Number ${num} is through on her own...`,"danger",[rnd(40,60),72],null,null,null,{opp:M.oppNums.indexOf(num)+1});
+      beat(pick([`...${P(gk).name} races off her line and smothers it! Great keeping!`,`...${P(gk).name} spreads herself and blocks it!`]),"save",[50,88],null,null,null,{kind:"gksave",id:gk})}
+    else if(r<.82){const d=pickOur({DEF:3,MID:1,ATT:.2,GK:0},"TAC");if(!d)return;M.rt[d]+=.3;M.shots[1]++;
+      beat(`Number ${num} shoots... it's heading in...`,"danger",[rnd(40,60),84],null,null,null,{opp:M.oppNums.indexOf(num)+1,kind:"oshot"});
+      beat(pick([`...${P(d).name} clears it off the line! What a hero!`,`...but ${P(d).name} throws herself in the way!`]),"save",[rnd(40,60),95],null,null,null,{kind:"tackle",id:d})}
+    else{const fo=pickOur({DEF:2,MID:1,ATT:.3},"TAC");M.shots[1]++;
+      beat(`Free kick to ${T}. ${fo?P(fo).name:"We"} caught their number ${num} late.`,"danger",[rnd(40,60),72],null,null,null,{kind:"fk",side:"them",opp:M.oppNums.indexOf(num)+1});
+      if(R()<.1*M.oppStr/11)theirGoal(num,`Number ${num} curls the free kick in. Goal for ${T}.`);
+      else if(gk&&R()<.5){M.sot[1]++;M.rt[gk]+=.3;beat(`...${P(gk).name} tips it round the post!`,"save",[50,91],null,null,null,{kind:"gksave",id:gk})}
+      else{beat(`...it flies over the bar.`,"",[50,102],null,null,null,{kind:"omiss"});goalKick("us")}}
+  }
+}
 function beat(text,cls,ball,score,after,gl,meta){M.queue.push({text,cls,ball,score,after,gl,meta:meta||{}})}
+const SET_MS={goalkick:2800,kickin:1900,corner:2300,fk:1900};
 const BEAT_MS={build:1100,chance:1300,shot:1700,goal:2800,them:2300,danger:1300,save:1400,brk:1600,pass:1000,win:1000,"":1000};
 function step(sync){
   if(!M||M.state!=="live")return;
   let wait;
-  if(M.queue.length){const b=M.queue.shift();feed(b.text,b.cls);if(b.ball)M.ball=b.ball;
+  if(M.queue.length){const b=M.queue.shift();const k=b.meta&&b.meta.kind;
+    feed(b.text,b.cls,["goal","them","save"].includes(b.cls)||(k==="miss"||k==="omiss")&&/post|close/i.test(b.text)||b.cls==="chance"&&/nutmeg|skill|dances|turn/.test(b.text));if(b.ball)M.ball=b.ball;
     if(["build","chance","shot","goal","pass"].includes(b.cls))M.poss="us";else if(["danger","them","win"].includes(b.cls))M.poss=b.cls==="win"?"us":"them";
     else if(b.cls==="save")M.poss="us";
     if(b.score==="us")M.dUs++;if(b.score==="them")M.dThem++;
@@ -842,7 +903,7 @@ function step(sync){
     animBeat(b);
     if(b.after==="ht"){M.state="break";stopTimer();snapPitch();renderMatch();return}
     if(b.after==="ft"){endMatch();return}
-    wait=BEAT_MS[b.cls]??1000;
+    wait=SET_MS[k]||BEAT_MS[b.cls]||1000; // set pieces get time to play out on the pitch
   }else{tick();wait=M.queue.length?250:380}
   renderMatch();
   if(!sync){const mult=[0,1.5,1,.4][M.speed];M.timer=setTimeout(step,wait*mult)}
@@ -1439,7 +1500,7 @@ function renderMatch(){
    ${gl.length?`<div class="scorers" aria-label="Goals"><div>${gl.filter(g=>g.side==="us").map(g=>`<span>⚽ ${esc(g.name)} ${g.min}'${g.ast?` <small>(${esc(g.ast)})</small>`:""}</span>`).join("")}</div><div class="r">${gl.filter(g=>g.side==="them").map(g=>`<span>${esc(g.name)} ${g.min}' ⚽</span>`).join("")}</div></div>`:""}</div>
   <div class="mtop">
    <div class="mpwrap"><div id="mpitchSlot"></div><div class="legend"><span><i style="background:#FFD200;border-color:#16239E"></i>Newton Aycliffe</span><span><i style="background:${kitBg(kit(M.opp))}"></i>${esc(t.name)}</span></div>
-    ${canChange?`<p class="hint" style="margin-top:6px">Tap a player on the pitch, then a sub to swap them.</p>`:""}</div>
+    ${M.state!=="pre"&&M.state!=="ft"?`<p class="hint" style="margin-top:6px">To make a sub, tap a sub's name below, then tap who's coming off.</p>`:""}</div>
    <div class="stack" style="gap:12px">
     ${M.state!=="pre"&&top?`<div class="flash ${flashCls}${fresh?" anim":""}" style="${dly}" role="status" aria-live="polite"><span class="fm">${top.m}'</span><span>${top.cls==="goal"?"⚽ ":""}${esc(top.text)}</span></div>`:""}
     ${M.state!=="pre"&&top?`<div class="roll" aria-hidden="true" style="margin:0">${M.feed.slice(1,4).map((e,i)=>`<div style="opacity:${[.85,.6,.4][i]}"><span>${e.m}'</span> ${esc(e.text)}</div>`).join("")}</div>`:""}
@@ -1448,8 +1509,7 @@ function renderMatch(){
     ${M.state==="pre"?talkCard("pre","Pre-match team talk"):""}
     ${M.state==="break"?talkCard("ht","Half-time team talk"):""}
     ${M.state==="ft"?talkCard("ft","Full-time team talk"):""}
-    ${canChange&&M.state!=="pre"?`<section class="card"><h3>Subs</h3><div class="bench">${bench.map(id=>{const p=P(id);return `<button class="bp${M.selTok===`b${id}`?" sel":""}" data-mbench="${id}"${canChange?"":" disabled"}><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)}</b><small>${M.mins[id]} min · legs ${Math.round(M.cond[id])}%</small></span></button>`}).join("")||`<p class="hint">No subs today.</p>`}</div>
-     ${canChange?`<div class="btns" style="margin-top:10px"><button class="btn ghost small" data-m="rotate">Freshen up tired legs</button></div>`:`<p class="hint" style="margin-top:8px">Pause to make a change.</p>`}</section>`:""}
+    ${M.state!=="pre"&&M.state!=="ft"?subsCard(bench,canChange):""}
     ${canChange&&M.state!=="pre"?`<section class="card"><h3>Changes</h3><div class="btns"><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-mform="${f}" aria-pressed="${f===M.form}">${f}</button>`).join("")}</div></div>
       <div class="seg" role="group" aria-label="Approach" style="margin-top:8px">${MENT.map((m,i)=>`<button data-mment="${i}" aria-pressed="${i===M.ment}">${m}</button>`).join("")}</div></section>`:""}
    </div>
@@ -1463,6 +1523,14 @@ function renderMatch(){
   const slot=document.getElementById("mpitchSlot");if(slot){if(!M.pitchEl)M.pitchEl=buildMPitch();slot.replaceWith(M.pitchEl);updateMPitch()}
   const ours=M.goalLog.filter(g=>g.side==="us");if(ours.length>(M.gfx||0)){M.gfx=ours.length;showGoal(ours[ours.length-1])}
   setBar();
+}
+// subs: tap a sub, then tap the girl coming off. Tapping a sub while the game runs pauses it.
+function subsCard(bench,canChange){
+  const selB=M.selTok&&M.selTok[0]==="b"?M.selTok.slice(1):null;const form=FORMS[M.form];
+  return `<section class="card" id="subsCard"><h3>Subs</h3><div class="bench">${bench.map(id=>{const p=P(id);return `<button class="bp${selB===id?" sel":""}" data-mbench="${id}"><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)}</b><small>${M.mins[id]} min · legs ${Math.round(M.cond[id])}%</small></span></button>`}).join("")||`<p class="hint">No subs today.</p>`}</div>
+   ${selB?`<h3 style="margin-top:12px">Who's coming off for ${esc(P(selB).name)}?</h3><div class="bench">${M.xi.map((id,i)=>{const p=id&&P(id);const bad=form[i][0]==="GK"&&!P(selB).posD.includes("GK");return `<button class="bp off" data-moff="${i}"><span class="num">${p?p.num:"+"}</span><span class="x"><b>${p?esc(p.name):"Empty spot"}</b><small>${POSN[form[i][3]]}${p?` · legs ${Math.round(M.cond[id])}%`:""}${bad?" · ⚠ not a keeper":""}</small></span></button>`}).join("")}</div>
+    <div class="btns" style="margin-top:8px"><button class="btn ghost small" data-moff="x">Cancel</button></div>`:""}
+   ${canChange?`<div class="btns" style="margin-top:10px"><button class="btn ghost small" data-m="rotate">Freshen up tired legs</button></div>`:bench.length?`<p class="hint" style="margin-top:8px">Tapping a sub pauses the game.</p>`:""}</section>`;
 }
 // our goal takes over the screen for a moment: big GOAL!, her shirt number and name, confetti
 function showGoal(g){
@@ -1493,8 +1561,10 @@ function shapeTarget(side,i,time){
   if(i===0){const gy=side==="us"?91:9;const near=Math.abs(by-gy)<28;return [clamp(50+(bx-50)*.3,38,62),gy+(near?up*3:0)]}
   const x=sx+(bx-50)*.38+wob[0];
   let y=sy+(by-50)*.45+(attacking?up*7:-up*3)+wob[1];
+  if(retreating(side,time))y=side==="us"?Math.max(y,55):Math.min(y,45); // goal kick: stay in our own half
   return [clamp(x,5,95),clamp(y,7,93)];
 }
+function retreating(side,time){const r=M.an&&M.an.retreat;return !!r&&r.side===side&&(time??now())<r.until}
 function plSpeed(side,i){const id=side==="us"?M.xi[i]:null;const p=id&&P(id);const pac=p?p.a.PAC:M.oppStr*.95;return 9+pac*.45}
 function setRun(side,i,x,y,dur,sprint){M.an.run[side][i]={x:clamp(x,2,98),y:clamp(y,1,99),until:now()+dur,spr:sprint?1.35:1}}
 function hold(side,i){const A=M.an;A.hold=i==null||i<0?null:{s:side,i};A.fl=null}
@@ -1553,6 +1623,30 @@ function animBeat(b){
     case "gksave":{const tx=rnd(44,56);setRun("us",0,tx,91,1,true);kick(tx,91,60,1,()=>hold("us",0));return}
     case "miss":{const tx=bx<50?rnd(28,40):rnd(60,72);kick(tx,-2,60,R()<.5?5:1,()=>{later(.6,()=>{const g=sideArr("them")[0];A.ball.x=g[0];A.ball.y=g[1]+2;hold("them",0)})});return}
     case "omiss":{const tx=bx<50?rnd(28,40):rnd(60,72);kick(tx,102,60,R()<.5?5:1,()=>{later(.6,()=>{const g=sideArr("us")[0];A.ball.x=g[0];A.ball.y=g[1]-2;hold("us",0)})});return}
+    case "goalkick":{const s=m.side,o=s==="us"?"them":"us";M.poss=s;A.run={us:[],them:[]};
+      const g=sideArr(s)[0];const gx=rnd(42,58),gy=s==="us"?84:16;A.fl=null;A.ball.x=gx;A.ball.y=gy;A.ball.z=0;setRun(s,0,gx,gy+(s==="us"?2:-2),.8,true);
+      A.retreat={side:o,until:t+5};A.nextIdle=t+99;later(.8,()=>hold(s,0));
+      // the keeper waits until they're all back behind halfway (or a few seconds), then plays it out
+      const take=()=>{if(!(A.hold&&A.hold.s===s&&A.hold.i===0)){A.retreat.until=now();return} // play has moved on
+        const back=sideArr(o).every((p,i)=>!i||(o==="us"?p[1]>=50:p[1]<=50));
+        if(!back&&now()<A.retreat.until-1.2){later(.25,take);return}
+        A.retreat.until=now()+.5;A.nextIdle=now()+.6;
+        if(A.hold&&A.hold.s===s&&A.hold.i===0){const d=nearest(s,[gx,s==="us"?66:34],1);if(d>0){const p=sideArr(s)[d];passTo(s,d,p[0],p[1])}}};
+      later(1.4,take);return}
+    case "kickin":{const s=m.side;M.poss=s;const ki=s==="us"&&ourI>0?ourI:nearest(s,[bx,by],1);A.fl=null;A.ball.x=bx<50?.5:99.5;A.ball.y=by;A.ball.z=0;A.hold=null;
+      if(ki>0){setRun(s,ki,bx<50?1.5:98.5,by,1,true);later(.7,()=>hold(s,ki));
+        later(1.3,()=>{const arr=sideArr(s);let bi=-1,bd=1e9;arr.forEach((p,i)=>{if(i===ki||!i)return;const d=pd(p,[A.ball.x,A.ball.y]);if(d<bd){bd=d;bi=i}});if(bi>0)passTo(s,bi,arr[bi][0],arr[bi][1])})}
+      A.nextIdle=t+2;return}
+    case "corner":{const s=m.side;const ci=s==="us"?(ourI>0?ourI:nearest("us",[bx,by],1)):(m.opp>0?m.opp:nearest("them",[bx,by],1));A.fl=null;A.hold=null;
+      const cy=s==="us"?.8:99.2,cx=bx<50?.8:99.2;A.ball.x=cx;A.ball.y=cy;A.ball.z=0;setRun(s,ci,cx,cy,1,true);
+      // everyone else piles into the box
+      const o=s==="us"?"them":"us";const by2=s==="us"?14:86;
+      [1,2,3,4].forEach(i=>{if(i!==ci)setRun(s,i,rnd(36,64),by2+rnd(-4,5),2.4,true);setRun(o,i,rnd(38,62),by2+(s==="us"?-3:3)+rnd(-3,3),2.4,true)});
+      later(.8,()=>hold(s,ci));later(1.4,()=>kick(rnd(40,60),by2,34,7,()=>{A.hold=null}));A.nextIdle=t+99;return}
+    case "fk":{const s=m.side;const fi=s==="us"?(ourI>0?ourI:nearest("us",[bx,by],1)):(m.opp>0?m.opp:nearest("them",[bx,by],1));A.fl=null;A.ball.x=bx;A.ball.y=by;A.ball.z=0;
+      setRun(s,fi,bx,by+(s==="us"?2:-2),.8,true);later(.6,()=>hold(s,fi));
+      const o=s==="us"?"them":"us";[1,2].forEach((i,k)=>setRun(o,i,bx-4+k*8,by+(s==="us"?-8:8),2,true));A.nextIdle=t+99;return}
+    case "cleared":{const d=nearest("them",[A.ball.x,A.ball.y],1);if(d>0){setRun("them",d,A.ball.x,A.ball.y,.8,true);later(.3,()=>kick(rnd(20,80),rnd(40,55),40,6,()=>{}))}return}
     case "block":{const d=nearest("them",[A.ball.x,A.ball.y],1);if(d>0){setRun("them",d,A.ball.x,A.ball.y-2,1,true);later(.35,()=>kick(A.ball.x+rnd(-8,8),A.ball.y+rnd(6,12),30,0,()=>hold("them",d)))}return}
     case "tackle":{const di=ourI>=0?ourI:nearest("us",[A.ball.x,A.ball.y],1);setRun("us",di,A.ball.x,A.ball.y+1.5,1,true);later(.45,()=>{kick(A.ball.x+rnd(-3,3),A.ball.y+rnd(2,5),25,0,()=>hold("us",di))});return}
     case "oshot":{const oi=m.opp>0?m.opp:nearest("them",[bx,by],1);A.lastOpp=oi;if(!A.hold||A.hold.s!=="them"||A.hold.i!==oi){passTo("them",oi,bx,by)}else setRun("them",oi,bx,by,1.2);return}
@@ -1567,7 +1661,7 @@ function animBeat(b){
   // anything else: the side on the ball keeps it near that spot
   const side=M.poss;const ni=nearest(side,[bx,by],1);if(A.hold&&A.hold.s===side)passTo(side,ni,bx,by);else{setRun(side,ni,A.ball.x,A.ball.y,1,true);later(.5,()=>passTo(side,ni,bx,by))}
 }
-function netBulge(w){const n=M.pitchEl&&M.pitchEl.querySelector(".net."+w);if(n){n.classList.remove("bulge");void n.offsetWidth;n.classList.add("bulge")}}
+function netBulge(w){if(M.flip)w=w==="top"?"bot":"top";const n=M.pitchEl&&M.pitchEl.querySelector(".net."+w);if(n){n.classList.remove("bulge");void n.offsetWidth;n.classList.add("bulge")}}
 function animFrame(dt,time){
   const A=M.an;const live=M.state==="live";const sp=[1,.8,1,1.7][M.speed]||1;const pdt=live?dt*sp:dt;
   // queued follow-ups (tackles, goal kicks)
@@ -1591,16 +1685,18 @@ function animFrame(dt,time){
       if(r&&r.until>time)tg=[r.x,r.y];else{A.run[s][i]=null;tg=shapeTarget(s,i,time);
         if(live&&A.hold&&!A.cele){ // press the ball, and the girl on it carries it
           if(A.hold.s===s&&A.hold.i===i)tg=p.slice();
-          else if(A.hold.s!==s&&i===nearest(s,[A.ball.x,A.ball.y],1))tg=[A.ball.x,A.ball.y+(s==="us"?3:-3)]}}
+          else if(A.hold.s!==s&&!retreating(s,time)&&i===nearest(s,[A.ball.x,A.ball.y],1))tg=[A.ball.x,A.ball.y+(s==="us"?3:-3)]}}
       if(!r&&!(A.hold&&A.hold.s===s&&A.hold.i===i))arr.forEach((q,j)=>{if(j===i)return;const ex=(p[0]-q[0])*.75,ey=p[1]-q[1],e=Math.hypot(ex,ey);if(e<9&&e>.01){tg=[tg[0]+ex/e*(9-e)*.9/.75,tg[1]+ey/e*(9-e)*.9]}}); // keep spread out
-      const v=plSpeed(s,i)*(r?r.spr:1)*(i===0?.8:1)*(stillNow()?.7:1);
+      if(i&&retreating(s,time)&&!(A.hold&&A.hold.s===s))tg=[tg[0],s==="us"?Math.max(tg[1],55):Math.min(tg[1],45)];
+      const v=plSpeed(s,i)*(r?r.spr:1)*(i===0?.8:1)*(stillNow()?.7:1)*(retreating(s,time)?1.4:1);
       const dx=(tg[0]-p[0])*.75,dy=tg[1]-p[1],d=Math.hypot(dx,dy);if(d<.05)return;
       const stp=Math.min(d,v*pdt)*(d<2.5?.6:1);p[0]+=dx/d*stp/.75;p[1]+=dy/d*stp});
   }
   // move the ball
   if(A.fl){const f=A.fl;f.t+=pdt/f.dur;const u=Math.min(1,f.t);A.ball.x=f.fx+(f.tx-f.fx)*u;A.ball.y=f.fy+(f.ty-f.fy)*u;A.ball.z=f.h*4*u*(1-u);
     if(u>=1){A.fl=null;A.ball.z=0;f.then&&f.then()}}
-  else if(A.hold){const p=sideArr(A.hold.s)[A.hold.i];const up=A.hold.s==="us"?-1:1;A.ball.x=p[0]+.9;A.ball.y=p[1]+up*1.6;A.ball.z=0}
+  else if(A.hold){const p=sideArr(A.hold.s)[A.hold.i];const up=A.hold.s==="us"?-1:1;const hid=A.hold.s==="us"?M.xi[A.hold.i]:null;const lf=hid&&P(hid).foot==="L";
+    A.ball.x=p[0]+(lf?-.9:.9)*-up;A.ball.y=p[1]+up*1.6;A.ball.z=0}
   else if(stillNow()){A.ball.x+=(50-A.ball.x)*Math.min(1,dt*3);A.ball.y+=(50-A.ball.y)*Math.min(1,dt*3)}
   if(A.cele&&!A.run[A.cele.side][A.cele.i])A.cele=null;
   drawPitch();
@@ -1610,14 +1706,16 @@ function snapPitch(){
   const A=M.an;if(!A)return;A.run={us:[],them:[]};A.later=[];A.fl=null;A.hold=null;A.cele=null;A.ball={x:50,y:50,z:0};
   A.us=[0,1,2,3,4].map(i=>slotXY("us",i));A.them=[0,1,2,3,4].map(i=>slotXY("them",i));drawPitch();
 }
+// the game works with us attacking up the screen; in the second half the view turns round so the teams swap ends
 function drawPitch(){
-  const el=M.pitchEl,A=M.an;if(!el||!A)return;const h=A.hold;
-  el.querySelectorAll(".dot.us").forEach((b,i)=>{b.style.left=A.us[i][0].toFixed(2)+"%";b.style.top=A.us[i][1].toFixed(2)+"%";b.classList.toggle("has",!!h&&h.s==="us"&&h.i===i)});
-  el.querySelectorAll(".dot.them").forEach((b,i)=>{b.style.left=A.them[i][0].toFixed(2)+"%";b.style.top=A.them[i][1].toFixed(2)+"%";b.classList.toggle("has",!!h&&h.s==="them"&&h.i===i)});
+  const el=M.pitchEl,A=M.an;if(!el||!A)return;const h=A.hold;const F=!!M.flip;const X=v=>(F?100-v:v).toFixed(2)+"%";
+  el.classList.toggle("flip",F);
+  el.querySelectorAll(".dot.us").forEach((b,i)=>{b.style.left=X(A.us[i][0]);b.style.top=X(A.us[i][1]);b.classList.toggle("has",!!h&&h.s==="us"&&h.i===i)});
+  el.querySelectorAll(".dot.them").forEach((b,i)=>{b.style.left=X(A.them[i][0]);b.style.top=X(A.them[i][1]);b.classList.toggle("has",!!h&&h.s==="them"&&h.i===i)});
   const z=A.ball.z,ball=el.querySelector(".ball"),sh=el.querySelector(".bsh");
-  ball.style.left=A.ball.x.toFixed(2)+"%";ball.style.top=(A.ball.y-z*.9).toFixed(2)+"%";ball.style.transform=`translate(-50%,-50%) scale(${(1+z*.06).toFixed(3)})`;
-  sh.style.left=A.ball.x.toFixed(2)+"%";sh.style.top=(A.ball.y+.6).toFixed(2)+"%";sh.style.opacity=(.45-z*.03).toFixed(2);
-  const zn=el.querySelector(".zone");zn.style.left=A.ball.x.toFixed(2)+"%";zn.style.top=A.ball.y.toFixed(2)+"%";
+  ball.style.left=X(A.ball.x);ball.style.top=(F?100-A.ball.y-z*.9:A.ball.y-z*.9).toFixed(2)+"%";ball.style.transform=`translate(-50%,-50%) scale(${(1+z*.06).toFixed(3)})`;
+  sh.style.left=X(A.ball.x);sh.style.top=X(A.ball.y+(F?-.6:.6));sh.style.opacity=(.45-z*.03).toFixed(2);
+  const zn=el.querySelector(".zone");zn.style.left=X(A.ball.x);zn.style.top=X(A.ball.y);
   const ob=el.querySelector(".onball");const id=h&&h.s==="us"?M.xi[h.i]:null;const txt=h?(h.s==="us"?(id?P(id).name:""):(h.i===0?"Their keeper":`No. ${M.oppNums[h.i-1]}`)):"";
   if(ob.textContent!==txt)ob.textContent=txt;ob.hidden=!txt||M.state!=="live";
 }
@@ -1626,6 +1724,7 @@ function ftPanel(){
   return `<section class="card potm"><img src="coffey.jpg" alt="Coffey Coffee logo"><div style="min-width:0"><h3>${M.comp==="T"?"Star of the game":"Coffey Coffee player of the match"}</h3>
    <div style="font:400 26px var(--display)">${M.potm?esc(P(M.potm).name):"-"}</div>
    <p class="hint">${M.res==="W"?"A win! ":M.res==="D"?"A draw. ":"A defeat, but plenty to build on. "}${unused.length?`${unused.map(id=>P(id).name).join(", ")} didn't get on and will be disappointed.`:"Everyone in the squad got on the pitch."}</p></div></section>
+  ${M.feed.some(e=>e.hl)?`<section class="card"><h3>Match highlights</h3><div class="feed">${M.feed.filter(e=>e.hl).reverse().map(e=>`<div class="ev ${e.cls}"><span class="m">${e.m}'</span><span>${e.cls==="goal"?"⚽ ":""}${esc(e.text)}</span></div>`).join("")}</div></section>`:""}
   <section class="card"><h3>Ratings</h3><div class="scroll"><table class="tbl"><thead><tr><th class="l">Player</th><th>Mins</th><th>Goals</th><th>Ast</th><th>Rating</th></tr></thead><tbody>
   ${rows.map(id=>`<tr><td class="l"><span class="pname"><span class="num">${P(id).num}</span>${esc(P(id).name)}</span></td><td>${M.mins[id]}</td><td>${M.goals[id]||""}</td><td>${M.ast[id]||""}</td><td><b>${M.mins[id]?M.rt[id].toFixed(1):"–"}</b></td></tr>`).join("")}</tbody></table></div></section>`;
 }
@@ -1686,7 +1785,8 @@ document.addEventListener("click",e=>{
     if(!sel){sel=k}else if(sel===k){sel=null}else if(sel[0]==="o"&&k[0]==="o"){sel=k}else{swapTac(sel,k);sel=null;saveGame()}render();return}
   // match
   if(view==="match"&&M){
-    if(d.m==="go"){M.state="live";if(M.min===0)feed(`Kick-off! ${M.weather}.`,"brk");M.selTok=null;M.an&&(M.an.nextPass=performance.now()/1000+.6);runTimer();renderMatch();return}
+    if(d.m==="go"){if(M.state==="break"&&!M.flip){M.flip=true;feed("Second half! The teams have swapped ends.","brk");drawPitch()}
+      M.state="live";if(M.min===0)feed(`Kick-off! ${M.weather}.`,"brk");M.selTok=null;M.an&&(M.an.nextPass=performance.now()/1000+.6);runTimer();renderMatch();return}
     if(d.m==="pause"){stopTimer();M.state="paused";renderMatch();return}
     if(d.m==="done"){finishMatch();window.scrollTo({top:0});return}
     if(d.m==="rotate"){const n=autoRotate();toast(n?`${n} change${n>1?"s":""} made.`:"Nobody needs a rest right now.");renderMatch();return}
@@ -1703,6 +1803,8 @@ document.addEventListener("click",e=>{
     if(d.talk){const[ph,k]=d.talk.split(":");if(!M.talks[ph]){doTalk(ph,k);renderMatch()}return}
     if(d.mform){M.form=d.mform;feed(`Formation change to ${d.mform}.`);snapPitch();renderMatch();return}
     if(d.mment){M.ment=+d.mment;feed(`New instructions: ${MENT[+d.mment].toLowerCase()}.`);renderMatch();return}
+    if(d.moff!=null&&M.state!=="ft"){const b=M.selTok&&M.selTok[0]==="b"?M.selTok:null;M.selTok=null;if(b&&d.moff!=="x"){swapMatch(b,`s${d.moff}`);updateMPitch()}renderMatch();return}
+    if(d.mbench&&M.state==="live"){stopTimer();M.state="paused";M.selTok=`b${d.mbench}`;renderMatch();document.getElementById("subsCard")?.scrollIntoView({block:"nearest",behavior:"smooth"});return}
     if(M.state!=="live"&&M.state!=="ft"&&(d.slot!=null||d.mbench)){const k=d.slot!=null?`s${d.slot}`:`b${d.mbench}`;
       if(!M.selTok)M.selTok=k;else if(M.selTok===k)M.selTok=null;else if(M.selTok[0]==="b"&&k[0]==="b")M.selTok=k;else{swapMatch(M.selTok,k);M.selTok=null}
       renderMatch();return}
