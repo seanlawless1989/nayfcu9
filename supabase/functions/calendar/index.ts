@@ -68,7 +68,9 @@ function matchEvent(m: Match) {
   const where = m.ha === "H" ? "Home" : m.ha === "A" ? "Away" : "";
   const desc = [[compName(m.comp), where].filter(Boolean).join(" · "), hm(m.ko) ? `Kick-off ${m.ko}` : "Kick-off time to be confirmed",
     m.venue ? `Venue: ${m.venue}` : "Venue to be confirmed", "", `Match page: ${SITE}?match=${encodeURIComponent(m.id)}`].join("\n");
-  const lm = m.updated ? [`LAST-MODIFIED:${stamp(new Date(m.updated))}`] : [];
+  // "updated" moves on every edit (supabase/6_match_updated.sql); SEQUENCE rises with it so calendars treat the
+  // event as a newer version of the same game rather than keeping the old one.
+  const lm = m.updated ? [`LAST-MODIFIED:${stamp(new Date(m.updated))}`, `SEQUENCE:${Math.max(0, Math.floor((Date.parse(m.updated) - Date.UTC(2026, 0, 1)) / 60000))}`] : [];
   return event(`match-${m.id}`, [...when(m.date, m.ko, 60), ...lm], { SUMMARY: "⚽ " + title, LOCATION: m.venue, DESCRIPTION: desc, URL: `${SITE}?match=${encodeURIComponent(m.id)}` });
 }
 function tournamentEvent(t: Tournament, games: Match[]) {
