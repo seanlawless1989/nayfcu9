@@ -161,7 +161,7 @@ Allow about an hour. Do the steps in order.
 ## 2. Edge functions (match alerts and calendar)
 With the Supabase CLI (`supabase link --project-ref <ref>`):
 ```
-supabase secrets set SITE_URL={site}/ TEAM_NAME="{name}" APP_NAME="{app}" TEAM_FULL_NAME="{full}" AGE_GROUP="{age}" PUBLIC_SCORES={scores}
+supabase secrets set SITE_URL={site}/ TEAM_NAME="{name}" APP_NAME="{app}" TEAM_FULL_NAME="{full}" AGE_GROUP="{age}" PUBLIC_SCORES={scores} POTM_SPONSOR="{potm}" POTM_ICON="{potm_icon}"
 supabase functions deploy notify
 supabase functions deploy calendar --no-verify-jwt
 ```
@@ -224,6 +224,7 @@ def main():
         name=team["name"], app=team.get("appName", ""), age=team.get("ageGroup", ""), format=team.get("format", "5v5"),
         half=team.get("halfLength", 20), league=team.get("league", "League"),
         scores="true" if team["publicScores"] else "false",
+        potm=(team.get("potm") or {}).get("sponsor") or "none", potm_icon=(team.get("potm") or {}).get("icon") or "⭐",
         scores_note=("Scores are **public**: visitors see results, scorers and goal alerts."
                      + (" FA rules don't allow this for U7 to U11 teams, so the club has chosen to take that on." if young else ""))
                     if team["publicScores"] else

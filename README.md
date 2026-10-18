@@ -57,7 +57,7 @@ The game is built from a single source file elsewhere and copied in here. To upd
 
 Everything that makes this site Newton Aycliffe's lives in `docs/team.js`: the name, age group, colours, crest, sponsors, kits, league name, match format (5v5, 7v7, 9v9 or 11v11), half length and hashtags. Change a value there and the whole site, the graphics maker and the sticker book follow it.
 
-`publicScores` is each club's choice. FA rules don't allow U7 to U11 scores, results or scorers to be published, so with `publicScores: false` visitors see games, line-ups, appearances and awards without scores, and match alerts and the calendar leave scores out (set the `PUBLIC_SCORES=false` secret on the edge functions too). Signed-in coaches still see and record everything. Newton Aycliffe has it on. Coach-written match reports are shown as written, and the database itself is still readable, so it hides scores from the site rather than locking them away.
+`publicScores` is each club's choice. FA rules don't allow U7 to U11 scores, results or scorers to be published, so with `publicScores: false` visitors see games, line-ups, appearances and awards without scores, and match alerts and the calendar leave scores out (set the `PUBLIC_SCORES=false` secret on the edge functions too). Match alerts name the player of the match sponsor from the `POTM_SPONSOR` (and `POTM_ICON`) secret, which should match `potm` in `team.js`; `POTM_SPONSOR=none` sends a plain "Player of the Match". Signed-in coaches still see and record everything. Newton Aycliffe has it on. Coach-written match reports are shown as written, and the database itself is still readable, so it hides scores from the site rather than locking them away.
 
 ## Help and changes
 

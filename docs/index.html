@@ -866,9 +866,15 @@ function pickView(){const m=matches.find(x=>x.id===pickMatch);if(!m)return `<div
   <p class="hint">Tick who's in the squad. Live match will use exactly these players on the day, and the squad post will use them too. Parents' answers are shown where they've replied.</p>
   <div class="av">${roster.map(p=>`<label class="row" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||"No answer"}</span></label>`).join("")}</div>
   <p class="hint">${PICK.set.size} picked.</p>
+  ${pickAlertable(m)?`<label class="row" style="cursor:pointer"><span><input type="checkbox" id="pickAlert" checked style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">📣 Send a squad alert to parents' phones</span></label><p class="hint">Only sent when the squad is new or has changed since the last alert.</p>`:""}
   <div class="btns"><button class="btn gold" id="pickSave">Save squad</button><button class="btn" id="pickSavePost">Save and make the squad post</button><button class="btn ghost" data-view="fixtures">Cancel</button></div></section>`}
+function pickAlertable(m){return !m.practice&&!m.postponed&&!result(m)&&(m.date||"")>=todayLocal()&&!(m.live&&m.live.status&&m.live.status!=="pre")}
 async function pickSave(){const m=matches.find(x=>x.id===pickMatch);const roster=players.map(p=>p.name);const sq=[...PICK.set].sort((a,b)=>(+(players.find(p=>p.name===a)||{}).num||99)-(+(players.find(p=>p.name===b)||{}).num||99));
-  try{await db.collection("matches").doc(m.id).update({squad:sq});m.squad=sq;try{localStorage.removeItem(liveKey(m.id))}catch(e){}toast(`Squad saved: ${sq.length} players.`);return m}catch(e){toast("Couldn't save the squad. Try again.");return null}}
+  const tell=!!($("#pickAlert")&&$("#pickAlert").checked&&sq.length);
+  try{await db.collection("matches").doc(m.id).update({squad:sq});m.squad=sq;try{localStorage.removeItem(liveKey(m.id))}catch(e){}}catch(e){toast("Couldn't save the squad. Try again.");return null}
+  // the alert goes to phones with kick-off reminders on; the function only sends it when the squad is new or changed
+  const r=tell?await alSend({squad:m.id}):null;
+  toast(`Squad saved: ${sq.length} players.${r==null?"":r>=0?" Parents with alerts on have been told.":" No change since the last alert, so none sent."}`);return m}
 window.monthFixtures=ym=>sortMatches(matches.filter(m=>(m.date||"").startsWith(ym||"")&&!m.postponed&&m.stage!=="placeholder")).map(m=>Object.assign({},m,{res:result(m)}));
 function nextFixture(){const today=new Date().toISOString().slice(0,10);return sortMatches(matches.filter(m=>!result(m)&&!m.postponed&&!(m.hidden&&m.live&&m.live.status==="ft")&&(m.date||"")>=today))[0]}
 function msgText(m){const d=new Date(m.date+"T12:00:00");
@@ -898,15 +904,17 @@ async function alOn(){if(AL.busy)return;AL.busy=true;render();
 async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.sub.endpoint;await AL.sub.unsubscribe();await sb.rpc("push_unsubscribe",{p_endpoint:ep});AL.sub=null;toast("Alerts are off on this phone.")}catch(e){toast("Couldn't turn alerts off. Try again.")}finally{AL.busy=false;render()}}
 // after a live update from the coach's phone: send any new alerts straight away (the every-minute check is the back-up)
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:{match:id}}).catch(()=>{})}
+// squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
+async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.potm;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
-  const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone 10 minutes and 2 minutes before kick-off, and live updates on match day: the starting line-up, kick-off, every goal, substitutions, half time and full time.</p>`;
+  const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, 10 minutes and 2 minutes before kick-off, and live updates on match day: the confirmed line-up, kick-off, ${TEAM.publicScores===false?"":"every goal, "}substitutions, half time, full time and the ${esc(POTM)}.</p>`;
   let bodyHtml;
   if(alIos()&&!alStandalone())bodyHtml=`<div class="note">On an iPhone or iPad, alerts only work from the club app on your home screen:<br>1. Tap the Share button <b>⬆︎</b> in Safari (on newer iPhones tap <b>⋯</b> first, then <b>Share</b>).<br>2. Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.<br>3. Open <b>${esc(APP)}</b> from your home screen and come back to this page.</div>`;
   else if(!alSupported())bodyHtml=`<div class="note">This browser can't show alerts. On Android use Chrome; on iPhone add the site to your home screen first.</div>`;
   else if(Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
   else{const on=!!AL.sub;
-    bodyHtml=`<div class="av"><label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-rem"${AL.prefs.reminders?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Kick-off reminders</span><span class="hint">10 and 2 minutes before</span></label>
-      <label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-live"${AL.prefs.live?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Live scores</span><span class="hint">line-up, goals, subs, HT, FT</span></label></div>
+    bodyHtml=`<div class="av"><label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-rem"${AL.prefs.reminders?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Squad and kick-off reminders</span><span class="hint">squad picked, 10 and 2 minutes before</span></label>
+      <label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-live"${AL.prefs.live?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Live scores</span><span class="hint">line-up, ${TEAM.publicScores===false?"":"goals, "}subs, HT, FT, player of the match</span></label></div>
       <div class="btns">${on?`<span class="pill">✅ On for this phone</span><button class="btn ghost" id="alOff"${AL.busy?" disabled":""}>Turn off</button>`:`<button class="btn gold" id="alOn"${AL.busy?" disabled":""}>${AL.busy?"Turning on…":"Turn on alerts"}</button>`}</div>`}
   return `<section class="card stack">${head}${bodyHtml}<p class="hint">Each phone is set up on its own. We don't ask for your name, number or email, and alerts only use first names already on this site.</p></section>`}
 
@@ -1143,11 +1151,12 @@ function todayLocal(){return new Date().toLocaleDateString("en-CA")}
 function liveStart(id){const m=matches.find(x=>x.id===id);if(!m)return;let saved=null;try{saved=JSON.parse(localStorage.getItem(liveKey(id))||"null")}catch(e){}
   const out=Object.entries(AV[id]||{}).filter(([,v])=>v==="no").map(([n])=>n);
   const sq=(m.squad&&m.squad.length)?m.squad.slice():Object.keys(played(m)).length?Object.keys(played(m)):players.filter(p=>p.current&&!out.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
-  const srv=m.live&&m.live.status&&m.live.status!=="pre"?m.live:null;
+  // another coach's phone may have started the game, or locked the line-up before kick-off
+  const srv=m.live&&m.live.status&&(m.live.status!=="pre"||(m.live.events||[]).some(e=>e.k==="lu"))?m.live:null;
   LV=saved&&saved.v===3?saved:srv?Object.assign({v:3,id,onSince:{},touched:{1:[],2:[]}},JSON.parse(JSON.stringify(srv))):{v:3,id,status:"pre",half:1,halfStart:null,halfLen:+TEAM.halfLength||20,form:FORM0,squad:sq,slots:sq.slice(0,SIDE).concat(Array(SIDE).fill("")).slice(0,SIDE),events:[],mins:{},onSince:{},touched:{1:[],2:[]}};
   if(!LV.squad||!LV.squad.length)LV.squad=sq;setView("live")}
 function liveSaveLocal(){try{localStorage.setItem(liveKey(LV.id),JSON.stringify(LV))}catch(e){}}
-function livePublic(){return {status:LV.status,half:LV.half,halfStart:LV.halfStart,halfLen:LV.halfLen,form:LV.form,slots:LV.slots,squad:LV.squad,events:LV.events,mins:LV.mins}}
+function livePublic(){return {locked:!!LV.locked,status:LV.status,half:LV.half,halfStart:LV.halfStart,halfLen:LV.halfLen,form:LV.form,slots:LV.slots,squad:LV.squad,events:LV.events,mins:LV.mins}}
 async function livePush(extra){const m=matches.find(x=>x.id===LV.id);if(!m)return;if(m.practice){m.live=livePublic();return}
   const body=Object.assign({played:m.played||{},assists:m.assists||{},us:m.us??0,them:m.them??0,keepers:m.keepers||{},live:livePublic(),check:""},extra||{});
   const id=LV.id,last=(LV.events[LV.events.length-1]||{}).k;
@@ -1164,7 +1173,7 @@ function pitchHtml(L,editable){const F=FORMS[L.form]||FORMS[FORM0];
   return `<div class="pitch">${F.xy.map(([x,y],i)=>{const n=L.slots[i]||"";
     return `<div class="spot${i===0?" gk":""}" style="left:${x}%;top:${y}%">${editable?`<select data-slot="${i}" aria-label="${F.label[i]}"><option value="">${F.label[i]}</option>${L.squad.map(p=>`<option${p===n?" selected":""}>${esc(p)}</option>`).join("")}</select>`:`<b>${esc(numOf(n)||"")}</b><span>${esc(n||F.label[i])}</span>`}</div>`}).join("")}</div>`}
 function commentary(e,m){const opp=esc(m.opp||"the opposition");
-  switch(e.k){case "lu":return `<b>Starting line-up</b> (${esc(e.form)}): ${esc(e.line[0])} in goal, ${e.line.slice(1).map(esc).join(", ")}.${e.bench&&e.bench.length?` Subs: ${e.bench.map(esc).join(", ")}.`:""}`;
+  switch(e.k){case "lu":return `<b>${e.re?"Line-up change":"Line-up confirmed"}</b> (${esc(e.form)}): ${esc(e.line[0])} in goal, ${e.line.slice(1).map(esc).join(", ")}.${e.bench&&e.bench.length?` Subs: ${e.bench.map(esc).join(", ")}.`:""}`;
     case "ko":return `<b>Kick-off!</b> ${esc(TEAM.name)} line up in a ${esc(e.form)}: ${e.line.map(esc).join(", ")}.`;
     case "goal":return `<b>GOAL!</b> ${esc(e.n)} scores for ${esc(TEAM.name)}${e.a?`, set up by ${esc(e.a)}`:""}. ${e.s}`;
     case "them":return `Goal for ${opp}. ${e.s}`;
@@ -1187,11 +1196,11 @@ function liveView(){
   const pr=m.practice?`<div class="note"><b>Practice match.</b> Try anything: nothing is saved and parents can't see it. Tap "Practice live match" on Fixtures to start again.</div>`:"";
   if(LV.status==="pre")return `<div class="live">${pr}${liveBoard(m,LV)}
     <section class="card stack"><h3>Starting line-up</h3>
-    <div class="btns"><span class="hint">Formation</span><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}">${f}</button>`).join("")}</div>
+    <div class="btns"><span class="hint">Formation</span><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}"${LV.locked?" disabled":""}>${f}</button>`).join("")}</div>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px">Minutes each half<input type="number" id="lvLen" min="5" max="45" value="${LV.halfLen}" style="width:70px"></label></div>
-    ${pitchHtml(LV,true)}
-    <p class="hint">Subs: ${bench().map(esc).join(", ")||"none"}. Pick a player for each position. The keeper is the GK spot.</p>
-    <div class="btns"><button class="btn gold bigbtn" id="lvKo"${onPitch().length<5?" disabled":""}>Kick off</button>${m.practice?"":`<button class="btn ghost" id="lvLineup"${onPitch().length<5?" disabled":""}>${LV.events.some(e=>e.k==="lu")?"✅ Line-up sent · send again":"📣 Send line-up to parents"}</button>`}<button class="btn ghost" data-view="fixtures">Back</button></div></section></div>`;
+    ${pitchHtml(LV,!LV.locked)}
+    <p class="hint">Subs: ${bench().map(esc).join(", ")||"none"}. ${LV.locked?`🔒 Line-up locked${m.practice?"":" and sent to parents"}. Unlock it to make a change; locking it again tells parents what changed.`:`Pick a player for each position. The keeper is the GK spot. Lock the line-up when it's final${m.practice?"":" and parents with alerts on get \"Line-up confirmed\""}.`}</p>
+    <div class="btns">${LV.locked?`<button class="btn gold bigbtn" id="lvKo">Kick off</button><button class="btn ghost" id="lvUnlock">🔓 Unlock line-up</button>`:`<button class="btn gold bigbtn" id="lvLock"${onPitch().length<SIDE?" disabled":""}>🔒 Lock line-up</button><button class="btn ghost" id="lvKo"${onPitch().length<5?" disabled":""}>Kick off</button>`}<button class="btn ghost" data-view="fixtures">Back</button></div></section></div>`;
   const pl=played(m),as=assistsOf(m),on=onPitch(),F=FORMS[LV.form];
   return `<div class="live">${pr}${liveBoard(m,LV)}
   <div class="btns">${LV.status==="live"&&LV.half===1?`<button class="btn" id="lvHt">Half time</button>`:""}${LV.status==="ht"?`<button class="btn gold" id="lv2h">Start 2nd half</button>`:""}
@@ -1264,7 +1273,10 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
     ${names.map(n=>`<tr class="click" data-player="${esc(n)}"><td><span class="num">${esc(numOf(n))||"·"}</span>${esc(n)}${n in ks?` <span title="In goal">🧤</span>`:""}${m.potm===n?` <span class="potm" title="${esc(POTM)}">${POTM_IC}</span>`:""}${starters&&!starters.includes(n)?` <span class="hint">sub</span>`:""}</td>${showG?`<td>${+pl[n]?`<b>${pl[n]}</b>`:"–"}</td>`:""}${showA?`<td>${+as[n]||"–"}</td>`:""}${showH?`<td>${n in hv?hv[n]:"–"}</td>`:""}${showM?`<td>${n in mins?Math.round(mins[n]):"–"}</td>`:""}</tr>`).join("")}</tbody></table>
     ${sheet?"":`<p class="hint">Only the scorers${m.potm?" and player of the match":""} were written down for this game, so the full team isn't known.</p>`}</section>`:!fx&&r?`<section class="card"><h3>The team</h3><p class="hint">The team wasn't written down for this game.</p></section>`:"";
   const awards=!fx&&(m.potm||Object.keys(ks).length)?`<section class="card"><h3>Awards</h3>${m.potm?`<div class="potm">${POTM_IC} ${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}: <b>${esc(m.potm)}</b></div>`:""}${Object.entries(ks).map(([n,c])=>`<div class="meta">🧤 ${esc(n)} in goal${+c?", clean sheet":""}</div>`).join("")}</section>`:"";
-  const lineup=ko&&ko.line?`<section class="card"><h3>Starting line-up${ko.form?` (${esc(ko.form)})`:""}</h3>${pitchHtml({form:ko.form,slots:ko.line},false)}${(b=>b.length?`<p class="hint">Subs: ${b.map(esc).join(", ")}</p>`:"")((L.squad||[]).filter(n=>!ko.line.includes(n)))}</section>`:"";
+  // before kick-off, the line-up the coaches locked in; the picked squad before that
+  const lu=ko||[...ev].reverse().find(e=>e.k==="lu");
+  const lineup=lu&&lu.line?`<section class="card"><h3>${ko?"Starting line-up":"Line-up confirmed"}${lu.form?` (${esc(lu.form)})`:""}</h3>${pitchHtml({form:lu.form,slots:lu.line},false)}${(b=>b.length?`<p class="hint">Subs: ${b.map(esc).join(", ")}</p>`:"")((ko?(L.squad||[]):(lu.bench||[])).filter(n=>!lu.line.includes(n)))}</section>`
+    :fx&&!m.postponed&&m.squad&&m.squad.length?`<section class="card"><h3>Squad</h3><p>${m.squad.map(esc).join(", ")}</p></section>`:"";
   const story=ev.length?`<section class="card"><h3>How the game went</h3>${timelineHtml(L,m,!isLive(m))}</section>`:!fx&&r?`<section class="card"><h3>How the game went</h3><p class="hint">There's no minute-by-minute story for this game. Games run with Live match mode will show one here.</p></section>`:"";
   const ms=milestones().filter(x=>x.id===m.id);
   const msHtml=ms.length?`<section class="card"><h3>Milestones in this game</h3>${ms.map(x=>`<div class="ms"><span>🎉 <b>${esc(x.n)}</b>: ${esc(x.label)}</span></div>`).join("")}</section>`:"";
@@ -1388,10 +1400,16 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.id==="alOn")alOn();
   if(b.id==="alOff")alOff();
   if(view==="live"&&LV){const m=matches.find(x=>x.id===LV.id);if(!m)return;const now=Date.now();
-    if(b.dataset.lvform){const f=b.dataset.lvform;if(f!==LV.form){LV.form=f;if(LV.status!=="pre")addEv({k:"form",form:f});liveSaveLocal();render();if(LV.status!=="pre")livePush()}}
-    if(b.id==="lvLineup"&&LV.status==="pre"&&onPitch().length===SIDE){addEv({k:"lu",form:LV.form,line:LV.slots.slice(),bench:bench()});liveSaveLocal();render();
+    if(b.dataset.lvform&&!(LV.status==="pre"&&LV.locked)){const f=b.dataset.lvform;if(f!==LV.form){LV.form=f;if(LV.status!=="pre")addEv({k:"form",form:f});liveSaveLocal();render();if(LV.status!=="pre")livePush()}}
+    if(b.id==="lvUnlock"&&LV.status==="pre"){LV.locked=false;liveSaveLocal();render();if(!m.practice)db.collection("matches").doc(LV.id).update({live:livePublic()}).then(()=>{m.live=livePublic()},()=>{});return}
+    if(b.id==="lvLock"&&LV.status==="pre"&&onPitch().length===SIDE){
+      // "Line-up confirmed" goes out the first time; after an unlock, only a different line-up sends "Line-up change"
+      const prev=[...LV.events].reverse().find(e=>e.k==="lu"),bn=bench();
+      const same=prev&&prev.form===LV.form&&prev.line.join("|")===LV.slots.join("|")&&(prev.bench||[]).join("|")===bn.join("|");
+      LV.locked=true;if(!same)addEv(Object.assign({k:"lu",form:LV.form,line:LV.slots.slice(),bench:bn},prev?{re:1}:{}));liveSaveLocal();render();
+      if(m.practice){m.live=livePublic();toast("Line-up locked. In a real game parents with alerts on would get it now.");return}
       // only the line-up goes to the server here: the score stays blank until kick-off
-      try{await db.collection("matches").doc(LV.id).update({live:livePublic()});m.live=livePublic();alNotify(LV.id);toast("Line-up sent. Parents with alerts on will get it now.")}catch(x){toast("Couldn't send the line-up. Check your signal and try again.")}return}
+      try{await db.collection("matches").doc(LV.id).update({live:livePublic()});m.live=livePublic();if(!same)alNotify(LV.id);toast(same?"Line-up locked. It hasn't changed, so no new alert.":"Line-up locked. Parents with alerts on will get it now.")}catch(x){if(!same)LV.events.pop();LV.locked=false;liveSaveLocal();render();toast("Couldn't send the line-up. Check your signal and try again.")}return}
     if(b.id==="lvKo"){LV.status="live";LV.half=1;LV.halfStart=now;onPitch().forEach(n=>clockOn(n,now));addEv({k:"ko",form:LV.form,line:LV.slots.slice()});liveSaveLocal();render();livePush()}
     if(b.dataset.lvgoal)liveGoal(b.dataset.lvgoal);
     if(b.dataset.lvasg!=null)liveAssist(b.dataset.lvasg);
@@ -1638,7 +1656,10 @@ async function saveMatch(){
     potm:F.potm||null,played:F.played,assists:F.assists||{},postponed:!!F.postponed&&F.us===""&&F.them==="",tournament_id:F.tournament_id||null,stage:F.stage||"",halves:F.halves||{},keepers:F.keepers||{},gk:Object.keys(F.keepers||{})[0]||null,saves:F.saves===""||F.saves==null?null:+F.saves,notes:F.notes,apps:F.apps!==false||Object.values(F.played).some(g=>!(+g>0)),check:"",updated:new Date().toISOString()};
   const id=F.id||`${F.date}-${slug(F.opp)}-${Math.random().toString(36).slice(2,6)}`;
   $("#saveM").disabled=true;
-  try{await db.collection("matches").doc(id).set(body);toast("Match saved.");season=seasonOf(F.date);F=null;editing=null;setView(isFixture(body)?"fixtures":"results")}
+  // a newly chosen player of the match for a game just played is sent to parents' phones (the function skips older games)
+  const prevPotm=F.id?(matches.find(x=>x.id===F.id)||{}).potm||null:null,tellPotm=!!body.potm&&body.potm!==prevPotm&&body.us!=null&&body.comp!=="Tournament";
+  try{await db.collection("matches").doc(id).set(body);toast("Match saved.");
+    if(tellPotm)alSend({potm:id}).then(r=>{if(r!=null&&r>=0)toast(`Match saved. ${POTM.charAt(0).toUpperCase()+POTM.slice(1)} sent to parents' phones.`)});season=seasonOf(F.date);F=null;editing=null;setView(isFixture(body)?"fixtures":"results")}
   catch(e){$("#saveM").disabled=false;toast(e&&e.code==="quota_exceeded"?"The results store is full.":"Couldn't save. Check your connection and try again.");if(e&&e.code==="invalid_argument"){canWrite=false;render()}}
 }
 

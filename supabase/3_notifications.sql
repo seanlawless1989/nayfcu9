@@ -79,6 +79,30 @@ begin
   return found;
 end $$;
 revoke all on function public.push_claim_events(text, bigint, bigint) from public, anon, authenticated;
+-- Squad and player-of-the-match alerts: what was last sent for each match, so a re-save only alerts when it changed.
+alter table public.push_log add column if not exists squad_sent jsonb;
+alter table public.push_log add column if not exists potm_sent text;
+-- 0 = already sent as it is, 1 = first time, 2 = changed since it was sent
+create or replace function public.push_claim_squad(p_match text, p_squad jsonb)
+returns int language plpgsql security definer set search_path = public as $$
+declare prev jsonb;
+begin
+  insert into public.push_log (match_id) values (p_match) on conflict do nothing;
+  select squad_sent into prev from public.push_log where match_id = p_match for update;
+  if prev is not distinct from p_squad then return 0; end if;
+  update public.push_log set squad_sent = p_squad where match_id = p_match;
+  return case when prev is null then 1 else 2 end;
+end $$;
+create or replace function public.push_claim_potm(p_match text, p_potm text)
+returns boolean language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.push_log (match_id) values (p_match) on conflict do nothing;
+  update public.push_log set potm_sent = p_potm where match_id = p_match and potm_sent is distinct from p_potm;
+  return found;
+end $$;
+revoke all on function public.push_claim_squad(text, jsonb) from public, anon, authenticated;
+revoke all on function public.push_claim_potm(text, text) from public, anon, authenticated;
+
 revoke all on function public.push_claim_reminder(text, int) from public, anon, authenticated;
 
 -- Every minute: send kick-off reminders (10 and 2 minutes before), and catch any live update the coach's phone didn't pass on.
