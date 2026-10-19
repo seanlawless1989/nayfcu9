@@ -101,3 +101,21 @@ returns table(choice int, votes bigint) language sql security definer set search
   group by v.choice;
 $$;
 grant execute on function public.poll_totals(text) to anon, authenticated;
+
+-- ---------- Sponsor report (coaches only) ----------
+-- One row each time a coach saves or copies a matchday graphic, with the sponsors drawn on it.
+-- Put next to website visits (page_views) it shows a sponsor how often they were seen.
+create table if not exists public.post_log(
+  id       bigint generated always as identity primary key,
+  day      date not null default (now() at time zone 'Europe/London')::date,
+  kind     text not null,                         -- squad, ft, potm, month, ms
+  sponsors text[] not null default '{}',
+  created  timestamptz not null default now()
+);
+alter table public.post_log enable row level security;
+drop policy if exists "coaches read post log" on public.post_log;
+create policy "coaches read post log" on public.post_log for select to authenticated using (public.is_coach());
+drop policy if exists "coaches add to post log" on public.post_log;
+create policy "coaches add to post log" on public.post_log for insert to authenticated with check (public.is_coach());
+grant select, insert on public.post_log to authenticated;
+revoke all on public.post_log from anon;

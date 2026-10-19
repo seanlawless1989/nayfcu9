@@ -888,6 +888,23 @@ function viewsCard(){
     <h3 style="margin-top:14px">Last 14 days</h3><div class="bars">${last.map(r=>`<div title="${r.visitors} people"><b>${r.views}</b><i style="height:${r.views/mx*100}%"></i>${+r.day.slice(8)}</div>`).join("")}</div>
     <p class="hint" style="margin-top:6px">Times the site was opened. "People" counts each phone or computer once a day. Coaches' phones aren't counted, and nothing about who visited is stored.</p></section>`;
 }
+// ---------- sponsor report (public.post_log, coaches only) ----------
+// The graphics page logs each saved or copied post with the sponsors drawn on it; set beside website visits,
+// that's the evidence for a sponsor's renewal. Nothing about children goes in it.
+let POSTS=null;
+async function loadPosts(){POSTS=null;if(!sb||!canWrite)return;try{const {data,error}=await sb.from("post_log").select("day,kind,sponsors");if(!error)POSTS=data||[]}catch(e){}}
+window.logPost=(kind,sponsors)=>{if(!sb||!canWrite)return;const row={kind,sponsors:sponsors.filter(Boolean)};sb.from("post_log").insert(row).then(({error})=>{if(!error&&POSTS)POSTS.push(Object.assign({day:todayLocal()},row))},()=>{})};
+const SPONSORS=()=>[...new Set([TEAM.sponsor&&TEAM.sponsor.name,TEAM.potm&&TEAM.potm.sponsor,TEAM.kitSponsor&&TEAM.kitSponsor.name].filter(Boolean))];
+function sponsorReport(name,from){const vis=(VIEWS||[]).filter(r=>r.day>=from),posts=(POSTS||[]).filter(r=>r.day>=from&&(r.sponsors||[]).includes(name));
+  const kinds={};posts.forEach(r=>kinds[r.kind]=(kinds[r.kind]||0)+1);
+  return {views:vis.reduce((t,r)=>t+r.views,0),visitors:vis.reduce((t,r)=>t+r.visitors,0),posts:posts.length,kinds}}
+const KIND_NAMES={squad:"squad announcement",ft:"full-time result",potm:"player of the match post",month:"fixture list",ms:"milestone post"},kindsText=k=>Object.entries(k).map(([x,v])=>`${v} ${KIND_NAMES[x]||x}${v===1?"":"s"}`).join(", ");
+function sponsorCard(){const sp=SPONSORS();if(!canWrite||!sp.length||!POSTS||!VIEWS)return "";const from=`${season.slice(0,4)}-07-01`;
+  return `<section class="card edit-only"><h3>Sponsor report</h3><p class="hint" style="margin-bottom:8px">Since 1 July ${season.slice(0,4)}. Posts are matchday graphics saved or copied from this site that show the sponsor. Only coaches see this.</p>
+    ${sp.map(n=>{const r=sponsorReport(n,from);return `<div class="row" style="flex-wrap:wrap;gap:6px;padding:8px 0;border-bottom:1px solid var(--line)"><b style="flex:1 1 160px">${esc(n)}</b><span>${r.posts} post${r.posts===1?"":"s"}</span><span class="hint">${kindsText(r.kinds)}</span><button class="mini" data-sprep="${esc(n)}">Copy report</button></div>`}).join("")}
+    <p class="hint" style="margin-top:8px">Visits to the site in the same period: ${sponsorReport("",from).views}.</p></section>`}
+function sponsorText(n){const from=`${season.slice(0,4)}-07-01`,r=sponsorReport(n,from);
+  return `${TEAM.name} ${TEAM.ageGroup||""}: thank you, ${n}\n\nSince 1 July ${season.slice(0,4)}:\n• ${r.posts} matchday post${r.posts===1?"":"s"} with your logo${Object.keys(r.kinds).length?` (${kindsText(r.kinds)})`:""}\n• ${r.views} visits to the team website\n\nThank you for supporting the team.`}
 function pface(n,cls){return PHOTOS[n]?`<img class="${cls}" src="${PHOTOS[n]}" alt="">`:""}
 function shrinkPhoto(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=300,c=document.createElement("canvas"),k=Math.min(im.width,im.height);c.width=c.height=S;c.getContext("2d").drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,0,0,S,S);ok(c.toDataURL("image/jpeg",.82))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function savePhoto(n,file){try{const img=await shrinkPhoto(file);const {error}=await sb.from("player_photos").upsert({player:n,img});if(error)throw error;PHOTOS[n]=img;toast(`Photo saved for ${n}.`);render()}catch(e){toast("Couldn't save that photo. Try a JPG or PNG.")}}
@@ -1241,7 +1258,7 @@ function reviewNoScores(){const ps=playerStats(seasonMatches()),career=playerSta
     </div><p class="hint" style="margin-top:10px">Scores and scorers aren't shown publicly for this age group.</p></section>
   ${ptCard(pt)}
   <section class="card"><h3>Milestones</h3>${(ms=>ms.length?ms.map(msRow).join(""):`<p class="hint">None yet this season.</p>`)(milestones().filter(x=>seasonOf(x.date)===season))}</section>
-  ${viewsCard()}</div>`;
+  ${viewsCard()}${sponsorCard()}</div>`;
 }
 function reviewView(){if(noScores())return reviewNoScores();
   const list=seasonMatches().filter(result),t=teamStats(list),ps=playerStats(list),ks=keeperStats(list),pt=ptStats(seasonMatches());
@@ -1285,7 +1302,7 @@ function reviewView(){if(noScores())return reviewNoScores();
       <div><span>Most appearances</span><b>${mostApps&&mostApps[1].apps?`${esc(mostApps[0])} (${mostApps[1].apps})`:"–"}</b><small>Counts only games where appearances were recorded</small></div>
     </div>
     <h3 style="margin-top:14px">All-time top scorers</h3><table class="lb"><tbody>${Object.entries(career).filter(([,o])=>o.goals).sort((a,b)=>b[1].goals-a[1].goals).slice(0,10).map(([n,o],i)=>`<tr class="click" data-player="${esc(n)}"><td>${i+1}. ${esc(n)}</td><td><b>${o.goals}</b></td></tr>`).join("")}</tbody></table></section>
-  ${viewsCard()}
+  ${viewsCard()}${sponsorCard()}
   <section class="card edit-only"><h3>Backup</h3><p class="hint">Download everything (matches, players, tournaments, honours) to keep a copy. A copy is also saved automatically each month.</p><div class="btns" style="margin-top:8px"><button class="btn" id="bkJson">Download full backup</button><button class="btn ghost" id="bkCsv">Download results as a spreadsheet (CSV)</button></div></section>
   </div>`;
 }
@@ -2062,6 +2079,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="trEditBtn"&&canWrite){trEdit=JSON.parse(JSON.stringify(TR||{day:"Wednesday",start:"18:00",finish:"19:00",off:[]}));render();return}
   if(t.id==="trCancel"){trEdit=null;render();return}
   if(t.id==="attSave"){attSave();return}
+  if(t.dataset.sprep){const tx=sponsorText(t.dataset.sprep);try{await navigator.clipboard.writeText(tx);toast("Report copied. Paste it into an email.")}catch(er){prompt("Copy this report",tx)}return}
   if(t.dataset.vote){const [id,i]=t.dataset.vote.split("|");castVote(id,+i);return}
   if(t.dataset.pollnew&&canWrite){pollStart(t.dataset.pollnew);return}
   if(t.id==="pfCancel"){pollNew=null;render();return}
@@ -2170,7 +2188,7 @@ async function checkCoach(){
   if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
   if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
@@ -2589,8 +2607,13 @@ $("clearLogos").addEventListener("click",async()=>{const BUILTIN={crest:TEAM.cre
 function toast(t){$("gtoast").textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>$("gtoast").textContent="",5000)}
 function fileName(){const opp=(S.mode==="month"?S.month:S.mode==="ms"?S.msPlayer:(S.opp||"match")||"post").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"");const kind={squad:"Squad",ft:"FullTime",potm:"PotM",month:"Fixtures",ms:"Milestone"}[S.mode]||"Post";return `${S.date||"date"}_${TEAM.ageShort||"team"}_${kind}_${opp}.png`}
 let downloads=null;
+// which sponsors this post shows, for the sponsor report
+const LOGGED=new Set();// one log per post, however often it's saved or its caption copied
+function logThis(){const k=fileName();if(LOGGED.has(k))return;LOGGED.add(k);window.logPost&&window.logPost(S.mode,postSponsors())}
+function postSponsors(){const k=KITS[S.pkit]||{};return [HAS_SP()?(S.sponsorName||(TEAM.sponsor&&TEAM.sponsor.name)):"",S.mode==="potm"&&TEAM.potm&&TEAM.potm.sponsor,S.mode==="squad"&&k.octopus&&TEAM.kitSponsor&&TEAM.kitSponsor.name]}
 $("saveBtn").addEventListener("click",async()=>{
   if(S.mode==="setup"){setMode("squad")}
+  logThis();
   const blob=await new Promise(r=>cv.toBlob(r,"image/png"));
   if(downloads){try{await downloads.save({filename:fileName(),data:blob});toast("Saved.");return}catch(e){if(e&&e.code==="declined"){toast("Not saved.");return}}}
   try{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fileName();document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast("Image downloaded.");return}catch(e){}
@@ -2598,7 +2621,7 @@ $("saveBtn").addEventListener("click",async()=>{
 });
 function showImageFallback(){const url=cv.toDataURL("image/png");let im=$("fallbackImg");if(!im){im=document.createElement("img");im.id="fallbackImg";im.alt="Post image";cv.after(im)}im.src=url;cv.hidden=true;im.hidden=false;
   toast("Press and hold (or right-click) the image and choose Save image.");setTimeout(()=>{cv.hidden=false;im.hidden=true},20000)}
-$("copyCap").addEventListener("click",()=>{const ta=$("caption");const done=()=>toast("Caption copied.");
+$("copyCap").addEventListener("click",()=>{const ta=$("caption");const done=()=>toast("Caption copied.");logThis();
   try{navigator.clipboard.writeText(ta.value).then(done,()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select();toast("Selected, now copy it.")}});
 
 // ---------- portal hooks ----------
