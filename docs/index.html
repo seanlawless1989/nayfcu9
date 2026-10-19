@@ -14,15 +14,11 @@
 <script src="config.js"></script>
 <script>
 // Team setup (supabase/7_team_setup.sql): a coach's answers on the Team setup page are laid over team.js.
-// The last copy is kept on the phone so the page draws in the right colours at once; the first visit asks the database.
-(function(){const T=window.TEAM=window.TEAM||{},C=window.TEAM_CONFIG||window.NAYFC_CONFIG||{},K=(T.storageKey||"team")+".setup";let row=null;
+// The last copy is kept on the phone so the page draws in the right colours at once. On a phone's first visit the page
+// draws straight away from team.js and asks the database alongside the results (suRefresh), so poor signal never holds it up.
+(function(){const T=window.TEAM=window.TEAM||{},K=(T.storageKey||"team")+".setup";let row=null;
   try{row=JSON.parse(localStorage.getItem(K)||"null")}catch(e){}
-  if(!row&&C.supabaseUrl&&C.supabaseAnonKey&&!/YOUR-/.test(C.supabaseUrl))try{const x=new XMLHttpRequest();
-    x.open("GET",C.supabaseUrl+"/rest/v1/team_settings?id=eq.1&select=settings,ready,updated",false);
-    x.setRequestHeader("apikey",C.supabaseAnonKey);x.setRequestHeader("Authorization","Bearer "+C.supabaseAnonKey);x.send();
-    if(x.status===200)row=JSON.parse(x.responseText)[0]||{none:true};else if(x.status>=400&&x.status<500)row={none:true};// no table: an older database
-    if(row)try{localStorage.setItem(K,JSON.stringify(row))}catch(e){}}catch(e){}
-  window.TEAM_SETUP=row;if(row&&row.settings)Object.assign(T,row.settings)})();
+  window.TEAM_SETUP=row;window.SETUP_WAIT=!row;if(row&&row.settings)Object.assign(T,row.settings)})();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <title>Newton Aycliffe Under 9s</title>
@@ -589,7 +585,7 @@ const PRN=/girl/i.test(PL)?{s:"she",p:"her",o:"her",sh:"she's",kid:"daughter"}:/
 // FA rules stop U7-U11 scores, results and scorers being published; a club can switch public scores off (TEAM.publicScores=false).
 // Visitors then get each game without its score or goals; coaches who sign in still see everything.
 const noScores=()=>TEAM.publicScores===false&&!canWrite;
-function maskScore(m){if(!m)return m;const o=Object.assign({},m,{us:null,them:null,assists:{},hidden:true});
+function maskScore(m){if(!m)return m;const o=Object.assign({},m,{us:null,them:null,assists:{},hidden:result(m)!=null||!!(m.live&&["live","ht","ft"].includes(m.live.status))});// hidden = played or under way, score kept back
   if(m.played)o.played=Object.fromEntries(Object.keys(m.played).map(n=>[n,0]));
   if(m.keepers)o.keepers=Object.fromEntries(Object.keys(m.keepers).map(n=>[n,0]));
   if(m.live)o.live=Object.assign({},m.live,{events:(m.live.events||[]).filter(e=>e.k!=="goal"&&e.k!=="them").map(e=>{const x=Object.assign({},e);delete x.s;return x})});
@@ -676,7 +672,7 @@ function render(){
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
   const main=$("#main");const gv=view==="gfx";main.hidden=gv;$("#gfxView").hidden=!gv;if(gv){window.GFX&&GFX.refresh();document.body.classList.toggle("ro",!canWrite);return}
-  if(!db){main.innerHTML=`<div class="card empty">Loading the results…</div>`;return}
+  if(!db||window.SETUP_WAIT){main.innerHTML=`<div class="card empty">Loading the results…</div>`;return}
   if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   if(setupPending()&&!canWrite&&view!=="login"){main.innerHTML=settingUpView();document.body.classList.toggle("ro",true);return}
   renderTicker();
@@ -790,7 +786,7 @@ function matchRow(m){
   return `<div class="match${cc}" role="button" tabindex="0" data-edit="${esc(m.id)}">
     <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
-      <div class="meta">${cc?`<span class="ctag">${esc(compName(m.comp))}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
+      <div class="meta">${cc?`<span class="ctag">${esc(compName(m.comp))}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":!r&&!m.hidden&&!m.postponed?"KO TBC":""].filter(Boolean).map(esc).join(" · ")}</div>
       ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}${m.report&&m.report.trim()?`<div class="meta">📝 Match report</div>`:!r&&hasPreview(m)?`<div class="meta">📰 Match preview</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&!m.hidden&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}</div>
@@ -834,7 +830,7 @@ function tCard(t){
       <div class="meta"><span class="ctag">Tournament</span>${multi?`${days.length} days${t.venue?" · ":""}`:""}${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
       ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}</div>
     <div></div></div>
-    ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">No games added yet.</p>`}
+    ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">${tEnd(t)>=new Date().toISOString().slice(0,10)?"Tournament entered. Fixtures to follow.":"No games added yet."}</p>`}
     <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div>
   </div>`;
 }
@@ -1343,7 +1339,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const ours=Object.entries(pl).filter(([,g])=>+g>0).map(([n,g])=>{const t=ev.filter(e=>e.k==="goal"&&e.n===n).map(e=>e.m).filter(Boolean);return `${esc(n)}${t.length?" "+t.map(esc).join(", "):+g>1?` ×${g}`:""}`});
   const theirs=ev.filter(e=>e.k==="them").map(e=>esc(e.m)).filter(Boolean);
   const board=`<div class="board"><div class="tm"><img src="${CREST}" alt="">${esc(TEAM.name)}</div><div class="sc">${(r||isLive(m))&&!m.hidden?`${m.us??0} – ${m.them??0}`:"v"}<small>${lab}</small></div><div class="tm">${badge(m.opp)}${esc(m.opp||"Opponent to add")}</div>${ours.length||theirs.length?`<div class="scorers"><div>${ours.map(x=>`<span>⚽ ${x}</span>`).join("")}</div><div>${theirs.length?`<span>⚽ ${theirs.join(", ")}</span>`:""}</div></div>`:""}</div>`;
-  const facts=[["📅",longDate(m.date)],["⏰",m.ko?`${m.ko} kick-off`:""],["📍",[m.venue,m.ha==="H"?"Home":m.ha==="A"?"Away":""].filter(Boolean).join(" · ")],["🏆",tn?`${tn.name}${m.stage?` · ${m.stage}`:""}${(d=>d.length>1&&d.includes(m.date)?` · Day ${d.indexOf(m.date)+1} of ${d.length}`:"")(tDays(tn))}`:compName(m.comp||"")]].filter(([,v])=>v);
+  const facts=[["📅",longDate(m.date)],["⏰",m.ko?`${m.ko} kick-off`:!result(m)&&!m.hidden&&!m.postponed?"Kick-off time TBC":""],["📍",[m.venue,m.ha==="H"?"Home":m.ha==="A"?"Away":""].filter(Boolean).join(" · ")],["🏆",tn?`${tn.name}${m.stage?` · ${m.stage}`:""}${(d=>d.length>1&&d.includes(m.date)?` · Day ${d.indexOf(m.date)+1} of ${d.length}`:"")(tDays(tn))}`:compName(m.comp||"")]].filter(([,v])=>v);
   const info=`<section class="card mdinfo">${facts.map(([i,v])=>`<div><span>${i}</span>${esc(v)}</div>`).join("")}${m.postponed?`<div><span>⚠️</span><b>Postponed.</b> New date to be confirmed.</div>`:""}${tn&&tn.trophy?`<div><span>${trophyIcon(tn.trophy)}</span>${esc(tn.trophy)}</div>`:""}</section>`;
   // the team
   const sheet=teamSheet(m),ko=ev.find(e=>e.k==="ko"),starters=ko&&ko.line||null;let names=Object.keys(pl);
@@ -1808,10 +1804,14 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     catch(er){suBusy=false;b.disabled=false;toast("Couldn't save the sign-off. Check your connection and try again.")}return}
 });
 // pick up a coach's changes made on another phone: if the database copy is newer than this phone's, reload once
-async function suRefresh(){if(!sb)return;const {data,error}=await sb.from("team_settings").select("settings,ready,updated").eq("id",1).maybeSingle();if(error)return;
-  const row=data||{none:true},old=SETUP_ROW||{};if(row.updated===old.updated&&row.ready===old.ready&&!!row.none===!!old.none)return;
+// On a phone's first visit (nothing kept yet) the results wait for this answer instead, so visitors never glimpse a site that's still being set up.
+async function suRefresh(){if(!sb)return;const first=window.SETUP_WAIT,done=()=>{if(first){window.SETUP_WAIT=false;render()}};
+  const {data,error}=await sb.from("team_settings").select("settings,ready,updated").eq("id",1).maybeSingle();
+  if(error){if(first&&(error.code==="PGRST205"||/does not exist|schema cache/i.test(error.message||"")))suRemember({none:true});done();return}// no table: an older database
+  const row=data||{none:true},old=SETUP_ROW||{};if(first&&row.none){suRemember(row);done();return}
+  if(!first&&row.updated===old.updated&&row.ready===old.ready&&!!row.none===!!old.none)return;
   suRemember(row);let seen="";try{seen=sessionStorage.getItem(SETUP_KEY)||""}catch(e){}
-  if(seen!==String(row.updated)){try{sessionStorage.setItem(SETUP_KEY,String(row.updated))}catch(e){}location.reload()}}
+  if(seen!==String(row.updated)){try{sessionStorage.setItem(SETUP_KEY,String(row.updated))}catch(e){}location.reload();return}done()}
 
 // ---------- the match form ----------
 let F=null;
@@ -2022,6 +2022,7 @@ document.addEventListener("submit",async e=>{
   if(!window.supabase||!CFG.supabaseUrl||!CFG.supabaseAnonKey){document.getElementById("main").innerHTML=`<div class="card empty">This site isn't connected to its database yet. Add the Supabase details to config.js (see the README).</div>`;return}
   sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);
   db=makeDb(sb);canWrite=false;
+  if(window.SETUP_WAIT)suRefresh().catch(()=>{window.SETUP_WAIT=false;render()});
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
@@ -2032,7 +2033,7 @@ document.addEventListener("submit",async e=>{
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
   await Promise.all([loadGallery(),loadTraining()]);
-  suRefresh().catch(()=>{});
+  if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
