@@ -9,15 +9,29 @@ import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
-const US = Deno.env.get("TEAM_NAME") ?? "Newton Aycliffe";
+let US = Deno.env.get("TEAM_NAME") ?? "Newton Aycliffe";
 // PUBLIC_SCORES=false: no goal alerts and no scores in alerts (FA rules for U7-U11). Matches the site's TEAM.publicScores.
-const SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";
-const AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
+let SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";
+let AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
 // The player of the match sponsor (TEAM.potm.sponsor and .icon in docs/team.js). POTM_SPONSOR=none for a plain "Player of the match".
 const POTM_SPONSOR = (Deno.env.get("POTM_SPONSOR") ?? "Coffey Coffee").trim();
-const POTM = POTM_SPONSOR && POTM_SPONSOR !== "none" ? `${POTM_SPONSOR} Player of the Match` : "Player of the Match";
-const POTM_ICON = Deno.env.get("POTM_ICON") ?? (POTM_SPONSOR === "Coffey Coffee" ? "☕" : "⭐");
+let POTM = POTM_SPONSOR && POTM_SPONSOR !== "none" ? `${POTM_SPONSOR} Player of the Match` : "Player of the Match";
+let POTM_ICON = Deno.env.get("POTM_ICON") ?? (POTM_SPONSOR === "Coffey Coffee" ? "☕" : "⭐");
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+// A coach's answers on the site's Team setup page (supabase/7_team_setup.sql) win over the secrets above.
+// Scores stay hidden if either the secret or the setup page says so.
+const ENV_SCORES = SCORES;
+async function loadTeam() {
+  const { data, error } = await db.from("team_settings").select("settings").eq("id", 1).maybeSingle();
+  const t = error ? null : data?.settings;
+  if (!t) return;
+  if (t.name) US = t.name;
+  if (t.ageGroup) AGE = t.ageGroup;
+  SCORES = ENV_SCORES && t.publicScores !== false;
+  const sp = (t.potm?.sponsor ?? "").trim();
+  POTM = sp ? `${sp} Player of the Match` : "Player of the Match";
+  POTM_ICON = t.potm?.icon || "⭐";
+}
 // the key pair lives in public.push_keys (service role only)
 let keysReady: Promise<void> | null = null;
 function loadKeys() {
@@ -149,6 +163,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     await loadKeys();
+    await loadTeam();
     const body = await req.json().catch(() => ({}));
     const out: Record<string, number> = {};
     if (typeof body.test === "string") {

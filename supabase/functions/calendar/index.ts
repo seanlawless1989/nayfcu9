@@ -8,13 +8,27 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
 // Team details come from the function's secrets so the same code serves any team; defaults are Newton Aycliffe's.
-const TEAM = Deno.env.get("APP_NAME") ?? "NAYFC U9s";
-const FULL = Deno.env.get("TEAM_FULL_NAME") ?? "Newton Aycliffe Youth FC";
-const AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
-const SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";   // false: no scores in event titles
+let TEAM = Deno.env.get("APP_NAME") ?? "NAYFC U9s";
+let FULL = Deno.env.get("TEAM_FULL_NAME") ?? "Newton Aycliffe Youth FC";
+let AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
+let SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";   // false: no scores in event titles
 const HOST = new URL(SITE).hostname;
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { auth: { persistSession: false } });
-const compName = (c: string) => (c === "League" ? "Russell Foster League" : c);
+let LEAGUE = "Russell Foster League";
+const compName = (c: string) => (c === "League" ? LEAGUE : c);
+// A coach's answers on the site's Team setup page (supabase/7_team_setup.sql) win over the secrets above.
+// Scores stay hidden if either the secret or the setup page says so.
+const ENV_SCORES = SCORES;
+async function loadTeam() {
+  const { data, error } = await db.from("team_settings").select("settings").eq("id", 1).maybeSingle();
+  const t = error ? null : data?.settings;
+  if (!t) return;
+  if (t.appName) TEAM = t.appName;
+  if (t.fullName) FULL = t.fullName;
+  if (t.ageGroup) AGE = t.ageGroup;
+  if (t.league) LEAGUE = t.league;
+  SCORES = ENV_SCORES && t.publicScores !== false;
+}
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 type Match = { id: string; date: string; opp: string; ha: string; venue: string; comp: string; ko: string; us: number | null; them: number | null; postponed: boolean; stage: string; tournament_id: string | null; updated: string };
@@ -99,6 +113,7 @@ function trainingEvent(t: Training, from: string) {
 Deno.serve(async (req) => {
   const url = new URL(req.url);
   const withTraining = url.searchParams.get("training") !== "0";
+  await loadTeam();
   const today = new Date().toISOString().slice(0, 10);
   const since = addDays(today, -120); // recent results stay in the calendar for a few months
   const [mq, tq, trq] = await Promise.all([
