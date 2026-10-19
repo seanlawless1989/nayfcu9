@@ -4,6 +4,7 @@
 //   POST {test: "<endpoint>"} from a parent's phone after turning alerts on: a "you're all set" alert
 //   POST {squad: "<id>"}  from a coach's phone after saving Pick squad: "squad announced" (again only if it changed)
 //   POST {potm: "<id>"}   from a coach's phone after saving the player of the match
+//   POST {postponed: "<id>"} from a coach's phone after marking an upcoming game postponed (or back on)
 // Only names already shown on the site go in an alert. See supabase/3_notifications.sql.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -158,6 +159,14 @@ async function potmAlert(m: Match) {
   return await send("live", { title: `${POTM_ICON} ${POTM}: ${m.potm}`, body: `Well done ${m.potm}! ${US} v ${m.opp || "the opposition"}${score}.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `potm-${m.id}` });
 }
 
+// ---- postponed (an upcoming game called off) ----
+async function postponedAlert(m: Match) {
+  if (m.us != null || m.stage === "placeholder" || m.date < londonDate(Date.now())) return -1;
+  const { data: claimed } = await db.rpc("push_claim_postponed", { p_match: m.id, p_postponed: !!m.postponed });
+  if (!claimed) return -1; // back on, or already sent
+  return await send("reminders", { title: "⚠️ Game postponed", body: `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"} on ${dayName(m.date)} is off. New date to follow.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `pp-${m.id}` });
+}
+
 const COLS = "id,date,opp,ko,venue,ha,us,them,postponed,stage,comp,squad,potm,live";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -168,6 +177,9 @@ Deno.serve(async (req) => {
     const out: Record<string, number> = {};
     if (typeof body.test === "string") {
       out.test = await send(null, { title: "🔔 Match alerts are on", body: `You'll get kick-off reminders and ${SCORES ? "live scores" : "live updates"} for the ${AGE}.`, url: SITE, tag: "welcome" }, body.test);
+    } else if (typeof body.postponed === "string") {
+      const { data } = await db.from("matches").select(COLS).eq("id", body.postponed).maybeSingle();
+      out.postponed = data ? await postponedAlert(data as Match) : -1;
     } else if (typeof body.squad === "string" || typeof body.potm === "string") {
       const id = typeof body.squad === "string" ? body.squad : body.potm;
       const { data } = await db.from("matches").select(COLS).eq("id", id).maybeSingle();
