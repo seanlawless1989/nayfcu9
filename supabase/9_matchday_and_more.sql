@@ -33,3 +33,19 @@ begin
 end $$;
 revoke all on function public.push_subscribe2(text, text, text, boolean, boolean, boolean, boolean) from public;
 grant execute on function public.push_subscribe2(text, text, text, boolean, boolean, boolean, boolean) to anon, authenticated;
+
+-- ---------- Training attendance (coaches only) ----------
+-- One row per player who came to a session. Shown to coaches next to playing time, never to parents.
+create table if not exists public.training_attendance(
+  day     date not null,
+  player  text not null,
+  updated timestamptz not null default now(),
+  primary key(day, player)
+);
+alter table public.training_attendance enable row level security;
+drop policy if exists "coaches read attendance" on public.training_attendance;
+create policy "coaches read attendance" on public.training_attendance for select to authenticated using (public.is_coach());
+drop policy if exists "coaches write attendance" on public.training_attendance;
+create policy "coaches write attendance" on public.training_attendance for all to authenticated using (public.is_coach()) with check (public.is_coach());
+grant select, insert, update, delete on public.training_attendance to authenticated;
+revoke all on public.training_attendance from anon;

@@ -1066,6 +1066,25 @@ async function loadTraining(){if(!sb)return;try{const {data}=await sb.from("trai
 function clock(t){const m=/^(\d{1,2}):(\d{2})/.exec(t||"");if(!m)return t||"";const h=+m[1];return `${h%12||12}${m[2]!=="00"?":"+m[2]:""}${h<12?"am":"pm"}`}
 function trUpcoming(n){if(!TR)return [];const di=WEEKDAYS.indexOf(TR.day);if(di<0)return [];const out=[],off=TR.off||[],now=new Date(),hm=now.toTimeString().slice(0,5),d=new Date(todayLocal()+"T12:00:00");
   for(let i=0;i<120&&out.length<n;i++,d.setDate(d.getDate()+1)){const iso=d.toLocaleDateString("en-CA");if(TR.until&&iso>TR.until)break;if(d.getDay()!==di||(i===0&&hm>=TR.finish))continue;out.push({iso,off:off.includes(iso)})}return out}
+// Training attendance (public.training_attendance, coaches only): {"2026-10-14": ["Ava","Mia"]}
+let ATT=null,attDay=null;
+async function loadAttendance(){ATT=null;if(!sb||!canWrite)return;try{const {data,error}=await sb.from("training_attendance").select("day,player");if(error)return;ATT={};(data||[]).forEach(r=>(ATT[r.day]=ATT[r.day]||[]).push(r.player))}catch(e){}}
+// recent sessions to tick off: the weekly day going back eight weeks, skipping weeks off, plus any day already recorded
+function trPast(){const out=new Set(Object.keys(ATT||{}));if(TR){const di=WEEKDAYS.indexOf(TR.day),d=new Date(todayLocal()+"T12:00:00");
+  for(let i=0;i<63;i++,d.setDate(d.getDate()-1)){const iso=d.toLocaleDateString("en-CA");if(d.getDay()===di&&!(TR.off||[]).includes(iso))out.add(iso)}}
+  return [...out].sort().reverse().slice(0,10)}
+function attCard(){if(!canWrite||!ATT)return "";const days=trPast();if(!attDay||!days.includes(attDay))attDay=days[0]||todayLocal();
+  const here=new Set(ATT[attDay]||[]),roster=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99));
+  return `<section class="card stack edit-only"><h3>Who came to training</h3><p class="hint" style="margin:0">Only coaches see this. It shows next to playing time on the Review page.</p>
+    <label class="f">Session<select id="attDay">${days.map(d=>`<option value="${d}"${d===attDay?" selected":""}>${esc(shortDay(d))}${ATT[d]?` · ${ATT[d].length} came`:""}</option>`).join("")}</select></label>
+    <div class="av">${roster.map(p=>`<label class="row" style="cursor:pointer"><span><input type="checkbox" data-att="${esc(p.name)}"${here.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">${esc(p.name)}</span></label>`).join("")}</div>
+    <div class="btns"><button class="btn gold" id="attSave">Save attendance</button><button class="mini" id="attAll">Tick everyone</button></div></section>`}
+async function attSave(){const names=[...document.querySelectorAll("[data-att]")].filter(x=>x.checked).map(x=>x.dataset.att),day=attDay;
+  try{let r=await sb.from("training_attendance").delete().eq("day",day);if(r.error)throw r.error;
+    if(names.length){r=await sb.from("training_attendance").insert(names.map(player=>({day,player})));if(r.error)throw r.error}
+    ATT[day]=names;if(!names.length)delete ATT[day];toast(`Saved: ${names.length} at training on ${shortDay(day)}.`);render()}catch(e){toast("Couldn't save attendance. Try again.")}}
+// sessions recorded and attended per player, for one season
+function attStats(seasonName){const out={},days=Object.keys(ATT||{}).filter(d=>seasonOf(d)===seasonName);days.forEach(d=>ATT[d].forEach(n=>out[n]=(out[n]||0)+1));return {sessions:days.length,out}}
 function trainingView(){
   if(trEdit&&canWrite)return trFormView();
   if(!TR)return `<div class="card empty">Training details are on their way.</div>`;
@@ -1077,7 +1096,7 @@ function trainingView(){
     <div class="trbig"><b>Every ${esc(TR.day)}</b><span>${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span></div>
     <div class="trfacts">${facts.map(([i,v])=>`<div><span>${i}</span><span>${v}</span></div>`).join("")}</div>
     ${TR.notes?`<p style="margin:0">${esc(TR.notes)}</p>`:""}
-    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section></div>`}
+    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section>${attCard()}</div>`}
 function trFormView(){const F2=trEdit;const off=(F2.off||[]).slice().sort();
   return `<section class="card stack"><h2>Edit training</h2>
     <div class="grid2"><label class="f">Day<select id="tr-day">${WEEKDAYS.map(d=>`<option${d===F2.day?" selected":""}>${d}</option>`).join("")}</select></label>
@@ -1130,6 +1149,14 @@ function msRow(x){return `<div class="ms"><span>🎉 <b>${esc(x.n)}</b>: ${esc(x
 // ---------- playing time ----------
 function halvesOf(m){return m.halves||{}}
 function ptStats(list){const t=list.filter(m=>Object.keys(halvesOf(m)).length);const out={};t.forEach(m=>{Object.keys(played(m)).forEach(n=>{const o=out[n]=out[n]||{q:0,poss:0};o.poss+=2});Object.entries(halvesOf(m)).forEach(([n,q])=>{const o=out[n]=out[n]||{q:0,poss:0};o.q+=+q||0})});return {games:t.length,out}}
+// Playing time compares children, so only coaches see it unless the club turns TEAM.publicPlayingTime on.
+// Training attendance (coaches only) sits alongside, so fairness covers training as well as matches.
+function ptCard(pt){if(!canWrite&&TEAM.publicPlayingTime!==true)return "";const at=canWrite&&ATT?attStats(season):null,useAt=at&&at.sessions>0;
+  const names=[...new Set([...Object.keys(pt.out),...(useAt?Object.keys(at.out):[])])].filter(n=>pt.out[n]||players.some(p=>p.name===n&&p.current));
+  const pc=n=>{const o=pt.out[n];return o&&o.poss?o.q/o.poss:0};
+  if(!pt.games&&!useAt)return `<section class="card${canWrite?" edit-only":""}"><h3>Playing time</h3><p class="hint">Not recorded yet. Use <b>▶ Live match</b> on a fixture, or the halves counter on the match form, and it'll show here.${canWrite?" Tick off who came to training on the Training page to see that here too.":""}</p></section>`;
+  return `<section class="card${canWrite?" edit-only":""}"><h3>Playing time${useAt?" and training":""}</h3><p class="hint" style="margin-bottom:8px">${pt.games?`Halves played out of halves available, from the ${pt.games} game${pt.games>1?"s":""} where it was recorded. `:""}${useAt?`Training: sessions attended out of the ${at.sessions} recorded. `:""}Lowest playing time first, so you can see who's due more.${canWrite&&TEAM.publicPlayingTime!==true?" Only coaches see this.":""}</p>
+    <table class="lb"><thead><tr><th>Player</th>${pt.games?`<th colspan="2">Halves</th><th>%</th>`:""}${useAt?`<th>Training</th>`:""}</tr></thead><tbody>${names.sort((a,b)=>pc(a)-pc(b)||a.localeCompare(b)).map(n=>{const o=pt.out[n]||{q:0,poss:0};return `<tr><td>${esc(n)}</td>${pt.games?`<td style="width:40%"><div class="ptbar"><i style="width:${o.poss?o.q/o.poss*100:0}%"></i></div></td><td>${o.q}/${o.poss}</td><td>${o.poss?Math.round(o.q/o.poss*100):0}%</td>`:""}${useAt?`<td>${at.out[n]||0}/${at.sessions}</td>`:""}</tr>`}).join("")}</tbody></table></section>`}
 function keeperStats(list){const out={};list.filter(result).forEach(m=>{const k=Object.entries(keepersOf(m));k.forEach(([n,c])=>{const o=out[n]=out[n]||{g:0,cs:0,saves:0,shared:0};o.g++;if(+c)o.cs++;if(k.length>1)o.shared++;else o.saves+=+m.saves||0})});return out}
 
 // ---------- season review + club records ----------
@@ -1145,8 +1172,7 @@ function reviewNoScores(){const ps=playerStats(seasonMatches()),career=playerSta
       <div><span>Most ${esc(POTM)}</span><b>${tp?`${esc(tp[0])} (${tp[1].potm})`:"–"}</b></div>
       <div><span>Most appearances, all time</span><b>${ca?`${esc(ca[0])} (${ca[1].apps})`:"–"}</b></div>
     </div><p class="hint" style="margin-top:10px">Scores and scorers aren't shown publicly for this age group.</p></section>
-  <section class="card"><h3>Playing time</h3>${pt.games?`<p class="hint" style="margin-bottom:8px">Halves played out of halves available, from the ${pt.games} game${pt.games===1?"":"s"} with a full record.</p>
-    <table class="lb"><tbody>${Object.entries(pt.out).sort((a,b)=>a[1].q/a[1].poss-b[1].q/b[1].poss).map(([n,o])=>`<tr><td>${esc(n)}</td><td style="text-align:right">${o.q} / ${o.poss}</td></tr>`).join("")}</tbody></table>`:`<p class="hint">Not recorded yet.</p>`}</section>
+  ${ptCard(pt)}
   <section class="card"><h3>Milestones</h3>${(ms=>ms.length?ms.map(msRow).join(""):`<p class="hint">None yet this season.</p>`)(milestones().filter(x=>seasonOf(x.date)===season))}</section>
   ${viewsCard()}</div>`;
 }
@@ -1181,8 +1207,7 @@ function reviewView(){if(noScores())return reviewNoScores();
     </div></section>
   <section class="card"><h3>Form</h3><div class="form" style="flex-wrap:wrap">${list.map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")||`<span class="hint">No results yet.</span>`}</div></section>
   <section class="card"><h3>Goals scored by month</h3>${mk.length?`<div class="bars">${mk.map(k=>`<div><b>${months[k]}</b><i style="height:${months[k]/mx*100}%"></i>${MONTHS[+k.slice(5)-1]}</div>`).join("")}</div>`:`<p class="hint">No goals yet.</p>`}</section>
-  <section class="card"><h3>Playing time</h3>${pt.games?`<p class="hint" style="margin-bottom:8px">Halves played out of halves available, from the ${pt.games} game${pt.games>1?"s":""} where it was recorded (Live match mode records it for you). Lowest first, so you can see who's due more time.</p>
-    <table class="lb"><tbody>${Object.entries(pt.out).sort((a,b)=>a[1].q/a[1].poss-b[1].q/b[1].poss).map(([n,o])=>`<tr><td>${esc(n)}</td><td style="width:50%"><div class="ptbar"><i style="width:${o.poss?o.q/o.poss*100:0}%"></i></div></td><td>${o.q}/${o.poss}</td><td>${o.poss?Math.round(o.q/o.poss*100):0}%</td></tr>`).join("")}</tbody></table>`:`<p class="hint">Not recorded yet. Use <b>▶ Live match</b> on a fixture, or the halves counter on the match form, and it'll show here.</p>`}</section>
+  ${ptCard(pt)}
   <section class="card"><h3>Goalkeepers</h3>${Object.keys(ks).length?`<table class="lb"><thead><tr><th>Keeper</th><th>Games in goal</th><th>Shared games</th><th>Clean sheets</th><th>Saves</th></tr></thead><tbody>${Object.entries(ks).sort((a,b)=>b[1].cs-a[1].cs||b[1].g-a[1].g).map(([n,o])=>`<tr><td>🧤 ${esc(n)}</td><td>${o.g}</td><td>${o.shared}</td><td><b>${o.cs}</b></td><td>${o.saves}</td></tr>`).join("")}</tbody></table><p class="hint" style="margin-top:6px">Saves only count games with one keeper.</p>`:`<p class="hint">Tap 🧤 next to a player on the match form (or in Live match) to start keeper stats.</p>`}</section>
   <section class="card"><h3>Milestones</h3>${(ms=>ms.length?ms.map(msRow).join(""):`<p class="hint">None yet this season.</p>`)(milestones().filter(x=>seasonOf(x.date)===season))}</section>
   <section class="card"><h2>All-time club records</h2><div class="kv" style="margin-top:10px">
@@ -1541,6 +1566,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       await livePush({played:pl,halves:liveHalves(),us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
       const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
   }});
+document.addEventListener("change",e=>{if(e.target.id==="attDay"){attDay=e.target.value;render()}});
 document.addEventListener("change",e=>{const al={"al-rem":"reminders","al-goals":"goals","al-res":"results","al-live":"live"}[e.target.id];if(!al)return;AL.prefs[al]=e.target.checked;if(view==="alerts")render();
   try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(x){}
   if(AL.sub)alSave(AL.sub).then(()=>toast("Saved."),()=>toast("Couldn't save that. Try again."))});
@@ -1940,6 +1966,8 @@ document.addEventListener("click",async e=>{
   if(t.id==="calCopy"){try{await navigator.clipboard.writeText(t.dataset.url);toast("Calendar link copied.")}catch(err){prompt("Copy this link",t.dataset.url)}return}
   if(t.id==="trEditBtn"&&canWrite){trEdit=JSON.parse(JSON.stringify(TR||{day:"Wednesday",start:"18:00",finish:"19:00",off:[]}));render();return}
   if(t.id==="trCancel"){trEdit=null;render();return}
+  if(t.id==="attSave"){attSave();return}
+  if(t.id==="attAll"){document.querySelectorAll("[data-att]").forEach(x=>x.checked=true);return}
   if(t.id==="trOffAdd"&&trEdit){trRead();const d=$("#tr-offnew").value;if(!d){toast("Pick a date first.");return}trEdit.off=[...new Set([...(trEdit.off||[]),d])];render();return}
   if(t.dataset.troff&&trEdit){trRead();trEdit.off=(trEdit.off||[]).filter(x=>x!==t.dataset.troff);render();return}
   if(t.id==="trSave"&&trEdit&&canWrite){trRead();const row=Object.assign({},trEdit,{id:1,updated:new Date().toISOString()});if(!/^\d{1,2}:\d{2}/.test(row.start)||!/^\d{1,2}:\d{2}/.test(row.finish)){toast("Add a start and finish time.");return}t.disabled=true;
@@ -2040,7 +2068,7 @@ async function checkCoach(){
   if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
   if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
