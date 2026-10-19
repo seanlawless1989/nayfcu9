@@ -123,7 +123,7 @@ def build_site(team, src, site, keep_badges):
 
 def build_sql(team, out):
     parts = []
-    for name in ("1_schema.sql", "3_notifications.sql", "4_gallery_training.sql", "5_help_requests.sql"):
+    for name in ("1_schema.sql", "3_notifications.sql", "4_gallery_training.sql", "5_help_requests.sql", "7_team_setup.sql"):
         s = (SQL / name).read_text()
         s = s.replace("-- Newton Aycliffe U9s: ", f"-- {team['name']} {team.get('ageShort', '')}: ")
         if name == "3_notifications.sql":
@@ -133,6 +133,9 @@ def build_sql(team, out):
         if name == "4_gallery_training.sql":
             s = re.sub(r"insert into public\.training \(id, day.*?on conflict \(id\) do nothing;\n",
                        "insert into public.training (id) values (1) on conflict (id) do nothing;   -- coaches fill this in on the Training page\n", s, flags=re.S)
+        if name == "7_team_setup.sql":
+            # a new team starts hidden from visitors until a coach finishes Team setup, welfare sign-off included
+            s += "\ninsert into public.team_settings (id, ready) values (1, false) on conflict (id) do nothing;\n"
         parts.append(f"-- ===================== {name} =====================\n" + s)
     sql = "\n".join(parts)
     for bad in ("elqwksyqwezhkekdqivn", "eyJhbGci", "Greenfield"):
@@ -176,9 +179,11 @@ Turn on custom SMTP (**Authentication > Emails**) with a sending service; Supaba
 3. **Settings > Pages**: deploy from `main`, `/docs`.{cname}
 4. Open `{site}/?coach`, tap **Coach sign in**, and sign in with the coach email from step 1.3.
 
-## 5. Before the team uses it
-- Add the squad (first names only) on the Squad page, then fixtures.
-- Add more coaches with one insert each: `insert into public.coaches (email) values ('name@example.com');`
+## 5. Hand over to the coach
+Send the coach the link `{site}/?coach`. Until they finish **Team setup** (a tile on the home page once they've signed in),
+only coaches can see the site. Team setup covers the club name, age group, league, format, crest, colours, kits, sponsors,
+squad (first names only), fixtures, other coaches and the welfare officer's sign-off. Going live there is what opens the site
+to parents. Their answers are kept in the `team_settings` table and win over `team.js`; the sign-off is in `team_signoff`.
 - The club's welfare officer should agree what's public. Player photos stay coach-only until the club records
   each parent's consent; the gallery bucket is public, so only upload photos the club has consent for.
 - Sign the data processing agreement with the club before any children's details go in.
