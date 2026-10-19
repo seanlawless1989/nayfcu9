@@ -415,3 +415,4 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 .bup{font:700 12px var(--body);color:var(--club);cursor:pointer;white-space:nowrap}.bup input{display:none}
 .hero .btns{position:relative;justify-content:center;margin-top:12px}
 .hero .btn.ghost{color:#fff;border-color:rgba(255,255,255,.45)}
+.clublink{display:inline-block;margin-top:4px;color:inherit;opacity:.85;font:700 12px var(--body);letter-spacing:.04em}

@@ -1,0 +1,15 @@
+{
+  "name": "Sample Town Junior Football Club",
+  "short": "Sample Town",
+  "crest": "crest.png",
+  "colours": { "club": "#0F7A3E", "clubDeep": "#0A5A2D", "ink": "#FFFFFF", "second": "#F4C20D" },
+  "intro": "Football for boys and girls from under 7s to under 16s. Pick your child's team for fixtures, results and match alerts.",
+  "contact": "Ask your team's coach, or the club secretary through the club's usual channels.",
+  "siteUrl": "https://sample-town.example.org",
+  "teams": [
+    { "name": "Under 9s Girls", "url": "https://sample-town.example.org/u9s-girls/", "note": "Saturday mornings" },
+    { "name": "Under 11s", "url": "https://sample-town-u11s.example.org/" },
+    { "name": "Under 12s Girls", "url": "https://sample-town.example.org/u12s-girls/", "note": "7v7, Sunday league" },
+    { "name": "Under 14s", "url": "", "note": "Site coming soon" }
+  ]
+}

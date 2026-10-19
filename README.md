@@ -76,3 +76,9 @@ Coaches can send fixes, change requests and questions from **Help and changes** 
 3. Everything is written to `dist/<team-name>/`: `site/` is the website, `supabase/setup.sql` and the functions set up a fresh database, and `SETUP.md` lists the steps filled in for that team.
 
 The copy leaves out Newton Aycliffe's data, logos, opponent badges, domain and the U9s Manager game. Add `--keep-badges` to include the North East opponent badges.
+
+## Clubs with several teams
+
+`python3 tools/package_club.py clubs/<club>` builds a club landing page (`dist/club-<slug>/`) from `club.json`
+that links to each team's site (see `clubs/demo/club.json`). Add `club: {name: "...", url: "https://..."}` to each
+team's `team.js` and its masthead shows an "All <club> teams" link back to that page.
