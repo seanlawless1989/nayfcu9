@@ -92,6 +92,7 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .tgame{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:var(--field)}
 .tgame[data-edit]{cursor:pointer}
 .md .report p{margin:0 0 10px;line-height:1.55}.md .report textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;resize:vertical}
+.md .pvfacts{margin:4px 0 0;padding:10px 12px;border-radius:10px;background:var(--field);border:1px solid var(--line);display:flex;flex-direction:column;gap:6px;font-size:14px}.md .pvfacts>div>span:first-child{display:inline-block;width:24px}
 .md .mdinfo{display:flex;flex-direction:column;gap:6px;font-weight:600}.md .mdinfo span{display:inline-block;width:26px}
 .md .mdteam td:first-child{white-space:nowrap}.md .mdteam td:not(:first-child),.md .mdteam th:not(:first-child){text-align:center}
 .md .mdnav{display:grid;grid-template-columns:1fr 1fr;gap:8px}.md .mdnav .btn{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.md .mdnav .btn:last-child:not(:first-child){justify-self:end}
@@ -415,6 +416,7 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 .hero .pill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px 12px;font:700 13px var(--body)}
 .hero .pill.cd{background:var(--gold);color:#111;border-color:var(--gold)}
 .hero .h2hrow{position:relative;text-align:center;margin-top:10px;font-size:13px;opacity:.9}
+.hero .hpv{position:relative;margin:12px auto 0;max-width:560px;text-align:center;font-size:14px;line-height:1.45;opacity:.95}.hero .hpv b{color:var(--gold)}
 .ctag{white-space:nowrap}
 @media (max-width:700px){nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}nav.tabs::-webkit-scrollbar{display:none}nav.tabs button{flex:none}
   .mast .in{padding-block:14px 18px}.crest{width:70px}}
@@ -716,7 +718,8 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
     <div class="vs">${home?us:them}${mid}${home?them:us}</div>
     <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${m.venue?`<span class="pill">📍 ${esc(m.venue)}</span>`:""}${m.ha==="A"||m.ha==="H"?`<span class="pill">${m.ha==="A"?"Away":"Home"}</span>`:m.venue?"":`<span class="pill">Venue TBC</span>`}</div>
     ${!live&&h.length?`<div class="h2hrow">Last time: ${h.slice(0,3).map(scChip).join(" ")}</div>`:""}
-    <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
+    ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
+    <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players","👧","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records, milestones and playing time"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["help","🛟","Help and changes","Ask for a fix or a change"]];
@@ -787,7 +790,7 @@ function matchRow(m){
     <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
       <div class="meta">${cc?`<span class="ctag">${esc(compName(m.comp))}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":""].filter(Boolean).map(esc).join(" · ")}</div>
-      ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}${m.report&&m.report.trim()?`<div class="meta">📝 Match report</div>`:""}
+      ${sc?`<div class="meta">⚽ ${esc(sc)}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}${m.report&&m.report.trim()?`<div class="meta">📝 Match report</div>`:!r&&hasPreview(m)?`<div class="meta">📰 Match preview</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&!m.hidden&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}</div>
     <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:m.hidden&&!m.postponed?`<span class="chip N" title="Played">✓</span>`:m.postponed?`<span class="chip P" title="Postponed">P</span>`:`<span class="chip N">${m.comp==="Tournament"?"T":"–"}</span>`}</div>
@@ -1146,8 +1149,8 @@ function reviewView(){if(noScores())return reviewNoScores();
 }
 function dl(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}
 function backupJson(){return JSON.stringify({exported:new Date().toISOString(),players,matches,tournaments,honours},null,1)}
-function backupCsv(){const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const rows=[["date","season","opponent","competition","tournament","stage","home/away","venue","kick-off","us","them","result","scorers","assists","player of the match","goalkeepers","saves","notes","match report"]];
-  sortMatches(matches).forEach(m=>{const tn=tournaments.find(t=>t.id===m.tournament_id);rows.push([m.date,seasonOf(m.date),m.opp,m.comp,tn?tn.name:"",m.stage||"",m.ha,m.venue,m.ko,m.us,m.them,result(m)||"",Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>`${n} ${g}`).join("; "),Object.entries(assistsOf(m)).map(([n,a])=>`${n} ${a}`).join("; "),m.potm,Object.entries(keepersOf(m)).map(([n,c])=>n+(+c?" (clean sheet)":"")).join("; "),m.saves,m.notes,m.report||""])});
+function backupCsv(){const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const rows=[["date","season","opponent","competition","tournament","stage","home/away","venue","kick-off","us","them","result","scorers","assists","player of the match","goalkeepers","saves","notes","match report","match preview"]];
+  sortMatches(matches).forEach(m=>{const tn=tournaments.find(t=>t.id===m.tournament_id);rows.push([m.date,seasonOf(m.date),m.opp,m.comp,tn?tn.name:"",m.stage||"",m.ha,m.venue,m.ko,m.us,m.them,result(m)||"",Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>`${n} ${g}`).join("; "),Object.entries(assistsOf(m)).map(([n,a])=>`${n} ${a}`).join("; "),m.potm,Object.entries(keepersOf(m)).map(([n,c])=>n+(+c?" (clean sheet)":"")).join("; "),m.saves,m.notes,m.report||"",m.preview||""])});
   return rows.map(r=>r.map(q).join(",")).join("\r\n")}
 
 // ---------- live match (coach) + live timeline (everyone) ----------
@@ -1247,7 +1250,7 @@ function tlBody(m,home){const L=m.live||{};
     ${L.status==="live"||L.status==="ht"?`<p class="hint">This page updates by itself every few seconds. ${home?`<button class="mini" data-tl="${esc(m.id)}">Follow live</button> `:""}<button class="mini" data-view="alerts">🔔 Get goal alerts</button></p>`:""}`}
 let tlMatch=null;
 // ---------- match details (tap any game) ----------
-let mdMatch=null,mdFrom="results",mdWrite=false;
+let mdMatch=null,mdFrom="results",mdWrite=false,mdPrevWrite=false;
 // match reports: written by coaches on the match page, public once saved
 function reportHtml(t){return String(t||"").trim().split(/\n\s*\n/).map(p=>`<p>${esc(p.trim()).replace(/\n/g,"<br>")}</p>`).join("")}
 function reportCard(m){const has=!!(m.report&&m.report.trim());
@@ -1255,6 +1258,24 @@ function reportCard(m){const has=!!(m.report&&m.report.trim());
     <p class="hint">Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdReportSave">Save report</button><button class="btn ghost" id="mdReportCancel">Cancel</button></div></section>`;
   if(has)return `<section class="card report"><h3>Match report</h3>${reportHtml(m.report)}${canWrite?`<button class="mini edit-only" id="mdReportEdit">Edit report</button>`:""}</section>`;
   return canWrite&&(result(m)||isLive(m))?`<section class="card report edit-only"><h3>Match report</h3><p class="hint">No report yet.</p><button class="btn gold" id="mdReportEdit">Write match report</button></section>`:""}
+// match previews: written by coaches before the game, public once saved, with a few facts worked out from past games
+function hasPreview(m){return !!(m&&m.preview&&m.preview.trim())}
+function clip(t,n){t=String(t||"").trim().replace(/\s+/g," ");return t.length>n?t.slice(0,n).replace(/\s+\S*$/,"")+"…":t}
+function previewFacts(m){if(m.hidden||noScores())return "";const rows=[];
+  if(m.opp){const h=meetings(m.opp,m.date),t=teamStats(h);
+    rows.push(h.length?["🆚",`Against ${esc(m.opp)}: played ${t.P}, won ${t.W}, drew ${t.D}, lost ${t.L}. Last time ${scChip(h[0])}`]:["🆕",`First time we've played ${esc(m.opp)}.`])}
+  const before=sortMatches(matches.filter(x=>result(x)&&!x.practice&&x.stage!=="placeholder"&&(x.date||"")<m.date));
+  const form=before.slice(-5);if(form.length)rows.push(["📈",`Last ${form.length} games: ${form.map(scChip).join(" ")}`]);
+  const ps=playerStats(before.filter(x=>seasonOf(x.date)===seasonOf(m.date)));const top=Object.entries(ps).filter(([,o])=>o.goals>0).sort((a,b)=>b[1].goals-a[1].goals);
+  if(top.length){const g=top[0][1].goals,lead=top.filter(([,o])=>o.goals===g).map(([n])=>esc(n));rows.push(["⚽",`Top scorer this season: ${lead.join(", ")} (${g})`])}
+  return rows.length?`<div class="pvfacts">${rows.map(([i,v])=>`<div><span>${i}</span>${v}</div>`).join("")}</div>`:""}
+function previewCard(m){const has=hasPreview(m),before=isFixture(m)&&!isLive(m)&&!m.postponed;
+  if(canWrite&&mdPrevWrite)return `<section class="card report"><h3>Match preview</h3><textarea id="mdPreview" rows="8" placeholder="What's coming up? Who are we playing, what are we working on, anything parents should know. Everyone can read this once it's saved.">${esc(m.preview||"")}</textarea>
+    <p class="hint">Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdPreviewSave">Save preview</button><button class="btn ghost" id="mdPreviewCancel">Cancel</button></div></section>`;
+  if(!before&&!has)return "";
+  const facts=before?previewFacts(m):"";
+  if(!has&&!facts&&!canWrite)return "";
+  return `<section class="card report${has||facts?"":" edit-only"}"><h3>Match preview</h3>${has?reportHtml(m.preview):canWrite?`<p class="hint edit-only">No preview written yet.</p>`:""}${facts}${canWrite?`<button class="${has?"mini":"btn gold"} edit-only" id="mdPreviewEdit" style="margin-top:10px">${has?"Edit preview":"Write match preview"}</button>`:""}</section>`}
 function reportsView(){const list=sortMatches(matches.filter(m=>m.report&&m.report.trim()&&!m.practice)).reverse();
   const back=`<button class="btn ghost" data-view="results" style="align-self:flex-start">← Results</button>`;
   if(!list.length)return `<div class="stack">${back}<div class="card empty">No match reports yet.${canWrite?" Open a result and tap <b>Write match report</b>.":""}</div></div>`;
@@ -1264,7 +1285,7 @@ function reportsView(){const list=sortMatches(matches.filter(m=>m.report&&m.repo
       <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:""}</div></div>`});
   return `<div class="list">${back}<h2 style="margin:6px 0 0">Match reports</h2><p class="hint">Every report, newest first. Tap one to read it with the rest of the match.</p>${out}</div>`}
 function longDate(iso){const d=new Date((iso||"")+"T12:00:00");return isNaN(d)?"Date to add":`${["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()]} ${d.getDate()} ${LONGM[d.getMonth()]} ${d.getFullYear()}`}
-function openMatch(id){mdWrite=false;mdFrom=view==="md"?mdFrom:view;mdMatch=id;setView("md");try{history.replaceState(null,"",location.pathname+"?match="+encodeURIComponent(id))}catch(e){}}
+function openMatch(id){mdWrite=false;mdPrevWrite=false;mdFrom=view==="md"?mdFrom:view;mdMatch=id;setView("md");try{history.replaceState(null,"",location.pathname+"?match="+encodeURIComponent(id))}catch(e){}}
 // a full team sheet exists when someone is down as playing without scoring, or halves/live data were kept
 function teamSheet(m){return m.apps!==false&&(Object.values(played(m)).some(g=>!+g)||Object.keys(halvesOf(m)).length>0||!!(m.live&&m.live.squad&&m.live.squad.length))}
 function mdView(){const m=matches.find(x=>x.id===mdMatch);
@@ -1299,7 +1320,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
   const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&AV[m.id]?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
-  return `<div class="live md">${back}${board}${info}${reportCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
+  return `<div class="live md">${back}${board}${info}${fx?previewCard(m)+reportCard(m):reportCard(m)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
@@ -1831,6 +1852,10 @@ document.addEventListener("click",async e=>{
   if(t.dataset.edit||t.dataset.md){const id=t.dataset.edit||t.dataset.md;if(matches.some(x=>x.id===id))openMatch(id);return}
   if(t.id==="mdReportEdit"){mdWrite=true;render();const ta=$("#mdReport");if(ta){ta.focus();ta.scrollIntoView({block:"center"})}return}
   if(t.id==="mdReportCancel"){mdWrite=false;render();return}
+  if(t.id==="mdPreviewEdit"){mdPrevWrite=true;render();const ta=$("#mdPreview");if(ta){ta.focus();ta.scrollIntoView({block:"center"})}return}
+  if(t.id==="mdPreviewCancel"){mdPrevWrite=false;render();return}
+  if(t.id==="mdPreviewSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdPreview").value.trim();t.disabled=true;
+    try{await db.collection("matches").doc(m.id).update({preview:txt||null});m.preview=txt||null;const raw=RAW.find(x=>x.id===m.id);if(raw)raw.preview=m.preview;mdPrevWrite=false;toast(txt?"Match preview saved.":"Match preview removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the preview. Check your connection and try again.")}return}
   if(t.id==="mdReportSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdReport").value.trim();t.disabled=true;
     try{await db.collection("matches").doc(m.id).update({report:txt||null});m.report=txt||null;mdWrite=false;toast(txt?"Match report saved.":"Match report removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the report. Check your connection and try again.")}return}
   if("mdback" in t.dataset){setView(mdFrom||"results");return}
@@ -1931,7 +1956,7 @@ document.addEventListener("submit",async e=>{
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&mdWrite)||(view==="training"&&!!trEdit);
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="training"&&!!trEdit);
   db.collection("matches").onSnapshot(s=>{RAW=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");matches=pubMatches();if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
