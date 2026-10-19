@@ -582,7 +582,7 @@ let db=null, canWrite=false;
 // team settings (docs/team.js)
 const TEAM=window.TEAM||{},SK=TEAM.storageKey||"team",PL=TEAM.players||"players";
 // pronouns for a player: "Can she make it?", "Can he make it?", or they for mixed teams
-const PRN=/girl/i.test(PL)?{s:"she",p:"her",o:"her",sh:"she's"}:/boy|lad/i.test(PL)?{s:"he",p:"his",o:"him",sh:"he's"}:{s:"they",p:"their",o:"them",sh:"they've"};
+const PRN=/girl/i.test(PL)?{s:"she",p:"her",o:"her",sh:"she's"}:/boy|lad/i.test(PL)?{s:"he",p:"his",o:"him",sh:"he's"}:{s:"they",p:"their",o:"them",sh:"they've"},KID=/girl/i.test(PL)?"daughter":/boy|lad/i.test(PL)?"son":"child";
 // FA rules stop U7-U11 scores, results and scorers being published; a club can switch public scores off (TEAM.publicScores=false).
 // Visitors then get each game without its score or goals; coaches who sign in still see everything.
 const noScores=()=>TEAM.publicScores===false&&!canWrite;
@@ -866,7 +866,7 @@ function availView(){
   const d=new Date(m.date+"T12:00:00");const roster=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99));
   return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>
     <p><b>${esc(m.ha==="A"?"at ":"v ")}${esc(m.opp)}</b><br>${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}${m.ko?` · ${esc(m.ko)} kick-off`:""}${m.venue?` · ${esc(m.venue)}`:""}</p>
-    <p class="hint">Tap the answer next to your daughter's name. Only the coaches can see the answers.</p>
+    <p class="hint">Tap the answer next to your ${KID}'s name. Only the coaches can see the answers.</p>
     <div class="av">${roster.map(p=>{const v=(AV_MINE[m.id]||{})[p.name];return `<div class="row"><span>${esc(p.name)}</span><div class="seg" role="group" aria-label="${esc(p.name)}"><button data-av="yes" data-n="${esc(p.name)}" aria-pressed="${v==="yes"}">Yes</button><button data-av="maybe" data-n="${esc(p.name)}" aria-pressed="${v==="maybe"}">Maybe</button><button data-av="no" data-n="${esc(p.name)}" aria-pressed="${v==="no"}">No</button></div></div>`}).join("")}</div></section>`;
 }
 let availMatch=null;const AV_MINE={};
@@ -892,9 +892,9 @@ async function pickSave(){const m=matches.find(x=>x.id===pickMatch);const roster
 window.monthFixtures=ym=>sortMatches(matches.filter(m=>(m.date||"").startsWith(ym||"")&&!m.postponed&&m.stage!=="placeholder")).map(m=>Object.assign({},m,{res:result(m)}));
 function nextFixture(){const today=new Date().toISOString().slice(0,10);return sortMatches(matches.filter(m=>!result(m)&&!m.postponed&&!(m.hidden&&m.live&&m.live.status==="ft")&&(m.date||"")>=today))[0]}
 function msgText(m){const d=new Date(m.date+"T12:00:00");
-  return `⚽ ${TEAM.ageGroup||"Match"}: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${compName(m.comp)})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${m.venue?`📍 ${m.venue}`:"📍 Venue to be confirmed"}\n\nFollow the game live on the day:\n${siteUrl()}?live=${encodeURIComponent(m.id)}\n\nPlease let us know if your daughter can make it:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nGet kick-off and goal alerts on your phone:\n${siteUrl()}?alerts\n\nThank you! 💙💛`}
+  return `⚽ ${TEAM.ageGroup||"Match"}: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${compName(m.comp)})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${m.venue?`📍 ${m.venue}`:"📍 Venue to be confirmed"}\n\nFollow the game live on the day:\n${siteUrl()}?live=${encodeURIComponent(m.id)}\n\nPlease let us know if your ${KID} can make it:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nGet kick-off and goal alerts on your phone:\n${siteUrl()}?alerts\n\nThank you! ${TEAM.cheer||"💙💛"}`}
 function msgView(){const m=matches.find(x=>x.id===msgMatch)||nextFixture();if(!m)return `<div class="card empty">No upcoming fixtures.</div>`;
-  return `<section class="card stack"><h2>Parents' message</h2><p class="hint">Copy this into the parents' WhatsApp group. The link lets each parent say whether their daughter can make it, and you'll see the answers on the Fixtures page.</p>
+  return `<section class="card stack"><h2>Parents' message</h2><p class="hint">Copy this into the parents' WhatsApp group. The link lets each parent say whether their ${KID} can make it, and you'll see the answers on the Fixtures page.</p>
   <textarea id="msgText" rows="12" style="width:100%;font:15px var(--body)">${esc(msgText(m))}</textarea>
   <div class="btns"><button class="btn gold" id="copyMsg">Copy message</button><button class="btn ghost" data-view="fixtures">Back to fixtures</button></div></section>`}
 let msgMatch=null;
