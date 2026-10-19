@@ -171,3 +171,6 @@ grant execute on function public.log_view(boolean) to anon, authenticated;
 
 -- Added 2026-10-17: match report written by a coach on the match page (public, unlike notes).
 alter table public.matches add column if not exists report text;
+
+-- Added 2026-10-19: match preview written by a coach before the game (public).
+alter table public.matches add column if not exists preview text;
