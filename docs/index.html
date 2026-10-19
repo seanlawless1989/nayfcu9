@@ -701,6 +701,7 @@ function render(){
   else if(view==="gallery")main.innerHTML=galleryView();
   else if(view==="calendar")main.innerHTML=calendarView();
   else if(view==="training")main.innerHTML=trainingView();
+  else if(view==="votes")main.innerHTML=votesView();
   else if(view==="help")main.innerHTML=helpView();
   else if(view==="book")main.innerHTML=bookView();
   else if(view==="tnew"||view==="tedit")main.innerHTML=tFormView();
@@ -729,7 +730,9 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
 const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
-  const pics=GAL.slice(-6).reverse();
+  const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
+  if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes","Goal of the month and more"]);
+  const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:"Goal of the month and more";
   return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
@@ -1071,6 +1074,47 @@ function matchIcs(m){const e=s=>String(s||"").replace(/\\/g,"\\\\").replace(/;/g
   return ["BEGIN:VCALENDAR","VERSION:2.0",`PRODID:-//${TEAM.fullName||APP}//${TEAM.ageShort||""}//EN`,ICS_TZ,"BEGIN:VEVENT",`UID:match-${m.id}@${SITE.replace(/^https?:\/\//,"")}`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"")}`,...when,
     `SUMMARY:${e(`⚽ ${APP} v ${m.opp}${k?"":" (kick-off TBC)"}`)}`,m.venue?`LOCATION:${e(m.venue)}`:"",`DESCRIPTION:${e(`${compName(m.comp||"")}\n${k?`Kick-off ${m.ko}`:"Kick-off time to be confirmed"}\n${url}`)}`,`URL:${url}`,"END:VEVENT","END:VCALENDAR"].filter(Boolean).join("\r\n")+"\r\n"}
 function downloadIcs(m){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([matchIcs(m)],{type:"text/calendar"}));a.download=`${fileTag}-${slug(m.opp||"match")}-${m.date}.ics`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+
+// ---------- parent votes (public.polls, supabase/9_matchday_and_more.sql) ----------
+// Goal of the month and players' player of the season. One vote per phone (a random id kept on it); totals show
+// to coaches straight away and to everyone once the vote closes.
+let POLLS=[],PTOT={},pollNew=null;
+const pollOpen=p=>!p.closed&&!(p.closes&&new Date(p.closes)<new Date());
+const voterId=()=>{try{let v=localStorage.getItem(SK+".voter");if(!v){v=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,"0")).join("");localStorage.setItem(SK+".voter",v)}return v}catch(e){return null}};
+const myVotes=()=>{try{return JSON.parse(localStorage.getItem(SK+".votes")||"{}")}catch(e){return {}}};
+async function loadPolls(){if(!sb)return;try{const {data,error}=await sb.from("polls").select("*").order("created",{ascending:false});if(error)return;POLLS=data||[];
+  await Promise.all(POLLS.filter(p=>canWrite||!pollOpen(p)).map(async p=>{const {data:t}=await sb.rpc("poll_totals",{p_poll:p.id});PTOT[p.id]=Object.fromEntries((t||[]).map(r=>[r.choice,+r.votes]))}))}catch(e){}}
+// goals from live match mode in a month, as choices for goal of the month
+function monthGoals(ym){return sortMatches(matches.filter(m=>(m.date||"").startsWith(ym))).flatMap(m=>((m.live&&m.live.events)||[]).filter(e=>e.k==="goal"&&e.n).map(e=>`${e.n} v ${m.opp}${e.m?` (${e.m})`:""}`))}
+function pollCard(p){const mine=myVotes()[p.id],open=pollOpen(p),tot=PTOT[p.id],sum=tot?Object.values(tot).reduce((a,b)=>a+b,0):0,top=tot?Math.max(0,...Object.values(tot)):0;
+  return `<section class="card stack"><h3>${p.kind==="gotm"?"⚽":p.kind==="potss"?"🏅":"🗳️"} ${esc(p.title)}</h3>
+    <p class="hint" style="margin:0">${open?`${p.closes?`Voting closes ${esc(new Date(p.closes).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}))}. `:""}One vote per phone. You can change it until it closes.`:"Voting has closed."}</p>
+    <div class="av">${(p.options||[]).map((o,i)=>{const n=tot?tot[i]||0:null;return `<div class="row"><span>${esc(o)}${n!=null?` <b>${n}</b>${n&&n===top&&!open?" 🏆":""}`:""}</span>${open?`<button class="mini" data-vote="${esc(p.id)}|${i}" aria-pressed="${mine===i}">${mine===i?"✓ Your vote":"Vote"}</button>`:""}</div>${n!=null&&sum?`<div class="ptbar" style="margin:-4px 0 6px"><i style="width:${n/sum*100}%"></i></div>`:""}`}).join("")}</div>
+    ${canWrite?`<div class="btns edit-only"><span class="hint">${sum} vote${sum===1?"":"s"} so far. Only coaches see totals before it closes.</span>${open?`<button class="mini" data-pollclose="${esc(p.id)}">Close the vote</button>`:""}<button class="mini" data-polldel="${esc(p.id)}">Delete</button></div>`:""}</section>`}
+function votesView(){
+  if(pollNew&&canWrite)return pollForm();
+  const open=POLLS.filter(pollOpen),past=POLLS.filter(p=>!pollOpen(p));
+  return `<div class="stack"><section class="card"><h2>🗳️ Votes</h2><p class="hint">${noScores()?"":"Goal of the month, "}players' player of the season and more. Tap to vote.</p>${canWrite?`<div class="btns edit-only" style="margin-top:8px">${noScores()?"":`<button class="btn gold" data-pollnew="gotm">Goal of the month</button>`}<button class="btn gold" data-pollnew="potss">Players' player of the season</button><button class="btn ghost" data-pollnew="other">Another vote</button></div>`:""}</section>
+    ${open.length?open.map(pollCard).join(""):`<div class="card empty">No votes open right now.</div>`}
+    ${past.length?`<h2 class="sect">Past votes</h2>${past.map(pollCard).join("")}`:""}</div>`}
+function pollForm(){const k=pollNew.kind,lastMonth=(d=>{d.setDate(0);return d.toISOString().slice(0,7)})(new Date());
+  return `<section class="card stack"><h2>New vote</h2>
+    <label class="f">Title<input type="text" id="pf-title" value="${esc(pollNew.title)}" maxlength="80"></label>
+    ${k==="gotm"?`<label class="f">Month<input type="month" id="pf-month" value="${esc(pollNew.month||lastMonth)}"></label><button class="mini" id="pfGoals" type="button">Fill in that month's goals</button>`:""}
+    <label class="f">Choices, one per line (first names only)<textarea id="pf-opts" rows="8">${esc(pollNew.opts)}</textarea></label>
+    <label class="f">Voting closes<input type="date" id="pf-closes" value="${esc(pollNew.closes)}"></label>
+    <div class="btns"><button class="btn gold" id="pfSave">Open the vote</button><button class="btn ghost" id="pfCancel">Cancel</button></div></section>`}
+function pollStart(kind){const d=new Date();d.setDate(d.getDate()+7);const lm=(x=>{x.setDate(0);return x})(new Date());
+  pollNew={kind,closes:d.toISOString().slice(0,10),title:kind==="gotm"?`Goal of the month: ${LONGM[lm.getMonth()]}`:kind==="potss"?`Players' player of the season ${todaySeason()}`:"",
+    month:lm.toISOString().slice(0,7),opts:kind==="gotm"?monthGoals(lm.toISOString().slice(0,7)).join("\n"):kind==="potss"?players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name).join("\n"):""};setView("votes")}
+async function pollSave(){const v=id=>($("#"+id)||{}).value||"";const title=v("pf-title").trim(),opts=[...new Set(v("pf-opts").split("\n").map(x=>x.trim()).filter(Boolean))],closes=v("pf-closes");
+  if(!title||opts.length<2){toast("Add a title and at least two choices.");return}
+  const row={id:`${Date.now().toString(36)}-${slug(title).slice(0,30)}`,kind:pollNew.kind,title,options:opts,closes:closes?new Date(closes+"T21:00:00").toISOString():null};
+  const {error}=await sb.from("polls").insert(row);if(error){toast("Couldn't open the vote. Has the database update been run?");return}
+  pollNew=null;await loadPolls();toast("Vote opened. Share the Votes page link with parents.");render()}
+async function castVote(id,i){const v=voterId();if(!v){toast("This phone can't vote (private browsing?).");return}
+  const {error}=await sb.rpc("cast_vote",{p_poll:id,p_voter:v,p_choice:i});if(error){toast(/closed/i.test(error.message)?"This vote has closed.":"Couldn't save your vote. Try again.");return}
+  const m=myVotes();m[id]=i;try{localStorage.setItem(SK+".votes",JSON.stringify(m))}catch(e){}toast("Thanks, your vote is in.");if(canWrite)await loadPolls();render()}
 
 // ---------- training ----------
 // public.training holds one row: the weekly session shown here and added to the calendar feed until "until".
@@ -1981,6 +2025,13 @@ document.addEventListener("click",async e=>{
   if(t.id==="trEditBtn"&&canWrite){trEdit=JSON.parse(JSON.stringify(TR||{day:"Wednesday",start:"18:00",finish:"19:00",off:[]}));render();return}
   if(t.id==="trCancel"){trEdit=null;render();return}
   if(t.id==="attSave"){attSave();return}
+  if(t.dataset.vote){const [id,i]=t.dataset.vote.split("|");castVote(id,+i);return}
+  if(t.dataset.pollnew&&canWrite){pollStart(t.dataset.pollnew);return}
+  if(t.id==="pfCancel"){pollNew=null;render();return}
+  if(t.id==="pfSave"){pollSave();return}
+  if(t.id==="pfGoals"&&pollNew){const mo=$("#pf-month").value,g=monthGoals(mo);pollNew.month=mo;pollNew.title=$("#pf-title").value;if(/^Goal of the month: /.test(pollNew.title)&&mo)pollNew.title=`Goal of the month: ${LONGM[+mo.slice(5)-1]}`;pollNew.closes=$("#pf-closes").value;pollNew.opts=g.join("\n");render();if(!g.length)toast("No goals recorded in Live match mode that month. Type them in.");return}
+  if(t.dataset.pollclose){await sb.from("polls").update({closed:true}).eq("id",t.dataset.pollclose);await loadPolls();render();return}
+  if(t.dataset.polldel&&confirm("Delete this vote and its results?")){await sb.from("polls").delete().eq("id",t.dataset.polldel);await loadPolls();render();return}
   if(t.id==="attAll"){document.querySelectorAll("[data-att]").forEach(x=>x.checked=true);return}
   if(t.id==="trOffAdd"&&trEdit){trRead();const d=$("#tr-offnew").value;if(!d){toast("Pick a date first.");return}trEdit.off=[...new Set([...(trEdit.off||[]),d])];render();return}
   if(t.dataset.troff&&trEdit){trRead();trEdit.off=(trEdit.off||[]).filter(x=>x!==t.dataset.troff);render();return}
@@ -2082,7 +2133,7 @@ async function checkCoach(){
   if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
   if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
@@ -2113,12 +2164,12 @@ document.addEventListener("submit",async e=>{
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
-  await Promise.all([loadGallery(),loadTraining()]);
+  await Promise.all([loadGallery(),loadTraining(),loadPolls()]);
   if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["gallery","calendar","training","help","setup"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["gallery","calendar","training","help","setup","votes"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}

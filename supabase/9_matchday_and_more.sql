@@ -49,3 +49,55 @@ drop policy if exists "coaches write attendance" on public.training_attendance;
 create policy "coaches write attendance" on public.training_attendance for all to authenticated using (public.is_coach()) with check (public.is_coach());
 grant select, insert, update, delete on public.training_attendance to authenticated;
 revoke all on public.training_attendance from anon;
+
+-- ---------- Parent votes: goal of the month, players' player of the season ----------
+-- Coaches open a vote with a list of choices (first names only). Each phone gets one vote, using a random id kept
+-- on that phone; nothing about the parent is stored. Totals are shown to coaches, and to everyone once the vote closes.
+create table if not exists public.polls(
+  id       text primary key,
+  kind     text not null default 'other',        -- gotm, potss or other
+  title    text not null,
+  options  jsonb not null default '[]'::jsonb,   -- ["Jack v Meadow Park (23')", ...]
+  closes   timestamptz,                           -- voting stops then (blank = until a coach closes it)
+  closed   boolean not null default false,
+  created  timestamptz not null default now()
+);
+alter table public.polls enable row level security;
+drop policy if exists "everyone reads polls" on public.polls;
+create policy "everyone reads polls" on public.polls for select using (true);
+drop policy if exists "coaches write polls" on public.polls;
+create policy "coaches write polls" on public.polls for all to authenticated using (public.is_coach()) with check (public.is_coach());
+grant select on public.polls to anon, authenticated;
+grant insert, update, delete on public.polls to authenticated;
+
+create table if not exists public.poll_votes(
+  poll_id text not null,
+  voter   text not null,      -- a random id made on the phone
+  choice  int  not null,
+  updated timestamptz not null default now(),
+  primary key(poll_id, voter)
+);
+alter table public.poll_votes enable row level security;   -- no policies: votes only go in through cast_vote
+revoke all on public.poll_votes from anon, authenticated;
+
+create or replace function public.cast_vote(p_poll text, p_voter text, p_choice int)
+returns void language plpgsql security definer set search_path = public as $$
+declare p public.polls;
+begin
+  select * into p from public.polls where id = p_poll;
+  if p.id is null or p.closed or (p.closes is not null and p.closes < now()) then raise exception 'This vote has closed'; end if;
+  if p_choice < 0 or p_choice >= jsonb_array_length(p.options) then raise exception 'bad choice'; end if;
+  if length(p_voter) < 16 or length(p_voter) > 64 then raise exception 'bad voter'; end if;
+  insert into public.poll_votes(poll_id, voter, choice) values (p_poll, p_voter, p_choice)
+  on conflict (poll_id, voter) do update set choice = excluded.choice, updated = now();
+end $$;
+grant execute on function public.cast_vote(text, text, int) to anon, authenticated;
+
+-- totals per choice: coaches any time, everyone else once the vote has closed
+create or replace function public.poll_totals(p_poll text)
+returns table(choice int, votes bigint) language sql security definer set search_path = public as $$
+  select v.choice, count(*) from public.poll_votes v join public.polls p on p.id = v.poll_id
+  where v.poll_id = p_poll and (public.is_coach() or p.closed or (p.closes is not null and p.closes < now()))
+  group by v.choice;
+$$;
+grant execute on function public.poll_totals(text) to anon, authenticated;
