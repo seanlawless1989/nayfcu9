@@ -227,6 +227,14 @@ ol.tl li.ft,ol.tl li.ht{font-weight:700}
 .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
 .gal-th{padding:0;border:0;border-radius:10px;overflow:hidden;aspect-ratio:1;background:var(--field);cursor:pointer;display:block}
 .gal-th img{width:100%;height:100%;object-fit:cover;display:block}
+/* homepage albums: one card per game with photos, a big cover, a strip of the next few, and the date and caption */
+.albs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.alb{background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgb(0 0 0 / .08);display:flex;flex-direction:column}
+.alb .gal-th{border-radius:0;aspect-ratio:4/3}
+.alb-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:3px}.alb-strip .gal-th{aspect-ratio:1}
+.alb-more{position:relative}.alb-more span{position:absolute;inset:0;display:grid;place-items:center;background:rgb(0 0 0 / .45);color:#fff;font:800 16px var(--body)}
+.alb-meta{width:100%;padding:10px 12px 12px;color:var(--ink);font:inherit;display:flex;flex-direction:column;gap:2px}.alb-meta b{font:800 15px var(--body)}.alb-meta small{color:var(--muted);font-weight:600}.alb-meta i{color:var(--ink);font-style:normal;font-size:13px}
+@media(max-width:640px){.albs .alb:nth-child(n+3){display:none}}
 .gal-h{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;border:0;padding:0 0 10px;font:700 15px var(--body);color:var(--ink);cursor:pointer;text-align:left}.gal-h span{color:var(--muted);font-size:13px;white-space:nowrap}
 label.galadd{display:inline-block}
 body.lb-on{overflow:hidden}
@@ -718,11 +726,11 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
     ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players","👧","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records, milestones and playing time"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
+const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["help","🛟","Help and changes","Ask for a fix or a change"]];
-function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances, milestones and playing time"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
+function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse();
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2><section class="card">${galGrid(pics)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos</button></div></section>`:""}`}
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -997,6 +1005,12 @@ function galGrid(list){return `<div class="gal">${list.map(p=>`<button class="ga
 function galAdd(id){return canWrite&&id?`<label class="btn gold galadd edit-only">📷 Add photos<input type="file" accept="image/*" multiple data-galup="${esc(id)}" hidden></label>`:""}
 function photosCard(m){const ps=galOf(m.id);if(!ps.length&&!(canWrite&&!isFixture(m)))return "";
   return `<section class="card"><h3>Photos${ps.length>1?` (${ps.length})`:""}</h3>${ps.length?galGrid(ps):`<p class="hint">No photos from this game yet.</p>`}${canWrite?`<div class="btns edit-only" style="margin-top:10px">${galAdd(m.id)}</div>`:""}</section>`}
+// newest games with photos, each as an album card
+function albums(n){const ids=[...new Set(GAL.slice().reverse().map(p=>p.match_id))].slice(0,n);
+  return `<div class="albs">${ids.map(id=>{const ps=galOf(id),m=matches.find(x=>x.id===id),c=ps.find(p=>p.caption)||ps[0],rest=ps.filter(p=>p!==c),strip=rest.slice(0,3),more=ps.length-1-strip.length;
+    const th=p=>`<button class="gal-th" data-photo="${esc(p.id)}" aria-label="${esc(p.caption||"Open photo")}"><img src="${galUrl(p.thumb)}" alt="${esc(p.caption||"")}" loading="lazy"></button>`;
+    return `<div class="alb">${th(c)}${strip.length?`<div class="alb-strip">${strip.map((p,i)=>i===strip.length-1&&more>0?`<div class="alb-more">${th(p)}<span>+${more}</span></div>`:th(p)).join("")}</div>`:""}
+      <button class="alb-meta" data-md="${esc(id)}" style="text-align:left;border:0;background:none;cursor:pointer"><b>${m?`${m.ha==="A"?"at ":"v "}${esc(m.opp||"")}`:"Match photos"}</b><small>${m?esc(shortDay(m.date)):""} · ${ps.length} photo${ps.length===1?"":"s"}</small>${c.caption?`<i>${esc(c.caption)}</i>`:""}</button></div>`}).join("")}</div>`}
 function galLabel(m){return `${shortDay(m.date)} · v ${esc(m.opp||"")}${result(m)?` · ${m.us}–${m.them}`:""}`}
 function shortDay(iso){const d=new Date((iso||"")+"T12:00:00");return isNaN(d)?"":d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}
 function galleryView(){
