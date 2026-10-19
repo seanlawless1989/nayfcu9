@@ -10,8 +10,10 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 const URL_ = Deno.env.get("SUPABASE_URL")!;
 const db = createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const KEY = Deno.env.get("ANTHROPIC_API_KEY");
-let US = Deno.env.get("TEAM_NAME") ?? "Newton Aycliffe";
-let AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
+// The site sends its own team.js name, age group and score setting with each request, so every club's copy
+// works without extra secrets. Team setup answers (team_settings) win over both; see loadTeam().
+let US = Deno.env.get("TEAM_NAME") ?? "our team";
+let AGE = Deno.env.get("AGE_GROUP") ?? "";
 let SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 const out = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
@@ -29,7 +31,8 @@ const seasonOf = (d: string) => { const y = +d.slice(0, 4), m = +d.slice(5, 7); 
 
 // FA youth rule: no scores, results, scorers or league tables published for under-7s to under-11s.
 // The drafts follow it for those age groups even when the site itself shows scores.
-const faAge = () => { const n = +((AGE.match(/\d+/) || [])[0] || 0); return n >= 7 && n <= 11; };
+// An unknown age group counts as covered, so a draft never shows scores by mistake.
+const faAge = () => { const n = +((AGE.match(/\d+/) || [])[0] || 0); return !n || (n >= 7 && n <= 11); };
 const noScoreText = () => !SCORES || faAge();
 
 async function loadTeam() {
@@ -46,7 +49,7 @@ function facts(m: M, all: M[]) {
   const hide = noScoreText();
   const word = { W: "won", D: "drew", L: "lost" } as const;
   const lines = [
-    `Team: ${US} ${AGE} (grassroots football)`,
+    `Team: ${`${US} ${AGE}`.trim()} (grassroots football)`,
     `Next game: ${m.ha === "A" ? "away at" : m.ha === "H" ? "at home to" : "against"} ${m.opp}, ${new Date(m.date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}`,
   ];
   if (m.ko) lines.push(`Kick-off: ${m.ko}`);
@@ -70,7 +73,7 @@ function facts(m: M, all: M[]) {
 
 // what happened in a played game, in order, from the Live-mode timeline when there is one
 function reportFacts(m: M, all: M[]) {
-  const lines = [`Team: ${US} ${AGE} (grassroots football)`,
+  const lines = [`Team: ${`${US} ${AGE}`.trim()} (grassroots football)`,
     `Game: ${m.ha === "A" ? "away at" : m.ha === "H" ? "at home to" : "against"} ${m.opp}, ${new Date(m.date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}${m.comp ? `, ${m.comp}` : ""}`];
   if (m.venue) lines.push(`Venue: ${m.venue}`);
   const SCORES = !noScoreText(), r = res(m);
@@ -131,7 +134,10 @@ Deno.serve(async (req) => {
     const { data: ok } = await me.rpc("is_coach");
     if (!ok) return out({ error: "coaches_only" }, 403);
     if (!KEY) return out({ error: "no_key" }); // 200 so the site can read why
-    const { match, kind } = await req.json();
+    const { match, kind, team } = await req.json();
+    if (team?.name) US = String(team.name);
+    if (team?.ageGroup) AGE = String(team.ageGroup);
+    if (team?.publicScores === false) SCORES = false;
     const { data: all, error } = await db.from("matches").select("id,date,opp,ha,venue,comp,ko,us,them,played,postponed,stage,squad,assists,potm,keepers,halves,live,report");
     if (error) throw error;
     const m = (all as M[]).find((x) => x.id === match);
