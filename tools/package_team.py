@@ -59,7 +59,8 @@ def make_icons(crest, site, colour):
 
 
 def build_site(team, src, site, keep_badges):
-    shutil.copytree(DOCS, site, ignore=lambda d, names: [n for n in names if Path(d) == DOCS and (n in NAYFC_ONLY or n in NAYFC_DIRS)])
+    # other teams hosted under docs/<team>/ (each has its own team.js) never go into a copy either
+    shutil.copytree(DOCS, site, ignore=lambda d, names: [n for n in names if Path(d) == DOCS and (n in NAYFC_ONLY or n in NAYFC_DIRS or (DOCS / n / "team.js").exists())])
     shutil.copy(src / "team.js", site / "team.js")
     for name in logos(team):
         f = src / name
