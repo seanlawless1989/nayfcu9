@@ -10,7 +10,7 @@ self.TEAM = {
   players: "players",
   tagline: "Under 14s",
   appName: "Darlington United U14s",
-  siteUrl: "https://seanlawless1989.github.io/darlington-united-u14s",
+  siteUrl: "https://nayfootball.club/darlington-united-u14s",
   supportName: "Sean",
 
   league: "League",
