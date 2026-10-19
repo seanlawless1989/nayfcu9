@@ -177,7 +177,7 @@ ol.tl li.ft,ol.tl li.ht{font-weight:700}
 .av{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
 .av .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-weight:700}
 .av .row .seg button{min-width:52px}
-.avsum{font:700 12px var(--body);color:var(--muted);margin-top:4px}
+.avsum{grid-column:1/-1;font:700 12px var(--body);color:var(--muted);margin-top:4px}
 .ms{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--field);margin-bottom:6px}
 .bars{display:flex;align-items:flex-end;gap:6px;height:140px;padding-top:10px}
 .bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;font:700 11px var(--body);color:var(--muted);height:100%}
