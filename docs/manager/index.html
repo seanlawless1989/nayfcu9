@@ -365,6 +365,60 @@ details.tacd .tg{margin-top:14px}
 @keyframes conf2{to{transform:translateY(105vh) rotate(720deg)}}
 @media (max-width:760px){body.inmatch .mp{max-width:min(440px,calc(38vh*.75))}body.inmatch .mpwrap{padding:6px}body.inmatch .mpwrap .legend{display:none}body.inmatch .mstack{gap:10px}}
 .actbar .cont[data-m="pause"]::after{display:none}
+/* v11: guided first week, training summary sheet, game time, fixture filters, sub planner, desktop sidebar */
+html{scroll-padding-bottom:170px}
+body{margin:0}
+.sheet{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,14,40,.55);padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet .in{background:var(--card);color:var(--ink);border-radius:18px;max-width:640px;width:100%;max-height:calc(100dvh - 40px);overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+@media (min-width:700px){.sheet{align-items:center}}
+.sheet h2{margin:0}
+.steps{display:flex;gap:6px}.steps i{flex:1;height:5px;border-radius:3px;background:var(--line)}.steps i.on{background:var(--club)}
+.guide{border:2px solid var(--club);background:color-mix(in srgb,var(--club) 8%,var(--card))}
+.guide .steps{margin-bottom:8px}
+.goals4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.goals4 div{padding:10px;border-radius:10px;background:var(--field);font-size:13.5px}
+.goals4 b{display:block;font-size:15px}
+.trow{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr) 54px;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.trow:last-child{border-bottom:0}
+.trow small{display:block;color:var(--muted);font-size:12.5px}
+.trow .d{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.pos{color:var(--win)}.neg{color:var(--loss)}
+.gt td.c{text-align:center;min-width:34px}
+.gt td.c span{display:inline-block;min-width:30px;padding:2px 4px;border-radius:6px;font-weight:700;font-size:12.5px}
+.gt .full{background:color-mix(in srgb,var(--win) 22%,transparent)}.gt .part{background:color-mix(in srgb,var(--draw) 22%,transparent)}.gt .zero{background:color-mix(in srgb,var(--loss) 20%,transparent)}.gt .outx{background:var(--field);color:var(--muted)}
+.fitl{display:grid;gap:6px}
+.fitl div{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-radius:9px;background:var(--field);font-size:14px}
+.fitl small{color:var(--muted)}
+.filt{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filt button{font:700 13px var(--body);padding:7px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.filt button[aria-pressed="true"]{background:var(--club);border-color:var(--club);color:#fff}
+.pm{display:grid;grid-template-columns:minmax(0,90px) minmax(0,1fr) 44px;gap:8px;align-items:center;font-size:13.5px;padding:3px 0}
+.pm small{grid-column:2/-1;color:var(--muted);font-size:12px;margin-top:-4px}
+.pm .bar i{background:var(--win)}.pm.low .bar i{background:var(--draw)}
+.pm b{text-align:right;font-variant-numeric:tabular-nums}
+.chl{display:grid;gap:4px;font-size:13.5px}
+.chl div{display:flex;gap:8px;align-items:center;padding:5px 8px;border-radius:8px;background:var(--field)}
+.chl .m{font-weight:800;min-width:30px;font-variant-numeric:tabular-nums}
+.chl .bad{opacity:.55;text-decoration:line-through}
+.chl button{margin-left:auto}
+.tip{border-left:4px solid var(--gold)}
+#planCard .seg{display:grid;grid-template-columns:repeat(4,auto);width:fit-content}
+@media (max-width:520px){#planCard .seg{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}}
+@media (min-width:760px){#pitch{max-width:min(440px,max(260px,calc((100vh - 290px)*.75)))}}
+@media (min-width:1000px){
+  body:not(.inmatch){padding-left:210px}
+  body:not(.inmatch) .tabwrap{top:0;bottom:0;right:auto;width:210px;border-top:0;border-right:1px solid var(--line);padding:84px 0 0;z-index:8}
+  body:not(.inmatch) nav.tabs{grid-template-columns:1fr;grid-auto-rows:54px;max-width:none}
+  body:not(.inmatch) nav.tabs button{flex-direction:row;justify-content:flex-start;gap:14px;height:54px;padding:0 22px;font-size:15px}
+  body:not(.inmatch) nav.tabs button[aria-current="page"]{background:color-mix(in srgb,var(--club) 10%,transparent)}
+  body:not(.inmatch) nav.tabs button[aria-current="page"]::before{top:8px;bottom:8px;left:0;right:auto;width:4px;height:auto;border-radius:0 3px 3px 0}
+  body:not(.inmatch) .mast{margin-left:-210px;padding-left:210px}
+  #pitch{max-width:min(440px,max(260px,calc((100vh - 430px)*.75)))}
+  .pickcard{position:sticky;top:76px}
+  body:not(.inmatch) .actbar{left:210px;bottom:0;padding:10px 0 12px}
+  main.hasbar,body:not(.inmatch) main.hasbar{padding-bottom:110px}
+  .toast{bottom:100px}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -583,12 +637,12 @@ function buildSeason(){
 }
 function newGame(keepName){
   S={v:3,year:2026,age:9,season:1,teams:{},players:SQUAD.map(mkPlayer),
-    tac:{form:"1-2-1",xi:[],subs:[],ment:1,cap:"lydia"},train:{focus:"passing",int:1,indiv:{}},
+    tac:{form:"1-2-1",xi:[],subs:[],ment:1,cap:"lydia",plan:{mode:"off",gk:true,ch:[]}},train:{focus:"passing",int:1,indiv:{}},
     inbox:[],board:{fun:70,harm:72,dev:50,res:50},hist:[],lastRes:null,lastStats:null,seasonOver:false,msgId:1,trophies:[],posV:1};
-  ensureTeams();S.div=1;S.leagueIds=DIV1.slice();S.manager=keepName||"";
+  ensureTeams();S.div=1;S.leagueIds=DIV1.slice();S.manager=keepName||"";S.guide=keepName?9:0;S.friendly={done:false};S.mlog=[];
   buildSeason();
   autoPick();
-  mail("Club committee","Welcome to the dugout",`Welcome aboard, gaffer. You're in charge of the Under 9s girls for ${S.year}/${String((S.year+1)%100).padStart(2,"0")}.\n\nWe play 5v5 (a keeper and four outfield), two halves of 20 minutes, with rolling subs. Each week you pick a matchday squad of 8: five to start and three subs. Anyone left out will be disappointed, so share it around.\n\nTraining is on Wednesday nights. There's the County Cup, a league, and four one-day tournaments to look forward to.\n\nThe committee cares most about the girls enjoying it, the girls getting better and a happy squad. Results are nice too. Good luck!`);
+  mail("Club committee","Welcome to the dugout",`Welcome aboard, gaffer. You're in charge of the Under 9s girls for ${S.year}/${String((S.year+1)%100).padStart(2,"0")}.\n\nWe play 5v5 (a keeper and four outfield), two halves of 20 minutes, with rolling subs. Each week you pick a matchday squad of 8: five to start and three subs. Anyone left out will be disappointed, so rotate the squad fairly.\n\nTraining is on Wednesday nights. There's the County Cup, a league, and four one-day tournaments to look forward to.\n\nThe committee cares most about the girls enjoying it, the girls getting better and a happy squad. Results are nice too. Good luck!`);
   mail("Grey-Smith Legal","Shirt sponsor",`We're proud to be on the front of the yellow shirts again this season. Go on, Aycliffe!`);
   mail("Coffey Coffee","Player of the match",`We'll be handing out the Coffey Coffee player of the match award after every game. All round better coffee, all round better football.`);
   rollAvailability(true);
@@ -674,6 +728,7 @@ function fixXI(){
 // ---------------- training ----------------
 function applyTraining(){
   const t=TRAIN[S.train.focus],im=[.6,1,1.4][S.train.int]*(S.talkBoost?1.1:1);S.talkBoost=0;const before={};const funB=S.players.reduce((a,p)=>a+p.fun,0);
+  const fun0={},ovr0={};S.players.forEach(p=>{fun0[p.id]=p.fun;ovr0[p.id]=ovr(p)});
   S.players.forEach(p=>{before[p.id]={...p.a};
     for(const[k] of ATTR){let g=.015*p.pot;
       if(t.main.includes(k))g+=(k==="GK"&&!p.pos.includes("GK")?.045:.1)*im*p.pot*rnd(.7,1.3);
@@ -696,6 +751,15 @@ function applyTraining(){
   S.trainRep={focus:t.n,int:["light","normal","hard"][S.train.int],ups,funD,star:star?star.name:null,tow:tow?tow.id:null,
     towWhy:tow?pick([`Worked her socks off in every drill.`,`Listened brilliantly and helped the others.`,`Her ${t.n.toLowerCase()} was the best it's been all season.`,`Never stopped smiling and never stopped running.`,`First to arrive, last to leave, and tidied up the cones.`,`Tried something new and nailed it.`]):"",
     line:pick([`${star?.name} was brilliant in the ${t.d.toLowerCase()}.`,`${star?.name} asked to stay behind and do extra.`,`Lots of giggles, lots of effort. ${star?.name} stood out.`,`${star?.name} did a skill nobody had seen before.`])};
+  // who changed and why, for the summary after the session
+  S.trainRep.rows=S.players.map(p=>{const k=S.train.indiv[p.id]||t.main[0]||t.side[0];const why=[];
+    if(t.main.includes("GK")&&!p.pos.includes("GK"))why.push("Not a keeper, so smaller gains from goalkeeping");
+    else if(t.main.length)why.push(`${t.n} focus`);else why.push("Fun games: no main skill, but a big lift in enjoyment");
+    if(S.train.indiv[p.id])why.push(`extra coaching on ${ATTR.find(a=>a[0]===S.train.indiv[p.id])[1].toLowerCase()}`);
+    if(S.train.int===2)why.push("a hard session tires her and takes some fun out");if(S.train.int===0)why.push("a light session keeps it fun");
+    if(!p.avail)why.push("she's away this week, so only half the benefit");
+    if(tow&&tow.id===p.id)why.push("trainer of the week");
+    return {id:p.id,ups:Object.keys(p.up),k,from:before[p.id][k],to:p.a[k],ovrD:ovr(p)-ovr0[p.id],funD:Math.round(p.fun-fun0[p.id]),why}});
 }
 // the coach's tip for Wednesday, based on Saturday's game
 function suggestion(){
@@ -746,21 +810,22 @@ function theirStr(){
   const list=form.map(([role])=>({role,get:k=>(k==="GK"?s0*.92:s0)*M.oppForm*fade}));
   return unitStr(list);
 }
-function startMatch(){
-  const ev=curEvent();const of=ourFixture(ev);if(!of||!of.f)return;
-  if(!S.trained)applyTraining();
+function startMatch(fr){
+  const ev=curEvent();const of=fr?{comp:"F",f:{h:US,a:FRIENDLY_OPP}}:ourFixture(ev);if(!of||!of.f)return;
+  if(!S.trained&&!fr)applyTraining();
   fixXI();
   const T=of.comp==="T";const tour=T?of.tour:null;
   const opp=of.f.h===US?of.f.a:of.f.h;const home=!T&&of.f.h===US;
   const cond={};const base=[100,97,91][S.wkTrain?S.wkTrain.int:1];
   const squad=squadIds();
   squad.forEach(id=>cond[id]=tour&&tour.cond?tour.cond[id]??base:base);
-  M={comp:of.comp,round:ev.round,opp,home,oppStr:team(opp).str,oppForm:rnd(.93,1.07),form:S.tac.form,ment:S.tac.ment,
-    xi:S.tac.xi.slice(),squad,cond,mins:{},rt:{},goals:{},ast:{},half:T?7:20,tour:T?ev.round:null,final:T&&tour.stage==="final",
+  M={comp:of.comp,round:fr?0:ev.round,opp,home,oppStr:team(opp).str,oppForm:rnd(.93,1.07),form:S.tac.form,ment:S.tac.ment,
+    xi:S.tac.xi.slice(),squad,cond,mins:{},rt:{},goals:{},ast:{},half:T?7:fr?10:20,tour:T?ev.round:null,final:T&&tour.stage==="final",
     us:0,them:0,min:0,q:0,shots:[0,0],sot:[0,0],possT:[0,0],feed:[],state:"pre",speed:1,timer:null,ball:[50,50],
     weather:T&&tour.weather?tour.weather:pick(WEATHER),selTok:null,talks:{},talkSaid:null,mod:{atk:1,def:1,ctl:1},goalLog:[],
     oppNums:shuffle([7,8,9,10,11,5,6,14]),poss:"us",pitchEl:null,queue:[],dUs:0,dThem:0};
   if(T)tour.weather=M.weather;
+  const pl=S.tac.plan;M.plan=pl&&pl.mode!=="off"?JSON.parse(JSON.stringify(pl)):null;M.planB=planBounds(M.half);
   squad.forEach(id=>{M.mins[id]=0;M.rt[id]=6.2;M.goals[id]=0;M.ast[id]=0});
   view="match";render();startAnim();
 }
@@ -830,6 +895,10 @@ function tick(){
   }
   if(M.min===M.half){M.q++;beat(`Half-time. ${M.us}-${M.them}. The teams will swap ends for the second half.`,"brk",[50,50],null,"ht")}
   if(M.min===M.half*2){M.q++;beat(`The referee blows for full time!`,"brk",[50,50],null,"ft")}
+  // the sub plan: changes are queued so they land in order with the commentary
+  if(M.plan&&M.min<M.half*2&&M.planB.includes(M.min)){const nx=M.planB.find(b=>b>M.min)||M.half*2;
+    const chs=M.plan.mode==="manual"?M.plan.ch.filter(c=>c.m===M.min).map(c=>({on:c.on,off:c.off})):planStep(M.xi.slice(),M.mins,M.min,nx-M.min,M.half,M.plan,M.squad,M.form);
+    chs.forEach(ch=>beat("","",null,null,null,null,{kind:"plan",ch}))}
 }
 // goals from set pieces and other moments
 function ourGoal(sh,ast,line,bx){M.us++;M.sot[0]++;M.shots[0]++;M.goals[sh]++;M.rt[sh]+=1;if(ast){M.ast[ast]++;M.rt[ast]+=.55}
@@ -895,13 +964,14 @@ function step(sync){
   if(!M||M.state!=="live")return;
   let wait;
   if(M.queue.length){const b=M.queue.shift();const k=b.meta&&b.meta.kind;
+    if(k==="plan"){const tx=planApply(b.meta.ch);if(tx){feed(tx,"");updateMPitch()}renderMatch();if(!sync)M.timer=setTimeout(step,(tx?900:60)*[0,1.5,1,.4][M.speed]);return}
     feed(b.text,b.cls,["goal","them","save"].includes(b.cls)||(k==="miss"||k==="omiss")&&/post|close/i.test(b.text)||b.cls==="chance"&&/nutmeg|skill|dances|turn/.test(b.text));if(b.ball)M.ball=b.ball;
     if(["build","chance","shot","goal","pass"].includes(b.cls))M.poss="us";else if(["danger","them","win"].includes(b.cls))M.poss=b.cls==="win"?"us":"them";
     else if(b.cls==="save")M.poss="us";
     if(b.score==="us")M.dUs++;if(b.score==="them")M.dThem++;
     if(b.gl)M.goalLog.push(b.gl);
     animBeat(b);
-    if(b.after==="ht"){M.state="break";stopTimer();snapPitch();renderMatch();return}
+    if(b.after==="ht"){M.state="break";stopTimer();while(M.queue[0]&&M.queue[0].meta.kind==="plan"){const tx=planApply(M.queue.shift().meta.ch);if(tx)feed(tx,"")}snapPitch();renderMatch();return}
     if(b.after==="ft"){endMatch();return}
     wait=SET_MS[k]||BEAT_MS[b.cls]||1000; // set pieces get time to play out on the pitch
   }else{tick();wait=M.queue.length?250:380}
@@ -963,7 +1033,7 @@ function doTalk(phase,k){
     if(k==="learn"){mo=r==="L"?3:0;fu=0;react="They're already asking what drills they'll do.";S.talkBoost=(S.talkBoost||0)+1}
     if(k==="notgood"){if(r==="W"){mo=-6;fu=-7;react="Faces drop. They won, so they're confused."}else{mo=-4;fu=-6;react="Quiet car journeys home. One or two in tears."}}
   }
-  const sc=M.comp==="T"?.4:.7;
+  const sc=M.comp==="T"||M.comp==="F"?.4:.7;
   M.squad.forEach(id=>{const p=P(id);const k=(M.mins[id]||phase==="pre"?1:.5)*sc;p.morale=clamp(p.morale+mo*k,0,100);p.fun=clamp(p.fun+fu*k,0,100)});
   if(mod)for(const[a,v] of Object.entries(mod))M.mod[a]*=v;
   M.talks[phase]=k;M.talkSaid={phase,text:TALKS[phase].find(x=>x[0]===k)[1],react};
@@ -971,6 +1041,7 @@ function doTalk(phase,k){
 }
 
 function finishMatch(){
+  if(M.comp==="F"){finishFriendly();return}
   const m=M;const ev=curEvent();const of=ourFixture(ev);const f=of.f;const T=m.comp==="T";const tour=T?S.tours[m.tour]:null;
   if(f.h===US){f.hs=m.us;f.as=m.them}else{f.hs=m.them;f.as=m.us}
   if(m.comp==="C"||(T&&m.final)){f.pens=m.pens?(f.h===US?m.pens:[m.pens[1],m.pens[0]]):null;f.w=m.res==="W"?US:m.opp}
@@ -997,10 +1068,11 @@ function finishMatch(){
     if(tour.stage==="group"){const i=tour.fx.indexOf(f);const j=i^1;if(tour.fx[j].hs==null){const[a,b]=simGoals(tour.fx[j].h,tour.fx[j].a,false);tour.fx[j].hs=a;tour.fx[j].as=b}}
     tour.cond={};m.squad.forEach(id=>tour.cond[id]=clamp(m.cond[id]+28,0,100));
     S.tac.xi=m.xi.slice().map((id,i)=>id);S.tac.subs=m.squad.filter(id=>!m.xi.includes(id));while(S.tac.subs.length<3)S.tac.subs.push(null);
-    tourProgress(tour);
+    logMatch(m);tourProgress(tour);
     if(tour.stage==="done")parentChat(m);
     M=null;view="home";saveGame();render();return;
   }
+  logMatch(m);
   if(ev.type==="L")S.league[ev.round].forEach(x=>{if(x.hs==null)simFix(x)});
   else{S.cup.r[ev.round].forEach(t=>{if(t.hs==null)simTie(t)});advanceCup(ev.round)}
   parentChat(m);
@@ -1168,8 +1240,8 @@ const ICO={home:'<path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/>',team:'<path d="M8 3L3
   table:'<path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8"/>',club:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'};
 const svgI=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
 const TABS=[["home","Home","home"],["team","Team","tactics"],["games","Games","fixtures"],["table","League","table"],["club","Club","club"]];
-const SUBTABS={team:[["tactics","Pick your team"],["squad","Squad"],["training","Training"]],games:[["fixtures","Games"],["cup","County Cup"],["tours","Tournaments"]]};
-const GROUP={home:"home",inbox:"home",tactics:"team",squad:"team",training:"team",fixtures:"games",cup:"games",tours:"games",table:"table",club:"club"};
+const SUBTABS={team:[["tactics","Pick your team"],["squad","Squad"],["training","Training"],["gametime","Game time"]],games:[["fixtures","Games"],["cup","County Cup"],["tours","Tournaments"]]};
+const GROUP={home:"home",inbox:"home",tactics:"team",squad:"team",training:"team",gametime:"team",fixtures:"games",cup:"games",tours:"games",table:"table",club:"club"};
 function render(){
   $("#when").textContent=S.seasonOver?`Season over · ${seasonStr()}`:fmt(curDate());
   $("#mastSub").textContent=`${S.manager?`${S.manager} · `:""}Under ${S.age}s · ${divName()} · ${seasonStr()}`;
@@ -1185,7 +1257,8 @@ function render(){
   if(view==="match")view="home";
   const sub=SUBTABS[GROUP[view]];
   main.innerHTML=(sub&&!(view==="squad"&&playerView)?`<nav class="subtabs" aria-label="${GROUP[view]==="team"?"Team":"Games"}">${sub.map(([v,n])=>`<button data-view="${v}" aria-current="${v===view?"page":"false"}">${n}</button>`).join("")}</nav>`:"")+
-    ({home:homeV,squad:squadV,tactics:tacticsV,training:trainingV,fixtures:fixturesV,table:tableV,cup:cupV,tours:toursV,inbox:inboxV,club:clubV}[view]||homeV)();
+    ({home:homeV,squad:squadV,tactics:tacticsV,training:trainingV,gametime:gameTimeV,fixtures:fixturesV,table:tableV,cup:cupV,tours:toursV,inbox:inboxV,club:clubV}[view]||homeV)()+
+    (S.guide===0?guideIntro():"");
   setBar();
 }
 function compLabel(comp,round){return comp==="L"?`League · Round ${round+1}`:comp==="C"?`County Cup · ${CUPNAME[round]}`:S.tours[round].name}
@@ -1229,6 +1302,7 @@ function heroV(){
      ${r.tow?`<div class="vs"><div class="pcard" style="gap:12px"><div class="big" style="background:var(--gold);color:#16239E">${P(r.tow).num}</div><div><div style="font:400 20px var(--display)">⭐ Trainer of the week</div><div class="nm">${esc(P(r.tow).name)}</div><div class="sub">${esc(r.towWhy)}</div></div></div></div>`:""}
      <p style="margin:0">${esc(r.focus)}, ${esc(r.int)}. ${esc(r.line)}</p>
      <p style="margin:0">${r.ups.length?`Getting better: ${esc(r.ups.slice(0,8).join(", "))}${r.ups.length>8?` and ${r.ups.length-8} more`:""}.`:"No attributes ticked up this week, but it all adds up."} ${r.funD>0?"Lots of fun had.":r.funD<0?"A few tired faces at the end.":""}</p>
+     ${r.rows?`<div class="btns"><button ${GHOST} data-act="trainsheet">See who improved and why</button></div>`:""}
      ${notes}</section>`;
   }
   // Saturday
@@ -1245,6 +1319,8 @@ function heroV(){
   }
   // Sunday: yesterday's result
   let body="";
+  if(d===0&&!S.lastRes&&S.wk===0&&S.friendly&&S.friendly.res){const fr=S.friendly.res;
+    body=`<div class="vs">${badge(US,1)}<div style="min-width:0;flex:1"><div class="nm">Friendly: ${fr.us}–${fr.them} ${fr.res==="W"?"win":fr.res==="D"?"draw":"defeat"}</div><div class="sub">v ${esc(teamName(FRIENDLY_OPP))}${fr.log&&fr.log.some(g=>g.side==="us")?` · ⚽ ${scorerLine(fr.log,"us")}`:""}</div></div>${badge(FRIENDLY_OPP,1)}</div>`}
   if(d===0&&S.lastRes){const lr=S.lastRes;
     body=`<div class="vs">${badge(US,1)}<div style="min-width:0;flex:1"><div class="nm">${lr.tour?`${esc(lr.tour)}: ${lr.place===1?"Winners! 🏆":lr.place===2?"Runners-up 🥈":`${ord(lr.place||3)} in the group`}`:`Yesterday: ${lr.us}–${lr.them} ${lr.res==="W"?"win":lr.res==="D"?"draw":"defeat"}`}</div>
      <div class="sub">${lr.tour?`Last game ${lr.us}–${lr.them} v ${esc(teamName(lr.opp))}`:`v ${esc(teamName(lr.opp))}`}${lr.log&&lr.log.some(g=>g.side==="us")?` · ⚽ ${scorerLine(lr.log,"us")}`:""}</div></div>${badge(lr.opp,1)}</div>`}
@@ -1259,6 +1335,8 @@ function contBtn(attr,big,sub){return `<button class="btn gold cont" ${attr}><b>
 const SKIP_I='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5l7 7-7 7M13 5l7 7-7 7"/></svg>';
 function actBar(){
   if(S.seasonOver)return contBtn(`data-act="nextseason"`,`Start the U${Math.min(S.age+1,12)}s`);
+  if(S.guide===1)return contBtn(`data-act="g1"`,"Next: training");
+  if(S.guide===2)return contBtn(`data-act="g2"`,"Finish");
   const ev=curEvent(),of=ourFixture(ev);const d=S.day;let main,extra=[];
   const skip=(act,where)=>`<button class="skip" data-act="${act}">${SKIP_I}Skip to ${where}</button>`;
   if(d===3&&!S.trained){main=contBtn(`data-act="train"`,"Run training");extra.push(skip("tosat","Saturday"))}
@@ -1312,7 +1390,7 @@ function homeV(){
   const cupNext=S.cal.findIndex((e,i)=>i>=S.wk&&e.type==="C");
   const cupState=S.cup.won?"Winners! 🏆":S.cup.out?`Knocked out`:cupNext>=0?`${CUPNAME[S.cal[cupNext].round]} on ${fmt(S.cal[cupNext].date)}`:"-";
   const tourNextI=S.cal.findIndex((e,i)=>i>=S.wk&&e.type==="T"&&S.tours[e.round].stage!=="done");
-  return `<div class="stack">${S.manager?"":nameCard()}${celebrateCard()}${heroV()}
+  return `<div class="stack">${S.manager||S.guide===0?"":nameCard()}${celebrateCard()}${friendlyCard()}${heroV()}
   <div class="cols">
    ${inboxCard()}
    <section class="card"><h3>Committee confidence</h3>
@@ -1354,7 +1432,7 @@ function gameCard(){
    <div class="btns" style="margin-top:14px"><button class="btn ghost small" data-act="${confirmNew?"newgo":"new"}">${confirmNew?"Tap again to wipe this save and start over":"Start a new game"}</button></div></section>`;
 }
 function clubV(){
-  return `<div class="stack">${S.manager?"":nameCard()}<section class="card"><h2>Trophy cabinet</h2>${cabinet()}</section>${gameCard()}</div>`;
+  return `<div class="stack">${S.manager||S.guide===0?"":nameCard()}<section class="card"><h2>Trophy cabinet</h2>${cabinet()}</section>${gameCard()}</div>`;
 }
 function backupCode(){try{return btoa(unescape(encodeURIComponent(JSON.stringify(S))))}catch(e){return ""}}
 function reviewV(){
@@ -1374,10 +1452,10 @@ function reviewV(){
 }
 function squadTable(){
   const ps=S.players.slice().sort((a,b)=>a.num-b.num);const sq=new Set(squadIds());
-  return `<section class="card"><h2>Squad</h2><div class="scroll"><table class="tbl"><thead><tr><th class="l">Player</th><th class="l">Positions</th><th class="l">Foot</th><th>Ovr</th><th class="l">Mood</th><th>Apps</th><th>Mins</th><th>Goals</th><th>Ast</th><th>PotM</th><th>Avg</th></tr></thead><tbody>
+  return `<section class="card"><h2>Squad</h2><div class="scroll"><table class="tbl"><thead><tr><th class="l">Player</th><th class="l">Positions</th><th class="l">Foot</th><th>Ovr</th><th class="l">Stars</th><th class="l">Mood</th><th>Apps</th><th>Mins</th><th>Goals</th><th>Ast</th><th>PotM</th><th>Avg</th></tr></thead><tbody>
   ${ps.map(p=>{const av=p.ss.rt.length?(p.ss.rt.reduce((a,b)=>a+b,0)/p.ss.rt.length).toFixed(1):"–";const d=ovr(p)-ovrStart(p);
-   return `<tr class="click" data-player="${p.id}"><td class="l"><span class="pname"><span class="num">${p.num}</span>${esc(p.name)}${p.id===S.tac.cap?` <span class="trait">C</span>`:""}${S.trainRep&&S.trainRep.tow===p.id?` <span class="tow">⭐ TotW</span>`:""}${p.avail?sq.has(p.id)?"":` <span class="na-tag" style="background:var(--field);color:var(--muted)">Not in 8</span>`:` <span class="na-tag">Away</span>`}</span></td><td class="l">${p.posD.join(" ")}</td><td class="l">${p.foot==="L"?"<b>Left</b>":"Right"}</td><td><b>${ovr(p).toFixed(1)}</b>${d>=.05?` <span class="up">+${d.toFixed(1)}</span>`:""}</td><td class="l"><span class="face">${face(p.morale)}</span> ${moodWord(p.morale)}</td><td>${p.ss.apps}</td><td>${p.ss.mins}</td><td>${p.ss.goals}</td><td>${p.ss.ast}</td><td>${p.ss.potm}</td><td>${av}</td></tr>`}).join("")}
-  </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her attributes. Overall is out of 20.</p></section>`;
+   return `<tr class="click" data-player="${p.id}"><td class="l"><span class="pname"><span class="num">${p.num}</span>${esc(p.name)}${p.id===S.tac.cap?` <span class="trait">C</span>`:""}${S.trainRep&&S.trainRep.tow===p.id?` <span class="tow">⭐ TotW</span>`:""}${p.avail?sq.has(p.id)?"":` <span class="na-tag" style="background:var(--field);color:var(--muted)">Not in 8</span>`:` <span class="na-tag">Away</span>`}</span></td><td class="l">${p.posD.join(" ")}</td><td class="l">${p.foot==="L"?"<b>Left</b>":"Right"}</td><td><b>${ovr(p).toFixed(1)}</b>${d>=.05?` <span class="up">+${d.toFixed(1)}</span>`:""}</td><td class="l">${starsHTML(p)}</td><td class="l"><span class="face">${face(p.morale)}</span> ${moodWord(p.morale)}</td><td>${p.ss.apps}</td><td>${p.ss.mins}</td><td>${p.ss.goals}</td><td>${p.ss.ast}</td><td>${p.ss.potm}</td><td>${av}</td></tr>`}).join("")}
+  </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see her attributes and where she fits best.</p>${ratingHelp()}</section>`;
 }
 function squadV(){return playerView?playerV(P(playerView)):`<div class="stack">${squadTable()}</div>`}
 function playerV(p){
@@ -1389,7 +1467,9 @@ function playerV(p){
   <div class="cols">
   <section class="card"><h3>Attributes</h3><div class="stack" style="gap:8px">
    ${ATTR.map(([k,n])=>{const v=p.a[k];return `<div class="att"><span>${n}</span><div class="bar ${v>=14?"good":v>=9?"":"mid"}"><i style="width:${v/20*100}%"></i></div><span class="v">${fl(v)}</span><span class="up">${p.up[k]?"▲":""}</span></div>`}).join("")}
-  </div><p class="hint" style="margin-top:10px">▲ went up at the last training session.</p></section>
+  </div><p class="hint" style="margin-top:10px">▲ went up at the last training session.</p>
+   <h3 style="margin-top:16px">Where she fits</h3><div class="fitl">${Object.keys(POSN).map(c=>{const sl=[POS_ROLE[c],0,0,c];const v=fitFor(p,sl);return `<div><span><b>${POSN[c]}</b><br><small>${fitWord(famFor(p,sl))}${strongSide(p,c)?" · her strong side":""} · ${v.toFixed(1)}</small></span>${starsSpan(starsFor(v))}</div>`}).join("")}</div>
+   ${ratingHelp()}</section>
   <section class="card"><h3>Extra coaching for ${esc(p.name)}</h3>
    <label class="hint" for="indiv">Pick one thing to work on with her on Wednesdays.</label>
    <select id="indiv" data-indiv="${p.id}" style="margin-top:6px"><option value="">Nothing extra</option>${ATTR.map(([k,n])=>`<option value="${k}"${tr===k?" selected":""}>${n}</option>`).join("")}</select>
@@ -1406,20 +1486,25 @@ function pitchHTML(xi,form,opts){
       <span class="rl">${code}${off?" ⚠":""}</span><span class="sh">${p?p.num:"+"}${p&&p.id===S.tac.cap?`<span class="cap">C</span>`:""}</span><span class="nm">${p?esc(p.name):"Empty"}</span></button>`}).join("")}</div>`;
 }
 // 1 to 5 stars from the overall rating (out of 20), so the cards read easily on a phone
-function starN(p){return clamp(Math.round((ovr(p)-8)/1.6),1,5)}
+function starN(p){return starsFor(ovr(p))}
 function starsHTML(p){const k=starN(p);return `<span class="stars" role="img" aria-label="${k} out of 5 stars">${"★".repeat(k)}${"☆".repeat(5-k)}</span>`}
 function bpBtn(id,attr,selKey,extra){const p=P(id);const dr=p.dropped?` · left out ${p.dropped}×`:"";return `<button class="bp${sel===selKey?" sel":""}" ${attr}><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)} <span class="face">${face(p.morale)}</span></b><small>${POSN[p.posD[0]]} · ${starsHTML(p)}${extra||dr}</small></span></button>`}
 let tacOpen=false;
 function tacticsV(){
   const away=S.players.filter(p=>!p.avail);const out=outIds();
-  return `<div class="stack"><div class="btns"><button class="btn ghost" data-act="auto">Pick my best eight</button><button class="btn ghost" data-act="share">Share it around</button></div><div class="cols">
-  <section class="card"><h2>Starting five</h2>${pitchHTML(S.tac.xi,S.tac.form,{sel})}
-   <p class="hint" style="margin-top:10px">Tap a player, then tap another to swap them. An orange shirt with ⚠ means she is out of position.</p></section>
-  <div class="stack">
+  const tip=rotateTips()[0];const sp=sel?sel[0]==="s"?slotPanel(+sel.slice(1)):tokGet(sel)?fitPanel(tokGet(sel)):"":"";
+  return `<div class="stack">${guideCard()}<div class="btns"><button class="btn ghost" data-act="auto">Pick my best eight</button><button class="btn ghost" data-act="share">Rotate squad fairly</button>
+  <p class="hint" style="flex:1 1 260px"><b>Rotate squad fairly</b> puts in girls left out last time, or yet to play, then the best of the rest, always with a keeper.</p></div>
+  ${tip?`<div class="note">${esc(tip)} <button class="btn ghost small" data-view="gametime" style="margin-left:4px">See game time</button></div>`:""}
+  <div class="cols">
+  <section class="card pickcard"><h2>Starting five</h2>${pitchHTML(S.tac.xi,S.tac.form,{sel})}
+   <p class="hint" style="margin-top:10px">Tap a player to see where she fits best, then tap another to swap them. An orange shirt with ⚠ means she is out of position.</p></section>
+  <div class="stack">${sp}
    <section class="card"><h3>Subs (3)</h3><div class="bench">${S.tac.subs.map((id,i)=>id?bpBtn(id,`data-sub="${i}"`,`u${i}`):`<button class="bp${sel===`u${i}`?" sel":""}" data-sub="${i}"><span class="num">+</span><span class="x"><b>Empty</b><small>Tap to fill</small></span></button>`).join("")}</div></section>
    <section class="card"><h3>Not in the squad${out.length?` (${out.length})`:""}</h3><div class="bench">${out.map(id=>bpBtn(id,`data-out="${id}"`,`o${id}`)).join("")||`<p class="hint">Everyone available is in the eight.</p>`}
     ${away.map(p=>`<div class="bp na"><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)}</b><small>Away: ${esc(p.away)}${p.awayWks>1?` (${p.awayWks} weeks)`:""}</small></span></div>`).join("")}</div>
     ${out.length?`<p class="hint" style="margin-top:8px">Girls left out lose a bit of morale, more if it keeps happening.</p>`:""}</section>
+   ${planCard()}
    <details class="card tacd"${tacOpen?" open":""}><summary><b>Tactics</b><span class="hint">${S.tac.form} · ${MENT[S.tac.ment]} · ${esc(P(S.tac.cap)?.name||"no")} captain</span></summary>
     <div class="tg"><h3>Formation</h3><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-form="${f}" aria-pressed="${f===S.tac.form}">${f}</button>`).join("")}</div><p class="hint" style="margin-top:8px">${FORM_NOTE[S.tac.form]}</p></div>
     <div class="tg"><h3>Approach</h3><div class="seg" role="group" aria-label="Approach">${MENT.map((m,i)=>`<button data-ment="${i}" aria-pressed="${i===S.tac.ment}">${m}</button>`).join("")}</div>
@@ -1430,22 +1515,33 @@ function tacticsV(){
 }
 function trainingV(){
   const sg=suggestion();
-  return `<div class="stack"><section class="card"><h2>Training</h2>
+  return `<div class="stack">${guideCard()}<section class="card"><h2>Training</h2>
    <p class="hint" style="margin-bottom:12px">${S.trained?`This week's session is done (${esc(S.trainRep?.focus||"")}). Changes here apply next Wednesday.`:`The session is on Wednesday. Your pick here is what you'll run, and you can change it on the night.`}</p>
    <div class="note" style="margin-bottom:12px;background:var(--field);color:inherit"><b>Coach's suggestion: ${TRAIN[sg.k].n}.</b> ${esc(sg.why)}</div>
    <div class="opts">${Object.entries(TRAIN).map(([k,t])=>`<button class="opt" data-train="${k}" aria-pressed="${k===S.train.focus}"><b>${t.n}${k===sg.k?" ⭐":""}</b><small>${t.d}</small></button>`).join("")}</div>
    <h3 style="margin-top:18px">How hard</h3>
    <div class="seg" role="group" aria-label="Intensity">${["Light","Normal","Hard"].map((n,i)=>`<button data-int="${i}" aria-pressed="${i===S.train.int}">${n}</button>`).join("")}</div>
-   <p class="hint" style="margin-top:8px">${["Light: slower progress, fresh legs, happier girls.","Normal: steady progress.","Hard: faster progress, but tired legs on Saturday and less fun."][S.train.int]}</p></section>
+   <p class="hint" style="margin-top:8px">${["Light: slower progress, fresh legs, happier girls.","Normal: steady progress.","Hard: faster progress, but tired legs on Saturday and less fun."][S.train.int]}</p>
+   ${S.trained&&S.trainRep&&S.trainRep.rows?`<div class="btns" style="margin-top:12px"><button class="btn ghost small" data-act="trainsheet">See this week's training report</button></div>`:""}</section>
    <section class="card"><h3>Extra coaching</h3><div class="scroll"><table class="tbl"><thead><tr><th class="l">Player</th><th class="l">Working on</th><th>Ovr</th><th>Since Sept</th></tr></thead><tbody>
    ${S.players.slice().sort((a,b)=>a.num-b.num).map(p=>{const d=ovr(p)-ovrStart(p);return `<tr class="click" data-player="${p.id}"><td class="l"><span class="pname"><span class="num">${p.num}</span>${esc(p.name)}</span></td><td class="l">${S.train.indiv[p.id]?ATTR.find(a=>a[0]===S.train.indiv[p.id])[1]:`<span class="hint">Nothing extra</span>`}</td><td>${ovr(p).toFixed(1)}</td><td>${d>=.05?`<span class="up">+${d.toFixed(1)}</span>`:"–"}</td></tr>`}).join("")}
    </tbody></table></div><p class="hint" style="margin-top:8px">Tap a player to give her extra coaching.</p></section></div>`;
 }
+let fxShow="next",fxComp="all";
 function fixturesV(){
-  const rows=S.cal.map((ev,i)=>{const isNext=i===S.wk&&!S.seasonOver;
-    if(ev.type==="T"){const t=S.tours[ev.round];return `<div class="fx${isNext?" next":""}"><div class="d">${fmt(ev.date).replace(" ","<br>")}</div><div style="min-width:0;display:flex;flex-direction:column;gap:3px"><div class="t"><span>🏆 ${esc(t.name)}</span></div><div><span class="comp T">One-day tournament</span></div></div><div class="s">${t.stage==="done"?`<span class="chip ${t.place===1?"W":t.place===2?"D":"L"}">${t.place===1?"1st":ord(t.place)}</span>`:isNext?`<span class="chip N">Next</span>`:""}</div></div>`}
-    const of=ourFixture(ev);if(!of.f&&ev.type==="L")return `<div class="fx${isNext?" next":""}"><div class="d">${fmt(ev.date).replace(" ","<br>")}</div><div class="t"><span class="comp L">League · Round ${ev.round+1}</span></div><div class="s"><span class="hint">Bye week</span></div></div>`;if(!of.f)return ev.type==="C"&&i>=S.wk?`<div class="fx"><div class="d">${fmt(ev.date).replace(" ","<br>")}</div><div class="t"><span class="comp C">County Cup · ${CUPNAME[ev.round]}</span></div><div class="s"><span class="hint">${S.cup.out?"Out":"Draw to come"}</span></div></div>`:"";return fxRow(of.f,of.comp,ev.date,ev.round,isNext)}).join("");
-  return `<section class="card"><h2>Fixtures and results</h2><div class="stack" style="gap:8px">${rows}</div></section>`;
+  const rows=S.cal.map((ev,i)=>{const isNext=i===S.wk&&!S.seasonOver;let h="";
+    if(ev.type==="T"){const t=S.tours[ev.round];h=`<div class="fx${isNext?" next":""}"><div class="d">${fmt(ev.date).replace(" ","<br>")}</div><div style="min-width:0;display:flex;flex-direction:column;gap:3px"><div class="t"><span>🏆 ${esc(t.name)}</span></div><div><span class="comp T">One-day tournament</span></div></div><div class="s">${t.stage==="done"?`<span class="chip ${t.place===1?"W":t.place===2?"D":"L"}">${t.place===1?"1st":ord(t.place)}</span>`:isNext?`<span class="chip N">Next</span>`:""}</div></div>`}
+    else{const of=ourFixture(ev);if(!of.f&&ev.type==="L")h=`<div class="fx${isNext?" next":""}"><div class="d">${fmt(ev.date).replace(" ","<br>")}</div><div class="t"><span class="comp L">League · Round ${ev.round+1}</span></div><div class="s"><span class="hint">Bye week</span></div></div>`;else if(!of.f)h=ev.type==="C"&&i>=S.wk?`<div class="fx"><div class="d">${fmt(ev.date).replace(" ","<br>")}</div><div class="t"><span class="comp C">County Cup · ${CUPNAME[ev.round]}</span></div><div class="s"><span class="hint">${S.cup.out?"Out":"Draw to come"}</span></div></div>`:"";else h=fxRow(of.f,of.comp,ev.date,ev.round,isNext)}
+    return {i,type:ev.type,h}}).filter(r=>r.h&&(fxComp==="all"||r.type===fxComp));
+  const up=rows.filter(r=>r.i>=S.wk),done=rows.filter(r=>r.i<S.wk);
+  const list=fxShow==="next"?up.slice(0,3):fxShow==="done"?done.slice().reverse():rows;
+  const empty=fxShow==="next"?(S.seasonOver?"The season's over. Tap Results to look back.":"Nothing else coming up in this competition."):fxShow==="done"?"No results yet.":"Nothing to show.";
+  const fb=(k,v,n)=>`<button data-${k}="${v}" aria-pressed="${(k==="fxshow"?fxShow:fxComp)===v}">${n}</button>`;
+  return `<section class="card"><h2>${fxShow==="next"?"Coming up":fxShow==="done"?"Results":"Full season"}</h2>
+   <div class="filt" role="group" aria-label="Show">${fb("fxshow","next","Next 3")}${fb("fxshow","done","Results")}${fb("fxshow","all","Full season")}</div>
+   <div class="filt" role="group" aria-label="Competition">${fb("fxcomp","all","All")}${fb("fxcomp","L","League")}${fb("fxcomp","C","County Cup")}${fb("fxcomp","T","Tournaments")}</div>
+   <div class="stack" style="gap:8px">${list.map(r=>r.h).join("")||`<p class="hint">${empty}</p>`}</div>
+   ${fxShow==="next"&&up.length>3?`<div class="btns" style="margin-top:10px"><button class="btn ghost small" data-fxshow="all">Show all ${up.length} still to play</button></div>`:""}</section>`;
 }
 function tableV(){
   const t=tableRows();
@@ -1493,7 +1589,7 @@ function renderMatch(){
   const flashCls=top?(top.cls||"plain"):"plain";const el=performance.now()-(M.flashT||0);
   const dur={goal:2000,them:1500,shot:1600}[flashCls]||450;const fresh=!!top&&el<dur;const dly=`animation-delay:-${Math.round(el)}ms`;
   const evNew=!!top&&el<1200;
-  const compT=M.comp==="L"?"League":M.comp==="C"?`County Cup ${CUPNAME[M.round]}`:`${S.tours[M.tour].name}${M.final?" · Final":""}`;
+  const compT=M.comp==="F"?"Pre-season friendly":M.comp==="L"?"League":M.comp==="C"?`County Cup ${CUPNAME[M.round]}`:`${S.tours[M.tour].name}${M.final?" · Final":""}`;
   const gl=M.goalLog;
   $("#main").innerHTML=`<div class="stack mstack">
   <div class="board${fresh&&top.cls==="goal"?" gflash":""}${fresh&&top.cls==="them"?" tflash":""}" style="${dly}"><div class="side">${badge(US)}<span>Newton Aycliffe</span></div><div style="display:flex;flex-direction:column;align-items:center"><div class="sc">${M.dUs}–${M.dThem}</div><span class="clk">${quarter}</span>${M.state!=="ft"?`<button class="spd" data-speed="${M.speed%3+1}" aria-label="Game speed ${["slow","normal","fast"][M.speed-1]}. Tap to change">${["Slow","Normal","Fast"][M.speed-1]} ▸</button>`:""}</div><div class="side r"><span>${esc(t.name)}</span>${badge(M.opp)}</div>
@@ -1502,6 +1598,8 @@ function renderMatch(){
    <div class="mpwrap"><div id="mpitchSlot"></div><div class="legend"><span><i style="background:#FFD200;border-color:#16239E"></i>Newton Aycliffe</span><span><i style="background:${kitBg(kit(M.opp))}"></i>${esc(t.name)}</span></div>
     ${M.state!=="pre"&&M.state!=="ft"?`<p class="hint" style="margin-top:6px">To make a sub, tap a sub's name below, then tap who's coming off.</p>`:""}</div>
    <div class="stack" style="gap:12px">
+    ${M.comp==="F"?matchTip():""}
+    ${M.state==="pre"?prePlanCard():""}
     ${M.state!=="pre"&&top?`<div class="flash ${flashCls}${fresh?" anim":""}" style="${dly}" role="status" aria-live="polite"><span class="fm">${top.m}'</span><span>${top.cls==="goal"?"⚽ ":""}${esc(top.text)}</span></div>`:""}
     ${M.state!=="pre"&&top?`<div class="roll" aria-hidden="true" style="margin:0">${M.feed.slice(1,4).map((e,i)=>`<div style="opacity:${[.85,.6,.4][i]}"><span>${e.m}'</span> ${esc(e.text)}</div>`).join("")}</div>`:""}
     ${M.state==="live"||M.state==="paused"?`<div class="mshouts"><div class="shouts">${Object.entries(SHOUTS).map(([k,v])=>`<button class="shout${shoutOn()===k?" on":""}" data-shout="${k}"${M.min<(M.shoutCd||0)?" disabled":""}><b>${v.n}</b><small>${shoutOn()===k?`Working · ${M.shout.until-M.min} min left`:v.d}</small></button>`).join("")}</div>
@@ -1527,7 +1625,7 @@ function renderMatch(){
 // subs: tap a sub, then tap the girl coming off. Tapping a sub while the game runs pauses it.
 function subsCard(bench,canChange){
   const selB=M.selTok&&M.selTok[0]==="b"?M.selTok.slice(1):null;const form=FORMS[M.form];
-  return `<section class="card" id="subsCard"><h3>Subs</h3><div class="bench">${bench.map(id=>{const p=P(id);return `<button class="bp${selB===id?" sel":""}" data-mbench="${id}"><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)}</b><small>${M.mins[id]} min · legs ${Math.round(M.cond[id])}%</small></span></button>`}).join("")||`<p class="hint">No subs today.</p>`}</div>
+  return `<section class="card" id="subsCard"><h3>Subs</h3>${M.plan?`<p class="hint" style="margin:-2px 0 8px">Following your sub plan (${PLAN_N[M.plan.mode].toLowerCase()})${(()=>{const n=M.planB.find(b=>b>M.min&&b<M.half*2);return n?`. Next planned change ${n}'`:""})()}. <button class="btn ghost small" data-m="planoff">Stop the plan</button></p>`:""}<div class="bench">${bench.map(id=>{const p=P(id);return `<button class="bp${selB===id?" sel":""}" data-mbench="${id}"><span class="num">${p.num}</span><span class="x"><b>${esc(p.name)}</b><small>${M.mins[id]} min · legs ${Math.round(M.cond[id])}%</small></span></button>`}).join("")||`<p class="hint">No subs today.</p>`}</div>
    ${selB?`<h3 style="margin-top:12px">Who's coming off for ${esc(P(selB).name)}?</h3><div class="bench">${M.xi.map((id,i)=>{const p=id&&P(id);const bad=form[i][0]==="GK"&&!P(selB).posD.includes("GK");return `<button class="bp off" data-moff="${i}"><span class="num">${p?p.num:"+"}</span><span class="x"><b>${p?esc(p.name):"Empty spot"}</b><small>${POSN[form[i][3]]}${p?` · legs ${Math.round(M.cond[id])}%`:""}${bad?" · ⚠ not a keeper":""}</small></span></button>`}).join("")}</div>
     <div class="btns" style="margin-top:8px"><button class="btn ghost small" data-moff="x">Cancel</button></div>`:""}
    ${canChange?`<div class="btns" style="margin-top:10px"><button class="btn ghost small" data-m="rotate">Freshen up tired legs</button></div>`:bench.length?`<p class="hint" style="margin-top:8px">Tapping a sub pauses the game.</p>`:""}</section>`;
@@ -1721,7 +1819,7 @@ function drawPitch(){
 }
 function ftPanel(){
   const rows=M.squad.slice().sort((a,b)=>M.rt[b]-M.rt[a]);const unused=M.squad.filter(id=>!M.mins[id]);
-  return `<section class="card potm"><img src="coffey.jpg" alt="Coffey Coffee logo"><div style="min-width:0"><h3>${M.comp==="T"?"Star of the game":"Coffey Coffee player of the match"}</h3>
+  return `<section class="card potm"><img src="coffey.jpg" alt="Coffey Coffee logo"><div style="min-width:0"><h3>${M.comp==="T"||M.comp==="F"?"Star of the game":"Coffey Coffee player of the match"}</h3>
    <div style="font:400 26px var(--display)">${M.potm?esc(P(M.potm).name):"-"}</div>
    <p class="hint">${M.res==="W"?"A win! ":M.res==="D"?"A draw. ":"A defeat, but plenty to build on. "}${unused.length?`${unused.map(id=>P(id).name).join(", ")} didn't get on and will be disappointed.`:"Everyone in the squad got on the pitch."}</p></div></section>
   ${M.feed.some(e=>e.hl)?`<section class="card"><h3>Match highlights</h3><div class="feed">${M.feed.filter(e=>e.hl).reverse().map(e=>`<div class="ev ${e.cls}"><span class="m">${e.m}'</span><span>${e.cls==="goal"?"⚽ ":""}${esc(e.text)}</span></div>`).join("")}</div></section>`:""}
@@ -1743,6 +1841,178 @@ function swapTac(a,b){
   if(!squadIds().includes(S.tac.cap))S.tac.cap=S.tac.xi.find(Boolean);
 }
 
+// ---------------- v11: guided first week, friendly, training report, game time, ratings, sub planner ----------------
+const FRIENDLY_OPP="sedg";
+function sheet(html){closeSheet();const el=document.createElement("div");el.className="sheet";el.id="sheet";el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");
+  el.innerHTML=`<div class="in">${html}</div>`;el.addEventListener("click",e=>{if(e.target===el)closeSheet()});document.body.appendChild(el);el.querySelector("[data-act=closesheet]")?.focus()}
+function closeSheet(){document.getElementById("sheet")?.remove()}
+function stepsHTML(n){return `<div class="steps" aria-hidden="true">${[1,2,3].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</div>`}
+// step 1 of the first week sits over everything until the manager has a name
+function guideIntro(){
+  return `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="g0h"><div class="in">${stepsHTML(1)}
+   <h3>Your first week · step 1 of 3</h3><h2 id="g0h">Welcome to the dugout</h2>
+   <p style="margin:0">You're the new manager of Newton Aycliffe Youth Under 9s girls. The committee judges you on four things:</p>
+   <div class="goals4"><div><b>😄 Enjoyment</b>Are the girls having fun?</div><div><b>🤝 Squad harmony</b>Is everyone getting a fair go?</div><div><b>📈 Development</b>Are they getting better?</div><div><b>🏆 Results</b>Nice to have, but it counts the least.</div></div>
+   <p class="hint">Every week there's news on Monday, training on Wednesday and a match on Saturday. Next you'll pick your team, then plan training.</p>
+   <label class="hint" for="mgrName" style="font-weight:700">What's your name, gaffer?</label>
+   <input id="mgrName" type="text" maxlength="24" placeholder="Your name" autocomplete="given-name" value="${esc(S.manager||"")}" style="padding:11px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--field);color:inherit;font:inherit">
+   <div class="btns" style="justify-content:flex-end"><button class="btn gold" data-act="g0">Next: pick your team</button></div></div></div>`;
+}
+function guideCard(){
+  if(S.guide===1&&view==="tactics")return `<section class="card guide">${stepsHTML(2)}<h3>Your first week · step 2 of 3</h3><h2>Pick your team</h2>
+    <p style="margin:0 0 6px">Five start (a keeper and four outfield) and three sit on the bench as rolling subs. Anyone available who isn't in the eight will be disappointed.</p>
+    <p class="hint">Try <b>Pick my best eight</b> or <b>Rotate squad fairly</b>, or tap one player and then another to swap them. Tap a player to see which positions suit her. When you're happy, tap <b>Next: training</b>.</p></section>`;
+  if(S.guide===2&&view==="training")return `<section class="card guide">${stepsHTML(3)}<h3>Your first week · step 3 of 3</h3><h2>Plan Wednesday's training</h2>
+    <p style="margin:0 0 6px">Pick what to work on and how hard. The coach's suggestion has a ⭐. Harder sessions improve the girls faster, but they're less fun and tire them for Saturday.</p>
+    <p class="hint">After the session you'll see who improved and how the girls felt. Tap <b>Finish</b> when you're done.</p></section>`;
+  return "";
+}
+function friendlyOpen(){return !!S.friendly&&!S.friendly.done&&S.guide>=9&&S.wk===0&&S.day<3&&!S.seasonOver}
+function friendlyCard(){
+  if(!friendlyOpen())return "";const t=team(FRIENDLY_OPP);
+  return `<section class="card hero"><h3>Before the season starts</h3><div class="vs">${badge(US,1)}<div style="min-width:0;flex:1"><div class="nm">Pre-season friendly v ${esc(t.name)}</div><div class="sub">A practice match with two halves of 10 minutes. It doesn't count, so it's a good way to learn the match screen before the real thing.</div></div>${badge(FRIENDLY_OPP,1)}</div>
+   <div class="btns"><button class="btn gold" data-act="friendly">Play the friendly</button><button ${GHOST} data-act="nofriendly">Skip it</button></div></section>`;
+}
+function finishFriendly(){
+  const m=M;
+  m.squad.forEach(id=>{const p=P(id);if(m.mins[id]>0){p.morale=clamp(p.morale+(m.res==="W"?3:1)+m.goals[id]*2,10,100);p.fun=clamp(p.fun+3+m.goals[id]*2,0,100)}});
+  const played=m.squad.filter(id=>m.mins[id]>0);const pu=m.possT[0]+m.possT[1]?Math.round(m.possT[0]/(m.possT[0]+m.possT[1])*100):50;
+  S.lastStats={us:m.us,them:m.them,shots:m.shots[0],sotThem:m.sot[1],poss:pu,cond:Math.round(played.reduce((a,id)=>a+m.cond[id],0)/Math.max(1,played.length)),gk:m.xi[0]?P(m.xi[0]).a.GK:10};
+  logMatch(m);
+  S.friendly={done:true,res:{us:m.us,them:m.them,res:m.res,log:m.goalLog}};
+  const sct=Object.entries(m.goals).filter(([,g])=>g).map(([id,g])=>P(id).name+(g>1?` (${g})`:"")).join(", ");
+  mail("Match report",`Friendly: ${m.us}-${m.them} v ${team(m.opp).name}`,`Pre-season friendly. ${m.weather}.\nScorers: ${sct||"none"}.\nIt didn't count, but the girls had a run out and you've seen how a match works. The coach will use it for Wednesday's suggestion.`);
+  updateBoard();M=null;view="home";saveGame();render();
+}
+// tips on the match screen during the practice match
+function matchTip(){
+  const st=M.state;const t=st==="pre"?"This is a practice match, so nothing counts. Pick a team talk, then tap Kick off!":st==="break"?"Half-time. Pick a team talk, and change formation or approach if you want. Subs can come on too.":st==="ft"?"Full time. What you say now matters to the girls. Then tap Leave the ground.":"Watch the commentary and the pitch. Shouts give an instruction for about 5 minutes. To make a sub, tap a sub's name, then the girl coming off.";
+  return `<section class="card tip"><h3>How the match works</h3><p style="margin:0">${t}</p></section>`;
+}
+// every match, for the game time dashboard
+function logMatch(m){S.mlog=S.mlog||[];const mins={};m.squad.forEach(id=>mins[id]=m.mins[id]||0);
+  S.mlog.push({d:curDate(),opp:m.opp,comp:m.comp,len:m.half*2,mins,away:S.players.filter(p=>!p.avail).map(p=>p.id)});if(S.mlog.length>12)S.mlog.splice(0,S.mlog.length-12)}
+function rotateTips(){
+  const tips=[];const log=(S.mlog||[]).slice(-5);const av=S.players.filter(p=>p.avail);
+  av.filter(p=>p.dropped>0).sort((a,b)=>b.dropped-a.dropped).forEach(p=>tips.push(`${p.name} has been left out ${p.dropped>1?`${p.dropped} weeks running`:"of the last squad"}. Bring her into the eight.`));
+  av.filter(p=>(p.benchRun||0)>=2).forEach(p=>tips.push(`${p.name} has had less than half a game ${p.benchRun} times in a row. Start her, or plan her more minutes.`));
+  if(log.length>=2){const tot=p=>log.reduce((a,g)=>a+(g.mins[p.id]||0),0);const s=av.slice().sort((a,b)=>tot(b)-tot(a));const max=log.reduce((a,g)=>a+g.len,0);
+    if(s.length&&tot(s[0])>=max*.85)tips.push(`${s[0].name} has played ${tot(s[0])} of the last ${max} minutes. She could start on the bench to share it out.`)}
+  return tips;
+}
+function gameTimeV(){
+  const log=(S.mlog||[]).slice(-5);const ps=S.players.slice().sort((a,b)=>a.num-b.num);const max=log.reduce((a,g)=>a+g.len,0);
+  const tot=p=>log.reduce((a,g)=>a+(g.mins[p.id]||0),0);
+  const cell=(g,p)=>{if(p.id in g.mins){const m=g.mins[p.id];return `<span class="${m>=g.len/2?"full":m>0?"part":"zero"}">${m}</span>`}return `<span class="outx">${(g.away||[]).includes(p.id)?"away":"out"}</span>`};
+  const tips=rotateTips();
+  return `<div class="stack"><section class="card"><h2>Game time</h2>
+   <p class="hint" style="margin-bottom:10px">Minutes in the last ${log.length||5} matches. Girls who are left out, or only get a little go, lose morale, and squad harmony drops with them.</p>
+   ${log.length?`<div class="scroll"><table class="tbl gt"><thead><tr><th class="l">Player</th>${log.map(g=>`<th title="${esc(teamName(g.opp))}">${esc(team(g.opp).short)}<br><small>${g.comp==="F"?"Friendly":g.comp==="T"?"Tourn.":g.comp==="C"?"Cup":"League"}</small></th>`).join("")}<th>Total</th><th>Share</th><th>Left out<br>in a row</th></tr></thead><tbody>
+    ${ps.map(p=>{const t=tot(p);return `<tr class="click" data-player="${p.id}"><td class="l"><span class="pname"><span class="num">${p.num}</span>${esc(p.name)}${p.avail?"":` <span class="na-tag">Away</span>`}</span></td>${log.map(g=>`<td class="c">${cell(g,p)}</td>`).join("")}<td><b>${t}</b></td><td>${max?Math.round(t/max*100):0}%</td><td>${p.dropped?`<b class="neg">${p.dropped}</b>`:"0"}</td></tr>`}).join("")}</tbody></table></div>
+    <p class="hint" style="margin-top:8px">Green is half a game or more, amber is less, red is on the bench all game. "Out" means not in the eight.</p>`:`<p class="hint">No matches yet. This fills in after your first game.</p>`}
+   </section>
+   <section class="card"><h3>Suggested rotation</h3>${tips.length?`<div class="stack" style="gap:6px">${tips.slice(0,4).map(t=>`<div class="note" style="background:var(--field);color:inherit">${esc(t)}</div>`).join("")}</div>`:`<p class="hint">Nobody's missing out at the moment. Nice work.</p>`}
+    <div class="btns" style="margin-top:10px"><button class="btn" data-act="share">Rotate squad fairly</button><button class="btn ghost" data-view="tactics">Pick your team</button></div>
+    <p class="hint" style="margin-top:8px">Rotate squad fairly brings in girls left out last time first. To share minutes inside a match, set up a sub plan on Pick your team.</p></section></div>`;
+}
+// ratings: overall is out of 20 in a girl's best position; stars turn a rating into 1 to 5
+function starsFor(v){return clamp(Math.round((v-8)/1.6),1,5)}
+function starsSpan(k){return `<span class="stars" role="img" aria-label="${k} out of 5 stars">${"★".repeat(k)}${"☆".repeat(5-k)}</span>`}
+function fitWord(f){return f>=1?"Her position":f>=.92?"Comfortable here":f>=.8?"Out of position":"Not a keeper"}
+function strongSide(p,c){return c==="LW"&&p.foot==="L"||c==="RW"&&p.foot==="R"}
+function ratingHelp(){return `<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">How ratings work</summary>
+  <p class="hint" style="margin:8px 0 6px">Each girl has eight attributes out of 20. <b>Overall</b> is how good she is in her best position, out of 20, worked out from the attributes that matter there (a keeper's goalkeeping, a defender's tackling and pace, and so on).</p>
+  <p class="hint" style="margin:0 0 6px"><b>Stars</b> turn a rating into 1 to 5: ★ under 10.4 · ★★ 10.4 to 12 · ★★★ 12 to 13.6 · ★★★★ 13.6 to 15.2 · ★★★★★ over 15.2.</p>
+  <p class="hint" style="margin:0">In a position she knows she plays at her overall (a little better on the wing of her strong foot). Out of position she plays below it, so her stars for that spot drop. Tap a player on Pick your team to see her stars for every spot.</p></details>`}
+function fitPanel(id){const p=P(id);if(!p)return "";const form=FORMS[S.tac.form];
+  return `<section class="card"><h3>Where ${esc(p.name)} fits · overall ${ovr(p).toFixed(1)}</h3><div class="fitl">${form.map((slot,i)=>{const v=fitFor(p,slot);const cur=S.tac.xi[i]===id;
+    return `<div${cur?' style="outline:2px solid var(--club)"':""}><span><b>${POSN[slot[3]]}</b>${cur?" · playing here":""}<br><small>${fitWord(famFor(p,slot))}${strongSide(p,slot[3])?" · her strong side":""} · ${v.toFixed(1)}</small></span>${starsSpan(starsFor(v))}</div>`}).join("")}</div>
+   <p class="hint" style="margin-top:8px">Now tap another player or spot to swap. Tap her again to cancel.</p></section>`}
+function slotPanel(i){const slot=FORMS[S.tac.form][i];if(!slot)return "";const ids=[...new Set([...squadIds(),...outIds()])];
+  const rk=ids.map(id=>({id,v:fitFor(P(id),slot)})).sort((a,b)=>b.v-a.v).slice(0,6);
+  return `<section class="card"><h3>Best fits for ${POSN[slot[3]].toLowerCase()}</h3><div class="fitl">${rk.map(({id,v})=>{const p=P(id);const w=S.tac.xi.includes(id)?S.tac.xi[i]===id?"playing here":"starting":S.tac.subs.includes(id)?"sub":"not in the eight";
+    return `<div><span><b>${esc(p.name)}</b> <small>· ${w}</small><br><small>${fitWord(famFor(p,slot))}${strongSide(p,slot[3])?" · her strong side":""} · ${v.toFixed(1)}</small></span>${starsSpan(starsFor(v))}</div>`}).join("")}</div>
+   <p class="hint" style="margin-top:8px">Tap a girl on the pitch or the bench to put her here.</p></section>`}
+// training report sheet: who improved, enjoyment and fitness, and why
+function showTrainSheet(){const r=S.trainRep;if(!r||!r.rows)return;
+  const legs=[100,97,91][S.wkTrain?S.wkTrain.int:1];const an=k=>(ATTR.find(a=>a[0]===k)||[])[1]||"";
+  const rows=r.rows.slice().sort((a,b)=>b.ups.length-a.ups.length||b.ovrD-a.ovrD);const sg=v=>v>0?`+${v}`:`${v}`;
+  sheet(`<h3>Training report</h3><h2>${esc(r.focus)}, ${esc(r.int)} session</h2>
+   <div class="goals4"><div><b class="${r.funD>0?"pos":r.funD<0?"neg":""}">${sg(r.funD)} enjoyment</b>on average across the squad</div><div><b>${legs}% fresh</b>legs for Saturday${legs<100?` after a ${esc(r.int)} session`:""}</div>
+    <div><b>${r.ups.length} level-up${r.ups.length===1?"":"s"}</b>attributes that reached a new whole number</div><div><b>⭐ ${r.tow?esc(P(r.tow).name):"-"}</b>trainer of the week</div></div>
+   <div>${rows.map(x=>{const p=P(x.id);const got=x.ups.length?`<b class="pos">▲ ${x.ups.map(k=>`${an(k)} ${fl(p.a[k])}`).join(", ")}</b>`:`${an(x.k)} ${x.from.toFixed(1)} → ${x.to.toFixed(1)}`;
+     return `<div class="trow"><div><b>${esc(p.name)}</b><small>Overall ${ovr(p).toFixed(1)} (${x.ovrD>=0?"+":""}${x.ovrD.toFixed(2)})</small></div><div>${got}<small>${esc(x.why.join(", "))}.</small></div><div class="d ${x.funD>0?"pos":x.funD<0?"neg":""}">${sg(x.funD)}<small>fun</small></div></div>`}).join("")}</div>
+   <p class="hint">Attributes grow in small steps each week. ▲ means one reached a new whole number.</p>
+   <div class="btns" style="justify-content:flex-end"><button class="btn gold" data-act="closesheet">Got it</button></div>`)}
+// ---- substitution planner ----
+const PLAN_N={off:"Off",equal:"Equal minutes",rotate:"Rotate positions",manual:"Manual"};
+const PLAN_D={off:"No planned changes. You make the subs yourself during the game.",equal:"Shares the minutes out as evenly as it can. Changes happen at the quarter points of each half, and nobody comes off straight after going on.",rotate:"Equal minutes, and at half-time the outfield girls swap positions so they try somewhere new.",manual:"You choose each change: the minute, who comes on and who goes off."};
+// change points: each quarter of a half (or the middle of a short half), plus half-time
+function planBounds(half){const q=half>=12?[.25,.5,.75]:[.5];const b=[];[0,half].forEach(h0=>{q.forEach(f=>b.push(h0+Math.round(half*f)));if(!h0)b.push(half)});return [...new Set(b)].sort((a,c)=>a-c)}
+function nextHalf(){if(friendlyOpen())return 10;const ev=curEvent();return ev&&ev.type==="T"?7:20}
+// one change: the girl coming on takes the spot of the girl going off (or they swap if both are on)
+function applyCh(xi,ch){const i=ch.off!=null?xi.indexOf(ch.off):ch.i;if(i==null||i<0)return false;const j=xi.indexOf(ch.on);if(j===i)return false;if(j>=0)[xi[i],xi[j]]=[xi[j],xi[i]];else xi[i]=ch.on;return true}
+function perms(a){if(a.length<2)return [a.slice()];const r=[];a.forEach((x,i)=>perms([...a.slice(0,i),...a.slice(i+1)]).forEach(q=>r.push([x,...q])));return r}
+// the changes at minute t for equal minutes or rotate positions; L is how long until the next change point
+function planStep(xi,mins,t,L,half,plan,squad,formKey){
+  const form=FORMS[formKey];const out=[];const doCh=(on,i)=>{const ch={on,off:xi[i]||null,i,sw:xi.includes(on)};if(applyCh(xi,ch))out.push(ch)};
+  const gi=form.findIndex(s=>s[0]==="GK");const prev={};xi.forEach((id,i)=>{if(id)prev[id]=form[i][3]});
+  if(t===half&&plan.gk&&gi>=0){const cur=xi[gi];const alt=squad.filter(id=>id!==cur&&P(id).posD.includes("GK")).sort((a,b)=>mins[a]-mins[b])[0];if(alt)doCh(alt,gi)}
+  const kp=xi[gi];const slots=form.map((s,i)=>i).filter(i=>i!==gi);const onNow=new Set(slots.map(i=>xi[i]).filter(Boolean));
+  // fewest minutes first; girls already on get a stint's head start so changes aren't constant
+  const key=id=>mins[id]-(onNow.has(id)?L:0);
+  const pool=squad.filter(id=>id!==kp).sort((a,b)=>key(a)-key(b)||onNow.has(b)-onNow.has(a));
+  const chosen=new Set(pool.slice(0,slots.length));const incoming=pool.filter(id=>chosen.has(id)&&!onNow.has(id));
+  slots.forEach(i=>{if(xi[i]&&chosen.has(xi[i])||!incoming.length)return;let bk=0,bv=-1;incoming.forEach((id,k)=>{const v=fitFor(P(id),form[i]);if(v>bv){bv=v;bk=k}});doCh(incoming.splice(bk,1)[0],i)});
+  if(plan.mode==="rotate"&&t===half){const ids=slots.map(i=>xi[i]);
+    if(ids.every(Boolean)){let best=ids,bs=-1e9;for(const pm of perms(ids)){let sc=0;pm.forEach((id,k)=>{const sl=form[slots[k]],p=P(id);sc+=fitFor(p,sl)/4+(prev[id]&&prev[id]!==sl[3]?3:0)+(p.posD.includes(sl[3])?1.5:0)});if(sc>bs){bs=sc;best=pm}}
+      best.forEach((id,k)=>{if(xi[slots[k]]!==id)doCh(id,slots[k])})}}
+  return out;
+}
+// play the plan through to project everyone's minutes
+function simPlan(plan,xi0,squad,formKey,half){
+  const xi=xi0.slice(),mins={},segs={},chs=[];squad.forEach(id=>{mins[id]=0;segs[id]=[]});const form=FORMS[formKey];
+  const end=half*2,pts=[...planBounds(half),end];let t=0;
+  pts.forEach((b,k)=>{xi.forEach((id,i)=>{if(!id||!(id in mins))return;mins[id]+=b-t;const sg=segs[id],c=form[i][3],last=sg[sg.length-1];if(last&&last.c===c&&last.to===t)last.to=b;else sg.push({c,from:t,to:b})});
+    t=b;if(b>=end||plan.mode==="off")return;
+    if(plan.mode==="manual")plan.ch.filter(c=>c.m===b).forEach(c=>{const sw=xi.includes(c.on);const ok=squad.includes(c.on)&&applyCh(xi,{on:c.on,off:c.off});chs.push({m:b,on:c.on,off:c.off,sw,bad:!ok})});
+    else planStep(xi,mins,b,(pts[k+1]||end)-b,half,plan,squad,formKey).forEach(ch=>chs.push({m:b,...ch}))});
+  return {mins,segs,chs,end};
+}
+function equalAsManual(){const sim=simPlan({mode:"equal",gk:S.tac.plan.gk},S.tac.xi,squadIds(),S.tac.form,nextHalf());return sim.chs.map(c=>({m:c.m,on:c.on,off:c.off}))}
+function chText(c){const off=c.off?P(c.off):null,on=P(c.on);if(!on)return "";if(c.sw&&off)return `${esc(on.name)} and ${esc(off.name)} swap positions`;return off?`${esc(on.name)} on for ${esc(off.name)}`:`${esc(on.name)} into the empty spot`}
+function planCard(){
+  const pl=S.tac.plan;const half=nextHalf();const sq=squadIds();const sim=simPlan(pl,S.tac.xi,sq,S.tac.form,half);
+  const gks=sq.filter(id=>P(id).posD.includes("GK")).length;const B=planBounds(half);
+  const ms=sq.map(id=>sim.mins[id]);const lo=Math.min(...ms),hi=Math.max(...ms);
+  const proj=`<div style="margin-top:12px">${sq.slice().sort((a,b)=>sim.mins[b]-sim.mins[a]).map(id=>{const m=sim.mins[id];const sg=sim.segs[id];
+     return `<div class="pm${m<half?" low":""}"><span>${esc(P(id).name)}</span><div class="bar"><i style="width:${m/sim.end*100}%"></i></div><b>${m}'</b><small>${sg.length?sg.map(s=>`${s.c} ${s.from}–${s.to}'`).join(" · "):"On the bench all game"}${m<half?" · less than half a game, she may be disappointed":""}</small></div>`}).join("")}</div>
+    <p class="hint" style="margin-top:6px">${sq.length?`Projected minutes: everyone plays between ${lo} and ${hi} of ${sim.end}.`:""}</p>`;
+  const tl=sim.chs.length?`<h3 style="margin-top:12px">Planned changes</h3><div class="chl">${sim.chs.map((c,k)=>`<div class="${c.bad?"bad":""}"><span class="m">${c.m}'</span><span>${chText(c)}${c.bad?" (won't happen: check who's on)":""}</span>${pl.mode==="manual"?`<button class="btn ghost small" data-plandel="${k}" aria-label="Remove this change">✕</button>`:""}</div>`).join("")}</div>`:"";
+  const opt=()=>sq.map(x=>`<option value="${x}">${esc(P(x).name)}</option>`).join("");
+  const add=pl.mode==="manual"?`<div class="btns" style="margin-top:10px"><select id="plM" aria-label="Minute">${B.map(b=>`<option value="${b}">${b}'${b===half?" (half-time)":""}</option>`).join("")}</select><select id="plOn" aria-label="Coming on"><option value="">Coming on…</option>${opt()}</select><select id="plOff" aria-label="Going off"><option value="">Going off…</option>${opt()}</select><button class="btn small" data-act="planadd">Add change</button></div>
+    <div class="btns" style="margin-top:8px"><button class="btn ghost small" data-act="plancopy">Start again from equal minutes</button></div>`:"";
+  return `<section class="card" id="planCard"><h3>Sub plan</h3>
+   <div class="seg" role="group" aria-label="Sub plan">${Object.keys(PLAN_N).map(k=>`<button data-plan="${k}" aria-pressed="${pl.mode===k}">${PLAN_N[k]}</button>`).join("")}</div>
+   <p class="hint" style="margin-top:8px">${PLAN_D[pl.mode]}${pl.mode!=="off"?" The plan runs by itself during the match, and you can still make your own changes or stop it.":""}${half!==20?` Planned for ${half}-minute halves.`:""}</p>
+   ${pl.mode!=="off"&&pl.mode!=="manual"&&gks>1?`<div class="btns" style="margin-top:8px"><button class="btn ghost small" data-plangk="1" aria-pressed="${!!pl.gk}">${pl.gk?"✓ ":""}Swap keepers at half-time</button></div>`:""}
+   ${pl.mode==="off"?`<p class="hint" style="margin-top:6px">Without a plan, the starting five play all ${sim.end} minutes unless you bring the subs on.</p>`:proj+tl+add}</section>`;
+}
+// before kick-off: what the plan will do, with a way to switch it off for this game
+function prePlanCard(){
+  if(!M.plan)return M.squad.length>5?`<section class="card"><h3>Sub plan</h3><p class="hint">No sub plan for this game. You can make changes yourself, or set one up on Pick your team next time.</p></section>`:"";
+  const sim=simPlan(M.plan,M.xi,M.squad,M.form,M.half);
+  return `<section class="card"><h3>Sub plan · ${PLAN_N[M.plan.mode]}</h3><div class="mins">${M.squad.slice().sort((a,b)=>sim.mins[b]-sim.mins[a]).map(id=>`<div class="mn${sim.mins[id]<M.half?" low":""}"><span>${esc(P(id).name)}</span><b>${sim.mins[id]}'</b></div>`).join("")}</div>
+   <p class="hint" style="margin-top:8px">Projected minutes. ${sim.chs.filter(c=>!c.bad).length} planned changes.</p><div class="btns" style="margin-top:6px"><button class="btn ghost small" data-m="planoff">Turn it off for this game</button></div></section>`;
+}
+// a planned change during the match; returns the commentary line, or "" if it no longer fits
+function planApply(ch){
+  const i=ch.off!=null?M.xi.indexOf(ch.off):ch.i;if(i==null||i<0||!M.squad.includes(ch.on))return "";const j=M.xi.indexOf(ch.on);if(j===i)return "";
+  const form=FORMS[M.form];const to=k=>form[k][3]==="GK"?"in goal":`to ${POSN[form[k][3]].toLowerCase()}`;
+  if(j>=0){[M.xi[i],M.xi[j]]=[M.xi[j],M.xi[i]];return `🔁 Sub plan: ${P(ch.on).name} goes ${to(i)}${M.xi[j]?`, ${P(M.xi[j]).name} ${to(j)}`:""}.`}
+  const off=M.xi[i];M.xi[i]=ch.on;return `🔁 Sub plan: ${P(ch.on).name} on for ${off?P(off).name:"the empty spot"}.`;
+}
+
 // ---------------- events ----------------
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,tr.click");if(!t||t.disabled)return;
@@ -1751,13 +2021,28 @@ document.addEventListener("click",e=>{
   if(d.player){view="squad";playerView=d.player;render();window.scrollTo({top:0});return}
   if(d.act==="back"){playerView=null;render();return}
   if(d.act==="day"){advanceDay();render();return}
-  if(d.act==="tosat"){jumpToSat();render();toast(S.trainRep?`Training done (${S.trainRep.focus}). It's match day.`:"It's match day.");return}
-  if(d.act==="train"){applyTraining();saveGame();render();return}
+  if(d.act==="tosat"){const was=S.trained;jumpToSat();render();if(!was&&S.trained)showTrainSheet();else toast("It's match day.");return}
+  if(d.act==="train"){applyTraining();saveGame();render();showTrainSheet();return}
+  if(d.act==="trainsheet"){showTrainSheet();return}
+  if(d.act==="closesheet"){closeSheet();return}
+  if(d.act==="g0"){const v=($("#mgrName").value||"").trim().slice(0,24);if(!v){toast("Type your name first.");$("#mgrName").focus();return}S.manager=v;S.guide=1;view="tactics";sel=null;saveGame();render();window.scrollTo({top:0});return}
+  if(d.act==="g1"){S.guide=2;view="training";saveGame();render();window.scrollTo({top:0});return}
+  if(d.act==="g2"){S.guide=9;view="home";saveGame();render();window.scrollTo({top:0});toast(friendlyOpen()?"You're all set. Fancy a practice match?":"You're all set. Good luck, gaffer!");return}
+  if(d.act==="friendly"){if(friendlyOpen()){startMatch(true);window.scrollTo({top:0})}return}
+  if(d.act==="nofriendly"){S.friendly.done=true;saveGame();render();return}
+  if(d.fxshow){fxShow=d.fxshow;render();return}
+  if(d.fxcomp){fxComp=d.fxcomp;render();return}
+  if(d.plan){const pl=S.tac.plan;pl.mode=d.plan;if(pl.mode==="manual"&&!pl.ch.length)pl.ch=equalAsManual();saveGame();render();return}
+  if(d.plangk){S.tac.plan.gk=!S.tac.plan.gk;saveGame();render();return}
+  if(d.plandel!=null){S.tac.plan.ch.splice(+d.plandel,1);saveGame();render();return}
+  if(d.act==="plancopy"){S.tac.plan.ch=equalAsManual();saveGame();render();toast("Copied the equal-minutes plan. Edit it as you like.");return}
+  if(d.act==="planadd"){const m=+$("#plM").value,on=$("#plOn").value,off=$("#plOff").value;if(!on||!off||on===off){toast("Pick who comes on and who goes off.");return}
+    S.tac.plan.ch.push({m,on,off});S.tac.plan.ch.sort((a,b)=>a.m-b.m);saveGame();render();return}
   if(d.act==="endtour"){S.lastRes=S.lastRes;nextWeek();render();window.scrollTo({top:0});return}
   if(d.act==="play"){startMatch();window.scrollTo({top:0});return}
   if(d.act==="skip"){skipWeek();toast("On to next week.");return}
   if(d.act==="auto"){autoPick(false);sel=null;saveGame();render();toast("Best eight picked.");return}
-  if(d.act==="share"){autoPick(true);sel=null;saveGame();render();toast("Picked the eight, giving the girls left out last time a go.");return}
+  if(d.act==="share"){autoPick(true);sel=null;saveGame();render();toast("Squad rotated: girls left out last time come in first.");return}
   if(d.act==="new"){confirmNew=true;render();return}
   if(d.act==="newgo"){confirmNew=false;newGame(S.manager);view="home";render();toast("New game started.");return}
   if(d.act==="nextseason"){nextSeason();window.scrollTo({top:0});return}
@@ -1788,6 +2073,7 @@ document.addEventListener("click",e=>{
     if(d.m==="go"){if(M.state==="break"&&!M.flip){M.flip=true;feed("Second half! The teams have swapped ends.","brk");drawPitch()}
       M.state="live";if(M.min===0)feed(`Kick-off! ${M.weather}.`,"brk");M.selTok=null;M.an&&(M.an.nextPass=performance.now()/1000+.6);runTimer();renderMatch();return}
     if(d.m==="pause"){stopTimer();M.state="paused";renderMatch();return}
+    if(d.m==="planoff"){M.plan=null;M.queue=M.queue.filter(b=>!(b.meta&&b.meta.kind==="plan"));toast("Sub plan stopped for this game.");renderMatch();return}
     if(d.m==="done"){finishMatch();window.scrollTo({top:0});return}
     if(d.m==="rotate"){const n=autoRotate();toast(n?`${n} change${n>1?"s":""} made.`:"Nobody needs a rest right now.");renderMatch();return}
     if(d.speed){M.speed=+d.speed;if(M.state==="live")runTimer();renderMatch();return}
@@ -1831,6 +2117,9 @@ function migrate(){
   if(!FORMS[S.tac.form])S.tac.form="1-2-1";
   if(!S.leagueIds){S.div=1;S.leagueIds=LEAGUE_T.map(t=>t[0])}
   S.trophies=S.trophies||[];if(S.manager==null)S.manager="";ensureTeams();
+  if(S.guide==null)S.guide=S.manager||S.wk>0||S.day>0?9:0;
+  if(!S.friendly)S.friendly={done:!(S.wk===0&&S.day===0&&!S.lastRes&&!(S.hist||[]).length)};
+  if(!S.mlog)S.mlog=[];if(!S.tac.plan)S.tac.plan={mode:"off",gk:true,ch:[]};
 }
 function start(data){
   S=(data&&data.S)||loadGame();
