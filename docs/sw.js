@@ -1,9 +1,9 @@
 // Keeps the site's own files on the phone so it opens quickly and works with a poor signal.
 // Data always comes live from the database; only the page shell is cached.
 importScripts("team.js");// self.TEAM: name, logos and the cache name
-const KEY=(self.TEAM&&TEAM.storageKey)||"team",CACHE=KEY+"-v6";
+const KEY=(self.TEAM&&TEAM.storageKey)||"team",CACHE=KEY+"-v7";
 const LOGOS=[TEAM.crest||"crest.png",TEAM.sponsor&&TEAM.sponsor.logo,TEAM.potm&&TEAM.potm.logo,TEAM.kitSponsor&&TEAM.kitSponsor.logo].filter(Boolean);
-const SHELL=["./","index.html","team.js","config.js",...new Set(LOGOS),"icon-192.png","icon-512.png","apple-touch-icon.png","manifest.webmanifest"];
+const SHELL=["./","index.html","app.css","app.js","team.js","config.js",...new Set(LOGOS),"icon-192.png","icon-512.png","apple-touch-icon.png","manifest.webmanifest"];
 const NAME=`${TEAM.name||""} ${TEAM.ageShort||""}`.trim()||"Match alerts";
 self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith(KEY+"-")&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

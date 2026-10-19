@@ -24,7 +24,7 @@ type M = { id: string; date: string; opp: string; ha: string; venue: string; com
   live: { events?: Ev[] } | null; report: string | null };
 type Ev = { k: string; m?: string; n?: string; a?: string; s?: string; on?: string; off?: string; form?: string; line?: string[] };
 const res = (m: M) => m.us == null || m.them == null ? null : m.us > m.them ? "W" : m.us === m.them ? "D" : "L";
-// same as oppKey() in docs/index.html, so head-to-heads match the site's
+// same as oppKey() in docs/app.js, so head-to-heads match the site's
 const key = (n: string) => String(n || "").toLowerCase().replace(/\bcls\b/g, "chester le street").replace(/[^a-z0-9 ]+/g, " ")
   .replace(/\b(a?fc|jfc|youth|juniors?|girls|the|c ?a|football club|club)\b/g, " ").replace(/\s+/g, " ").trim();
 const seasonOf = (d: string) => { const y = +d.slice(0, 4), m = +d.slice(5, 7); const s = m >= 7 ? y : y - 1; return `${s}-${String((s + 1) % 100).padStart(2, "0")}`; };

@@ -24,6 +24,8 @@ Parents can see results and stats without signing in. Only coaches on the list c
 
 The web pages are in the `docs` folder. GitHub Pages serves them at https://seanlawless1989.github.io/nayfcu9/
 
+`index.html` holds the page markup, `app.css` the styles and `app.js` the site itself. `gfx.js` is the matchday graphics maker, which only downloads once a coach signs in. Team details live in `team.js` and `config.js`, never in the others, so every team shares them.
+
 If the site isn't showing, go to the repository's **Settings**, then **Pages**. Under **Build and deployment**, choose **Deploy from a branch**, pick `main` and `/docs`, and click **Save**.
 
 ## 4. Let sign-in links come back to the site

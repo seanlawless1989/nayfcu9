@@ -6,7 +6,7 @@
 
 The team folder needs team.js (copy docs/team.js and change it) and every logo it names
 (crest, sponsor, player-of-the-match and shirt-sponsor logos). Optional: badges/ with opponent
-logos, and badges.json mapping a cleaned opponent name to a badge file (see BADGE_FILES in index.html).
+logos, and badges.json mapping a cleaned opponent name to a badge file (see BADGE_FILES in app.js).
 
 Output goes to dist/<slug>/:
     site/       upload to the team's GitHub repository as docs/ (or any static host)
@@ -114,11 +114,13 @@ def build_site(team, src, site, keep_badges):
     elif (src / "badges").is_dir():
         shutil.copytree(src / "badges", site / "badges")
         badge_map = json.loads((src / "badges.json").read_text()) if (src / "badges.json").exists() else {}
-    if badge_map is not None:
-        s, n = re.subn(r"const BADGE_FILES=\{.*?\};", "const BADGE_FILES=" + json.dumps(badge_map) + ";", s, count=1, flags=re.S)
-        if n != 1:
-            sys.exit("index.html has changed: couldn't find BADGE_FILES")
     p.write_text(s)
+    if badge_map is not None:
+        a = site / "app.js"
+        s, n = re.subn(r"const BADGE_FILES=\{.*?\};", "const BADGE_FILES=" + json.dumps(badge_map) + ";", a.read_text(), count=1, flags=re.S)
+        if n != 1:
+            sys.exit("app.js has changed: couldn't find BADGE_FILES")
+        a.write_text(s)
 
 
 def build_sql(team, out):
