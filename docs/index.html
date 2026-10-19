@@ -89,6 +89,7 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .match.tcard{display:block;cursor:default}
 .tcard .thead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
 .tgames{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.tday{font:700 11.5px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
 .tgame{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;background:var(--field)}
 .tgame[data-edit]{cursor:pointer}
 .md .report p{margin:0 0 10px;line-height:1.55}.md .report textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;resize:vertical}
@@ -804,20 +805,33 @@ const byComp=ms=>compFilter?ms.filter(m=>m.comp===compFilter):ms;
 const tByComp=ts=>!compFilter||compFilter==="Tournament"?ts:[];
 const STAGES=["Group stage","Round of 16","Quarter final","Semi final","Final","3rd place play-off","Plate","Shield","Friendly game"];
 const TROPHIES=["Winners","Runners-up","Semi-finalists","Plate winners","Shield winners"];
-function tGames(t){return matches.filter(m=>m.tournament_id===t.id).sort((a,b)=>STAGES.indexOf(a.stage||"Group stage")-STAGES.indexOf(b.stage||"Group stage"))}
+function tGames(t){return matches.filter(m=>m.tournament_id===t.id).sort((a,b)=>(a.date||"").localeCompare(b.date||"")||STAGES.indexOf(a.stage||"Group stage")-STAGES.indexOf(b.stage||"Group stage"))}
+// A tournament runs from date to end_date; end_date is blank for a one-day tournament.
+const tEnd=t=>t.end_date&&t.end_date>(t.date||"")?t.end_date:t.date||"";
+const nextDay=iso=>{const d=new Date(iso+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+1);return d.toISOString().slice(0,10)};
+function tDays(t){const out=[];for(let d=t.date;d&&d<=tEnd(t)&&out.length<14;d=nextDay(d))out.push(d);return out}
+// "14 Jun", "14–15 Jun" or "30 May – 1 Jun"; long adds full month names and the year
+function tRange(t,long){if(!t.date)return"";const M=long?LONGM:MONTHS,a=new Date(t.date+"T12:00:00"),b=new Date(tEnd(t)+"T12:00:00"),y=long?" "+b.getFullYear():"";
+  if(t.date===tEnd(t))return `${a.getDate()} ${M[a.getMonth()]}${y}`;
+  return a.getMonth()===b.getMonth()?`${a.getDate()}–${b.getDate()} ${M[b.getMonth()]}${y}`:`${a.getDate()} ${M[a.getMonth()]} – ${b.getDate()} ${M[b.getMonth()]}${y}`}
+const dayLabel=iso=>(d=>`${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`)(new Date(iso+"T12:00:00"));
 function trophyIcon(x){return /^winners|plate winners|shield winners/i.test(x||"")?"🏆":/runners/i.test(x||"")?"🥈":"🏅"}
-function tIsFixture(t){return (t.date||"")>=new Date().toISOString().slice(0,10)&&!tGames(t).some(result)}
+// a multi-day tournament stays under Fixtures until its last day, even once the first day's results are in
+function tIsFixture(t){const today=new Date().toISOString().slice(0,10);return tEnd(t)>=today&&((t.date!==tEnd(t)&&today<tEnd(t))||!tGames(t).some(result))}
+function tGameRow(m){const r=result(m);return `<div class="tgame" role="button" tabindex="0" data-edit="${esc(m.id)}"><div style="min-width:0"><div class="o"><span class="stag">${esc(m.stage||"Group stage")}</span>${esc(m.opp||"Opponent to add")}</div>
+      ${(sc=>sc?`<div class="meta">⚽ ${esc(sc)}</div>`:"")(Object.entries(played(m)).filter(([,x])=>x>0).map(([n,x])=>n+(x>1?` ×${x}`:"")).join(", "))}</div>
+      <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:`<span class="chip N">–</span>`}</div></div>`}
 function tCard(t){
   const g=tGames(t),st=teamStats(g.filter(result));const d=t.date?new Date(t.date+"T12:00:00"):null;
+  const days=tDays(t),multi=days.length>1,e=multi?new Date(tEnd(t)+"T12:00:00"):null;
+  const games=multi?[...new Set(g.map(m=>m.date))].map(dt=>`<div class="tday">${days.includes(dt)?`Day ${days.indexOf(dt)+1} · `:""}${esc(dt?dayLabel(dt):"Date to add")}</div>`+g.filter(m=>m.date===dt).map(tGameRow).join("")).join(""):g.map(tGameRow).join("");
   return `<div class="match tcard c-tournament"><div class="thead">
-    <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
+    <div class="d">${d?multi?`<b>${d.getDate()}–${e.getDate()}</b>${MONTHS[d.getMonth()]}${e.getMonth()!==d.getMonth()?"–"+MONTHS[e.getMonth()]:""}`:`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${esc(t.name||"Tournament")}${t.trophy?`<span class="trophy">${trophyIcon(t.trophy)} ${esc(t.trophy)}</span>`:""}</div>
-      <div class="meta"><span class="ctag">Tournament</span>${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
+      <div class="meta"><span class="ctag">Tournament</span>${multi?`${days.length} days${t.venue?" · ":""}`:""}${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
       ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}</div>
     <div></div></div>
-    ${g.length?`<div class="tgames">${g.map(m=>{const r=result(m);return `<div class="tgame" role="button" tabindex="0" data-edit="${esc(m.id)}"><div style="min-width:0"><div class="o"><span class="stag">${esc(m.stage||"Group stage")}</span>${esc(m.opp||"Opponent to add")}</div>
-      ${(sc=>sc?`<div class="meta">⚽ ${esc(sc)}</div>`:"")(Object.entries(played(m)).filter(([,x])=>x>0).map(([n,x])=>n+(x>1?` ×${x}`:"")).join(", "))}</div>
-      <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:`<span class="chip N">–</span>`}</div></div>`}).join("")}</div>`:`<p class="hint" style="margin-top:8px">No games added yet.</p>`}
+    ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">No games added yet.</p>`}
     <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div>
   </div>`;
 }
@@ -1276,7 +1290,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const ours=Object.entries(pl).filter(([,g])=>+g>0).map(([n,g])=>{const t=ev.filter(e=>e.k==="goal"&&e.n===n).map(e=>e.m).filter(Boolean);return `${esc(n)}${t.length?" "+t.map(esc).join(", "):+g>1?` ×${g}`:""}`});
   const theirs=ev.filter(e=>e.k==="them").map(e=>esc(e.m)).filter(Boolean);
   const board=`<div class="board"><div class="tm"><img src="${CREST}" alt="">${esc(TEAM.name)}</div><div class="sc">${(r||isLive(m))&&!m.hidden?`${m.us??0} – ${m.them??0}`:"v"}<small>${lab}</small></div><div class="tm">${badge(m.opp)}${esc(m.opp||"Opponent to add")}</div>${ours.length||theirs.length?`<div class="scorers"><div>${ours.map(x=>`<span>⚽ ${x}</span>`).join("")}</div><div>${theirs.length?`<span>⚽ ${theirs.join(", ")}</span>`:""}</div></div>`:""}</div>`;
-  const facts=[["📅",longDate(m.date)],["⏰",m.ko?`${m.ko} kick-off`:""],["📍",[m.venue,m.ha==="H"?"Home":m.ha==="A"?"Away":""].filter(Boolean).join(" · ")],["🏆",tn?`${tn.name}${m.stage?` · ${m.stage}`:""}`:compName(m.comp||"")]].filter(([,v])=>v);
+  const facts=[["📅",longDate(m.date)],["⏰",m.ko?`${m.ko} kick-off`:""],["📍",[m.venue,m.ha==="H"?"Home":m.ha==="A"?"Away":""].filter(Boolean).join(" · ")],["🏆",tn?`${tn.name}${m.stage?` · ${m.stage}`:""}${(d=>d.length>1&&d.includes(m.date)?` · Day ${d.indexOf(m.date)+1} of ${d.length}`:"")(tDays(tn))}`:compName(m.comp||"")]].filter(([,v])=>v);
   const info=`<section class="card mdinfo">${facts.map(([i,v])=>`<div><span>${i}</span>${esc(v)}</div>`).join("")}${m.postponed?`<div><span>⚠️</span><b>Postponed.</b> New date to be confirmed.</div>`:""}${tn&&tn.trophy?`<div><span>${trophyIcon(tn.trophy)}</span>${esc(tn.trophy)}</div>`:""}</section>`;
   // the team
   const sheet=teamSheet(m),ko=ev.find(e=>e.k==="ko"),starters=ko&&ko.line||null;let names=Object.keys(pl);
@@ -1344,7 +1358,7 @@ function bookView(){
   const pot=n=>ts.filter(x=>x.potm===n).length;
   const scorers=roster.filter(n=>st(n).goals).sort((a,b)=>st(b).goals-st(a).goals).slice(0,8);
   const at=assistsTracked(season),tracked=appsTracked(list);
-  const troph=[...ts.filter(x=>x.trophy).map(x=>({title:x.name,ach:x.trophy,date:x.date})),...honours.filter(h=>seasonOf(h.date)===season).map(h=>({title:h.title,ach:h.achievement,date:h.date}))];
+  const troph=[...ts.filter(x=>x.trophy).map(x=>({title:x.name,ach:x.trophy,date:x.date,when:tRange(x)})),...honours.filter(h=>seasonOf(h.date)===season).map(h=>({title:h.title,ach:h.achievement,date:h.date}))];
   let pg=0;const page=(cls,body)=>{pg++;return `<section class="bp ${cls}"><div class="band t"></div><div class="inner">${body}</div><div class="band b"></div><div class="pno">${pg}</div></section>`};
   const nice=d=>d?(x=>`${x.getDate()} ${MONTHS[x.getMonth()]}`)(new Date(d+"T12:00:00")):"";
   // cover
@@ -1364,7 +1378,7 @@ function bookView(){
     out+=page("",`<h1 class="ttl">Results${i?" (continued)":""}</h1><table class="res"><tr><th>Date</th><th>Opponent</th><th>Comp</th><th>Score</th><th></th><th>Scorers</th></tr>
     ${chunk.map(m=>{const r=result(m);const tn=m.tournament_id?tournaments.find(x=>x.id===m.tournament_id):null;return `<tr><td>${nice(m.date)}</td><td>${esc(m.opp||"")}${m.stage&&m.stage!=="placeholder"?` <span class="hint">(${esc(m.stage)})</span>`:""}</td><td>${esc(tn?tn.name:m.comp||"")}</td><td class="n">${r?`${m.us}–${m.them}`:""}</td><td>${r?`<span class="wdl ${r}">${r}</span>`:""}</td><td class="hint">${esc(Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>n+(g>1?` ×${g}`:"")).join(", "))}</td></tr>`}).join("")||`<tr><td colspan="6">No results yet.</td></tr>`}</table>`)}
   // honours
-  if(troph.length)out+=page("",`<h1 class="ttl">Honours</h1>${troph.map(x=>`<div class="hl" style="font-size:16pt">${trophyIcon(x.ach)} ${esc(x.title)}: ${esc(x.ach)} <span class="hint">${nice(x.date)}</span></div>`).join("")}
+  if(troph.length)out+=page("",`<h1 class="ttl">Honours</h1>${troph.map(x=>`<div class="hl" style="font-size:16pt">${trophyIcon(x.ach)} ${esc(x.title)}: ${esc(x.ach)} <span class="hint">${x.when||nice(x.date)}</span></div>`).join("")}
     ${ts.filter(x=>x.potm).length?`<h3 style="margin-top:8mm">Players of the tournament</h3><table>${ts.filter(x=>x.potm).map(x=>`<tr><td>⭐ ${esc(x.potm)}</td><td>${esc(x.name)}</td></tr>`).join("")}</table>`:""}`);
   // player pages
   roster.forEach((n,i)=>{const o=st(n);const best=sortMatches(list.filter(m=>(played(m)[n]||0)>0)).sort((a,b)=>played(b)[n]-played(a)[n])[0];
@@ -1458,16 +1472,16 @@ document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files
 
 // ---------- honours ----------
 function honoursView(){
-  const items=[...tournaments.filter(t=>t.trophy).map(t=>({date:t.date||"",title:t.name,ach:t.trophy,sub:t.potm?`Player of the tournament: ${t.potm}`:"",notes:t.notes,t:t.id})),
+  const items=[...tournaments.filter(t=>t.trophy).map(t=>({date:t.date||"",when:tRange(t,true),title:t.name,ach:t.trophy,sub:t.potm?`Player of the tournament: ${t.potm}`:"",notes:t.notes,t:t.id})),
     ...honours.map(h=>({date:h.date||"",title:h.title,ach:h.achievement,sub:"",notes:h.notes,h:h.id}))].sort((a,b)=>b.date.localeCompare(a.date));
   const bySeason={};items.forEach(i=>{(bySeason[seasonOf(i.date)||"Undated"]=bySeason[seasonOf(i.date)||"Undated"]||[]).push(i)});
   const awards=tournaments.filter(t=>t.potm).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   return `<div class="stack"><section class="card"><h2>Honours board</h2><p class="hint">Every trophy the ${esc(TEAM.ageGroup||"team")} have won. Tournament trophies appear here automatically; add league and cup trophies with the button below.</p>
     <div class="btns edit-only" style="margin-top:10px"><button class="btn gold" data-view="hnew">+ Add an honour</button></div></section>
   ${items.length?Object.entries(bySeason).map(([s,list])=>`<section class="card"><h3>${esc(s)}</h3><div class="list">${list.map(i=>`<div class="hon"><div class="ic">${trophyIcon(i.ach)}</div>
-    <div style="min-width:0"><div class="t">${esc(i.title)}</div><div class="meta"><b>${esc(i.ach||"")}</b>${i.date?` · ${(d=>`${d.getDate()} ${LONGM[d.getMonth()]} ${d.getFullYear()}`)(new Date(i.date+"T12:00:00"))}`:""}</div>${i.sub?`<div class="potm">⭐ ${esc(i.sub)}</div>`:""}${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}</div>
+    <div style="min-width:0"><div class="t">${esc(i.title)}</div><div class="meta"><b>${esc(i.ach||"")}</b>${i.when?` · ${esc(i.when)}`:i.date?` · ${(d=>`${d.getDate()} ${LONGM[d.getMonth()]} ${d.getFullYear()}`)(new Date(i.date+"T12:00:00"))}`:""}</div>${i.sub?`<div class="potm">⭐ ${esc(i.sub)}</div>`:""}${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}</div>
     <div class="edit-only">${i.h?`<button class="mini" data-hedit="${esc(i.h)}">Edit</button>`:`<button class="mini" data-tedit="${esc(i.t)}">Edit</button>`}</div></div>`).join("")}</div></section>`).join(""):`<div class="card empty">No trophies yet. They'll appear here as soon as one is won. 🏆</div>`}
-  ${awards.length?`<section class="card"><h3>Players of the tournament</h3><table class="lb"><tbody>${awards.map(t=>`<tr class="click" data-player="${esc(t.potm)}"><td>⭐ ${esc(t.potm)}</td><td>${esc(t.name)}</td><td>${esc(t.date||"")}</td></tr>`).join("")}</tbody></table></section>`:""}
+  ${awards.length?`<section class="card"><h3>Players of the tournament</h3><table class="lb"><tbody>${awards.map(t=>`<tr class="click" data-player="${esc(t.potm)}"><td>⭐ ${esc(t.potm)}</td><td>${esc(t.name)}</td><td>${esc(tRange(t,true))}</td></tr>`).join("")}</tbody></table></section>`:""}
   </div>`;
 }
 function tFormView(){
@@ -1477,7 +1491,9 @@ function tFormView(){
   return `<form id="tform" class="stack" novalidate><h2>${T.id?"Edit tournament":"Add a tournament"}</h2>
   <section class="card stack" style="gap:12px">
     <label class="f">Tournament name<input type="text" id="t-name" value="${esc(T.name)}" placeholder="e.g. Durham FC Sister Club Tournament"></label>
-    <div class="grid2"><label class="f">Date<input type="date" id="t-date" value="${esc(T.date||"")}"></label><label class="f">Venue<input type="text" id="t-venue" value="${esc(T.venue||"")}"></label></div>
+    <div class="grid2"><label class="f">First day<input type="date" id="t-date" value="${esc(T.date||"")}"></label><label class="f">Last day<input type="date" id="t-end" value="${esc(T.end_date&&T.end_date>(T.date||"")?T.end_date:"")}" min="${esc(T.date||"")}"></label></div>
+    <p class="hint" style="margin-top:-6px">For a tournament over 2 or 3 days, set the last day. Leave it blank for a one-day tournament.</p>
+    <label class="f">Venue<input type="text" id="t-venue" value="${esc(T.venue||"")}"></label>
     <label class="f">Player of the tournament<select id="t-potm"><option value="">Not chosen yet</option>${pool.map(n=>`<option${n===T.potm?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
     <label class="f">Trophy won<select id="t-trophy"><option value="">No trophy</option>${TROPHIES.map(x=>`<option${x===T.trophy?" selected":""}>${x}</option>`).join("")}<option value="__other"${other?" selected":""}>Something else…</option></select></label>
     <label class="f" id="t-other-wrap"${other?"":" hidden"}>What did we win?<input type="text" id="t-other" value="${other?esc(T.trophy):""}" placeholder="e.g. Fair play award"></label>
@@ -1491,8 +1507,14 @@ async function saveTournament(){
   const v=id=>$("#"+id)?.value??"";const tr=v("t-trophy")==="__other"?v("t-other").trim():v("t-trophy");
   const body={name:v("t-name").trim(),date:v("t-date")||null,venue:v("t-venue").trim(),potm:v("t-potm")||null,trophy:tr,notes:v("t-notes").trim(),updated:new Date().toISOString()};
   if(!body.name||!body.date){toast("Add the tournament name and date.");return}
+  const end=v("t-end"),multi=!!end&&end>body.date;
+  if(end&&end<body.date){toast("The last day can't be before the first day.");return}
+  if(multi&&tDays({date:body.date,end_date:end}).length>7){toast("A tournament can run for up to a week.");return}
+  // only send end_date when it's used, or when the database already has the column (rows loaded with it)
+  if(multi||"end_date" in T)body.end_date=multi?end:null;
   const id=T.id||`${body.date}-${slug(body.name)}`;
-  try{await db.collection("tournaments").doc(id).set(body);toast("Tournament saved.");season=seasonOf(body.date)||season;T=null;setView(tIsFixture(Object.assign({id},body))?"fixtures":"results")}
+  const off=T.id?tGames(T).filter(m=>m.date&&(m.date<body.date||m.date>(multi?end:body.date))).length:0;
+  try{await db.collection("tournaments").doc(id).set(body);toast(off?`Tournament saved. ${off} game${off>1?"s are":" is"} on a date outside the tournament days, so open ${off>1?"them":"it"} to change the date.`:"Tournament saved.");season=seasonOf(body.date)||season;T=null;setView(tIsFixture(Object.assign({id},body))?"fixtures":"results")}
   catch(e){toast("Couldn't save. Check your connection and try again.")}
 }
 function hFormView(){
@@ -1757,8 +1779,9 @@ function formView(){
       <label class="f">Venue<input type="text" id="f-venue" list="venues" value="${esc(F.venue)}"></label>
       <label class="f">Competition<select id="f-comp">${["League","Cup","Friendly","Tournament"].map(c=>`<option${c===F.comp?" selected":""}>${c}</option>`).join("")}</select></label>
     </div>
-    ${F.comp==="Tournament"?`<div class="grid2"><label class="f">Which tournament<select id="f-tid"><option value="">Choose…</option>${tournaments.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(t=>`<option value="${esc(t.id)}"${t.id===F.tournament_id?" selected":""}>${esc(t.name)} (${esc(t.date||"")})</option>`).join("")}</select></label>
+    ${F.comp==="Tournament"?`<div class="grid2"><label class="f">Which tournament<select id="f-tid"><option value="">Choose…</option>${tournaments.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(t=>`<option value="${esc(t.id)}"${t.id===F.tournament_id?" selected":""}>${esc(t.name)} (${esc(tRange(t,true))})</option>`).join("")}</select></label>
       <label class="f">Stage<select id="f-stage">${STAGES.map(x=>`<option${x===(F.stage||"Group stage")?" selected":""}>${x}</option>`).join("")}</select></label></div>
+      ${(x=>x&&tDays(x).length>1?`<div><div class="hint" style="margin-bottom:6px">Which day was this game?</div><div class="mg">${tDays(x).map((d,i)=>`<button type="button" class="mini" data-tday="${d}" aria-pressed="${F.date===d}"${F.date===d?' style="border-color:var(--club)"':""}>${F.date===d?"✓ ":""}Day ${i+1} · ${dayLabel(d)}</button>`).join("")}</div></div>`:"")(tournaments.find(y=>y.id===F.tournament_id))}
       <p class="hint">New tournament? Create it first with <b>+ Add a tournament</b>.</p>`:""}
     <datalist id="opps">${opps.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
     <datalist id="venues">${venues.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
@@ -1793,6 +1816,7 @@ async function saveMatch(){
   readForm();
   if(!F.date||!F.opp){toast("Add the date and opponent first.");return}
   if(F.comp==="Tournament"&&!F.tournament_id){toast("Pick which tournament this game was in.");return}
+  if(F.comp==="Tournament"&&(x=>x&&tDays(x).length>1&&!tDays(x).includes(F.date))(tournaments.find(y=>y.id===F.tournament_id))){toast("Pick which day of the tournament this game was on.");return}
   if(F.comp==="Tournament")F.potm="";
   const goalSum=Object.values(F.played).reduce((a,b)=>a+(+b||0),0);
   const body={date:F.date,opp:F.opp,ha:F.ha,venue:F.venue,comp:F.comp,ko:F.ko,us:F.us===""?(Object.keys(F.played).length&&F.them!==""?goalSum:null):F.us,them:F.them===""?null:F.them,
@@ -1837,10 +1861,11 @@ document.addEventListener("click",async e=>{
   if(t.dataset.medit){const m=matches.find(x=>x.id===t.dataset.medit);if(!m||!canWrite)return;
     F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
   if(t.dataset.player){playerView=t.dataset.player;setView("players");return}
+  if(t.dataset.tday&&F){readForm();F.date=t.dataset.tday;render();return}
   if(t.dataset.tedit){const x=tournaments.find(y=>y.id===t.dataset.tedit);if(x&&canWrite){T=JSON.parse(JSON.stringify(x));setView("tedit")}return}
   if(t.dataset.hedit){const x=honours.find(y=>y.id===t.dataset.hedit);if(x&&canWrite){H=JSON.parse(JSON.stringify(x));setView("hedit")}return}
   if(t.dataset.tgame){const x=tournaments.find(y=>y.id===t.dataset.tgame);if(!x)return;F=Object.assign(blankForm(),{comp:"Tournament",tournament_id:x.id,date:x.date||blankForm().date,venue:x.venue||"",ha:"N",stage:"Group stage"});
-    const prev=tGames(x).slice(-1)[0];if(prev){F.played=Object.fromEntries(Object.keys(played(prev)).map(n=>[n,0]))}setView("new");return}
+    const prev=tGames(x).slice(-1)[0];if(prev){F.played=Object.fromEntries(Object.keys(played(prev)).map(n=>[n,0]));if(tDays(x).includes(prev.date))F.date=prev.date}setView("new");return}
   if(t.dataset.tpost){const x=tournaments.find(y=>y.id===t.dataset.tpost);if(x&&x.potm){F=null;setView("gfx");await GFX.loadTournament(x)}return}
   if(t.id==="delT"){if(t.dataset.sure){try{await db.collection("tournaments").doc(T.id).delete();toast("Tournament deleted.");T=null;setView("results")}catch(err){toast("Couldn't delete it.")}}else{t.dataset.sure="1";t.textContent="Tap again to delete"}return}
   if(t.id==="delH"){if(t.dataset.sure){try{await db.collection("honours").doc(H.id).delete();toast("Removed.");H=null;setView("honours")}catch(err){toast("Couldn't delete it.")}}else{t.dataset.sure="1";t.textContent="Tap again to delete"}return}
