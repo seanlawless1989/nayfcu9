@@ -711,6 +711,7 @@ function render(){
   else if(view==="calendar")main.innerHTML=calendarView();
   else if(view==="training")main.innerHTML=trainingView();
   else if(view==="votes")main.innerHTML=votesView();
+  else if(view==="matchday")main.innerHTML=matchdayView();
   else if(view==="ftimport")main.innerHTML=ftView();
   else if(view==="help")main.innerHTML=helpView();
   else if(view==="book")main.innerHTML=bookView();
@@ -735,9 +736,9 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
     <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${m.venue?`<span class="pill">📍 ${esc(m.venue)}</span>`:""}${m.ha==="A"||m.ha==="H"?`<span class="pill">${m.ha==="A"?"Away":"Home"}</span>`:m.venue?"":`<span class="pill">Venue TBC</span>`}</div>
     ${!live&&h.length?`<div class="h2hrow">Last time: ${h.slice(0,3).map(scChip).join(" ")}</div>`:""}
     ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
-    <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
+    <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_ITEMS=[["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
+const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
@@ -960,6 +961,32 @@ function wxFor(m){const pc=(MD(m).postcode||"").replace(/\s+/g,"").toUpperCase()
     WX[k]={t:Math.round(h.temperature_2m[i]),p:h.precipitation_probability[i],c:h.weather_code[i],w:Math.round(h.wind_speed_10m[i])};if(["md","home","fixtures"].includes(view)&&!document.querySelector("#main form"))render()}).catch(()=>{});
   return null}
 function wxText(m,bare){const w=wxFor(m);return w?`${bare?"":(WXI[w.c]||"🌡️")+" "}${w.t}°C${w.p!=null?`, ${w.p}% chance of rain`:""}${w.w>=15?`, windy (${w.w} mph)`:""}`:""}
+// ---------- matchday: one screen for the whole day ----------
+// Parents: arrival, directions, kit, weather, availability and last-minute changes. Coaches: squad, line-up and the
+// live match (timer, subs, goals), plus messages. Afterwards: result, award, photos and the report.
+let mdayMatch=null;
+function mdayPick(){const t=todayLocal(),live=liveNow().find(m=>m.live.status!=="ft");if(live)return live;
+  const today=sortMatches(matches.filter(m=>m.date===t&&!m.postponed));if(today.length)return today.find(m=>!result(m))||today[today.length-1];
+  const recent=sortMatches(matches.filter(m=>result(m)&&m.date<t&&(new Date(t)-new Date(m.date))<=2*864e5));const nx=nextFixture();
+  return nx&&(new Date(nx.date)-new Date(t))<=864e5?nx:recent[recent.length-1]||nx}
+function matchdayView(){const m=matches.find(x=>x.id===mdayMatch)||mdayPick();if(!m)return `<div class="card empty">No game coming up yet.</div>`;mdayMatch=m.id;
+  const r=result(m),live=isLive(m),done=!!r||(m.live&&m.live.status==="ft")||m.hidden&&!isFixture(m),d=MD(m),id=esc(m.id);
+  const when=new Date(m.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+  const head=`<section class="card"><div class="kick hint" style="font-weight:800;text-transform:uppercase;letter-spacing:.08em">${live?"🔴 Live now":done?"Full time":"Matchday"} · ${esc(when)}</div><h2 style="margin:4px 0 0">${m.ha==="A"?"at":"v"} ${esc(m.opp||"TBC")}</h2>
+    ${done&&!m.hidden&&r?`<p style="font:800 28px var(--body);margin:6px 0 0">${m.us}–${m.them} <span class="chip ${r}">${r}</span></p>`:""}${m.postponed?`<div class="note" style="margin-top:8px"><b>⚠️ Postponed.</b> New date to be confirmed.</div>`:""}${d.notice?`<div class="note" style="margin-top:8px"><b>📣 Latest:</b> ${esc(d.notice)}</div>`:""}</section>`;
+  const facts=[["🕘",d.meet?`Arrive by ${d.meet}`:""],["⏰",m.ko?`${m.ko} kick-off`:"Kick-off TBC"],["📍",[m.venue,d.pitch?`Pitch ${d.pitch}`:""].filter(Boolean).join(" · ")],["👕",d.kit?`Wear the ${kitLabel(d.kit).toLowerCase()}`:""],[(w=>w&&WXI[w.c]||"🌡️")(wxFor(m)),(t=>t?t+" at kick-off":"")(wxText(m,true))]].filter(([,v])=>v);
+  const parents=done?"":`<section class="card stack"><h3>For parents</h3><div class="mdinfo" style="display:flex;flex-direction:column;gap:6px;font-weight:600">${facts.map(([i,v])=>`<div><span style="display:inline-block;width:26px">${i}</span>${esc(v)}</div>`).join("")}</div>
+    ${m.squad&&m.squad.length?`<p style="margin:0"><b>Squad:</b> ${m.squad.map(esc).join(", ")}</p>`:""}
+    <div class="btns">${live?`<button class="btn gold" data-tl="${id}">Follow live</button>`:`<button class="btn gold" data-mdayav="${id}">Can your ${PRN.kid} make it?</button>`}${mapsUrl(m)?`<a class="btn ghost" href="${mapsUrl(m)}" target="_blank" rel="noopener">🧭 Directions</a>`:""}<button class="btn ghost" data-view="alerts">🔔 Alerts</button></div></section>`;
+  const coach=!canWrite?"":done?`<section class="card stack edit-only"><h3>After the game</h3><div class="btns"><button class="btn gold" data-edit="${id}">Result and ${esc(POTM)}</button><button class="btn ghost" data-mdayrep="${id}">${m.report&&m.report.trim()?"Edit the report":"✨ Write the report"}</button><button class="btn ghost" data-gfx="ft" data-mid="${id}"${r?"":" disabled"}>Result post</button><button class="btn ghost" data-gfx="potm" data-mid="${id}"${m.potm?"":" disabled"}>PotM post</button></div><div class="btns">${galAdd(m.id)}</div></section>`
+    :`<section class="card stack edit-only"><h3>For coaches</h3>${m.comp!=="Tournament"?`<div class="avsum" style="margin:0">${avSummary(m.id)}</div>`:""}
+      <div class="btns"><button class="btn ghost" data-pick="${id}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="btn gold" data-live="${id}">▶ Line-up and live match</button><button class="btn ghost" data-msg="${id}">Parents' message</button><button class="btn ghost" data-medit="${id}">Matchday details</button></div>
+      <p class="hint" style="margin:0">Live match has the line-up, the match timer, substitutions and goals; parents follow along and get alerts.</p></section>`;
+  const after=!done?"":`${m.potm?`<section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3><p style="font:800 22px var(--body);margin:0">${POTM_IC} ${esc(m.potm)}</p></section>`:""}
+    ${m.report&&m.report.trim()?`<section class="card"><h3>Match report</h3><p style="margin:0">${esc(clip(m.report,320))}</p><div class="btns" style="margin-top:8px"><button class="btn ghost" data-md="${id}">Read it all</button></div></section>`:""}
+    ${(ps=>ps.length?`<section class="card"><h3>Photos (${ps.length})</h3>${galGrid(ps)}</section>`:"")(galOf(m.id))}
+    <div class="btns"><button class="btn ghost" data-md="${id}">Full match page</button>${m.live&&m.live.events&&m.live.events.length?`<button class="btn ghost" data-tl="${id}">Match timeline</button>`:""}</div>`;
+  return `<div class="stack">${head}${parents}${coach}${after}</div>`}
 function nextFixture(){const today=new Date().toISOString().slice(0,10);return sortMatches(matches.filter(m=>!result(m)&&!m.postponed&&!(m.hidden&&m.live&&m.live.status==="ft")&&(m.date||"")>=today))[0]}
 function msgText(m){const d=new Date(m.date+"T12:00:00");
   return `⚽ ${TEAM.ageGroup||"Match"}: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${compName(m.comp)})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${MD(m).meet?`\n🕘 Meet at ${MD(m).meet}`:""}\n${m.venue?`📍 ${m.venue}${MD(m).pitch?`, pitch ${MD(m).pitch}`:""}`:"📍 Venue to be confirmed"}${MD(m).kit?`\n👕 ${kitLabel(MD(m).kit)}`:""}${mapsUrl(m)?`\n🧭 ${mapsUrl(m)}`:""}\n\nFollow the game live on the day:\n${siteUrl()}?live=${encodeURIComponent(m.id)}\n\nPlease let us know if your ${PRN.kid} can make it:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nGet kick-off and goal alerts on your phone:\n${siteUrl()}?alerts\n\nThank you! ${TEAM.cheer||"⚽"}`}
@@ -1479,7 +1506,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const ours=Object.entries(pl).filter(([,g])=>+g>0).map(([n,g])=>{const t=ev.filter(e=>e.k==="goal"&&e.n===n).map(e=>e.m).filter(Boolean);return `${esc(n)}${t.length?" "+t.map(esc).join(", "):+g>1?` ×${g}`:""}`});
   const theirs=ev.filter(e=>e.k==="them").map(e=>esc(e.m)).filter(Boolean);
   const board=`<div class="board"><div class="tm"><img src="${CREST}" alt="">${esc(TEAM.name)}</div><div class="sc">${(r||isLive(m))&&!m.hidden?`${m.us??0} – ${m.them??0}`:"v"}<small>${lab}</small></div><div class="tm">${badge(m.opp)}${esc(m.opp||"Opponent to add")}</div>${ours.length||theirs.length?`<div class="scorers"><div>${ours.map(x=>`<span>⚽ ${x}</span>`).join("")}</div><div>${theirs.length?`<span>⚽ ${theirs.join(", ")}</span>`:""}</div></div>`:""}</div>`;
-  const facts=[["📅",longDate(m.date)],["⏰",m.ko?`${m.ko} kick-off`:!result(m)&&!m.hidden&&!m.postponed?"Kick-off time TBC":""],["🕘",fx&&MD(m).meet?`Meet at ${MD(m).meet}`:""],["📍",[m.venue,MD(m).pitch?`Pitch ${MD(m).pitch}`:"",m.ha==="H"?"Home":m.ha==="A"?"Away":""].filter(Boolean).join(" · ")],["👕",fx&&MD(m).kit?`Wear the ${kitLabel(MD(m).kit).toLowerCase()}`:""],[(w=>w&&WXI[w.c]||"🌡️")(fx&&wxFor(m)),fx?(t=>t?t+" at kick-off":"")(wxText(m,true)):""],["🏆",tn?`${tn.name}${m.stage?` · ${m.stage}`:""}${(d=>d.length>1&&d.includes(m.date)?` · Day ${d.indexOf(m.date)+1} of ${d.length}`:"")(tDays(tn))}`:compName(m.comp||"")]].filter(([,v])=>v);
+  const facts=[["📅",longDate(m.date)],["⏰",m.ko?`${m.ko} kick-off`:!result(m)&&!m.hidden&&!m.postponed?"Kick-off time TBC":""],["📣",fx&&MD(m).notice?MD(m).notice:""],["🕘",fx&&MD(m).meet?`Meet at ${MD(m).meet}`:""],["📍",[m.venue,MD(m).pitch?`Pitch ${MD(m).pitch}`:"",m.ha==="H"?"Home":m.ha==="A"?"Away":""].filter(Boolean).join(" · ")],["👕",fx&&MD(m).kit?`Wear the ${kitLabel(MD(m).kit).toLowerCase()}`:""],[(w=>w&&WXI[w.c]||"🌡️")(fx&&wxFor(m)),fx?(t=>t?t+" at kick-off":"")(wxText(m,true)):""],["🏆",tn?`${tn.name}${m.stage?` · ${m.stage}`:""}${(d=>d.length>1&&d.includes(m.date)?` · Day ${d.indexOf(m.date)+1} of ${d.length}`:"")(tDays(tn))}`:compName(m.comp||"")]].filter(([,v])=>v);
   const info=`<section class="card mdinfo">${facts.map(([i,v])=>`<div><span>${i}</span>${esc(v)}</div>`).join("")}${fx&&mapsUrl(m)?`<div><span>🧭</span><a href="${mapsUrl(m)}" target="_blank" rel="noopener">Directions</a></div>`:""}${m.postponed?`<div><span>⚠️</span><b>Postponed.</b> New date to be confirmed.</div>`:""}${tn&&tn.trophy?`<div><span>${trophyIcon(tn.trophy)}</span>${esc(tn.trophy)}</div>`:""}</section>`;
   // the team
   const sheet=teamSheet(m),ko=ev.find(e=>e.k==="ko"),starters=ko&&ko.line||null;let names=Object.keys(pl);
@@ -2051,6 +2078,7 @@ function formView(){
       <label class="f">Meet / arrive by<input type="time" id="f-meet" value="${esc(MD(F).meet||"")}"></label>
       <label class="f">Pitch<input type="text" id="f-pitch" value="${esc(MD(F).pitch||"")}" placeholder="e.g. 3" maxlength="20"></label>
       <label class="f">Kit<select id="f-kit"><option value="">Not set</option>${Object.entries(TKITS()).map(([k,x])=>`<option value="${esc(k)}"${MD(F).kit===k?" selected":""}>${esc(x.label||k)}</option>`).join("")}<option value="Training kit"${MD(F).kit==="Training kit"?" selected":""}>Training kit</option></select></label>
+      <label class="f" style="grid-column:1/-1">Last-minute changes for parents<input type="text" id="f-notice" value="${esc(MD(F).notice||"")}" maxlength="200" placeholder="e.g. Now on pitch 4. Bring a warm top."></label>
       <label class="f">Venue postcode<input type="text" id="f-pc" value="${esc(MD(F).postcode||"")}" placeholder="for directions and weather" maxlength="10" autocapitalize="characters"></label>
       <label class="f">Competition<select id="f-comp">${["League","Cup","Friendly","Tournament"].map(c=>`<option${c===F.comp?" selected":""}>${c}</option>`).join("")}</select></label>
     </div>
@@ -2086,7 +2114,7 @@ function formView(){
 }
 function readForm(){const v=id=>$("#"+id)?.value??"";F.opp=v("f-opp").trim();F.date=v("f-date");F.ko=v("f-ko");F.venue=v("f-venue").trim();F.comp=v("f-comp");
   F.us=v("f-us")===""?"":+v("f-us");F.them=v("f-them")===""?"":+v("f-them");F.potm=v("f-potm");F.notes=v("f-notes");F.saves=v("f-saves")===""?"":+v("f-saves");if($("#f-pp"))F.postponed=$("#f-pp").checked;
-  if($("#f-meet")){const md={meet:v("f-meet"),pitch:v("f-pitch").trim(),kit:v("f-kit"),postcode:v("f-pc").trim().toUpperCase()};Object.keys(md).forEach(k=>{if(!md[k])delete md[k]});F.matchday=md}
+  if($("#f-meet")){const md={meet:v("f-meet"),pitch:v("f-pitch").trim(),kit:v("f-kit"),postcode:v("f-pc").trim().toUpperCase(),notice:v("f-notice").trim()};Object.keys(md).forEach(k=>{if(!md[k])delete md[k]});F.matchday=md}
   if($("#f-tid")){F.tournament_id=$("#f-tid").value||null;F.stage=$("#f-stage").value}else if(F.comp!=="Tournament"){F.tournament_id=null;F.stage=""}}
 async function saveMatch(){
   readForm();
@@ -2127,6 +2155,9 @@ document.addEventListener("click",async e=>{
   if(t.id==="trEditBtn"&&canWrite){trEdit=JSON.parse(JSON.stringify(TR||{day:"Wednesday",start:"18:00",finish:"19:00",off:[]}));render();return}
   if(t.id==="trCancel"){trEdit=null;render();return}
   if(t.id==="attSave"){attSave();return}
+  if(t.dataset.mday){mdayMatch=t.dataset.mday==="1"?null:t.dataset.mday;setView("matchday");return}
+  if(t.dataset.mdayav){availMatch=t.dataset.mdayav;view="avail";render();return}
+  if(t.dataset.mdayrep){mdWrite=true;mdPrevWrite=false;mdFrom="matchday";mdMatch=t.dataset.mdayrep;setView("md");return}
   if(t.id==="ftStart"&&canWrite){ftStart();return}
   if(t.id==="ftFetch"){ftFetch();return}
   if(t.id==="ftPaste"){ftPasted();return}
@@ -2277,7 +2308,7 @@ document.addEventListener("submit",async e=>{
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["gallery","calendar","training","help","setup","votes"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["gallery","calendar","training","help","setup","votes","matchday"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
