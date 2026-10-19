@@ -1903,7 +1903,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="mdPreviewAi"||t.id==="mdReportAi"){const rep=t.id==="mdReportAi",m=matches.find(x=>x.id===mdMatch),ta=$(rep?"#mdReport":"#mdPreview");if(!m||!ta||!canWrite)return;
     if(ta.value.trim()&&!confirm(`Replace what's in the box with a suggested ${rep?"report":"preview"}?`))return;
     t.disabled=true;const was=t.textContent;t.textContent="Writing…";let txt=null,why="";
-    try{const {data,error}=await sb.functions.invoke("preview",{body:{match:m.id,kind:rep?"report":"preview"}});if(!error&&data&&data.text)txt=data.text;else why=(data&&data.error)||""}catch(e){}
+    try{const {data,error}=await sb.functions.invoke("preview",{body:{match:m.id,kind:rep?"report":"preview",team:{name:TEAM.name,ageGroup:TEAM.ageGroup,publicScores:TEAM.publicScores}}});if(!error&&data&&data.text)txt=data.text;else why=(data&&data.error)||""}catch(e){}
     t.disabled=false;t.textContent=was;
     if(txt)toast("Here's a suggestion. Check it and make it your own before saving.");else{txt=rep?draftReport(m):draftPreview(m);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a simple draft from the stats.":"Couldn't get an AI suggestion, so here's a simple draft from the stats.")}
     ta.value=txt;ta.focus();return}

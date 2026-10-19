@@ -59,6 +59,10 @@ Everything that makes this site Newton Aycliffe's lives in `docs/team.js`: the n
 
 `publicScores` is each club's choice. FA rules don't allow U7 to U11 scores, results or scorers to be published, so with `publicScores: false` visitors see games, line-ups, appearances and awards without scores, and match alerts and the calendar leave scores out (set the `PUBLIC_SCORES=false` secret on the edge functions too). Match alerts name the player of the match sponsor from the `POTM_SPONSOR` (and `POTM_ICON`) secret, which should match `potm` in `team.js`; `POTM_SPONSOR=none` sends a plain "Player of the Match". Signed-in coaches still see and record everything. Newton Aycliffe has it on. Coach-written match reports are shown as written, and the database itself is still readable, so it hides scores from the site rather than locking them away.
 
+## AI match previews and reports
+
+Coaches get **✨ Suggest a preview** and **✨ Suggest a report** buttons on the match page. They call the `preview` edge function (`supabase/functions/preview`, coaches only), which sends the game's facts and Live-mode timeline to Claude and returns a draft for the coach to edit before saving. It needs the `ANTHROPIC_API_KEY` secret on the Supabase project; without it the site writes a plain draft from the stats. The site sends its `team.js` name, age group and score setting with each request, and for under-7s to under-11s the drafts never mention scores, results or scorers (FA rule), even when the site shows scores.
+
 ## Help and changes
 
 Coaches can send fixes, change requests and questions from **Help and changes** on the home page (coach tiles). Requests are stored in the `help_requests` table (`supabase/5_help_requests.sql`). A scheduled Claude task checks for new ones every hour from 7am to 10pm. It makes small data fixes itself, opens a pull request for code changes (never merging them), and writes its answer back so the coach sees it on the same page. Anything big, unclear or destructive is left waiting for Sean.

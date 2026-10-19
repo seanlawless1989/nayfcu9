@@ -161,7 +161,7 @@ Allow about an hour. Do the steps in order.
    `insert into public.push_keys (public_key, private_key) values ('<public>', '<private>');` in the SQL Editor.
    Keep the private key out of every file you upload.
 
-## 2. Edge functions (match alerts, calendar and match previews)
+## 2. Edge functions (match alerts, calendar and AI match previews and reports)
 With the Supabase CLI (`supabase link --project-ref <ref>`):
 ```
 supabase secrets set SITE_URL={site}/ TEAM_NAME="{name}" APP_NAME="{app}" TEAM_FULL_NAME="{full}" AGE_GROUP="{age}" PUBLIC_SCORES={scores} POTM_SPONSOR="{potm}" POTM_ICON="{potm_icon}"
@@ -169,8 +169,9 @@ supabase functions deploy notify
 supabase functions deploy calendar --no-verify-jwt
 supabase functions deploy preview
 ```
-Optional: for AI-written match preview suggestions, add an Anthropic API key with `supabase secrets set ANTHROPIC_API_KEY=<key>`.
-Without it, "Suggest a preview" writes a simple draft from the stats instead.
+Then add the Touchline Tales Anthropic API key, which writes the coaches' "Suggest a preview" and "Suggest a report" drafts:
+`supabase secrets set ANTHROPIC_API_KEY=<key>` (or Edge Functions > Secrets in the dashboard). Without it, those buttons
+write a simple draft from the stats instead. Drafts leave out scores, results and scorers for under-7s to under-11s (FA rule).
 
 ## 3. Sign-in
 **Authentication > URL Configuration**: Site URL `{site}`, and the same under Redirect URLs.
