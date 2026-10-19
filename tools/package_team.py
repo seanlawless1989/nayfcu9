@@ -6,7 +6,7 @@
 
 The team folder needs team.js (copy docs/team.js and change it) and every logo it names
 (crest, sponsor, player-of-the-match and shirt-sponsor logos). Optional: badges/ with opponent
-logos, and badges.json mapping a cleaned opponent name to a badge file (see BADGE_FILES in index.html).
+logos, and badges.json mapping a cleaned opponent name to a badge file (see BADGE_FILES in app.js).
 
 Output goes to dist/<slug>/:
     site/       upload to the team's GitHub repository as docs/ (or any static host)
@@ -114,16 +114,19 @@ def build_site(team, src, site, keep_badges):
     elif (src / "badges").is_dir():
         shutil.copytree(src / "badges", site / "badges")
         badge_map = json.loads((src / "badges.json").read_text()) if (src / "badges.json").exists() else {}
-    if badge_map is not None:
-        s, n = re.subn(r"const BADGE_FILES=\{.*?\};", "const BADGE_FILES=" + json.dumps(badge_map) + ";", s, count=1, flags=re.S)
-        if n != 1:
-            sys.exit("index.html has changed: couldn't find BADGE_FILES")
     p.write_text(s)
+    if badge_map is not None:
+        a = site / "app.js"
+        s, n = re.subn(r"const BADGE_FILES=\{.*?\};", "const BADGE_FILES=" + json.dumps(badge_map) + ";", a.read_text(), count=1, flags=re.S)
+        if n != 1:
+            sys.exit("app.js has changed: couldn't find BADGE_FILES")
+        a.write_text(s)
 
 
 def build_sql(team, out):
     parts = []
-    for name in ("1_schema.sql", "3_notifications.sql", "4_gallery_training.sql", "5_help_requests.sql", "7_team_setup.sql"):
+    for name in ("1_schema.sql", "3_notifications.sql", "4_gallery_training.sql", "5_help_requests.sql", "6_match_updated.sql",
+                 "7_team_setup.sql", "8_multi_day_tournaments.sql", "9_matchday_and_more.sql"):
         s = (SQL / name).read_text()
         s = s.replace("-- Newton Aycliffe U9s: ", f"-- {team['name']} {team.get('ageShort', '')}: ")
         if name == "3_notifications.sql":
@@ -168,6 +171,7 @@ supabase secrets set SITE_URL={site}/ TEAM_NAME="{name}" APP_NAME="{app}" TEAM_F
 supabase functions deploy notify
 supabase functions deploy calendar --no-verify-jwt
 supabase functions deploy preview
+supabase functions deploy fulltime
 ```
 Then add the Touchline Tales Anthropic API key, which writes the coaches' "Suggest a preview" and "Suggest a report" drafts:
 `supabase secrets set ANTHROPIC_API_KEY=<key>` (or Edge Functions > Secrets in the dashboard). Without it, those buttons

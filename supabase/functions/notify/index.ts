@@ -4,6 +4,7 @@
 //   POST {test: "<endpoint>"} from a parent's phone after turning alerts on: a "you're all set" alert
 //   POST {squad: "<id>"}  from a coach's phone after saving Pick squad: "squad announced" (again only if it changed)
 //   POST {potm: "<id>"}   from a coach's phone after saving the player of the match
+//   POST {postponed: "<id>"} from a coach's phone after marking an upcoming game postponed (or back on)
 // Only names already shown on the site go in an alert. See supabase/3_notifications.sql.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -57,15 +58,19 @@ function kickOff(date: string, ko: string) {
 }
 
 // ---- sending ----
-async function send(kind: "reminders" | "live" | null, alert: Alert, only?: string) {
+// kind picks the phones: "live" phones get everything on match day; "goals" and "results" also go to phones that chose just those
+type Kind = "reminders" | "live" | "goals" | "results";
+async function send(kind: Kind | null, alert: Alert, only?: string) {
   let q = db.from("push_subs").select("endpoint,p256dh,auth");
-  if (only) q = q.eq("endpoint", only); else q = q.eq(kind!, true);
+  if (only) q = q.eq("endpoint", only);
+  else if (kind === "goals" || kind === "results") q = q.or(`live.eq.true,${kind}.eq.true`);
+  else q = q.eq(kind!, true);
   const { data, error } = await q; if (error) throw error;
   const subs = (data ?? []) as Sub[]; let ok = 0;
   for (let i = 0; i < subs.length; i += 25) {
     await Promise.all(subs.slice(i, i + 25).map(async (s) => {
       try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(alert), { TTL: kind === "live" ? 900 : 3600, urgency: "high" });
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(alert), { TTL: kind === "reminders" || !kind ? 3600 : 900, urgency: "high" });
         ok++; await db.from("push_subs").update({ last_ok: new Date().toISOString() }).eq("endpoint", s.endpoint);
       } catch (e) {
         const code = (e as { statusCode?: number }).statusCode;
@@ -116,7 +121,7 @@ async function flushLive(m: Match) {
   let sent = 0;
   for (const e of ready) {
     if (now - e.at! > 30 * 60_000) continue; // too old to be news (e.g. the first run after alerts were switched on)
-    const a = liveAlert(e, m); if (a) { await send("live", a); sent++; }
+    const a = liveAlert(e, m); if (a) { await send(e.k === "goal" || e.k === "them" ? "goals" : e.k === "ft" ? "results" : "live", a); sent++; }
   }
   return sent;
 }
@@ -155,7 +160,15 @@ async function potmAlert(m: Match) {
   if (!m.potm || !ft || m.comp === "Tournament" || m.date < londonDate(Date.now() - 3 * 864e5) || m.date > londonDate(Date.now())) return -1;
   const { data: claimed } = await db.rpc("push_claim_potm", { p_match: m.id, p_potm: m.potm }); if (!claimed) return -1;
   const score = SCORES && m.us != null && m.them != null ? ` (${m.us}–${m.them})` : "";
-  return await send("live", { title: `${POTM_ICON} ${POTM}: ${m.potm}`, body: `Well done ${m.potm}! ${US} v ${m.opp || "the opposition"}${score}.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `potm-${m.id}` });
+  return await send("results", { title: `${POTM_ICON} ${POTM}: ${m.potm}`, body: `Well done ${m.potm}! ${US} v ${m.opp || "the opposition"}${score}.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `potm-${m.id}` });
+}
+
+// ---- postponed (an upcoming game called off) ----
+async function postponedAlert(m: Match) {
+  if (m.us != null || m.stage === "placeholder" || m.date < londonDate(Date.now())) return -1;
+  const { data: claimed } = await db.rpc("push_claim_postponed", { p_match: m.id, p_postponed: !!m.postponed });
+  if (!claimed) return -1; // back on, or already sent
+  return await send("reminders", { title: "⚠️ Game postponed", body: `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"} on ${dayName(m.date)} is off. New date to follow.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `pp-${m.id}` });
 }
 
 const COLS = "id,date,opp,ko,venue,ha,us,them,postponed,stage,comp,squad,potm,live";
@@ -168,6 +181,9 @@ Deno.serve(async (req) => {
     const out: Record<string, number> = {};
     if (typeof body.test === "string") {
       out.test = await send(null, { title: "🔔 Match alerts are on", body: `You'll get kick-off reminders and ${SCORES ? "live scores" : "live updates"} for the ${AGE}.`, url: SITE, tag: "welcome" }, body.test);
+    } else if (typeof body.postponed === "string") {
+      const { data } = await db.from("matches").select(COLS).eq("id", body.postponed).maybeSingle();
+      out.postponed = data ? await postponedAlert(data as Match) : -1;
     } else if (typeof body.squad === "string" || typeof body.potm === "string") {
       const id = typeof body.squad === "string" ? body.squad : body.potm;
       const { data } = await db.from("matches").select(COLS).eq("id", id).maybeSingle();

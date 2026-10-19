@@ -11,6 +11,7 @@ self.TEAM = {
   tagline: "Youth Football Club · Girls",        // under the name in the masthead
   appName: "NAYFC U9s",                          // home-screen app name and calendar name
   siteUrl: "https://nayfootball.club",
+  club: { name: "Newton Aycliffe", url: "https://touchlinetales.club/newton-aycliffe/" },   // "All Newton Aycliffe teams" link in the masthead
   supportName: "Sean",                           // who coaches message on matchday (Help page)
 
   league: "Russell Foster League",               // shown wherever a game's competition is "League"

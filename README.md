@@ -24,6 +24,8 @@ Parents can see results and stats without signing in. Only coaches on the list c
 
 The web pages are in the `docs` folder. GitHub Pages serves them at https://seanlawless1989.github.io/nayfcu9/
 
+`index.html` holds the page markup, `app.css` the styles and `app.js` the site itself. `gfx.js` is the matchday graphics maker, which only downloads once a coach signs in. Team details live in `team.js` and `config.js`, never in the others, so every team shares them.
+
 If the site isn't showing, go to the repository's **Settings**, then **Pages**. Under **Build and deployment**, choose **Deploy from a branch**, pick `main` and `/docs`, and click **Save**.
 
 ## 4. Let sign-in links come back to the site
@@ -74,3 +76,9 @@ Coaches can send fixes, change requests and questions from **Help and changes** 
 3. Everything is written to `dist/<team-name>/`: `site/` is the website, `supabase/setup.sql` and the functions set up a fresh database, and `SETUP.md` lists the steps filled in for that team.
 
 The copy leaves out Newton Aycliffe's data, logos, opponent badges, domain and the U9s Manager game. Add `--keep-badges` to include the North East opponent badges.
+
+## Clubs with several teams
+
+`python3 tools/package_club.py clubs/<club>` builds a club landing page (`dist/club-<slug>/`) from `club.json`
+that links to each team's site (see `clubs/demo/club.json`). Add `club: {name: "...", url: "https://..."}` to each
+team's `team.js` and its masthead shows an "All <club> teams" link back to that page.
