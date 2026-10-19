@@ -32,7 +32,7 @@ async function loadTeam() {
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 type Match = { id: string; date: string; opp: string; ha: string; venue: string; comp: string; ko: string; us: number | null; them: number | null; postponed: boolean; stage: string; tournament_id: string | null; updated: string };
-type Tournament = { id: string; name: string; date: string | null; venue: string; trophy: string };
+type Tournament = { id: string; name: string; date: string | null; end_date: string | null; venue: string; trophy: string };
 type Training = { day: string; start: string; finish: string; venue: string; kit: string; notes: string; until: string | null; off: string[] };
 
 // ---- iCalendar text ----
@@ -87,13 +87,24 @@ function matchEvent(m: Match) {
   const lm = m.updated ? [`LAST-MODIFIED:${stamp(new Date(m.updated))}`, `SEQUENCE:${Math.max(0, Math.floor((Date.parse(m.updated) - Date.UTC(2026, 0, 1)) / 60000))}`] : [];
   return event(`match-${m.id}`, [...when(m.date, m.ko, 60), ...lm], { SUMMARY: "⚽ " + title, LOCATION: m.venue, DESCRIPTION: desc, URL: `${SITE}?match=${encodeURIComponent(m.id)}` });
 }
-function tournamentEvent(t: Tournament, games: Match[]) {
-  const ko = games.map((g) => g.ko).filter((k) => hm(k)).sort()[0] || "";
-  const date = t.date || games[0]?.date;
-  if (!date) return [];
-  const desc = [`Tournament${games.length ? `, ${games.length} game${games.length > 1 ? "s" : ""}` : ""}`, ko ? `First kick-off ${ko}` : "Kick-off times to be confirmed",
-    t.venue ? `Venue: ${t.venue}` : "", t.trophy ? `Result: ${t.trophy}` : "", "", SITE].filter((x, i) => x || i === 4).join("\n");
-  return event(`tournament-${t.id}`, when(date, ko, 240), { SUMMARY: `🏆 ${TEAM}: ${t.name}${ko ? "" : " (times TBC)"}`, LOCATION: t.venue, DESCRIPTION: desc, URL: SITE });
+// One event per tournament day. Day 1 keeps the tournament's original UID, so a one-day tournament that becomes
+// a two-day one updates in place and gains a second event.
+function tournamentEvents(t: Tournament, games: Match[]) {
+  const start = t.date || games[0]?.date;
+  if (!start) return [];
+  const end = t.end_date && t.end_date > start ? t.end_date : start;
+  const days: string[] = [];
+  for (let d = start; d <= end && days.length < 14; d = addDays(d, 1)) days.push(d);
+  const multi = days.length > 1;
+  return days.flatMap((date, i) => {
+    const today = multi ? games.filter((g) => g.date === date) : games;
+    const ko = today.map((g) => g.ko).filter((k) => hm(k)).sort()[0] || "";
+    const day = multi ? `day ${i + 1} of ${days.length}` : "";
+    const desc = [`Tournament${day ? `, ${day}` : ""}${today.length ? `, ${today.length} game${today.length > 1 ? "s" : ""}` : ""}`, ko ? `First kick-off ${ko}` : "Kick-off times to be confirmed",
+      t.venue ? `Venue: ${t.venue}` : "", t.trophy && i === days.length - 1 ? `Result: ${t.trophy}` : "", "", SITE].filter((x, j) => x || j === 4).join("\n");
+    return event(i ? `tournament-${t.id}-day${i + 1}` : `tournament-${t.id}`, when(date, ko, 240),
+      { SUMMARY: `🏆 ${TEAM}: ${t.name}${day ? ` (${day})` : ""}${ko ? "" : " (times TBC)"}`, LOCATION: t.venue, DESCRIPTION: desc, URL: SITE });
+  });
 }
 function trainingEvent(t: Training, from: string) {
   const day = DAYS.indexOf(t.day);
@@ -118,7 +129,7 @@ Deno.serve(async (req) => {
   const since = addDays(today, -120); // recent results stay in the calendar for a few months
   const [mq, tq, trq] = await Promise.all([
     db.from("matches").select("id,date,opp,ha,venue,comp,ko,us,them,postponed,stage,tournament_id,updated").gte("date", since).order("date"),
-    db.from("tournaments").select("id,name,date,venue,trophy").gte("date", since),
+    db.from("tournaments").select("id,name,date,end_date,venue,trophy").gte("date", since),
     withTraining ? db.from("training").select("*").eq("id", 1).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
   if (mq.error || tq.error) return new Response("Calendar is unavailable right now", { status: 503 });
@@ -129,7 +140,7 @@ Deno.serve(async (req) => {
     `X-WR-CALNAME:${TEAM}`, `X-WR-CALDESC:${FULL} ${AGE} fixtures` + (withTraining ? " and training" : ""), "X-WR-TIMEZONE:Europe/London",
     "REFRESH-INTERVAL;VALUE=DURATION:PT6H", "X-PUBLISHED-TTL:PT6H", ...TZ];
   for (const m of matches) if (!m.tournament_id || !tIds.has(m.tournament_id)) out.push(...matchEvent(m));
-  for (const t of tours) out.push(...tournamentEvent(t, matches.filter((m) => m.tournament_id === t.id)));
+  for (const t of tours) out.push(...tournamentEvents(t, matches.filter((m) => m.tournament_id === t.id)));
   if (trq.data) out.push(...trainingEvent(trq.data as Training, since > "2026-09-01" ? since : "2026-09-01"));
   out.push("END:VCALENDAR");
   return new Response(out.map(fold).join("\r\n") + "\r\n", {

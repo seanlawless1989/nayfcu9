@@ -88,6 +88,10 @@ create table if not exists public.tournaments(
   notes text default '', updated timestamptz not null default now());
 create table if not exists public.honours(
   id text primary key, date date, title text not null default '', achievement text default '', notes text default '', updated timestamptz not null default now());
+-- Added 2026-10-19: tournaments can run over 2 or 3 days (end_date is blank for a one-day tournament).
+alter table public.tournaments add column if not exists end_date date;
+alter table public.tournaments drop constraint if exists tournaments_end_after_start;
+alter table public.tournaments add constraint tournaments_end_after_start check (end_date is null or end_date >= date);
 alter table public.tournaments enable row level security;
 alter table public.honours enable row level security;
 drop policy if exists "read tournaments" on public.tournaments;
