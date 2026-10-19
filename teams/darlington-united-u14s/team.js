@@ -8,7 +8,7 @@ self.TEAM = {
   ageGroup: "Under 14s",
   ageShort: "U14s",
   players: "players",
-  tagline: "Under 14s",
+  tagline: "The Vikings · Under 14s",
   appName: "Darlington United U14s",
   siteUrl: "https://touchlinetales.club/darlington-united-u14s",
   supportName: "Sean",
@@ -19,14 +19,14 @@ self.TEAM = {
   halfLength: 35,
   publicScores: false,                           // hidden until the club's welfare officer chooses on Team setup
 
-  colours: { club: "#1F3A93", clubDeep: "#152866", clubInk: "#FFFFFF", gold: "#F2F2F2", goldInk: "#1A1A1A",
-             accent: "#C9D6F5", accentDeep: "#1F3A93" },
+  colours: { club: "#ED1B24", clubDeep: "#B3141B", clubInk: "#FFFFFF", gold: "#FFFFFF", goldInk: "#111111",
+             accent: "#FFFFFF", accentDeep: "#B3141B" },
   crest: "crest.png",
   sponsor: null,
   potm: { sponsor: "", logo: "", icon: "⭐", ribbon: "DU U14s" },
   kitSponsor: null,
   kits: {
-    home: { label: "Home", body: "#1F3A93", trim: "#FFFFFF", ink: "#FFFFFF", band: "#FFFFFF", bandInk: "#111111" }
+    home: { label: "Home", body: "#ED1B24", trim: "#111111", ink: "#FFFFFF", band: "#FFFFFF", bandInk: "#111111" }
   },
   captain: "",
 
