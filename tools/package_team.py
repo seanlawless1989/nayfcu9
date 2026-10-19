@@ -10,7 +10,7 @@ logos, and badges.json mapping a cleaned opponent name to a badge file (see BADG
 
 Output goes to dist/<slug>/:
     site/       upload to the team's GitHub repository as docs/ (or any static host)
-    supabase/   setup.sql for a fresh Supabase project, plus the two edge functions
+    supabase/   setup.sql for a fresh Supabase project, plus the edge functions
     SETUP.md    the steps, filled in for this team
 Nothing here touches Newton Aycliffe's site or database.
 """
@@ -161,13 +161,16 @@ Allow about an hour. Do the steps in order.
    `insert into public.push_keys (public_key, private_key) values ('<public>', '<private>');` in the SQL Editor.
    Keep the private key out of every file you upload.
 
-## 2. Edge functions (match alerts and calendar)
+## 2. Edge functions (match alerts, calendar and match previews)
 With the Supabase CLI (`supabase link --project-ref <ref>`):
 ```
 supabase secrets set SITE_URL={site}/ TEAM_NAME="{name}" APP_NAME="{app}" TEAM_FULL_NAME="{full}" AGE_GROUP="{age}" PUBLIC_SCORES={scores} POTM_SPONSOR="{potm}" POTM_ICON="{potm_icon}"
 supabase functions deploy notify
 supabase functions deploy calendar --no-verify-jwt
+supabase functions deploy preview
 ```
+Optional: for AI-written match preview suggestions, add an Anthropic API key with `supabase secrets set ANTHROPIC_API_KEY=<key>`.
+Without it, "Suggest a preview" writes a simple draft from the stats instead.
 
 ## 3. Sign-in
 **Authentication > URL Configuration**: Site URL `{site}`, and the same under Redirect URLs.

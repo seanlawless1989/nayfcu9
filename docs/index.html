@@ -1283,9 +1283,17 @@ function previewFacts(m){if(m.hidden||noScores())return "";const rows=[];
   const ps=playerStats(before.filter(x=>seasonOf(x.date)===seasonOf(m.date)));const top=Object.entries(ps).filter(([,o])=>o.goals>0).sort((a,b)=>b[1].goals-a[1].goals);
   if(top.length){const g=top[0][1].goals,lead=top.filter(([,o])=>o.goals===g).map(([n])=>esc(n));rows.push(["⚽",`Top scorer this season: ${lead.join(", ")} (${g})`])}
   return rows.length?`<div class="pvfacts">${rows.map(([i,v])=>`<div><span>${i}</span>${v}</div>`).join("")}</div>`:""}
+// a plain draft from the stats, used when the AI suggestion isn't available
+function draftPreview(m){const d=new Date(m.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+  const where=m.ha==="A"?`away at ${m.opp}`:m.ha==="H"?`at home to ${m.opp}`:`against ${m.opp}`;
+  const p1=`On ${d} we're ${where}${m.ko?`, kicking off at ${m.ko}`:""}${m.venue?` at ${m.venue}`:""}.`;
+  let p2="";if(!m.hidden&&!noScores()){const h=meetings(m.opp,m.date),t=teamStats(h);
+    p2=h.length?`We've played ${m.opp} ${h.length===1?"once":h.length+" times"} before (won ${t.W}, drew ${t.D}, lost ${t.L}), and last time it finished ${h[0].us}-${h[0].them}.`:`It's the first time we've played ${m.opp}, so it'll be a new challenge for the ${PL}.`}
+  else p2=meetings(m.opp,m.date).length?`We've played ${m.opp} before, so the ${PL} will know what to expect.`:`It's the first time we've played ${m.opp}, so it'll be a new challenge for the ${PL}.`;
+  return `${p1} ${p2}\n\nThe ${PL} have been working hard in training. Come along and cheer them on!`}
 function previewCard(m){const has=hasPreview(m),before=isFixture(m)&&!isLive(m)&&!m.postponed;
   if(canWrite&&mdPrevWrite)return `<section class="card report"><h3>Match preview</h3><textarea id="mdPreview" rows="8" placeholder="What's coming up? Who are we playing, what are we working on, anything parents should know. Everyone can read this once it's saved.">${esc(m.preview||"")}</textarea>
-    <p class="hint">Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdPreviewSave">Save preview</button><button class="btn ghost" id="mdPreviewCancel">Cancel</button></div></section>`;
+    <div class="btns"><button class="btn ghost" id="mdPreviewAi">✨ Suggest a preview</button></div><p class="hint">The suggestion is written by AI from the stats. Read it and change anything before you save. Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdPreviewSave">Save preview</button><button class="btn ghost" id="mdPreviewCancel">Cancel</button></div></section>`;
   if(!before&&!has)return "";
   const facts=before?previewFacts(m):"";
   if(!has&&!facts&&!canWrite)return "";
@@ -1878,6 +1886,13 @@ document.addEventListener("click",async e=>{
   if(t.id==="mdReportCancel"){mdWrite=false;render();return}
   if(t.id==="mdPreviewEdit"){mdPrevWrite=true;render();const ta=$("#mdPreview");if(ta){ta.focus();ta.scrollIntoView({block:"center"})}return}
   if(t.id==="mdPreviewCancel"){mdPrevWrite=false;render();return}
+  if(t.id==="mdPreviewAi"){const m=matches.find(x=>x.id===mdMatch),ta=$("#mdPreview");if(!m||!ta||!canWrite)return;
+    if(ta.value.trim()&&!confirm("Replace what's in the box with a suggested preview?"))return;
+    t.disabled=true;const was=t.textContent;t.textContent="Writing…";let txt=null,why="";
+    try{const {data,error}=await sb.functions.invoke("preview",{body:{match:m.id}});if(!error&&data&&data.text)txt=data.text;else why=(data&&data.error)||""}catch(e){}
+    t.disabled=false;t.textContent=was;
+    if(txt)toast("Here's a suggestion. Check it and make it your own before saving.");else{txt=draftPreview(m);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a simple draft from the stats.":"Couldn't get an AI suggestion, so here's a simple draft from the stats.")}
+    ta.value=txt;ta.focus();return}
   if(t.id==="mdPreviewSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdPreview").value.trim();t.disabled=true;
     try{await db.collection("matches").doc(m.id).update({preview:txt||null});m.preview=txt||null;const raw=RAW.find(x=>x.id===m.id);if(raw)raw.preview=m.preview;mdPrevWrite=false;toast(txt?"Match preview saved.":"Match preview removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the preview. Check your connection and try again.")}return}
   if(t.id==="mdReportSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdReport").value.trim();t.disabled=true;
