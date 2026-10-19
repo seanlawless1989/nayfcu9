@@ -4,7 +4,8 @@
     python3 tools/package_club.py clubs/demo        # folder holding club.json and the crest
 
 club.json: name, short, crest, colours {club, clubDeep, ink, second}, intro, contact, siteUrl, and teams
-[{name, url, note}] in the order they should show (a team with no url shows as "coming soon").
+[{name, url, note, group}] in the order they should show (a team with no url shows as "coming soon";
+a new "group", e.g. "Girls", starts a heading).
 Give each team's team.js  club: {name: "<short>", url: "<siteUrl>"}  so its site links back here.
 Output goes to dist/club-<slug>/: index.html and the crest, ready for GitHub Pages or any static host.
 The page is kept out of search engines like the team sites; set "index": true in club.json to allow it.
@@ -33,8 +34,11 @@ def main():
     shutil.copy(src / crest, out / crest)
     c = club.get("colours") or {}
     club_c, deep, ink, second = c.get("club", "#13804A"), c.get("clubDeep", c.get("club", "#0E2A1D")), c.get("ink", "#FFFFFF"), c.get("second", "#F2C230")
-    cards = []
+    cards, group = [], None
     for t in club.get("teams", []):
+        if t.get("group") and t["group"] != group:
+            group = t["group"]
+            cards.append(f"<h2>{esc(group)}</h2>")
         url = t.get("url") or ""
         if url and not re.match(r"^https?://", url):
             sys.exit(f"Team {t.get('name')}: url must start with https://")
@@ -62,6 +66,7 @@ main{{max-width:760px;margin:-22px auto 40px;padding:0 16px;display:grid;gap:12p
 .team b{{font-size:18px;flex:0 0 auto}}.team span{{color:var(--muted);flex:1;font-size:14px}}.team i{{font-style:normal;font-size:22px;color:var(--club)}}
 a.team:hover,a.team:focus-visible{{outline:3px solid var(--second);outline-offset:2px}}.team.soon{{opacity:.6;border-left-color:#ccc}}
 @media(max-width:520px){{.team{{flex-wrap:wrap}}.team span{{flex-basis:100%;order:3}}}}
+h2{{font:800 15px/1.2 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:14px 4px 0}}main h2:first-child{{margin-top:34px}}
 footer{{text-align:center;color:var(--muted);font-size:13px;padding:0 16px 32px}}
 </style>
 </head>

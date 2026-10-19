@@ -2,11 +2,97 @@
   "name": "Newton Aycliffe Youth Football Club",
   "short": "Newton Aycliffe",
   "crest": "crest.png",
-  "colours": { "club": "#2235E8", "clubDeep": "#16239E", "ink": "#FFFFFF", "second": "#FFD200" },
+  "colours": {
+    "club": "#2235E8",
+    "clubDeep": "#16239E",
+    "ink": "#FFFFFF",
+    "second": "#FFD200"
+  },
   "intro": "Pick your child's team for fixtures, results, photos and match alerts.",
   "contact": "Can't see your team? Ask your coach about getting a site set up.",
   "siteUrl": "https://touchlinetales.club/newton-aycliffe/",
   "teams": [
-    { "name": "Under 9s Girls", "url": "https://nayfootball.club/", "note": "Russell Foster League" }
+    {
+      "name": "Wildcats Development",
+      "group": "Girls"
+    },
+    {
+      "name": "Under 8s Wildcats",
+      "group": "Girls"
+    },
+    {
+      "name": "Under 9s Wildcats",
+      "group": "Girls",
+      "url": "https://nayfootball.club/",
+      "note": "Russell Foster League"
+    },
+    {
+      "name": "Under 11s Pumas",
+      "group": "Girls"
+    },
+    {
+      "name": "Under 11s Wildcats",
+      "group": "Girls"
+    },
+    {
+      "name": "Under 12s Wildcats",
+      "group": "Girls"
+    },
+    {
+      "name": "Under 13s Wildcats",
+      "group": "Girls"
+    },
+    {
+      "name": "Under 14s Girls",
+      "group": "Girls"
+    },
+    {
+      "name": "Under 16s Girls",
+      "group": "Girls"
+    },
+    {
+      "name": "Newton Aycliffe Youth Women",
+      "group": "Girls"
+    },
+    {
+      "name": "Under 8s Falcons",
+      "group": "Boys"
+    },
+    {
+      "name": "Under 9s Eagles",
+      "group": "Boys"
+    },
+    {
+      "name": "Under 10s Eagles",
+      "group": "Boys"
+    },
+    {
+      "name": "Under 11s Eagles",
+      "group": "Boys"
+    },
+    {
+      "name": "Under 12s Eagles",
+      "group": "Boys"
+    },
+    {
+      "name": "Under 13s Falcons",
+      "group": "Boys"
+    },
+    {
+      "name": "Under 14s Eagles",
+      "group": "Boys"
+    },
+    {
+      "name": "Under 15s Eagles",
+      "group": "Boys"
+    },
+    {
+      "name": "Under 18s Boys",
+      "group": "Boys"
+    },
+    {
+      "name": "Seniors",
+      "group": "Boys"
+    }
   ]
 }
