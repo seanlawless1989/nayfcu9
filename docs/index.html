@@ -297,7 +297,7 @@ textarea{min-height:70px;resize:vertical}
 .step .ball{font-size:12px;color:var(--muted);margin-right:2px}
 .btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .btn{font:700 15px var(--body);padding:11px 18px;border-radius:10px;border:0;background:var(--club);color:var(--clubInk);cursor:pointer}
-.btn.gold{background:var(--gold);color:var(--goldInk)}
+.btn.gold{background:var(--gold);color:var(--goldInk);box-shadow:inset 0 0 0 1.5px rgb(0 0 0 / .14)}/* the edge shows when a team's second colour is white */
 .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 .btn.danger{background:transparent;color:var(--loss);border:1.5px solid var(--loss)}
 .btn:disabled{opacity:.5;cursor:default}
@@ -942,35 +942,48 @@ function chaseView(){const m=matches.find(x=>x.id===msgMatch);if(!m)return `<div
 // ---------- match alerts (phone notifications) ----------
 // Families turn these on per phone. The "notify" Supabase function sends kick-off reminders 10 and 2 minutes
 // before and live updates (line-up, kick-off, goals, subs, half time, full time). iPhones only allow it from the home-screen app.
-const AL={sub:null,checked:false,busy:false,prefs:{reminders:true,live:true}};
+// Each phone picks what it gets: reminders (squad, kick-off, postponed), goals, results (full time and player of the match), or everything live.
+const AL={sub:null,checked:false,busy:false,prefs:{reminders:true,goals:false,results:false,live:true}};
 try{Object.assign(AL.prefs,JSON.parse(localStorage.getItem(SK+".alerts")||"{}"))}catch(e){}
 function alIos(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)}
 function alStandalone(){return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}
 function alSupported(){return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&!!CFG.vapidPublicKey}
 async function alCheck(){if(!alSupported()){AL.checked=true;return}try{const r=await navigator.serviceWorker.ready;AL.sub=await r.pushManager.getSubscription()}catch(e){}AL.checked=true;if(view==="alerts")render()}
 function alKey(b64){const p=(b64+"=".repeat((4-b64.length%4)%4)).replace(/-/g,"+").replace(/_/g,"/");return Uint8Array.from(atob(p),c=>c.charCodeAt(0))}
-async function alSave(sub){const j=sub.toJSON();const {error}=await sb.rpc("push_subscribe",{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_reminders:AL.prefs.reminders,p_live:AL.prefs.live});if(error)throw error;try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(e){}return j.endpoint}
+async function alSave(sub){const j=sub.toJSON(),P=AL.prefs,a={p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_reminders:P.reminders,p_live:P.live};
+  let {error}=await sb.rpc("push_subscribe2",Object.assign({p_goals:!!P.goals,p_results:!!P.results},a));
+  if(error)({error}=await sb.rpc("push_subscribe",Object.assign({},a,{p_live:P.live||P.goals||P.results})));// a database without supabase/9_matchday_and_more.sql
+  if(error)throw error;try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(e){}return j.endpoint}
 async function alOn(){if(AL.busy)return;AL.busy=true;render();
   try{if(await Notification.requestPermission()!=="granted"){toast("Alerts weren't allowed on this phone.");return}
     const r=await navigator.serviceWorker.ready;const sub=(await r.pushManager.getSubscription())||await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:alKey(CFG.vapidPublicKey)});
     const ep=await alSave(sub);AL.sub=sub;sb.functions.invoke("notify",{body:{test:ep}}).catch(()=>{});toast("Alerts are on. You should get a test one now.")}
   catch(e){toast("Couldn't turn alerts on. Try again in a moment.")}finally{AL.busy=false;render()}}
+async function alTest(){if(!AL.sub)return;AL.busy=true;render();try{const {data,error}=await sb.functions.invoke("notify",{body:{test:AL.sub.endpoint}});toast(!error&&data&&data.test>0?"Test alert sent. It should arrive in a few seconds.":"The test alert didn't go. Turn alerts off and on again.")}catch(e){toast("Couldn't send a test alert. Check your connection.")}finally{AL.busy=false;render()}}
 async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.sub.endpoint;await AL.sub.unsubscribe();await sb.rpc("push_unsubscribe",{p_endpoint:ep});AL.sub=null;toast("Alerts are off on this phone.")}catch(e){toast("Couldn't turn alerts off. Try again.")}finally{AL.busy=false;render()}}
 // after a live update from the coach's phone: send any new alerts straight away (the every-minute check is the back-up)
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:{match:id}}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
 async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.potm??data.postponed;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
-  const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, 10 minutes and 2 minutes before kick-off, and live updates on match day: the confirmed line-up, kick-off, ${TEAM.publicScores===false?"":"every goal, "}substitutions, half time, full time and the ${esc(POTM)}.</p>`;
+  const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
   if(alIos()&&!alStandalone())bodyHtml=`<div class="note">On an iPhone or iPad, alerts only work from the club app on your home screen:<br>1. Tap the Share button <b>⬆︎</b> in Safari (on newer iPhones tap <b>⋯</b> first, then <b>Share</b>).<br>2. Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.<br>3. Open <b>${esc(APP)}</b> from your home screen and come back to this page.</div>`;
   else if(!alSupported())bodyHtml=`<div class="note">This browser can't show alerts. On Android use Chrome; on iPhone add the site to your home screen first.</div>`;
   else if(Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
   else{const on=!!AL.sub;
-    bodyHtml=`<div class="av"><label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-rem"${AL.prefs.reminders?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Squad and kick-off reminders</span><span class="hint">squad picked, 10 and 2 minutes before</span></label>
-      <label class="row" style="cursor:pointer"><span><input type="checkbox" id="al-live"${AL.prefs.live?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">Live scores</span><span class="hint">line-up, ${TEAM.publicScores===false?"":"goals, "}subs, HT, FT, player of the match</span></label></div>
-      <div class="btns">${on?`<span class="pill">✅ On for this phone</span><button class="btn ghost" id="alOff"${AL.busy?" disabled":""}>Turn off</button>`:`<button class="btn gold" id="alOn"${AL.busy?" disabled":""}>${AL.busy?"Turning on…":"Turn on alerts"}</button>`}</div>`}
-  return `<section class="card stack">${head}${bodyHtml}<p class="hint">Each phone is set up on its own. We don't ask for your name, number or email, and alerts only use first names already on this site.</p></section>`}
+    const box=(id,k,label,hint)=>`<label class="row" style="cursor:pointer"><span style="white-space:nowrap"><input type="checkbox" id="${id}"${AL.prefs[k]?" checked":""}${k!=="reminders"&&k!=="live"&&AL.prefs.live?" disabled":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">${label}</span><span class="hint">${hint}</span></label>`;
+    bodyHtml=`<p class="hint" style="margin:0">Choose what this phone gets:</p><div class="av">${box("al-rem","reminders","Reminders","squad picked, 10 and 2 minutes before kick-off, games postponed")}
+      ${TEAM.publicScores===false?"":box("al-goals","goals","Goals","each goal as it goes in")}
+      ${box("al-res","results","Results",`full time and the ${esc(POTM)}`)}
+      ${box("al-live","live","Everything live",`line-up, kick-off, ${TEAM.publicScores===false?"":"goals, "}subs, half time and full time`)}</div>
+      <div class="btns">${on?`<span class="pill">✅ On for this phone</span><button class="btn ghost" id="alTest"${AL.busy?" disabled":""}>Send a test alert</button><button class="btn ghost" id="alOff"${AL.busy?" disabled":""}>Turn off</button>`:`<button class="btn gold" id="alOn"${AL.busy?" disabled":""}>${AL.busy?"Turning on…":"Turn on alerts"}</button>`}</div>`}
+  const help=`<details class="note"><summary><b>How to set it up on your phone</b></summary>
+    <p><b>iPhone or iPad:</b> open this site in Safari, tap Share <b>⬆︎</b>, then <b>Add to Home Screen</b>. Open ${esc(APP)} from your home screen, come back to this page and tap <b>Turn on alerts</b>, then <b>Allow</b>. Needs iOS 16.4 or later.</p>
+    <p><b>Android:</b> open this site in Chrome, tap <b>Turn on alerts</b>, then <b>Allow</b>. Adding it to your home screen (⋮ menu, <b>Add to Home screen</b>) makes it open like an app.</p>
+    <p><b>Computer:</b> Chrome, Edge and Firefox all work. Tap <b>Turn on alerts</b> and allow notifications when asked.</p>
+    <p><b>Nothing arriving?</b> Tap <b>Send a test alert</b>. If it doesn't come, check notifications are allowed for ${esc(APP)} (or your browser) in your phone's settings, and that Do Not Disturb or Focus is off.</p></details>`;
+  return `<section class="card stack">${head}${bodyHtml}${help}<p class="hint">Each phone is set up on its own. We don't ask for your name, number or email, and alerts only use first names already on this site.</p></section>`}
 
 // ---------- photo gallery ----------
 // public.match_photos rows point at files in the public "gallery" storage bucket (supabase/4_gallery_training.sql).
@@ -1495,6 +1508,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.tl){tlMatch=b.dataset.tl;setView("tl")}
   if(b.id==="alOn")alOn();
   if(b.id==="alOff")alOff();
+  if(b.id==="alTest")alTest();
   if(view==="live"&&LV){const m=matches.find(x=>x.id===LV.id);if(!m)return;const now=Date.now();
     if(b.dataset.lvform&&!(LV.status==="pre"&&LV.locked)){const f=b.dataset.lvform;if(f!==LV.form){LV.form=f;if(LV.status!=="pre")addEv({k:"form",form:f});liveSaveLocal();render();if(LV.status!=="pre")livePush()}}
     if(b.id==="lvUnlock"&&LV.status==="pre"){LV.locked=false;liveSaveLocal();render();if(!m.practice)db.collection("matches").doc(LV.id).update({live:livePublic()}).then(()=>{m.live=livePublic()},()=>{});return}
@@ -1527,7 +1541,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       await livePush({played:pl,halves:liveHalves(),us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
       const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
   }});
-document.addEventListener("change",e=>{const al={"al-rem":"reminders","al-live":"live"}[e.target.id];if(!al)return;AL.prefs[al]=e.target.checked;
+document.addEventListener("change",e=>{const al={"al-rem":"reminders","al-goals":"goals","al-res":"results","al-live":"live"}[e.target.id];if(!al)return;AL.prefs[al]=e.target.checked;if(view==="alerts")render();
   try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(x){}
   if(AL.sub)alSave(AL.sub).then(()=>toast("Saved."),()=>toast("Couldn't save that. Try again."))});
 document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files[0]){saveBadge(e.target.dataset.badge,e.target.files[0]);return}if(e.target.dataset.photo&&e.target.files[0]){savePhoto(e.target.dataset.photo,e.target.files[0]);return}

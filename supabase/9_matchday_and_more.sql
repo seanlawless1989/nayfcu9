@@ -19,3 +19,17 @@ begin
   return found;
 end $$;
 revoke all on function public.push_claim_postponed(text, boolean) from public, anon, authenticated;
+
+-- ---------- Alert choices per phone ----------
+-- reminders (squad, kick-off, postponed) and live (everything on match day) were already there.
+-- goals: just the goals. results: full time and player of the match. "live" still covers both.
+alter table public.push_subs add column if not exists goals boolean not null default false;
+alter table public.push_subs add column if not exists results boolean not null default false;
+create or replace function public.push_subscribe2(p_endpoint text, p_p256dh text, p_auth text, p_reminders boolean, p_live boolean, p_goals boolean, p_results boolean)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform public.push_subscribe(p_endpoint, p_p256dh, p_auth, p_reminders, p_live);  -- checks it's a real push address
+  update public.push_subs set goals = coalesce(p_goals, false), results = coalesce(p_results, false) where endpoint = p_endpoint;
+end $$;
+revoke all on function public.push_subscribe2(text, text, text, boolean, boolean, boolean, boolean) from public;
+grant execute on function public.push_subscribe2(text, text, text, boolean, boolean, boolean, boolean) to anon, authenticated;
