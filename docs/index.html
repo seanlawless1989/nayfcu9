@@ -1269,8 +1269,8 @@ let mdMatch=null,mdFrom="results",mdWrite=false,mdPrevWrite=false;
 function reportHtml(t){return String(t||"").trim().split(/\n\s*\n/).map(p=>`<p>${esc(p.trim()).replace(/\n/g,"<br>")}</p>`).join("")}
 function reportCard(m){const has=!!(m.report&&m.report.trim());
   if(canWrite&&mdWrite)return `<section class="card report"><h3>Match report</h3><textarea id="mdReport" rows="10" placeholder="How did the game go? Everyone can read this once it's saved.">${esc(m.report||"")}</textarea>
-    <p class="hint">Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdReportSave">Save report</button><button class="btn ghost" id="mdReportCancel">Cancel</button></div></section>`;
-  if(has)return `<section class="card report"><h3>Match report</h3>${reportHtml(m.report)}${canWrite?`<button class="mini edit-only" id="mdReportEdit">Edit report</button>`:""}</section>`;
+    <div class="btns"><button class="btn ghost" id="mdReportAi">✨ Suggest a report</button></div><p class="hint">The suggestion is written by AI from the result, the awards and the match timeline. Read it and change anything before you save. Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdReportSave">Save report</button><button class="btn ghost" id="mdReportCancel">Cancel</button></div></section>`;
+  if(has)return `<section class="card report"><h3>Match report</h3>${reportHtml(m.report)}<div class="btns"><button class="btn ghost" data-share="report">📤 Share report</button>${canWrite?`<button class="mini edit-only" id="mdReportEdit">Edit report</button>`:""}</div></section>`;
   return canWrite&&(result(m)||isLive(m))?`<section class="card report edit-only"><h3>Match report</h3><p class="hint">No report yet.</p><button class="btn gold" id="mdReportEdit">Write match report</button></section>`:""}
 // match previews: written by coaches before the game, public once saved, with a few facts worked out from past games
 function hasPreview(m){return !!(m&&m.preview&&m.preview.trim())}
@@ -1283,21 +1283,35 @@ function previewFacts(m){if(m.hidden||noScores())return "";const rows=[];
   const ps=playerStats(before.filter(x=>seasonOf(x.date)===seasonOf(m.date)));const top=Object.entries(ps).filter(([,o])=>o.goals>0).sort((a,b)=>b[1].goals-a[1].goals);
   if(top.length){const g=top[0][1].goals,lead=top.filter(([,o])=>o.goals===g).map(([n])=>esc(n));rows.push(["⚽",`Top scorer this season: ${lead.join(", ")} (${g})`])}
   return rows.length?`<div class="pvfacts">${rows.map(([i,v])=>`<div><span>${i}</span>${v}</div>`).join("")}</div>`:""}
+// FA youth rule: written previews and reports leave out scores, results and scorers for under-7s to under-11s
+function faHide(m){const n=+((String(TEAM.ageGroup||"").match(/\d+/)||[])[0]||0);return (n>=7&&n<=11)||m.hidden||noScores()}
+// a plain report from the stats and timeline, used when the AI suggestion isn't available
+function draftReport(m){const hide=faHide(m),r=result(m),ev=(m.live&&m.live.events||[]),pl=Object.keys(played(m)),ks=Object.keys(keepersOf(m));
+  const where=m.ha==="A"?`away at ${m.opp}`:m.ha==="H"?`at home to ${m.opp}`:`against ${m.opp}`;
+  const out=[`⚽ Match report: ${TEAM.name} ${hide||!r?"v":`${m.us}-${m.them}`} ${m.opp}`];
+  out.push(`${hide||!r?`What a game ${where}! 💪`:r==="W"?`A brilliant win ${where}! 🙌`:r==="D"?`A hard-fought draw ${where}. 💪`:`A tough game ${where}, but the ${PL} never stopped trying. 💪`}${pl.length?` Well done to everyone who played: ${pl.join(", ")}.`:""}`);
+  if(!hide){const g=Object.entries(played(m)).filter(([,n])=>+n>0).map(([n,c])=>+c>1?`${n} (${c})`:n);if(g.length)out.push(`⚽ Goals from ${g.join(", ")}.`)}
+  const subs=ev.filter(e=>e.k==="sub").length;if(subs)out.push(`🔁 Everyone played their part, with ${subs} substitution${subs>1?"s":""} to keep fresh legs on the pitch.`);
+  if(ks.length)out.push(`🧤 ${ks.join(" and ")} took a turn in goal${!hide&&ks.some(n=>+keepersOf(m)[n])?" and kept a clean sheet":""}.`);
+  if(m.potm)out.push(`${POTM_IC} ${POTM.charAt(0).toUpperCase()+POTM.slice(1)}: ${m.potm}. Well deserved! 👏`);
+  out.push(`Thanks to all the parents for your support. 💛`);return out.join("\n\n")}
+function shareText(m,kind){const t=kind==="report"?m.report:m.preview,link=`${SITE}/?match=${encodeURIComponent(m.id)}`;
+  return `${String(t||"").trim()}\n\n${link}`}
 // a plain draft from the stats, used when the AI suggestion isn't available
 function draftPreview(m){const d=new Date(m.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
   const where=m.ha==="A"?`away at ${m.opp}`:m.ha==="H"?`at home to ${m.opp}`:`against ${m.opp}`;
   const p1=`On ${d} we're ${where}${m.ko?`, kicking off at ${m.ko}`:""}${m.venue?` at ${m.venue}`:""}.`;
-  let p2="";if(!m.hidden&&!noScores()){const h=meetings(m.opp,m.date),t=teamStats(h);
+  let p2="";if(!faHide(m)){const h=meetings(m.opp,m.date),t=teamStats(h);
     p2=h.length?`We've played ${m.opp} ${h.length===1?"once":h.length+" times"} before (won ${t.W}, drew ${t.D}, lost ${t.L}), and last time it finished ${h[0].us}-${h[0].them}.`:`It's the first time we've played ${m.opp}, so it'll be a new challenge for the ${PL}.`}
   else p2=meetings(m.opp,m.date).length?`We've played ${m.opp} before, so the ${PL} will know what to expect.`:`It's the first time we've played ${m.opp}, so it'll be a new challenge for the ${PL}.`;
-  return `${p1} ${p2}\n\nThe ${PL} have been working hard in training. Come along and cheer them on!`}
+  return `⚽ ${p1} ${p2}\n\n💪 The ${PL} have been working hard in training. Come along and cheer them on! 🙌`}
 function previewCard(m){const has=hasPreview(m),before=isFixture(m)&&!isLive(m)&&!m.postponed;
   if(canWrite&&mdPrevWrite)return `<section class="card report"><h3>Match preview</h3><textarea id="mdPreview" rows="8" placeholder="What's coming up? Who are we playing, what are we working on, anything parents should know. Everyone can read this once it's saved.">${esc(m.preview||"")}</textarea>
     <div class="btns"><button class="btn ghost" id="mdPreviewAi">✨ Suggest a preview</button></div><p class="hint">The suggestion is written by AI from the stats. Read it and change anything before you save. Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdPreviewSave">Save preview</button><button class="btn ghost" id="mdPreviewCancel">Cancel</button></div></section>`;
   if(!before&&!has)return "";
   const facts=before?previewFacts(m):"";
   if(!has&&!facts&&!canWrite)return "";
-  return `<section class="card report${has||facts?"":" edit-only"}"><h3>Match preview</h3>${has?reportHtml(m.preview):canWrite?`<p class="hint edit-only">No preview written yet.</p>`:""}${facts}${canWrite?`<button class="${has?"mini":"btn gold"} edit-only" id="mdPreviewEdit" style="margin-top:10px">${has?"Edit preview":"Write match preview"}</button>`:""}</section>`}
+  return `<section class="card report${has||facts?"":" edit-only"}"><h3>Match preview</h3>${has?reportHtml(m.preview):canWrite?`<p class="hint edit-only">No preview written yet.</p>`:""}${facts}${has?`<button class="btn ghost" data-share="preview" style="margin-top:10px">📤 Share preview</button> `:""}${canWrite?`<button class="${has?"mini":"btn gold"} edit-only" id="mdPreviewEdit" style="margin-top:10px">${has?"Edit preview":"Write match preview"}</button>`:""}</section>`}
 function reportsView(){const list=sortMatches(matches.filter(m=>m.report&&m.report.trim()&&!m.practice)).reverse();
   const back=`<button class="btn ghost" data-view="results" style="align-self:flex-start">← Results</button>`;
   if(!list.length)return `<div class="stack">${back}<div class="card empty">No match reports yet.${canWrite?" Open a result and tap <b>Write match report</b>.":""}</div></div>`;
@@ -1886,13 +1900,16 @@ document.addEventListener("click",async e=>{
   if(t.id==="mdReportCancel"){mdWrite=false;render();return}
   if(t.id==="mdPreviewEdit"){mdPrevWrite=true;render();const ta=$("#mdPreview");if(ta){ta.focus();ta.scrollIntoView({block:"center"})}return}
   if(t.id==="mdPreviewCancel"){mdPrevWrite=false;render();return}
-  if(t.id==="mdPreviewAi"){const m=matches.find(x=>x.id===mdMatch),ta=$("#mdPreview");if(!m||!ta||!canWrite)return;
-    if(ta.value.trim()&&!confirm("Replace what's in the box with a suggested preview?"))return;
+  if(t.id==="mdPreviewAi"||t.id==="mdReportAi"){const rep=t.id==="mdReportAi",m=matches.find(x=>x.id===mdMatch),ta=$(rep?"#mdReport":"#mdPreview");if(!m||!ta||!canWrite)return;
+    if(ta.value.trim()&&!confirm(`Replace what's in the box with a suggested ${rep?"report":"preview"}?`))return;
     t.disabled=true;const was=t.textContent;t.textContent="Writing…";let txt=null,why="";
-    try{const {data,error}=await sb.functions.invoke("preview",{body:{match:m.id}});if(!error&&data&&data.text)txt=data.text;else why=(data&&data.error)||""}catch(e){}
+    try{const {data,error}=await sb.functions.invoke("preview",{body:{match:m.id,kind:rep?"report":"preview"}});if(!error&&data&&data.text)txt=data.text;else why=(data&&data.error)||""}catch(e){}
     t.disabled=false;t.textContent=was;
-    if(txt)toast("Here's a suggestion. Check it and make it your own before saving.");else{txt=draftPreview(m);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a simple draft from the stats.":"Couldn't get an AI suggestion, so here's a simple draft from the stats.")}
+    if(txt)toast("Here's a suggestion. Check it and make it your own before saving.");else{txt=rep?draftReport(m):draftPreview(m);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a simple draft from the stats.":"Couldn't get an AI suggestion, so here's a simple draft from the stats.")}
     ta.value=txt;ta.focus();return}
+  if(t.dataset.share){const m=matches.find(x=>x.id===mdMatch);if(!m)return;const text=shareText(m,t.dataset.share);
+    if(navigator.share){try{await navigator.share({text});return}catch(e){if(e&&e.name==="AbortError")return}}
+    try{await navigator.clipboard.writeText(text);toast("Copied. Paste it into WhatsApp.")}catch(e){prompt("Copy this",text)}return}
   if(t.id==="mdPreviewSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdPreview").value.trim();t.disabled=true;
     try{await db.collection("matches").doc(m.id).update({preview:txt||null});m.preview=txt||null;const raw=RAW.find(x=>x.id===m.id);if(raw)raw.preview=m.preview;mdPrevWrite=false;toast(txt?"Match preview saved.":"Match preview removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the preview. Check your connection and try again.")}return}
   if(t.id==="mdReportSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdReport").value.trim();t.disabled=true;
