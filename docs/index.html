@@ -2103,7 +2103,8 @@ async function saveMatch(){
   const was=F.id?matches.find(x=>x.id===F.id)||{}:{},tellPP=!!F.id&&!!body.postponed!==!!was.postponed&&body.date>=new Date().toISOString().slice(0,10);// the function alerts on postponed, and resets when it's back on
   // a newly chosen player of the match for a game just played is sent to parents' phones (the function skips older games)
   const prevPotm=F.id?(matches.find(x=>x.id===F.id)||{}).potm||null:null,tellPotm=!!body.potm&&body.potm!==prevPotm&&body.us!=null&&body.comp!=="Tournament";
-  try{await db.collection("matches").doc(id).set(body);toast("Match saved.");
+  try{try{await db.collection("matches").doc(id).set(body)}catch(er){if(!("matchday" in body))throw er;delete body.matchday;await db.collection("matches").doc(id).set(body);toast("Match saved, but not the meet time, pitch or kit: the database needs its October update.");await new Promise(r=>setTimeout(r,2500))}// older database without matches.matchday
+    toast("Match saved.");
     if(tellPP)alSend({postponed:id}).then(r=>{if(body.postponed&&r!=null&&r>=0)toast("Match saved. Parents with alerts on have been told it's postponed.")});
     if(tellPotm)alSend({potm:id}).then(r=>{if(r!=null&&r>=0)toast(`Match saved. ${POTM.charAt(0).toUpperCase()+POTM.slice(1)} sent to parents' phones.`)});season=seasonOf(F.date);F=null;editing=null;setView(isFixture(body)?"fixtures":"results")}
   catch(e){$("#saveM").disabled=false;toast(e&&e.code==="quota_exceeded"?"The results store is full.":"Couldn't save. Check your connection and try again.");if(e&&e.code==="invalid_argument"){canWrite=false;render()}}
