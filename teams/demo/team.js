@@ -17,6 +17,7 @@ self.TEAM = {
   format: "7v7",
   halfLength: 25,
   publicScores: false,                           // U11s: scores hidden from visitors (FA rule); coaches still see them
+  poweredBy: true,                               // small "Powered by Touchline Tales" link in the footer; false hides it
 
   colours: { club: "#0F7A3E", clubDeep: "#0A5A2D", clubInk: "#FFFFFF", gold: "#F4C20D", goldInk: "#1A1A1A",
              accent: "#BFE3CC", accentDeep: "#0F7A3E" },

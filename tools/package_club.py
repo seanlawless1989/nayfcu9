@@ -9,6 +9,7 @@ a new "group", e.g. "Girls", starts a heading).
 Give each team's team.js  club: {name: "<short>", url: "<siteUrl>"}  so its site links back here.
 Output goes to dist/club-<slug>/: index.html and the crest, ready for GitHub Pages or any static host.
 The page is kept out of search engines like the team sites; set "index": true in club.json to allow it.
+A small "Powered by Touchline Tales" link sits in the footer; set "poweredBy": false in club.json to hide it.
 """
 import html, json, re, shutil, sys
 from pathlib import Path
@@ -44,6 +45,8 @@ def main():
             sys.exit(f"Team {t.get('name')}: url must start with https://")
         inner = f'<b>{esc(t["name"])}</b><span>{esc(t.get("note") or ("Fixtures, results and match alerts" if url else "Site coming soon"))}</span>'
         cards.append(f'<a class="team" href="{esc(url)}">{inner}<i>→</i></a>' if url else f'<div class="team soon">{inner}</div>')
+    powered = "" if club.get("poweredBy") is False else (
+        f'<br><a class="powered" href="https://touchlinetales.club/?ref=powered-club-{slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>')
     robots = "" if club.get("index") else '<meta name="robots" content="noindex,nofollow,noimageindex,noarchive,nosnippet">\n'
     page = f"""<!doctype html>
 <html lang="en-GB">
@@ -68,6 +71,7 @@ a.team:hover,a.team:focus-visible{{outline:3px solid var(--second);outline-offse
 @media(max-width:520px){{.team{{flex-wrap:wrap}}.team span{{flex-basis:100%;order:3}}}}
 h2{{font:800 15px/1.2 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:14px 4px 0}}main h2:first-child{{margin-top:34px}}
 footer{{text-align:center;color:var(--muted);font-size:13px;padding:0 16px 32px}}
+footer .powered{{display:inline-block;margin-top:10px;font-size:12px;color:var(--muted);text-decoration:none;opacity:.85}}footer .powered:hover{{text-decoration:underline}}
 </style>
 </head>
 <body>
@@ -75,7 +79,7 @@ footer{{text-align:center;color:var(--muted);font-size:13px;padding:0 16px 32px}
 <main>
 {chr(10).join(cards)}
 </main>
-<footer>{esc(club.get("contact") or "")}<br>Team websites use first names only and are kept out of search engines.</footer>
+<footer>{esc(club.get("contact") or "")}<br>Team websites use first names only and are kept out of search engines.{powered}</footer>
 </body>
 </html>
 """
