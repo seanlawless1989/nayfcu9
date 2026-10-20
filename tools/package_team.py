@@ -197,6 +197,7 @@ to parents. Their answers are kept in the `team_settings` table and win over `te
 - Sign the data processing agreement with the club before any children's details go in.
 
 Settings used for this build: format {format}, halves of {half} minutes, league "{league}".
+{powered}
 
 {scores_note}
 """
@@ -236,6 +237,9 @@ def main():
         title=f"{team['name']} {team.get('ageGroup', '')}".strip(), full=team.get("fullName", team["name"]), slug=slug, site=site,
         name=team["name"], app=team.get("appName", ""), age=team.get("ageGroup", ""), format=team.get("format", "5v5"),
         half=team.get("halfLength", 20), league=team.get("league", "League"),
+        powered=(f'The footer shows a small "Powered by Touchline Tales" link (ref powered-{team.get("slug") or slug}); '
+                 "set poweredBy: false in team.js to hide it.") if team.get("poweredBy", True) is not False else
+                'The "Powered by Touchline Tales" footer link is turned off (poweredBy: false in team.js).',
         scores="true" if team["publicScores"] else "false",
         potm=(team.get("potm") or {}).get("sponsor") or "none", potm_icon=(team.get("potm") or {}).get("icon") or "⭐",
         scores_note=("Scores are **public**: visitors see results, scorers and goal alerts."
