@@ -179,16 +179,59 @@ const css=`.ttdemo{background:#0E2A1D;color:#F6F3EA;font:500 13px/1.35 Rubik,Arc
 .ttdemo .acts{display:flex;flex-wrap:wrap;gap:6px}
 .ttdemo button,.ttdemo a{font:600 12px/1 Rubik,Archivo,system-ui,sans-serif;border-radius:999px;padding:6px 10px;border:1px solid rgba(246,243,234,.35);background:transparent;color:#F6F3EA;cursor:pointer;text-decoration:none;white-space:nowrap}
 .ttdemo .go{background:#F2C230;border-color:#F2C230;color:#0E2A1D}
-.ttdemo .tip{flex-basis:100%;color:#BFE3CC;font-size:12px}`;
+.ttdemo .tip{flex-basis:100%;color:#BFE3CC;font-size:12px}
+.ttlead{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;max-width:440px;margin:0 auto;background:#F6F3EA;color:#0E2A1D;border-top:5px solid #F2C230;border-radius:14px;
+  padding:16px 16px 12px;box-shadow:0 12px 40px rgba(14,42,29,.35);font:400 14px/1.4 Rubik,Archivo,system-ui,sans-serif}
+.ttlead h3{font:700 18px/1.2 Oswald,Archivo,sans-serif;text-transform:uppercase;margin:0 28px 4px 0;padding:0;border:0;background:none;color:#0E2A1D}
+.ttlead h3::before,.ttlead h3::after{content:none;display:none}
+.ttlead p{margin:0 0 10px}
+.ttlead input{display:block;width:100%;box-sizing:border-box;font:16px/1.3 Rubik,system-ui,sans-serif;border:1.5px solid #cfcab9;border-radius:10px;padding:9px 11px;margin:0 0 8px;background:#fff;color:#0E2A1D}
+.ttlead input.bad{border-color:#C0392B}
+.ttlead label.tk{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;margin:2px 0 10px}
+.ttlead label.tk input{width:18px;height:18px;flex:none;margin:1px 0 0;accent-color:#13804A}
+.ttlead .send{width:100%;font:600 15px/1 Rubik,system-ui,sans-serif;border:0;border-radius:999px;padding:12px;background:#13804A;color:#fff;cursor:pointer}
+.ttlead .x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:24px;line-height:1;color:#3E4F45;cursor:pointer;padding:4px}
+.ttlead .msg{min-height:1.2em;margin:8px 0 0;font-size:13px}
+.ttlead a{color:#13804A}`;
 window.DEMO={paint(){
   const el=document.getElementById("ttdemo");if(!el)return;const c=isCoach();
   el.innerHTML=`<div class="in"><span><b>DEMO</b>A made-up team. Try anything: nothing you do is saved or seen by anyone else.</span>
     <span class="acts"><button class="go" data-demo="${c?"parent":"coach"}">${c?"Parents' view":"Try the coach view"}</button>
     <button data-demo="age">${flags.hidden?"Show scores":"U7–U11 view"}</button>
-    <button data-demo="reset">Start again</button><a href="../#signup">Get your own</a></span>
+    <button data-demo="reset">Start again</button><a href="../${REF?"?ref="+encodeURIComponent(REF):""}#signup">Get your own</a></span>
     <span class="tip">${c?"You're a coach now. Open today's game and tap ▶ Live match to record goals and subs, or make a matchday graphic.":
       flags.hidden?"For under 7s to under 11s, parents see games, line-ups and awards but no scores or scorers (FA rules). Coaches still see everything.":
       "Today's game is live. Tap the red bar to follow it like a parent would."}</span></div>`}};
+// ---------- follow-up: after a couple of minutes, ask (once) who they are, unless the home page already did ----------
+// Sent to the Touchline Tales inbox by FormSubmit, the same as the home page sign-up form (FORM_ID in assets/home.js there).
+const FORM="https://formsubmit.co/ajax/5f26f2b94f7b8df49f80d9aced927305",LEAD="tt-lead",ASKED="tt-demo-asked";
+const REF=(new URLSearchParams(location.search).get("ref")||ss.get("tt-demo-ref")||"").slice(0,40);if(REF)ss.set("tt-demo-ref",REF);   // kept through the demo bar's reloads
+function askLater(){
+  if(ls.get(LEAD)==="sent"||ss.get(ASKED))return;
+  setTimeout(()=>{if(ls.get(LEAD)==="sent"||ss.get(ASKED)||document.querySelector(".ttlead"))return;showLead()},120000)}
+function showLead(){
+  ss.set(ASKED,1);const el=document.createElement("form");el.className="ttlead";el.noValidate=true;el.setAttribute("aria-label","Get in touch");
+  el.innerHTML=`<button type="button" class="x" aria-label="Not now">×</button><h3>Want this for your team?</h3>
+    <p>Leave your details and we'll be in touch to answer questions and get you set up. Free for founding teams.</p>
+    <input name="name" placeholder="Your name" autocomplete="name" required><input name="email" type="email" placeholder="Your email" autocomplete="email" required>
+    <input name="club" placeholder="Club and team, e.g. Sample Town U10s" required>
+    <label class="tk"><input type="checkbox" name="consent" required><span>It's fine to contact me about Touchline Tales (<a href="../privacy/" target="_blank" rel="noopener">privacy</a>).</span></label>
+    <button class="send">Send</button><p class="msg" role="status" aria-live="polite"></p>`;
+  document.body.appendChild(el);
+  el.querySelector(".x").onclick=()=>el.remove();
+  el.addEventListener("input",e=>e.target.classList.remove("bad"));
+  el.addEventListener("submit",async e=>{e.preventDefault();const f=new FormData(el),msg=el.querySelector(".msg");
+    const bad=[...el.querySelectorAll("[required]")].filter(x=>!x.checkValidity());bad.forEach(x=>x.classList.add("bad"));
+    if(bad.length){msg.textContent=bad.length===1&&bad[0].type==="checkbox"?"Please tick the box so we can get back to you.":"Please fill in the highlighted boxes.";return}
+    const b=el.querySelector(".send");b.disabled=true;msg.textContent="Sending…";
+    try{const r=await realFetch(FORM,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({
+        "Name":f.get("name").trim(),"Email":f.get("email").trim(),"Club and team":f.get("club").trim(),"Where":"While using the demo","Link used":REF,
+        _subject:`Touchline Tales demo: ${f.get("club").trim()}`,_replyto:f.get("email").trim(),_template:"table",_captcha:"false"})});
+      const out=await r.json().catch(()=>({}));if(!r.ok||String(out.success)!=="true")throw 0;
+      ls.set(LEAD,"sent");el.innerHTML=`<h3>Thanks, ${esc(f.get("name").trim().split(" ")[0])}!</h3><p>We'll be in touch soon. Carry on looking around.</p>`;setTimeout(()=>el.remove(),5000)}
+    catch(x){b.disabled=false;msg.textContent="Sorry, that didn't send. Please try again in a minute."}});
+}
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
 function mount(){
   const st=document.createElement("style");st.textContent=css;document.head.appendChild(st);
   const el=document.createElement("div");el.id="ttdemo";el.className="ttdemo";el.setAttribute("role","note");document.body.prepend(el);DEMO.paint();
@@ -198,4 +241,5 @@ function mount(){
     if(k==="reset"){ss.del(KEY);ss.del(FLAGS);ls.del(TOKEN);ls.del((TEAM.storageKey||"team")+".setup");location.href=location.pathname}});
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount);else mount();
+askLater();
 })();
