@@ -63,6 +63,8 @@ function season(){
       {id:"h2",date:day(-120),title:"Fair Play Award",achievement:"County Youth League",notes:"Voted for by the referees"}],
     training:[{id:1,day:"Wednesday",start:"18:00",finish:"19:15",venue:"Sample Town Recreation Ground, 3G pitch",kit:"Boots, shin pads, water bottle and a warm top",
       notes:"Please arrive 10 minutes early so we can start on time.",until:day(220),off:[],updated:new Date(now-864e5*20).toISOString()}],
+    training_plans:[{day:wed[0],plan:"Warm-up: rondos in fours, 10 mins\nDrill: passing through gates, both feet\nShooting: one-touch finishes from the edge of the box\nGame: 6v6, everyone plays every position for 5 mins",updated:new Date(now-864e5*8).toISOString()},
+      {day:day((3-new Date().getDay()+7)%7),plan:"Warm-up: tag with a ball each, 10 mins\nDrill: 1v1 defending, stay on your feet\nCorners: who goes where (Ava near post, Ella edge of the box)\nGame: 7v7, two-touch for the first 10 mins",updated:new Date(now-864e5).toISOString()}],
     training_attendance:wed.flatMap((d,i)=>names.filter((n,j)=>(j+i)%5!==0).map(player=>({day:d,player}))),
     availability:names.map(player=>({match_id:next,player,status:st[player]||"yes"})),
     polls:[{id:"gotm-demo",kind:"gotm",title:"Goal of the month",options:["Ava v Meadow Park (6')","Ella v Meadow Park (14')","Millie v Meadow Park (38')","Ava v Meadow Park (46')"],
@@ -94,7 +96,7 @@ function advanceLive(){
 }
 
 // ---------- a little PostgREST: enough for the queries the site makes ----------
-const KEYS={availability:["match_id","player"],player_photos:["player"],badges:["key"],training_attendance:["day","player"],poll_votes:["poll_id","voter"],
+const KEYS={availability:["match_id","player"],player_photos:["player"],badges:["key"],training_attendance:["day","player"],training_plans:["day"],poll_votes:["poll_id","voter"],
   coaches:["email"],page_views:["day"]};
 const keyOf=t=>KEYS[t]||["id"];
 const parse=v=>v==="null"?null:v==="true"?true:v==="false"?false:v;
