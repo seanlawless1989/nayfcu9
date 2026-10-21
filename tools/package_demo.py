@@ -39,6 +39,10 @@ def build(out):
                    r'<script src="demo.js"></script>\n\1', s, count=1)
     if n != 1:
         sys.exit("index.html has changed: couldn't find the supabase-js script tag")
+    # visitor counts (cookieless GoatCounter, set up in touchlinetales-sites/assets/stats.js): the demo only, never a team site
+    s, n = re.subn(r'</head>', '<script src="/assets/stats.js" async></script>\n</head>', s, count=1)
+    if n != 1:
+        sys.exit("index.html has changed: couldn't find </head>")
     p.write_text(s)
     # the page shell is cached by the service worker, so demo.js has to be in it too
     w = out / "sw.js"
