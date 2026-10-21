@@ -710,6 +710,22 @@ async function attSave(){const names=[...document.querySelectorAll("[data-att]")
     ATT[day]=names;if(!names.length)delete ATT[day];toast(`Saved: ${names.length} at training on ${shortDay(day)}.`);render()}catch(e){toast("Couldn't save attendance. Try again.")}}
 // sessions recorded and attended per player, for one season
 function attStats(seasonName){const out={},days=Object.keys(ATT||{}).filter(d=>seasonOf(d)===seasonName);days.forEach(d=>ATT[d].forEach(n=>out[n]=(out[n]||0)+1));return {sessions:days.length,out}}
+// Session plans (public.training_plans, coaches only): {"2026-10-14": "Warm-up: ..."}. The database refuses everyone
+// else, so parents and visitors never get them, whatever the page shows.
+let SPLAN=null,spDay=null,spDraft={};
+async function loadSessionPlans(){SPLAN=null;if(!sb||!canWrite)return;try{const {data,error}=await sb.from("training_plans").select("day,plan");if(error)return;SPLAN={};(data||[]).forEach(r=>{if(r.plan)SPLAN[r.day]=r.plan})}catch(e){}}
+// sessions to plan: the next four, the last four and any day that already has a plan, newest first
+function spDays(){const out=new Set(Object.keys(SPLAN||{}));trUpcoming(4).filter(x=>!x.off).forEach(x=>out.add(x.iso));trPast().slice(0,4).forEach(d=>out.add(d));if(spDay)out.add(spDay);return [...out].sort().reverse().slice(0,16)}
+const spPrev=()=>Object.keys(SPLAN||{}).filter(d=>d<spDay).sort().pop();
+function spCard(){if(!canWrite||!SPLAN)return "";const next=(trUpcoming(6).find(x=>!x.off)||{}).iso;if(!spDay)spDay=next||todayLocal();
+  const days=spDays(),txt=spDraft[spDay]!=null?spDraft[spDay]:(SPLAN[spDay]||""),prev=spPrev();
+  return `<section class="card stack edit-only"><h3>📋 Session plan</h3><p class="hint" style="margin:0">Only coaches see this. Parents and visitors can't, even when they're signed in with a family code.</p>
+    <label class="f">Session<select id="spDay">${days.map(d=>`<option value="${d}"${d===spDay?" selected":""}>${esc(shortDay(d))}${d===next?" · next":""}${SPLAN[d]?" · planned":""}</option>`).join("")}</select></label>
+    <label class="f">What we're doing<textarea id="spText" rows="8" placeholder="Warm-up: rondos, 10 mins&#10;Drill: passing through gates&#10;Game: 4v4, two-touch">${esc(txt)}</textarea></label>
+    <div class="btns"><button class="btn gold" id="spSave">Save plan</button>${prev&&prev!==spDay?`<button class="mini" id="spCopy">Copy ${esc(shortDay(prev))}'s plan</button>`:""}</div></section>`}
+async function spSave(){const day=spDay,el=$("#spText");if(!el||!day)return;const plan=el.value.trim();
+  try{const r=plan?await sb.from("training_plans").upsert({day,plan,updated:new Date().toISOString()}):await sb.from("training_plans").delete().eq("day",day);if(r.error)throw r.error;
+    if(plan)SPLAN[day]=plan;else delete SPLAN[day];delete spDraft[day];toast(plan?`Plan saved for ${shortDay(day)}.`:`Plan cleared for ${shortDay(day)}.`);render()}catch(e){toast("Couldn't save the plan. Has the database update been run?")}}
 function trainingView(){
   if(trEdit&&canWrite)return trFormView();
   if(!TR)return `<div class="card empty">Training details are on their way.</div>`;
@@ -721,7 +737,7 @@ function trainingView(){
     <div class="trbig"><b>Every ${esc(TR.day)}</b><span>${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span></div>
     <div class="trfacts">${facts.map(([i,v])=>`<div><span>${i}</span><span>${v}</span></div>`).join("")}</div>
     ${TR.notes?`<p style="margin:0">${esc(TR.notes)}</p>`:""}
-    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section>${attCard()}</div>`}
+    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section>${spCard()}${attCard()}</div>`}
 function trFormView(){const F2=trEdit;const off=(F2.off||[]).slice().sort();
   return `<section class="card stack"><h2>Edit training</h2>
     <div class="grid2"><label class="f">Day<select id="tr-day">${WEEKDAYS.map(d=>`<option${d===F2.day?" selected":""}>${d}</option>`).join("")}</select></label>
@@ -1312,7 +1328,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       await livePush({played:pl,halves:liveHalves(),us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
       const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
   }});
-document.addEventListener("change",e=>{if(e.target.id==="attDay"){attDay=e.target.value;render()}
+document.addEventListener("change",e=>{if(e.target.id==="attDay"){attDay=e.target.value;render()}if(e.target.id==="spDay"){spDay=e.target.value;render()}
   if(e.target.dataset.ftpick&&FT){e.target.checked?FT.picks.add(e.target.dataset.ftpick):FT.picks.delete(e.target.dataset.ftpick)}});
 document.addEventListener("change",e=>{const al={"al-rem":"reminders","al-goals":"goals","al-res":"results","al-live":"live"}[e.target.id];if(!al)return;AL.prefs[al]=e.target.checked;if(view==="alerts")render();
   try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(x){}
@@ -1603,6 +1619,7 @@ function suRead(){if(!SU)return;document.querySelectorAll("[id^=su-]").forEach(e
 async function suSaveSettings(extra){const f=SU;const settings=Object.assign(suTeam(f),extra||{});
   const row={id:1,settings,ready:hasSetup()?SETUP_ROW.ready:false,updated:new Date().toISOString(),updated_by:(me&&me.email)||""};Object.assign(row,extra&&extra._row||{});delete settings._row;
   const {data,error}=await sb.from("team_settings").upsert(row).select("settings,ready,updated").single();if(error)throw error;suRemember(data);return data}
+document.addEventListener("input",e=>{if(e.target.id==="spText")spDraft[spDay]=e.target.value});
 document.addEventListener("input",e=>{if(view==="setup"&&e.target.closest&&e.target.closest("#main"))suRead()});
 document.addEventListener("change",async e=>{const k=e.target.dataset&&e.target.dataset.sulogo;if(view==="setup")suRead();if(!k||!e.target.files[0])return;
   try{SU[k]=await shrinkLogo(e.target.files[0],k==="crest"?512:400);render()}catch(er){toast("Couldn't read that picture. Try a PNG or JPG.")}});
@@ -1747,6 +1764,8 @@ document.addEventListener("click",async e=>{
   if(t.id==="trEditBtn"&&canWrite){trEdit=JSON.parse(JSON.stringify(TR||{day:"Wednesday",start:"18:00",finish:"19:00",off:[]}));render();return}
   if(t.id==="trCancel"){trEdit=null;render();return}
   if(t.id==="attSave"){attSave();return}
+  if(t.id==="spSave"){spSave();return}
+  if(t.id==="spCopy"){const el=$("#spText"),p=spPrev();if(el&&p){el.value=SPLAN[p];spDraft[spDay]=el.value}return}
   if(t.dataset.mday){mdayMatch=t.dataset.mday==="1"?null:t.dataset.mday;setView("matchday");return}
   if(t.dataset.mdayav){availMatch=t.dataset.mdayav;view="avail";render();return}
   if(t.dataset.mdayrep){mdWrite=true;mdPrevWrite=false;mdFrom="matchday";mdMatch=t.dataset.mdayrep;setView("md");return}
@@ -1878,7 +1897,7 @@ async function checkCoach(){
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadSessionPlans();await loadPolls();await loadPosts();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
@@ -1903,7 +1922,7 @@ document.addEventListener("submit",async e=>{
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="training"&&!!trEdit);
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="training"&&(!!trEdit||(document.activeElement||{}).id==="spText"));
   db.collection("matches").onSnapshot(s=>{RAW=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");matches=pubMatches();if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
