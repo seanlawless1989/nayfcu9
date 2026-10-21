@@ -409,15 +409,15 @@ function pickView(){const m=matches.find(x=>x.id===pickMatch);if(!m)return `<div
   <p class="hint">Tick who's in the squad. Live match will use exactly these players on the day, and the squad post will use them too. Parents' answers are shown where they've replied.</p>
   <div class="av">${roster.map(p=>`<label class="row" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||"No answer"}</span></label>`).join("")}</div>
   <p class="hint">${PICK.set.size} picked.</p>
-  ${pickAlertable(m)?`<label class="row" style="cursor:pointer"><span><input type="checkbox" id="pickAlert" checked style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">📣 Send a squad alert to parents' phones</span></label><p class="hint">Only sent when the squad is new or has changed since the last alert.</p>`:""}
+  ${pickAlertable(m)?`<label class="row" style="cursor:pointer"><span><input type="checkbox" id="pickAlert" checked style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">📣 Send a squad alert to parents' phones</span></label><p class="hint">${REACH===null?(loadReach(),""):REACH?`Goes to ${phones(+REACH.reminders)} with Reminders on. `:""}Only sent when the squad is new or has changed since the last alert.</p>`:""}
   <div class="btns"><button class="btn gold" id="pickSave">Save squad</button><button class="btn" id="pickSavePost">Save and make the squad post</button><button class="btn ghost" data-view="fixtures">Cancel</button></div></section>`}
 function pickAlertable(m){return !m.practice&&!m.postponed&&!result(m)&&(m.date||"")>=todayLocal()&&!(m.live&&m.live.status&&m.live.status!=="pre")}
 async function pickSave(){const m=matches.find(x=>x.id===pickMatch);const roster=players.map(p=>p.name);const sq=[...PICK.set].sort((a,b)=>(+(players.find(p=>p.name===a)||{}).num||99)-(+(players.find(p=>p.name===b)||{}).num||99));
   const tell=!!($("#pickAlert")&&$("#pickAlert").checked&&sq.length);
   try{await db.collection("matches").doc(m.id).update({squad:sq});m.squad=sq;try{localStorage.removeItem(liveKey(m.id))}catch(e){}}catch(e){toast("Couldn't save the squad. Try again.");return null}
   // the alert goes to phones with kick-off reminders on; the function only sends it when the squad is new or changed
-  const r=tell?await alSend({squad:m.id}):null;
-  toast(`Squad saved: ${sq.length} players.${r==null?"":r>=0?" Parents with alerts on have been told.":" No change since the last alert, so none sent."}`);return m}
+  const r=tell?await alSend({squad:m.id}):null;if(r!=null)REACH=null;
+  toast(`Squad saved: ${sq.length} players.${r==null?"":r>=0?` Squad alert sent to ${phones(r)}.`:" No change since the last alert, so none sent."}`);return m}
 window.monthFixtures=ym=>sortMatches(matches.filter(m=>(m.date||"").startsWith(ym||"")&&!m.postponed&&m.stage!=="placeholder")).map(m=>Object.assign({},m,{res:result(m)}));
 // ---------- matchday details (matches.matchday, supabase/9_matchday_and_more.sql): meet time, kit, pitch, postcode ----------
 const MD=m=>m&&m.matchday||{};
@@ -504,6 +504,17 @@ async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.s
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:{match:id}}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
 async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.potm??data.postponed;return typeof v==="number"?v:null}catch(e){return null}}
+// coaches: how many phones get alerts (counts only, supabase/12_alert_reach.sql); null until loaded, false if it failed
+let REACH=null;
+async function loadReach(){if(!sb||!canWrite)return;REACH=false;try{const {data,error}=await sb.rpc("alert_reach");if(!error&&data)REACH=data}catch(e){}if(view==="alerts"||view==="pick")render()}
+const phones=n=>`${n} phone${n===1?"":"s"}`;
+function reachCard(){if(!canWrite)return "";if(REACH===null){loadReach();return ""}if(!REACH)return "";const r=REACH;
+  const kinds=[[r.apple,"iPhone, iPad or Mac"],[r.google,"Android or Chrome"],[r.mozilla,"Firefox"]].filter(x=>+x[0]).map(x=>`${x[0]} ${x[1]}`).join(", ");
+  const last=r.last_ok?new Date(r.last_ok).toLocaleString("en-GB",{weekday:"short",day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"";
+  return `<section class="card stack edit-only"><h2>📊 Who gets alerts</h2>${+r.phones?`<p style="margin:0"><b>Alerts reach ${phones(+r.phones)}</b>${kinds?` (${kinds})`:""}.${+r.week?` ${r.week} joined in the last week.`:""}</p>
+    <div class="av"><div class="row"><span>Reminders and squad news</span><b>${r.reminders}</b></div>${TEAM.publicScores===false?"":`<div class="row"><span>Goals</span><b>${r.goals}</b></div>`}<div class="row"><span>Results</span><b>${r.results}</b></div><div class="row"><span>Everything live</span><b>${r.live}</b></div></div>
+    ${last?`<p class="hint" style="margin:0">Last alert delivered ${esc(last)}.</p>`:""}`:`<p style="margin:0">No phones have alerts turned on yet. Send parents the link to this page so they can turn them on.</p>`}
+    <p class="hint" style="margin:0">Only coaches see this. It's a count of phones, not families: we don't know whose phone is whose, and one family may have two.</p></section>`}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
@@ -522,7 +533,7 @@ function alertsView(){if(!AL.checked)alCheck();
     <p><b>Android:</b> open this site in Chrome, tap <b>Turn on alerts</b>, then <b>Allow</b>. Adding it to your home screen (⋮ menu, <b>Add to Home screen</b>) makes it open like an app.</p>
     <p><b>Computer:</b> Chrome, Edge and Firefox all work. Tap <b>Turn on alerts</b> and allow notifications when asked.</p>
     <p><b>Nothing arriving?</b> Tap <b>Send a test alert</b>. If it doesn't come, check notifications are allowed for ${esc(APP)} (or your browser) in your phone's settings, and that Do Not Disturb or Focus is off.</p></details>`;
-  return `<section class="card stack">${head}${bodyHtml}${help}<p class="hint">Each phone is set up on its own. We don't ask for your name, number or email, and alerts only use first names already on this site.</p></section>`}
+  return `${reachCard()}<section class="card stack">${head}${bodyHtml}${help}<p class="hint">Each phone is set up on its own. We don't ask for your name, number or email, and alerts only use first names already on this site.</p></section>`}
 
 // ---------- get the app: install the site on the home screen ----------
 // Chrome and Edge offer a one-tap install (beforeinstallprompt); iPhones need Safari's Share > Add to Home Screen.
