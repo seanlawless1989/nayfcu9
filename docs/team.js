@@ -22,7 +22,7 @@ self.TEAM = {
   // false: visitors and match alerts get games without scores; signed-in coaches still see everything.
   // Set the PUBLIC_SCORES secret on the edge functions to match.
   publicScores: true,                            // Newton Aycliffe chose to keep scores public (Oct 2026)
-  poweredBy: false,                              // small "Powered by Touchline Tales" link in the footer; false hides it
+  poweredBy: true,                               // small "Powered by Touchline Tales" link in the footer; false hides it
 
   colours: { club: "#2235E8", clubDeep: "#16239E", clubInk: "#FFFFFF", gold: "#FFD200", goldInk: "#1A1A1A",
              accent: "#F7A3D3", accentDeep: "#E5559F" },   // accent = player of the match graphic background
