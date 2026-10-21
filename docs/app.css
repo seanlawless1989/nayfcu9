@@ -423,3 +423,5 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 /* sub plan: the due-change banner is pinned to the bottom of the screen so it can't be missed */
 .plandue{position:fixed;inset:auto 0 0 0;z-index:49;border-radius:0;background:var(--card);color:var(--ink);border-top:3px solid var(--gold);font-size:15px;padding:14px;box-shadow:0 -8px 30px rgba(0,0,0,.25)}.plandue ul{margin:6px 0 8px 18px;padding:0}.plandue li{margin:2px 0}
 .tl li.bad{opacity:.7}
+/* get the app: numbered install steps */
+.steps{margin:0;padding-left:22px;display:grid;gap:8px;font-size:15px}

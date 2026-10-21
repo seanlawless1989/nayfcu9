@@ -123,6 +123,7 @@ function render(){
   else if(view==="avail")main.innerHTML=availView();
   else if(view==="msg")main.innerHTML=msgChase?chaseView():msgView();
   else if(view==="alerts")main.innerHTML=alertsView();
+  else if(view==="app")main.innerHTML=appView();
   else if(view==="gallery")main.innerHTML=galleryView();
   else if(view==="calendar")main.innerHTML=calendarView();
   else if(view==="training")main.innerHTML=trainingView();
@@ -154,13 +155,13 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
     ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
+const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes","Goal of the month and more"]);
   const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:"Goal of the month and more";
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>x[0]!=="app"||!alStandalone()).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -465,6 +466,25 @@ function alertsView(){if(!AL.checked)alCheck();
     <p><b>Computer:</b> Chrome, Edge and Firefox all work. Tap <b>Turn on alerts</b> and allow notifications when asked.</p>
     <p><b>Nothing arriving?</b> Tap <b>Send a test alert</b>. If it doesn't come, check notifications are allowed for ${esc(APP)} (or your browser) in your phone's settings, and that Do Not Disturb or Focus is off.</p></details>`;
   return `<section class="card stack">${head}${bodyHtml}${help}<p class="hint">Each phone is set up on its own. We don't ask for your name, number or email, and alerts only use first names already on this site.</p></section>`}
+
+// ---------- get the app: install the site on the home screen ----------
+// Chrome and Edge offer a one-tap install (beforeinstallprompt); iPhones need Safari's Share > Add to Home Screen.
+let INSTALL=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();INSTALL=e;if(view==="app")render()});
+addEventListener("appinstalled",()=>{INSTALL=null;toast(`${APP} is on your home screen.`);if(view==="app")render()});
+function appView(){const link=`${SITE}/?app`,ua=navigator.userAgent,ios=alIos(),android=/android/i.test(ua),phone=ios||android;
+  const notSafari=ios&&/CriOS|FxiOS|EdgiOS|FBAN|FBAV|Instagram|WhatsApp|GSA\//.test(ua);
+  const head=`<h2>📲 Get the app</h2><p>Put ${esc(APP)} on your home screen. It opens like any other app, works with a poor signal at the ground, and can send you match alerts.</p>`;
+  let how;
+  if(alStandalone())how=`<div class="note">✅ You're using the app. Turn on match alerts so you don't miss kick-off, goals and full time.</div><div class="btns"><button class="btn gold" data-view="alerts">🔔 Match alerts</button></div>`;
+  else if(INSTALL)how=`<div class="btns"><button class="btn gold bigbtn" id="appInstall">Install ${esc(APP)}</button></div><p class="hint">Free, no app store needed, and it takes a couple of seconds.</p>`;
+  else if(notSafari)how=`<div class="note">On an iPhone this needs Safari. Copy the link, open Safari, paste it in the address bar, then follow the steps that appear.</div><div class="btns"><button class="btn gold" data-appcopy="${esc(link)}">Copy the link</button></div>`;
+  else if(ios)how=`<ol class="steps"><li>Tap the Share button <b>⬆︎</b> at the bottom of Safari (on newer iPhones tap <b>⋯</b> first, then <b>Share</b>).</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>. ${esc(APP)} is now on your home screen with the club crest.</li></ol>`;
+  else if(android)how=`<ol class="steps"><li>Open this page in <b>Chrome</b>.</li><li>Tap the <b>⋮</b> menu at the top right.</li><li>Tap <b>Install app</b> or <b>Add to Home screen</b>, then <b>Install</b>.</li></ol>`;
+  else how=`<p>You're on a computer. Send yourself this link and open it on your phone:</p><div class="btns"><button class="btn gold" data-appcopy="${esc(link)}">Copy the link</button></div>`;
+  const next=alStandalone()?"":`<p class="hint">Then open ${esc(APP)} from your home screen and tap <b>🔔 Match alerts</b> to choose which alerts you get.${ios?" On an iPhone, alerts only work from the home-screen app.":""}</p>`;
+  const share=phone||alStandalone()?`<p class="hint">Helping another parent? Send them <button class="mini" data-appcopy="${esc(link)}">this link</button> and it opens these steps.</p>`:"";
+  return `<section class="card stack">${head}${how}${next}${share}</section>`}
 
 // ---------- photo gallery ----------
 // public.match_photos rows point at files in the public "gallery" storage bucket (supabase/4_gallery_training.sql).
@@ -1644,6 +1664,8 @@ document.addEventListener("click",async e=>{
   if(t.dataset.lb){lbAction(t.dataset.lb);return}
   if(t.dataset.photo){lbOpen(t.dataset.photo);return}
   if(t.dataset.ics){const m=matches.find(x=>x.id===t.dataset.ics);if(m)downloadIcs(m);return}
+  if(t.dataset.appcopy){try{await navigator.clipboard.writeText(t.dataset.appcopy);toast("Link copied.")}catch(err){prompt("Copy this link",t.dataset.appcopy)}return}
+  if(t.id==="appInstall"&&INSTALL){const e=INSTALL;INSTALL=null;e.prompt();try{await e.userChoice}catch(err){}render();return}
   if(t.id==="calCopy"){try{await navigator.clipboard.writeText(t.dataset.url);toast("Calendar link copied.")}catch(err){prompt("Copy this link",t.dataset.url)}return}
   if(t.id==="trEditBtn"&&canWrite){trEdit=JSON.parse(JSON.stringify(TR||{day:"Wednesday",start:"18:00",finish:"19:00",off:[]}));render();return}
   if(t.id==="trCancel"){trEdit=null;render();return}
@@ -1808,6 +1830,7 @@ document.addEventListener("submit",async e=>{
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
   for(const v of ["gallery","calendar","training","help","setup","votes","matchday"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
+  if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
 })();
