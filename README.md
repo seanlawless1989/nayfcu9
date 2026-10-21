@@ -79,6 +79,14 @@ Coaches can send fixes, change requests and questions from **Help and changes** 
 
 The copy leaves out Newton Aycliffe's data, logos, opponent badges, domain and the U9s Manager game. Add `--keep-badges` to include the North East opponent badges.
 
+## The public demo
+
+touchlinetales.club/demo/ is a clickable copy of the site for the made-up Sample Town Under 12s (`teams/demo-site`).
+It has no database: `teams/demo-site/demo.js` answers the site's Supabase calls from a made-up season dated around
+today (with a game always live), kept in the visitor's own browser tab. Visitors can try the coach view and the
+U7-U11 scores-hidden view, and nothing they do is saved or seen by anyone else. After any change to `docs/`, run
+`python3 tools/package_demo.py --to ../touchlinetales-sites/demo` and commit it there, alongside the team sites.
+
 ## Clubs with several teams
 
 `python3 tools/package_club.py clubs/<club>` builds a club landing page (`dist/club-<slug>/`) from `club.json`
