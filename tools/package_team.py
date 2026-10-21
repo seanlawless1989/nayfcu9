@@ -126,7 +126,7 @@ def build_site(team, src, site, keep_badges):
 def build_sql(team, out):
     parts = []
     for name in ("1_schema.sql", "3_notifications.sql", "4_gallery_training.sql", "5_help_requests.sql", "6_match_updated.sql",
-                 "7_team_setup.sql", "8_multi_day_tournaments.sql", "9_matchday_and_more.sql"):
+                 "7_team_setup.sql", "8_multi_day_tournaments.sql", "9_matchday_and_more.sql", "10_parent_login.sql"):
         s = (SQL / name).read_text()
         s = s.replace("-- Newton Aycliffe U9s: ", f"-- {team['name']} {team.get('ageShort', '')}: ")
         if name == "3_notifications.sql":
@@ -160,7 +160,8 @@ Allow about an hour. Do the steps in order.
 3. Open `supabase/setup.sql`. Replace `coach@example.com` with the first coach's email (lower case),
    and `YOUR-PROJECT` and `YOUR-ANON-KEY` with the values from **Project Settings > API**. Paste it all into the
    **SQL Editor** and run it.
-4. Make the match-alerts keys: `npx web-push generate-vapid-keys`. Run
+4. **Authentication > Sign In / Providers**: turn on **Allow anonymous sign-ins** (parents sign in with family codes).
+5. Make the match-alerts keys: `npx web-push generate-vapid-keys`. Run
    `insert into public.push_keys (public_key, private_key) values ('<public>', '<private>');` in the SQL Editor.
    Keep the private key out of every file you upload.
 
