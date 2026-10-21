@@ -70,6 +70,7 @@ function season(){
     poll_votes:[["Ava",9],["Ella",4],["Millie",12],["Ava",6]].flatMap(([_,v],i)=>Array.from({length:v},(x,j)=>({poll_id:"gotm-demo",voter:"v"+i+"-"+j,choice:i}))),
     team_settings:[{id:1,settings:{},ready:true,updated:new Date(now-864e5*30).toISOString()}],
     team_signoff:[{id:1,welfare_name:"Club welfare officer",welfare_email:"",public_scores:!flags.hidden,welfare_agreed:true,terms_agreed:true,dpa_agreed:true,agreed_by:"Club secretary"}],
+    parent_settings:[{id:1,required:false}],family_codes:players.map(p=>({player_id:p.id,code:p.name.slice(0,3).toUpperCase()+"123"})),parent_links:[],
     coaches:[{email:COACH}],badges:[],player_photos:[],match_photos:[],help_requests:[],post_log:[],
     page_views:Array.from({length:28},(_,i)=>{const d=27-i,wk=new Date(day(-d)).getDay(),v=(wk===0||wk===6)?40+((i*7)%25):8+((i*5)%12);return {day:day(-d),views:v,visitors:Math.round(v*.45)}})};
 }
@@ -79,6 +80,7 @@ const SCRIPT=[[30,{k:"goal",n:"Ava",a:"Mia"}],[75,{k:"sub",on:"Harper",off:"Ruby
 let DB=ss.get(KEY);
 if(!DB||DB.made!==day(0)||Date.now()-DB.start>3*3600e3){DB={made:day(0),start:Date.now(),done:0,touched:false,t:season()};ss.set(KEY,DB)}
 const T=DB.t,save=()=>ss.set(KEY,DB);
+if(!T.family_codes){const t=season();["parent_settings","family_codes","parent_links"].forEach(k=>T[k]=t[k]);save()}   // a tab opened before parent login
 function advanceLive(){
   const m=T.matches.find(x=>x.date===day(0)&&x.live&&x.live.status==="live");if(!m||DB.touched)return;
   const secs=(Date.now()-DB.start)/1000;
@@ -128,31 +130,51 @@ function rest(t,meth,q,body,h){
   if(one){if(out.length!==1)return json({code:"PGRST116",message:"JSON object requested, multiple (or no) rows returned",details:"",hint:null},406);return json(out[0])}
   return json(out)}
 
+// parent login: the demo has one phone, so parent_links is just the children this tab is signed in for
+const kidIds=()=>isParent()?T.parent_links.map(l=>l.player_id).filter(id=>T.players.some(p=>p.id===id&&p.current)):[];
+const kidNames=()=>kidIds().map(id=>T.players.find(p=>p.id===id).name);
+const famKey=()=>{const k=kidIds().sort();return k.length?"family:"+k[0]:null};
+const mustSignIn=()=>!isCoach()&&!!(T.parent_settings[0]||{}).required;
+function newCode(){const abc="23456789ABCDEFGHJKMNPQRSTUVWXYZ";let c;do{c=Array.from({length:6},()=>abc[Math.floor(Math.random()*abc.length)]).join("")}while(T.family_codes.some(f=>f.code===c));return c}
 function rpc(fn,a){
   switch(fn){
+    case "my_children":return json(kidNames());
+    case "link_family":{const c=String(a.p_code||"").replace(/[^a-z0-9]/gi,"").toUpperCase(),f=T.family_codes.find(x=>x.code===c),p=f&&T.players.find(x=>x.id===f.player_id&&x.current);
+      if(!p)return json(null);if(!T.parent_links.some(l=>l.player_id===p.id))T.parent_links.push({player_id:p.id});save();return json(p.name)}
+    case "unlink_family":T.parent_links=a.p_player==null?[]:T.parent_links.filter(l=>(T.players.find(p=>p.id===l.player_id)||{}).name!==a.p_player);save();return json(null);
+    case "my_availability":return json(T.availability.filter(r=>kidNames().includes(r.player)));
+    case "my_votes":return json(T.poll_votes.filter(v=>v.voter===famKey()).map(v=>({poll_id:v.poll_id,choice:v.choice})));
+    case "new_family_code":{const f=T.family_codes.find(x=>x.player_id===a.p_player);const c=newCode();if(f)f.code=c;else T.family_codes.push({player_id:a.p_player,code:c});
+      T.parent_links=T.parent_links.filter(l=>l.player_id!==a.p_player);save();return json(c)}
+    case "family_overview":T.players.filter(p=>p.current&&!T.family_codes.some(f=>f.player_id===p.id)).forEach(p=>T.family_codes.push({player_id:p.id,code:newCode()}));save();
+      return json(T.players.filter(p=>p.current).sort((x,y)=>(x.num||99)-(y.num||99)).map(p=>({player_id:p.id,player:p.name,num:p.num,code:T.family_codes.find(f=>f.player_id===p.id).code,phones:T.parent_links.some(l=>l.player_id===p.id)?1:0})));
     case "list_coaches":return json(T.coaches.map(c=>c.email));
     case "add_coach":upsert("coaches",{email:String(a.new_email||"").toLowerCase()},["email"]);save();return json(null);
     case "remove_coach":T.coaches=T.coaches.filter(c=>c.email!==String(a.old_email||"").toLowerCase());save();return json(null);
-    case "set_availability":upsert("availability",{match_id:a.p_match,player:a.p_player,status:a.p_status},["match_id","player"]);save();return json(null);
-    case "cast_vote":upsert("poll_votes",{poll_id:a.p_poll,voter:a.p_voter,choice:a.p_choice},["poll_id","voter"]);save();return json(null);
+    case "set_availability":if(mustSignIn()&&!kidNames().includes(a.p_player))return json({message:"Sign in with your family code first"},400);upsert("availability",{match_id:a.p_match,player:a.p_player,status:a.p_status},["match_id","player"]);save();return json(null);
+    case "cast_vote":if(mustSignIn()&&!famKey())return json({message:"Sign in with your family code to vote"},400);upsert("poll_votes",{poll_id:a.p_poll,voter:famKey()||a.p_voter,choice:a.p_choice},["poll_id","voter"]);save();return json(null);
     case "poll_totals":{const c={};(T.poll_votes||[]).filter(v=>v.poll_id===a.p_poll).forEach(v=>c[v.choice]=(c[v.choice]||0)+1);return json(Object.entries(c).map(([choice,votes])=>({choice:+choice,votes})))}
     default:return json(null)}  // log_view, push_subscribe and the rest: nothing to record in a demo
 }
 
-function session(){const exp=Math.floor(Date.now()/1000)+86400*30,user={id:"00000000-0000-4000-8000-000000000001",aud:"authenticated",role:"authenticated",email:COACH,
+// anon: a parent's phone signed in with a family code (no email), otherwise the demo coach
+function session(anon){const exp=Math.floor(Date.now()/1000)+86400*30,user=anon?{id:"00000000-0000-4000-8000-0000000000a1",aud:"authenticated",role:"authenticated",email:"",is_anonymous:true,
+  app_metadata:{},user_metadata:{},created_at:new Date().toISOString()}:{id:"00000000-0000-4000-8000-000000000001",aud:"authenticated",role:"authenticated",email:COACH,
   app_metadata:{provider:"email"},user_metadata:{},created_at:new Date().toISOString()};
   const b=o=>btoa(JSON.stringify(o)).replace(/=+$/,"").replace(/\+/g,"-").replace(/\//g,"_");
-  return {access_token:b({alg:"HS256",typ:"JWT"})+"."+b({sub:user.id,email:COACH,exp,role:"authenticated",aud:"authenticated"})+".demo",token_type:"bearer",
+  return {access_token:b({alg:"HS256",typ:"JWT"})+"."+b(Object.assign({sub:user.id,exp,role:"authenticated",aud:"authenticated"},anon?{is_anonymous:true}:{email:COACH}))+".demo",token_type:"bearer",
     expires_in:86400*30,expires_at:exp,refresh_token:"demo",user}}
 function coachOn(){ls.set(TOKEN,JSON.stringify(session()));location.href=location.pathname}
 function coachOff(){ls.del(TOKEN);location.href=location.pathname}
-const isCoach=()=>!!ls.get(TOKEN);
+const tok=()=>{try{return JSON.parse(ls.get(TOKEN)||"null")}catch(e){return null}};
+const isCoach=()=>{const t=tok();return !!(t&&t.user&&!t.user.is_anonymous)},isParent=()=>{const t=tok();return !!(t&&t.user&&t.user.is_anonymous)};
 
 function auth(path){
   if(path.endsWith("/otp")){setTimeout(coachOn,1200);return json({})}   // any email "signs in" as the demo coach
+  if(path.endsWith("/signup"))return json(session(true));   // a parent typing a family code
   if(path.endsWith("/logout")){setTimeout(()=>{if(!isCoach())DEMO.paint()},50);return json(null,204)}
-  if(path.endsWith("/token")){const s=session();ls.set(TOKEN,JSON.stringify(s));return json(s)}
-  if(path.endsWith("/user"))return isCoach()?json(session().user):json({message:"not signed in"},401);
+  if(path.endsWith("/token")){const s=session(isParent());ls.set(TOKEN,JSON.stringify(s));return json(s)}
+  if(path.endsWith("/user"))return tok()?json(session(isParent()).user):json({message:"not signed in"},401);
   return json({})}
 
 const realFetch=window.fetch.bind(window);
@@ -201,7 +223,7 @@ window.DEMO={paint(){
     <button data-demo="reset">Start again</button><a href="../${REF?"?ref="+encodeURIComponent(REF):""}#signup">Get your own</a></span>
     <span class="tip">${c?"You're a coach now. Open today's game and tap ▶ Live match to record goals and subs, or make a matchday graphic.":
       flags.hidden?"For under 7s to under 11s, parents see games, line-ups and awards but no scores or scorers (FA rules). Coaches still see everything.":
-      "Today's game is live. Tap the red bar to follow it like a parent would."}</span></div>`}};
+      "Today's game is live. Tap the red bar to follow it like a parent would. To try parent sign-in, open Parents and type Ava's family code, AVA-123."}</span></div>`}};
 // ---------- follow-up: after a couple of minutes, ask (once) who they are, unless the home page already did ----------
 // Sent to the Touchline Tales inbox by FormSubmit, the same as the home page sign-up form (FORM_ID in assets/home.js there).
 const FORM="https://formsubmit.co/ajax/5f26f2b94f7b8df49f80d9aced927305",LEAD="tt-lead",ASKED="tt-demo-asked";

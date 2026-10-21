@@ -67,6 +67,12 @@ Everything that makes this site Newton Aycliffe's lives in `docs/team.js`: the n
 
 Coaches get **✨ Suggest a preview** and **✨ Suggest a report** buttons on the match page. They call the `preview` edge function (`supabase/functions/preview`, coaches only), which sends the game's facts and Live-mode timeline to Claude and returns a draft for the coach to edit before saving. It needs the `ANTHROPIC_API_KEY` secret on the Supabase project; without it the site writes a plain draft from the stats. The site sends its `team.js` name, age group and score setting with each request, and for under-7s to under-11s the drafts never mention scores, results or scorers (FA rule), even when the site shows scores.
 
+## Parent login (family codes)
+
+Each player gets a six-character family code (`supabase/10_parent_login.sql`). Coaches see the codes on the **Squad** page and send each family theirs privately. A parent types it once on the **Parents** page (`?parents`); the phone gets an anonymous Supabase sign-in linked to that child, with no name or email. Signed-in parents answer availability for their own child only and vote once per family. **New code** stops the old one working and signs out every phone that used it. Wrong codes are limited to five an hour per phone.
+
+Turn on **Authentication > Sign In / Providers > Allow anonymous sign-ins** in Supabase, then run `10_parent_login.sql`. Until a coach switches **Parents must sign in** on (Squad page), the open availability links and one-vote-per-phone polls keep working as before.
+
 ## Help and changes
 
 Coaches can send fixes, change requests and questions from **Help and changes** on the home page (coach tiles). Requests are stored in the `help_requests` table (`supabase/5_help_requests.sql`). A scheduled Claude task checks for new ones every hour from 7am to 10pm. It makes small data fixes itself, opens a pull request for code changes (never merging them), and writes its answer back so the coach sees it on the same page. Anything big, unclear or destructive is left waiting for Sean.

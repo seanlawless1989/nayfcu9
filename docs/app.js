@@ -130,6 +130,7 @@ function render(){
   else if(view==="calendar")main.innerHTML=calendarView();
   else if(view==="training")main.innerHTML=trainingView();
   else if(view==="votes")main.innerHTML=votesView();
+  else if(view==="parents")main.innerHTML=parentsView();
   else if(view==="matchday")main.innerHTML=matchdayView();
   else if(view==="ftimport")main.innerHTML=ftView();
   else if(view==="help")main.innerHTML=helpView();
@@ -157,13 +158,13 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=l
     ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
+const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results","⚽","Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`Goals, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts","Kick-off, goals and full time on your phone"],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["help","🛟","Help and changes","Ask for a fix or a change"]];
-function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
+function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes","Goal of the month and more"]);
   const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:"Goal of the month and more";
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||PHOTOS_ON)).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||PHOTOS_ON)&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -337,13 +338,67 @@ function avWaiting(id){const a=AV[id]||{};return players.filter(p=>p.current&&!a
 function siteUrl(){return location.origin+location.pathname}
 function availView(){
   const m=matches.find(x=>x.id===availMatch);if(!m)return `<div class="card empty">That fixture couldn't be found. Ask the coach for a new link.</div>`;
-  const d=new Date(m.date+"T12:00:00");const roster=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99));
-  return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>
-    <p><b>${esc(m.ha==="A"?"at ":"v ")}${esc(m.opp)}</b><br>${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}${m.ko?` · ${esc(m.ko)} kick-off`:""}${m.venue?` · ${esc(m.venue)}`:""}</p>
-    <p class="hint">Tap the answer next to your ${PRN.kid}'s name. Only the coaches can see the answers.</p>
+  const d=new Date(m.date+"T12:00:00"),kids=canWrite?[]:myKids();let roster=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99));
+  const head=`<h2>Can ${PRN.s} make it?</h2>
+    <p><b>${esc(m.ha==="A"?"at ":"v ")}${esc(m.opp)}</b><br>${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}${m.ko?` · ${esc(m.ko)} kick-off`:""}${m.venue?` · ${esc(m.venue)}`:""}</p>`;
+  if(kids.length)roster=roster.filter(p=>kids.includes(p.name));
+  else if(PREQ&&!canWrite){parentNext="avail";return `<section class="card stack">${head}${joinBox(`To answer, type the family code the coach sent you. You only do this once on this phone.`)}</section>`}
+  return `<section class="card stack">${head}
+    <p class="hint">${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="avail">Sign in</button>`:""}</p>
     <div class="av">${roster.map(p=>{const v=(AV_MINE[m.id]||{})[p.name];return `<div class="row"><span>${esc(p.name)}</span><div class="seg" role="group" aria-label="${esc(p.name)}"><button data-av="yes" data-n="${esc(p.name)}" aria-pressed="${v==="yes"}">Yes</button><button data-av="maybe" data-n="${esc(p.name)}" aria-pressed="${v==="maybe"}">Maybe</button><button data-av="no" data-n="${esc(p.name)}" aria-pressed="${v==="no"}">No</button></div></div>`}).join("")}</div></section>`;
 }
 let availMatch=null;const AV_MINE={};
+// ---------- parent login (family codes, supabase/10_parent_login.sql) ----------
+// Each player has a family code the coach sends privately. Typing it once gives this phone an anonymous sign-in
+// (no email, no name) linked to that child: the parent then answers availability for their own child and gets one
+// vote per family. With "parents must sign in" on, the open availability links and phone votes stop working.
+let PL_ON=false,PREQ=false,KIDS=[],FAMV={},FAM=null,parentNext=null;
+const isParent=()=>!!(me&&(me.is_anonymous||!me.email));
+const myKids=()=>isParent()?KIDS:[];
+const fmtCode=c=>c?c.slice(0,3)+"-"+c.slice(3):"";
+async function copyOut(tx,msg){try{await navigator.clipboard.writeText(tx);toast(msg)}catch(e){prompt("Copy this",tx)}}
+async function loadParentSettings(){if(!sb)return;try{const {data,error}=await sb.from("parent_settings").select("required").maybeSingle();if(error)return;PL_ON=true;PREQ=!!(data&&data.required)}catch(e){}}
+async function loadParent(){KIDS=[];FAMV={};if(!sb||!isParent())return;
+  try{const [k,a,v]=await Promise.all([sb.rpc("my_children"),sb.rpc("my_availability"),sb.rpc("my_votes")]);
+    KIDS=(k.data||[]).map(r=>typeof r==="string"?r:r.my_children).filter(Boolean);
+    (a.data||[]).forEach(r=>{(AV_MINE[r.match_id]=AV_MINE[r.match_id]||{})[r.player]=r.status});
+    (v.data||[]).forEach(r=>{FAMV[r.poll_id]=r.choice})}catch(e){}}
+function joinBox(why){return `${why?`<p class="hint" style="margin:0">${why}</p>`:""}<form id="pForm" class="btns"><input type="text" id="pCode" placeholder="Family code, e.g. 7K3-M9Q" aria-label="Family code" autocomplete="off" autocapitalize="characters" spellcheck="false" style="max-width:240px"><button class="btn gold" type="submit">Sign in</button></form>`}
+async function parentJoin(){const el=$("#pCode"),code=(el&&el.value||"").replace(/[^a-z0-9]/gi,"").toUpperCase();
+  if(code.length!==6){toast("Family codes are six letters and numbers, like 7K3-M9Q.");return}
+  if(canWrite){toast("You're signed in as a coach. Sign out first to use a family code.");return}
+  if(!me){const {data,error}=await sb.auth.signInAnonymously();if(error||!data||!data.user){toast("Parent sign-in isn't switched on for this site yet. Ask the coach.");return}me=data.user}
+  const {data,error}=await sb.rpc("link_family",{p_code:code});
+  if(error){toast(/too many/i.test(error.message)?"Too many tries. Wait an hour, or ask the coach to check the code.":"Couldn't check that code. Try again.");return}
+  if(!data){toast("That code isn't right. Check it with the coach.");return}
+  await loadParent();authBox();toast(`Signed in. This phone is linked to ${data}.`);
+  const nx=parentNext;parentNext=null;if(nx)setView(nx);else render()}
+async function parentLeave(n){
+  if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();authBox();render();toast(`${n} is no longer linked to this phone.`);return}
+  if(!confirm("Sign this phone out? You'll need the family code to sign in again."))return;
+  await sb.rpc("unlink_family",{p_player:null});KIDS=[];FAMV={};await sb.auth.signOut();toast("This phone is signed out.")}
+function parentsView(){const kid=PRN.kid,kids=myKids();
+  const what=`<ul style="margin:0;padding-left:20px"><li>Tell the coaches whether your ${kid} can make each game</li><li>Vote in team votes, one vote per family</li></ul>`;
+  if(!PL_ON)return `<section class="card stack"><h2>👪 Parents</h2><p>Parent sign-in isn't switched on for this team yet.</p></section>`;
+  if(canWrite)return `<section class="card stack"><h2>👪 Parents</h2><p>You're signed in as a coach. Each family's code is on the Squad page.</p><div class="btns"><button class="btn gold" data-view="squad">Family codes</button></div></section>`;
+  if(kids.length)return `<section class="card stack"><h2>👪 Parents</h2><p>This phone is signed in for <b>${kids.map(esc).join(" and ")}</b>. You can:</p>${what}
+    <div class="av">${kids.map(n=>`<div class="row"><span>${esc(n)}</span><button class="mini" data-punlink="${esc(n)}">Remove</button></div>`).join("")}</div>
+    <h3>Another ${kid} in the squad?</h3>${joinBox("Type their family code as well.")}
+    <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div></section>`;
+  return `<section class="card stack"><h2>👪 Parents</h2><p>Sign in with the family code the coach sent you. You only do this once on each phone. Then you can:</p>${what}${joinBox("")}
+    <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p></section>`}
+// coaches: every player's code, how many phones use it, and the "parents must sign in" switch (on the Squad page)
+async function loadFam(){if(!sb||!canWrite)return;const {data,error}=await sb.rpc("family_overview");FAM=error?[]:(data||[]);if(view==="squad")render()}
+const famText=f=>`Hi! Here's ${f.player}'s family code for the ${TEAM.name||""} ${TEAM.ageGroup||""} website:\n\n${fmtCode(f.code)}\n\nOpen ${siteUrl()}?parents on your phone and type it in once. Then you can tell us whether ${f.player} can make each game, and vote in team votes.\n\nPlease keep it to your family. Thank you! ${TEAM.cheer||"⚽"}`;
+function famCard(){if(!canWrite||!PL_ON)return "";const kid=PRN.kid;
+  if(!FAM){loadFam();return `<section class="card edit-only"><h2>👪 Family codes</h2><p class="hint">Loading…</p></section>`}
+  return `<section class="card stack edit-only"><h2>👪 Family codes</h2>
+    <p class="hint">Send each family their ${kid}'s code privately, not in the group chat. They type it once on the Parents page, then they can answer availability for their own ${kid} and vote, one vote per family. "New code" stops the old one working and signs out every phone that used it.</p>
+    ${FAM.length?`<div class="av">${FAM.map(f=>`<div class="row" style="flex-wrap:wrap;gap:6px"><span style="flex:1 1 140px"><b>${esc(f.player)}</b> <code>${esc(fmtCode(f.code))}</code></span><span class="hint">${f.phones?`${f.phones} phone${f.phones>1?"s":""}`:"No phones yet"}</span><button class="mini" data-famcopy="${esc(f.player_id)}">Copy message</button><button class="mini" data-famnew="${esc(f.player_id)}">New code</button></div>`).join("")}</div>
+    <div class="btns"><button class="btn ghost" id="famAll">Copy all codes</button></div>`:`<p class="hint">Codes appear here once players are in the squad.</p>`}
+    <h3>Parents must sign in</h3><p class="hint">${PREQ?"On: only signed-in parents can answer availability and vote.":"Off: anyone with the link can still answer availability and vote, as before. Turn this on once every family has their code."}</p>
+    <div class="seg" role="group" aria-label="Parents must sign in"><button data-preq="1" aria-pressed="${PREQ}">On</button><button data-preq="0" aria-pressed="${!PREQ}">Off</button></div></section>`}
+
 // ---------- pick the squad for a fixture (Live match uses it) ----------
 let pickMatch=null,PICK=null;
 function pickView(){const m=matches.find(x=>x.id===pickMatch);if(!m)return `<div class="card empty">Fixture not found.</div>`;
@@ -408,7 +463,7 @@ function matchdayView(){const m=matches.find(x=>x.id===mdayMatch)||mdayPick();if
   return `<div class="stack">${head}${parents}${coach}${after}</div>`}
 function nextFixture(){const today=new Date().toISOString().slice(0,10);return sortMatches(matches.filter(m=>!result(m)&&!m.postponed&&!(m.hidden&&m.live&&m.live.status==="ft")&&(m.date||"")>=today))[0]}
 function msgText(m){const d=new Date(m.date+"T12:00:00");
-  return `⚽ ${TEAM.ageGroup||"Match"}: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${compName(m.comp)})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${MD(m).meet?`\n🕘 Meet at ${MD(m).meet}`:""}\n${m.venue?`📍 ${m.venue}${MD(m).pitch?`, pitch ${MD(m).pitch}`:""}`:"📍 Venue to be confirmed"}${MD(m).kit?`\n👕 ${kitLabel(MD(m).kit)}`:""}${mapsUrl(m)?`\n🧭 ${mapsUrl(m)}`:""}\n\nFollow the game live on the day:\n${siteUrl()}?live=${encodeURIComponent(m.id)}\n\nPlease let us know if your ${PRN.kid} can make it:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nGet kick-off and goal alerts on your phone:\n${siteUrl()}?alerts\n\nThank you! ${TEAM.cheer||"⚽"}`}
+  return `⚽ ${TEAM.ageGroup||"Match"}: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${compName(m.comp)})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${MD(m).meet?`\n🕘 Meet at ${MD(m).meet}`:""}\n${m.venue?`📍 ${m.venue}${MD(m).pitch?`, pitch ${MD(m).pitch}`:""}`:"📍 Venue to be confirmed"}${MD(m).kit?`\n👕 ${kitLabel(MD(m).kit)}`:""}${mapsUrl(m)?`\n🧭 ${mapsUrl(m)}`:""}\n\nFollow the game live on the day:\n${siteUrl()}?live=${encodeURIComponent(m.id)}\n\nPlease let us know if your ${PRN.kid} can make it${PREQ?" (first time? type in your family code)":""}:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nGet kick-off and goal alerts on your phone:\n${siteUrl()}?alerts\n\nThank you! ${TEAM.cheer||"⚽"}`}
 function msgView(){const m=matches.find(x=>x.id===msgMatch)||nextFixture();if(!m)return `<div class="card empty">No upcoming fixtures.</div>`;
   return `<section class="card stack"><h2>Parents' message</h2><p class="hint">Copy this into the parents' WhatsApp group. The link lets each parent say whether their ${PRN.kid} can make it, and you'll see the answers on the Fixtures page.</p>
   <textarea id="msgText" rows="12" style="width:100%;font:15px var(--body)">${esc(msgText(m))}</textarea>
@@ -494,8 +549,8 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, goals, assists, saves, playing time, awards and milestones, and match reports the coaches write.</li><li>Availability answers for each game, and training attendance. Only the coaches can see these.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
-  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents don't sign up or give an email address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. It's deleted when you turn alerts off.</li><li>If you vote in a poll, a random code made on your phone so you can only vote once.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, goals, assists, saves, playing time, awards and milestones, and match reports the coaches write.</li><li>Availability answers for each game, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
+  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when. Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors, as the FA asks for younger age groups.":""} Nobody's information is sold or used for advertising.</p>`)}
   ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts. Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
@@ -587,20 +642,21 @@ function matchIcs(m){const e=s=>String(s||"").replace(/\\/g,"\\\\").replace(/;/g
 function downloadIcs(m){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([matchIcs(m)],{type:"text/calendar"}));a.download=`${fileTag}-${slug(m.opp||"match")}-${m.date}.ics`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 
 // ---------- parent votes (public.polls, supabase/9_matchday_and_more.sql) ----------
-// Goal of the month and players' player of the season. One vote per phone (a random id kept on it); totals show
-// to coaches straight away and to everyone once the vote closes.
+// Goal of the month and players' player of the season. One vote per phone (a random id kept on it), or one per family
+// once parents sign in with a family code; totals show to coaches straight away and to everyone once the vote closes.
 let POLLS=[],PTOT={},pollNew=null;
 const pollOpen=p=>!p.closed&&!(p.closes&&new Date(p.closes)<new Date());
 const voterId=()=>{try{let v=localStorage.getItem(SK+".voter");if(!v){v=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,"0")).join("");localStorage.setItem(SK+".voter",v)}return v}catch(e){return null}};
-const myVotes=()=>{try{return JSON.parse(localStorage.getItem(SK+".votes")||"{}")}catch(e){return {}}};
+const myVotes=()=>{if(myKids().length)return FAMV;try{return JSON.parse(localStorage.getItem(SK+".votes")||"{}")}catch(e){return {}}};
 async function loadPolls(){if(!sb)return;try{const {data,error}=await sb.from("polls").select("*").order("created",{ascending:false});if(error)return;POLLS=data||[];
   await Promise.all(POLLS.filter(p=>canWrite||!pollOpen(p)).map(async p=>{const {data:t}=await sb.rpc("poll_totals",{p_poll:p.id});PTOT[p.id]=Object.fromEntries((t||[]).map(r=>[r.choice,+r.votes]))}))}catch(e){}}
 // goals from live match mode in a month, as choices for goal of the month
 function monthGoals(ym){return sortMatches(matches.filter(m=>(m.date||"").startsWith(ym))).flatMap(m=>((m.live&&m.live.events)||[]).filter(e=>e.k==="goal"&&e.n).map(e=>`${e.n} v ${m.opp}${e.m?` (${e.m})`:""}`))}
-function pollCard(p){const mine=myVotes()[p.id],open=pollOpen(p),tot=PTOT[p.id],sum=tot?Object.values(tot).reduce((a,b)=>a+b,0):0,top=tot?Math.max(0,...Object.values(tot)):0;
+function pollCard(p){const mine=myVotes()[p.id],fam=myKids().length>0,locked=PREQ&&!canWrite&&!fam,open=pollOpen(p),tot=PTOT[p.id],sum=tot?Object.values(tot).reduce((a,b)=>a+b,0):0,top=tot?Math.max(0,...Object.values(tot)):0;
   return `<section class="card stack"><h3>${p.kind==="gotm"?"⚽":p.kind==="potss"?"🏅":"🗳️"} ${esc(p.title)}</h3>
-    <p class="hint" style="margin:0">${open?`${p.closes?`Voting closes ${esc(new Date(p.closes).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}))}. `:""}One vote per phone. You can change it until it closes.`:"Voting has closed."}</p>
-    <div class="av">${(p.options||[]).map((o,i)=>{const n=tot?tot[i]||0:null;return `<div class="row"><span>${esc(o)}${n!=null?` <b>${n}</b>${n&&n===top&&!open?" 🏆":""}`:""}</span>${open?`<button class="mini" data-vote="${esc(p.id)}|${i}" aria-pressed="${mine===i}">${mine===i?"✓ Your vote":"Vote"}</button>`:""}</div>${n!=null&&sum?`<div class="ptbar" style="margin:-4px 0 6px"><i style="width:${n/sum*100}%"></i></div>`:""}`}).join("")}</div>
+    <p class="hint" style="margin:0">${open?`${p.closes?`Voting closes ${esc(new Date(p.closes).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}))}. `:""}${fam?"One vote per family":"One vote per phone"}. You can change it until it closes.`:"Voting has closed."}</p>
+    <div class="av">${(p.options||[]).map((o,i)=>{const n=tot?tot[i]||0:null;return `<div class="row"><span>${esc(o)}${n!=null?` <b>${n}</b>${n&&n===top&&!open?" 🏆":""}`:""}</span>${open&&!locked?`<button class="mini" data-vote="${esc(p.id)}|${i}" aria-pressed="${mine===i}">${mine===i?"✓ Your vote":"Vote"}</button>`:""}</div>${n!=null&&sum?`<div class="ptbar" style="margin:-4px 0 6px"><i style="width:${n/sum*100}%"></i></div>`:""}`}).join("")}</div>
+    ${open&&locked?`<div class="btns"><span class="hint">Parents vote once they've signed in with their family code.</span><button class="mini" data-view="parents" data-pnext="votes">Sign in to vote</button></div>`:""}
     ${canWrite?`<div class="btns edit-only"><span class="hint">${sum} vote${sum===1?"":"s"} so far. Only coaches see totals before it closes.</span>${open?`<button class="mini" data-pollclose="${esc(p.id)}">Close the vote</button>`:""}<button class="mini" data-polldel="${esc(p.id)}">Delete</button></div>`:""}</section>`}
 function votesView(){
   if(pollNew&&canWrite)return pollForm();
@@ -624,8 +680,8 @@ async function pollSave(){const v=id=>($("#"+id)||{}).value||"";const title=v("p
   const {error}=await sb.from("polls").insert(row);if(error){toast("Couldn't open the vote. Has the database update been run?");return}
   pollNew=null;await loadPolls();toast("Vote opened. Share the Votes page link with parents.");render()}
 async function castVote(id,i){const v=voterId();if(!v){toast("This phone can't vote (private browsing?).");return}
-  const {error}=await sb.rpc("cast_vote",{p_poll:id,p_voter:v,p_choice:i});if(error){toast(/closed/i.test(error.message)?"This vote has closed.":"Couldn't save your vote. Try again.");return}
-  const m=myVotes();m[id]=i;try{localStorage.setItem(SK+".votes",JSON.stringify(m))}catch(e){}toast("Thanks, your vote is in.");if(canWrite)await loadPolls();render()}
+  const {error}=await sb.rpc("cast_vote",{p_poll:id,p_voter:v,p_choice:i});if(error){if(/family code/i.test(error.message)){parentNext="votes";setView("parents");toast("Sign in with your family code to vote.");return}toast(/closed/i.test(error.message)?"This vote has closed.":"Couldn't save your vote. Try again.");return}
+  const m=myVotes();m[id]=i;if(!myKids().length)try{localStorage.setItem(SK+".votes",JSON.stringify(m))}catch(e){}toast("Thanks, your vote is in.");if(canWrite)await loadPolls();render()}
 
 // ---------- training ----------
 // public.training holds one row: the weekly session shown here and added to the calendar feed until "until".
@@ -1207,7 +1263,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.id==="waMsg"){const t=$("#msgText").value;window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank","noopener")}
   if(b.id==="copyMsg"){const ta=$("#msgText");try{navigator.clipboard.writeText(ta.value).then(()=>toast("Copied. Paste it into WhatsApp."),()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select()}}
   if(b.dataset.av){const n=b.dataset.n,v=b.dataset.av;(AV_MINE[availMatch]=AV_MINE[availMatch]||{})[n]=v;render();
-    sb.rpc("set_availability",{p_match:availMatch,p_player:n,p_status:v}).then(({error})=>toast(error?"Couldn't save that. Try again.":`Thanks, ${n}: ${v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`))}
+    sb.rpc("set_availability",{p_match:availMatch,p_player:n,p_status:v}).then(({error})=>toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`Thanks, ${n}: ${v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`))}
   if(b.dataset.msgfx){const [n,label]=b.dataset.msgfx.split("|");setView("gfx");(await gfxReady()).loadMilestone(n,label)}
   if(b.id==="bkJson")dl(`${(TEAM.abbr||"team")+"_"+(TEAM.ageShort||"")}_backup_${new Date().toISOString().slice(0,10)}.json`,backupJson(),"application/json");
   if(b.id==="bkCsv")dl(`${(TEAM.abbr||"team")+"_"+(TEAM.ageShort||"")}_results_${new Date().toISOString().slice(0,10)}.csv`,backupCsv(),"text/csv");
@@ -1446,7 +1502,7 @@ document.addEventListener("keydown",e=>{if(!STORY)return;if(e.key==="Escape"){cl
 
 function squadView(){
   const ps=players.slice().sort((a,b)=>(b.current-a.current)||((+a.num||99)-(+b.num||99))||a.name.localeCompare(b.name));
-  return `<section class="card"><h2>Squad</h2>
+  return `<div class="stack"><section class="card"><h2>Squad</h2>
   <p class="hint" style="margin-bottom:12px">First names only. Players marked "Left" stay in the records but drop off the match form.</p>
   <div class="stack" style="gap:8px">${ps.map(p=>`<div class="sq" data-pid="${esc(p.id)}">
     <input type="text" id="sqn-${esc(p.id)}" value="${esc(p.name)}" aria-label="Name" data-f="name" ${canWrite?"":"disabled"}>
@@ -1454,7 +1510,7 @@ function squadView(){
     <div class="seg edit-only"><button data-cur="1" aria-pressed="${!!p.current}">In squad</button><button data-cur="0" aria-pressed="${!p.current}">Left</button></div>
   </div>`).join("")}</div>
   <div class="btns edit-only" style="margin-top:14px"><input type="text" id="newName" placeholder="New player's first name" style="max-width:240px"><input type="number" id="newNum" placeholder="No." style="max-width:90px"><button class="btn" id="addP">Add player</button></div>
-  <p class="hint" style="margin-top:12px">Renaming here doesn't change old match records, so keep each name the same once ${PRN.sh} played.</p></section>`;
+  <p class="hint" style="margin-top:12px">Renaming here doesn't change old match records, so keep each name the same once ${PRN.sh} played.</p></section>${famCard()}</div>`;
 }
 
 // ---------- Team setup (supabase/7_team_setup.sql) ----------
@@ -1701,6 +1757,13 @@ document.addEventListener("click",async e=>{
   if(t.id==="ftAll"){ftRows().filter(f=>f.state!=="same").forEach(f=>FT.picks.add(f.key));render();return}
   if(t.dataset.sprep){const tx=sponsorText(t.dataset.sprep);try{await navigator.clipboard.writeText(tx);toast("Report copied. Paste it into an email.")}catch(er){prompt("Copy this report",tx)}return}
   if(t.dataset.vote){const [id,i]=t.dataset.vote.split("|");castVote(id,+i);return}
+  if(t.dataset.punlink){parentLeave(t.dataset.punlink);return}
+  if(t.id==="pLeave"){parentLeave(null);return}
+  if(t.dataset.famcopy){const f=(FAM||[]).find(x=>x.player_id===t.dataset.famcopy);if(f)copyOut(famText(f),`Copied. Send it to ${f.player}'s family.`);return}
+  if(t.id==="famAll"&&FAM){copyOut(`${TEAM.name||""} ${TEAM.ageGroup||""} family codes (keep private)\n\n${FAM.map(f=>`${f.player}: ${fmtCode(f.code)}`).join("\n")}\n\nParents type their code at ${siteUrl()}?parents`,"All codes copied.");return}
+  if(t.dataset.famnew&&canWrite){const f=(FAM||[]).find(x=>x.player_id===t.dataset.famnew);if(!f||!confirm(`Make a new code for ${f.player}? The old one stops working and any phones using it are signed out.`))return;
+    const {error}=await sb.rpc("new_family_code",{p_player:f.player_id});toast(error?"Couldn't make a new code. Try again.":`New code made for ${f.player}. Send it to the family.`);await loadFam();return}
+  if(t.dataset.preq&&canWrite){const on=t.dataset.preq==="1";const {error}=await sb.from("parent_settings").update({required:on}).eq("id",1);if(error){toast("Couldn't change that. Try again.");return}PREQ=on;toast(on?"Parents now need their family code to answer and vote.":"Anyone with the link can answer and vote again.");render();return}
   if(t.dataset.pollnew&&canWrite){pollStart(t.dataset.pollnew);return}
   if(t.id==="pfCancel"){pollNew=null;render();return}
   if(t.id==="pfSave"){pollSave();return}
@@ -1713,7 +1776,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="trSave"&&trEdit&&canWrite){trRead();const row=Object.assign({},trEdit,{id:1,updated:new Date().toISOString()});if(!/^\d{1,2}:\d{2}/.test(row.start)||!/^\d{1,2}:\d{2}/.test(row.finish)){toast("Add a start and finish time.");return}t.disabled=true;
     const {data,error}=await sb.from("training").upsert(row).select().single();if(error){t.disabled=false;toast("Couldn't save training. Try again.");return}TR=data;trEdit=null;toast("Training saved.");render();return}
   if(t.dataset.gfx){const m=matches.find(x=>x.id===t.dataset.mid);if(m){F=null;playerView=null;setView("gfx");await (await gfxReady()).loadMatch(m,t.dataset.gfx)}return}
-  if(t.dataset.view){F=null;T=null;H=null;trEdit=null;playerView=null;oppView=null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
+  if(t.dataset.view){F=null;T=null;H=null;trEdit=null;playerView=null;oppView=null;parentNext=t.dataset.pnext||null;if(t.dataset.view==="new"){F=blankForm()}setView(t.dataset.view);return}
   if(t.dataset.edit||t.dataset.md){const id=t.dataset.edit||t.dataset.md;if(matches.some(x=>x.id===id))openMatch(id);return}
   if(t.id==="mdReportEdit"){mdWrite=true;render();const ta=$("#mdReport");if(ta){ta.focus();ta.scrollIntoView({block:"center"})}return}
   if(t.id==="mdReportCancel"){mdWrite=false;render();return}
@@ -1759,7 +1822,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="delM"){if(t.dataset.sure){try{await db.collection("matches").doc(F.id).delete();toast("Match deleted.");F=null;setView("results")}catch(err){toast("Couldn't delete it. Try again.")}}
     else{t.dataset.sure="1";t.textContent="Tap again to delete";setTimeout(()=>{if(t.isConnected){delete t.dataset.sure;t.textContent="Delete match"}},4000)}return}
   if(t.dataset.cur!=null){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);try{await db.collection("players").doc(p.id).update({current:t.dataset.cur==="1"})}catch(err){toast("Couldn't update. Try again.")}return}
-  if(t.id==="addP"){const name=$("#newName").value.trim();if(!name){toast("Type a first name.");return}if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast(`${name} is already in the squad.`);return}
+  if(t.id==="addP"){FAM=null;const name=$("#newName").value.trim();if(!name){toast("Type a first name.");return}if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast(`${name} is already in the squad.`);return}
     const num=$("#newNum").value;try{await db.collection("players").doc(slug(name)).set({name,num:num===""?null:+num,current:true});toast(`${name} added.`)}catch(err){toast(`Couldn't add ${PRN.o}. Try again.`)}return}
 });
 document.addEventListener("click",e=>{if(LB&&e.target.classList&&e.target.classList.contains("lb-img"))lbClose()});
@@ -1778,7 +1841,7 @@ document.addEventListener("change",async e=>{
   if(t.dataset.f){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);const val=t.dataset.f==="num"?(t.value===""?null:+t.value):t.value.trim();if(!val&&t.dataset.f==="name")return;
     try{await db.collection("players").doc(p.id).update({[t.dataset.f]:val});toast("Saved.")}catch(err){toast("Couldn't save. Try again.")}}
 });
-document.addEventListener("submit",e=>{if(e.target.id==="mform"){e.preventDefault();saveMatch()}else if(e.target.id==="tform"){e.preventDefault();saveTournament()}else if(e.target.id==="hform"){e.preventDefault();saveHonour()}else e.preventDefault()});
+document.addEventListener("submit",e=>{if(e.target.id==="pForm"){e.preventDefault();parentJoin()}else if(e.target.id==="mform"){e.preventDefault();saveMatch()}else if(e.target.id==="tform"){e.preventDefault();saveTournament()}else if(e.target.id==="hform"){e.preventDefault();saveHonour()}else e.preventDefault()});
 
 // ---------- boot (Supabase) ----------
 const CFG=window.TEAM_CONFIG||window.NAYFC_CONFIG||{};
@@ -1799,7 +1862,8 @@ function makeDb(sb){
 }
 function authBox(){
   const el=document.getElementById("auth");if(!el)return;
-  if(me){el.innerHTML=`<span class="who">${canWrite?"Coach":"Signed in"}: ${esc(me.email)}</span><button class="mini" id="signOut">Sign out</button>`}
+  if(me&&isParent()){el.innerHTML=KIDS.length?`<button class="mini" data-view="parents">👪 ${esc(KIDS.join(", "))}</button>`:""}
+  else if(me){el.innerHTML=`<span class="who">${canWrite?"Coach":"Signed in"}: ${esc(me.email)}</span><button class="mini" id="signOut">Sign out</button>`}
   else if(/[?&]coach\b/.test(location.search)){el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
   else{el.innerHTML=""}
 }
@@ -1809,10 +1873,11 @@ function loadGfx(){if(window.GFX||document.getElementById("gfxjs"))return;const 
 const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadGfx();document.getElementById("gfxjs").addEventListener("load",()=>ok(window.GFX),{once:true})});
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
-  if(me){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
+  if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
   if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
+  FAM=null;await loadParent();
   await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();
   authBox();render();
 }
@@ -1844,12 +1909,12 @@ document.addEventListener("submit",async e=>{
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
-  await Promise.all([loadGallery(),loadTraining(),loadPolls()]);
+  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings()]);
   if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["gallery","calendar","training","help","setup","votes","matchday","privacy"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["gallery","calendar","training","help","setup","votes","matchday","privacy","parents"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
