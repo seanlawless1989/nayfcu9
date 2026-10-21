@@ -126,7 +126,7 @@ function render(){
   else if(view==="msg")main.innerHTML=msgChase?chaseView():msgView();
   else if(view==="alerts")main.innerHTML=alertsView();
   else if(view==="app")main.innerHTML=appView();
-  else if(view==="gallery")main.innerHTML=galleryView();
+  else if(view==="gallery")main.innerHTML=PHOTOS_ON?galleryView():homeView();
   else if(view==="calendar")main.innerHTML=calendarView();
   else if(view==="training")main.innerHTML=trainingView();
   else if(view==="votes")main.innerHTML=votesView();
@@ -163,7 +163,7 @@ function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every $
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes","Goal of the month and more"]);
   const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:"Goal of the month and more";
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>x[0]!=="app"||!alStandalone()).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||PHOTOS_ON)).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -494,10 +494,10 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, goals, assists, saves, playing time, awards and milestones, and match reports the coaches write.</li><li>Availability answers for each game, and training attendance. Only the coaches can see these.</li><li>Photos, but only if the club has a parent's consent for that ${kid}. Ask the coach to take one down at any time.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, goals, assists, saves, playing time, awards and milestones, and match reports the coaches write.</li><li>Availability answers for each game, and training attendance. Only the coaches can see these.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents don't sign up or give an email address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. It's deleted when you turn alerts off.</li><li>If you vote in a poll, a random code made on your phone so you can only vote once.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
-  ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for photos.</p>`)}
-  ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and photos. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors, as the FA asks for younger age groups.":""} Nobody's information is sold or used for advertising.</p>`)}
+  ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
+  ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors, as the FA asks for younger age groups.":""} Nobody's information is sold or used for advertising.</p>`)}
   ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts. Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
   ${sec("How long we keep it",`<p>Results and stats stay as the team's history while the club uses the site. A coach can remove a player at any time. If the club stops using Touchline Tales, everything is deleted within 30 days.</p>`)}
   ${sec("Your rights",`<p>You can ask to see, correct or delete your child's information, or object to it being shown. Speak to the team's coach or the club's welfare officer, or email <a href="mailto:hello@touchlinetales.club">hello@touchlinetales.club</a> and we'll pass it on to the club.</p><p>If you're unhappy, you can complain to the Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">ico.org.uk/make-a-complaint</a> or on 0303 123 1113.</p>`)}
@@ -509,11 +509,14 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
 // which also drops the location data phones put in pictures.
 let GAL=[],galMatch="",LB=null;
 const galUrl=p=>CFG.supabaseUrl+"/storage/v1/object/public/gallery/"+String(p).split("/").map(encodeURIComponent).join("/");
-async function loadGallery(){if(!sb)return;try{const {data}=await sb.from("match_photos").select("*").order("created");GAL=data||[]}catch(e){GAL=[]}}
+// The Photos page is archived until parents have their own login: no tab, tile or match-page photos, and nothing is loaded.
+// Player profile pictures (player_photos) are separate and stay. A team can bring Photos back with photos: true in team.js.
+const PHOTOS_ON=TEAM.photos===true;
+async function loadGallery(){if(!sb||!PHOTOS_ON){GAL=[];return}try{const {data}=await sb.from("match_photos").select("*").order("created");GAL=data||[]}catch(e){GAL=[]}}
 const galOf=id=>GAL.filter(p=>p.match_id===id);
 function galGrid(list){return `<div class="gal">${list.map(p=>`<button class="gal-th" data-photo="${esc(p.id)}" aria-label="${esc(p.caption||"Open photo")}"><img src="${galUrl(p.thumb)}" alt="" loading="lazy"></button>`).join("")}</div>`}
 function galAdd(id){return canWrite&&id?`<label class="btn gold galadd edit-only">📷 Add photos<input type="file" accept="image/*" multiple data-galup="${esc(id)}" hidden></label>`:""}
-function photosCard(m){const ps=galOf(m.id);if(!ps.length&&!(canWrite&&!isFixture(m)))return "";
+function photosCard(m){if(!PHOTOS_ON)return "";const ps=galOf(m.id);if(!ps.length&&!(canWrite&&!isFixture(m)))return "";
   return `<section class="card"><h3>Photos${ps.length>1?` (${ps.length})`:""}</h3>${ps.length?galGrid(ps):`<p class="hint">No photos from this game yet.</p>`}${canWrite?`<div class="btns edit-only" style="margin-top:10px">${galAdd(m.id)}</div>`:""}</section>`}
 // newest games with photos, each as an album card
 function albums(n){const ids=[...new Set(GAL.slice().reverse().map(p=>p.match_id))].slice(0,n);
@@ -523,6 +526,7 @@ function albums(n){const ids=[...new Set(GAL.slice().reverse().map(p=>p.match_id
       <button class="alb-meta" data-md="${esc(id)}" style="text-align:left;border:0;background:none;cursor:pointer"><b>${m?`${m.ha==="A"?"at ":"v "}${esc(m.opp||"")}`:"Match photos"}</b><small>${m?esc(shortDay(m.date)):""} · ${ps.length} photo${ps.length===1?"":"s"}</small>${c.caption?`<i>${esc(c.caption)}</i>`:""}</button></div>`}).join("")}</div>`}
 function galLabel(m){return `${shortDay(m.date)} · v ${esc(m.opp||"")}${result(m)?` · ${m.us}–${m.them}`:""}`}
 function shortDay(iso){const d=new Date((iso||"")+"T12:00:00");return isNaN(d)?"":d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}
+if(!PHOTOS_ON)document.querySelectorAll('nav.tabs [data-view="gallery"]').forEach(b=>b.remove());
 function galleryView(){
   const ids=new Set(GAL.map(p=>p.match_id));const ms=sortMatches(matches.filter(m=>ids.has(m.id))).reverse();
   let up="";
