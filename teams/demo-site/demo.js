@@ -148,6 +148,7 @@ function rpc(fn,a){
       T.parent_links=T.parent_links.filter(l=>l.player_id!==a.p_player);save();return json(c)}
     case "family_overview":T.players.filter(p=>p.current&&!T.family_codes.some(f=>f.player_id===p.id)).forEach(p=>T.family_codes.push({player_id:p.id,code:newCode()}));save();
       return json(T.players.filter(p=>p.current).sort((x,y)=>(x.num||99)-(y.num||99)).map(p=>({player_id:p.id,player:p.name,num:p.num,code:T.family_codes.find(f=>f.player_id===p.id).code,phones:T.parent_links.some(l=>l.player_id===p.id)?1:0})));
+    case "alert_reach":return json({phones:14,apple:9,google:5,mozilla:0,reminders:14,goals:11,results:12,live:8,week:2,reached:14,last_ok:new Date(Date.now()-864e5).toISOString()});
     case "list_coaches":return json(T.coaches.map(c=>c.email));
     case "add_coach":upsert("coaches",{email:String(a.new_email||"").toLowerCase()},["email"]);save();return json(null);
     case "remove_coach":T.coaches=T.coaches.filter(c=>c.email!==String(a.old_email||"").toLowerCase());save();return json(null);

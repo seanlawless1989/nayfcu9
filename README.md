@@ -73,6 +73,10 @@ Each player gets a six-character family code (`supabase/10_parent_login.sql`). C
 
 Turn on **Authentication > Sign In / Providers > Allow anonymous sign-ins** in Supabase, then run `10_parent_login.sql`. Until a coach switches **Parents must sign in** on (Squad page), the open availability links and one-vote-per-phone polls keep working as before.
 
+## Who gets alerts
+
+Coaches see **Who gets alerts** at the top of the **Match alerts** page: how many phones have alerts on, whether they're Apple or Android/Chrome, and how many chose each kind of alert. **Pick squad** also says how many phones the squad alert will go to. It's a count only (`supabase/12_alert_reach.sql`): alerts never store who a phone belongs to. Run `12_alert_reach.sql`; until then the counts just don't show.
+
 ## Help and changes
 
 Coaches can send fixes, change requests and questions from **Help and changes** on the home page (coach tiles). Requests are stored in the `help_requests` table (`supabase/5_help_requests.sql`). A scheduled Claude task checks for new ones every hour from 7am to 10pm. It makes small data fixes itself, opens a pull request for code changes (never merging them), and writes its answer back so the coach sees it on the same page. Anything big, unclear or destructive is left waiting for Sean.
