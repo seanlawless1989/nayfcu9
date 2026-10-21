@@ -33,11 +33,12 @@ const fileTag=APP.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
   // the masthead and hero use lighter and darker shades of the club colour; Newton Aycliffe's are tuned by hand in the CSS
   if(cl&&c.club.toUpperCase()!=="#2235E8"){const W=[255,255,255],K=[0,0,0];set("--clubRGB",cl.join(" "));set("--clubHi",mix(cl,W,.15));set("--clubMid",mix(cl,K,.12));set("--clubSoft",mix(cl,W,.3));set("--clubDark",mix(cl,K,.45));set("--clubDarker",mix(cl,K,.6));set("--shadowRGB",cl.map(v=>Math.round(v*.45)).join(" "))}
   document.querySelectorAll('img.crest,link[rel=icon]').forEach(el=>el.tagName==="LINK"?el.href=CREST:el.src=CREST)})();
-// Small "Powered by Touchline Tales" credit in the footer. On unless team.js sets poweredBy: false.
+// Footer: a Privacy link (always) and a small "Powered by Touchline Tales" credit (unless team.js sets poweredBy: false).
 // The ref names the team (TEAM.slug, or the same slug tools/package_team.py uses) so sign-ups can be traced back.
-(function poweredBy(){const f=document.getElementById("siteFoot");if(!f||TEAM.poweredBy===false)return;
+(function poweredBy(){const f=document.getElementById("siteFoot");if(!f)return;
   const slug=String(TEAM.slug||`${TEAM.name||""} ${TEAM.ageShort||""}`).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"team";
-  f.innerHTML=`<a href="https://touchlinetales.club/?ref=powered-${slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>`;f.hidden=false})();
+  const priv=`<button type="button" data-view="privacy" style="background:none;border:0;padding:0;font:inherit;color:var(--muted);opacity:.85;cursor:pointer">Privacy</button>`;
+  f.innerHTML=TEAM.poweredBy===false?priv:`${priv} · <a href="https://touchlinetales.club/?ref=powered-${slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>`;f.hidden=false})();
 let tournaments=[], honours=[], T=null, H=null;
 let matches=[], players=[], view="home", season=null, editing=null, playerView=null, oppView=null;
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -105,6 +106,7 @@ function render(){
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
   const main=$("#main");const gv=view==="gfx";main.hidden=gv;$("#gfxView").hidden=!gv;if(gv){window.GFX&&GFX.refresh();document.body.classList.toggle("ro",!canWrite);return}
+  if(view==="privacy"){main.innerHTML=privacyView();return}
   if(!db||window.SETUP_WAIT){main.innerHTML=`<div class="card empty">Loading the results…</div>`;return}
   if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   if(setupPending()&&!canWrite&&view!=="login"){main.innerHTML=settingUpView();document.body.classList.toggle("ro",true);return}
@@ -485,6 +487,21 @@ function appView(){const link=`${SITE}/?app`,ua=navigator.userAgent,ios=alIos(),
   const next=alStandalone()?"":`<p class="hint">Then open ${esc(APP)} from your home screen and tap <b>🔔 Match alerts</b> to choose which alerts you get.${ios?" On an iPhone, alerts only work from the home-screen app.":""}</p>`;
   const share=phone||alStandalone()?`<p class="hint">Helping another parent? Send them <button class="mini" data-appcopy="${esc(link)}">this link</button> and it opens these steps.</p>`:"";
   return `<section class="card stack">${head}${how}${next}${share}</section>`}
+
+// ---------- privacy notice for parents (footer link, or ?privacy) ----------
+// The club is the data controller; Touchline Tales is its processor (touchlinetales.club/dpa/). Keep this in step with what the database stores.
+function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName||TEAM.name||"the club"),team=esc(`${TEAM.name||""} ${TEAM.ageGroup||""}`.trim()||"team"),kid=esc(PL.replace(/s$/,""));
+  const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
+  return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
+  ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, goals, assists, saves, playing time, awards and milestones, and match reports the coaches write.</li><li>Availability answers for each game, and training attendance. Only the coaches can see these.</li><li>Photos, but only if the club has a parent's consent for that ${kid}. Ask the coach to take one down at any time.</li></ul>`)}
+  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents don't sign up or give an email address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. It's deleted when you turn alerts off.</li><li>If you vote in a poll, a random code made on your phone so you can only vote once.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
+  ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for photos.</p>`)}
+  ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and photos. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors, as the FA asks for younger age groups.":""} Nobody's information is sold or used for advertising.</p>`)}
+  ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts. Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
+  ${sec("How long we keep it",`<p>Results and stats stay as the team's history while the club uses the site. A coach can remove a player at any time. If the club stops using Touchline Tales, everything is deleted within 30 days.</p>`)}
+  ${sec("Your rights",`<p>You can ask to see, correct or delete your child's information, or object to it being shown. Speak to the team's coach or the club's welfare officer, or email <a href="mailto:hello@touchlinetales.club">hello@touchlinetales.club</a> and we'll pass it on to the club.</p><p>If you're unhappy, you can complain to the Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">ico.org.uk/make-a-complaint</a> or on 0303 123 1113.</p>`)}
+  <div class="btns"><button class="btn ghost" data-view="home">Back to the home page</button></div></div>`}
 
 // ---------- photo gallery ----------
 // public.match_photos rows point at files in the public "gallery" storage bucket (supabase/4_gallery_training.sql).
@@ -1511,13 +1528,13 @@ function setupView(){
     ${SU_COACHES===null?`<p class="hint">Loading…</p>`:`<div class="stack" style="gap:6px">${SU_COACHES.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${esc(e)}</span>${me&&e===String(me.email||"").toLowerCase()?`<span class="hint">You</span>`:`<button class="mini" data-sucoachdel="${esc(e)}">Remove</button>`}</div>`).join("")}</div>`}
     <div class="btns"><input type="text" id="su-coach" inputmode="email" placeholder="New coach's email" style="max-width:280px"><button class="btn" id="suCoachAdd">Add coach</button></div></section>
   <section class="card stack" style="gap:10px;border-left:6px solid var(--gold)"><h3 style="margin:0">6. Welfare sign-off${live?"":" and go live"}</h3>
-    <p class="hint">Please go through this with your club welfare officer. How we keep the children safe: first names only; the site is kept out of Google and parents get the link from the club; only the coaches above can change anything; your data sits in its own database in London that your club owns; sticker book photos stay on the coach's phone.</p>
+    <p class="hint">Please go through this with your club welfare officer. How we keep the children safe: first names only; the site is kept out of Google and parents get the link from the club; only the coaches above can change anything; your data sits in its own database in London, kept only for your club; sticker book photos stay on the coach's phone.</p>
     <div class="grid2"><label class="f">Welfare officer's name<input type="text" id="su-wname" value="${esc(S.welfare_name||"")}"></label><label class="f">Welfare officer's email<input type="text" id="su-wemail" inputmode="email" value="${esc(S.welfare_email||"")}"></label></div>
     <div><b>Should visitors see scores?</b><p class="hint">The FA's youth rules for Under 7s to Under 11s say scores shouldn't be published. Hidden means visitors don't see scores, scorers, goal alerts or scores in their calendar. Coaches still see everything.</p>
       <div class="seg" style="margin-top:8px"><button data-suscores="1" aria-pressed="${!!scores}">Show scores</button><button data-suscores="0" aria-pressed="${!scores}">Hide scores</button></div></div>
     ${chk("wok","Our welfare officer has read how the site handles children's details and is happy for it to go live with the scores choice above.",S.welfare_agreed)}
     ${chk("terms",`The club accepts the ${link(TEAM.termsUrl,"terms")}.`,S.terms_agreed)}
-    ${chk("dpa",`The club accepts the ${link(TEAM.dpaUrl,"data processing agreement")}. The club is the data controller.`,S.dpa_agreed)}
+    ${chk("dpa",`The club accepts the ${link(TEAM.dpaUrl||"https://touchlinetales.club/dpa/","data processing agreement")}. The club is the data controller.`,S.dpa_agreed)}
     <label class="f">Name and role of the person agreeing for the club (secretary or chair)<input type="text" id="su-by" value="${esc(S.agreed_by||"")}"></label>
     <div class="btns"><button class="btn gold" id="suLive"${suBusy?" disabled":""}>${live?"Save sign-off":"Go live"}</button></div></section></div>`}
 let suScores=null;
@@ -1828,7 +1845,7 @@ document.addEventListener("submit",async e=>{
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["gallery","calendar","training","help","setup","votes","matchday"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["gallery","calendar","training","help","setup","votes","matchday","privacy"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
