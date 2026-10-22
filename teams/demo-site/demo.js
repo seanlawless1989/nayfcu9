@@ -3,15 +3,18 @@
 // try everything, coach view included, and nothing they do leaves their phone. Reloading keeps their changes
 // for the tab; "Start again" in the demo bar wipes them.
 // Loaded by index.html before supabase-js, so the client picks up the fetch below. tools/package_demo.py wires it in.
+// Another demo team (the rugby ones) loads demo-season.js first: window.DEMO_DATA = {season, script, hiddenTeam, words} replaces
+// the football season below, and its own made-up database address keeps each demo's data and coach sign-in apart.
 (function(){
-const URL0="https://demo.supabase.co",KEY="tt-demo-db",FLAGS="tt-demo-flags",TOKEN="sb-demo-auth-token";
+const DD=window.DEMO_DATA||{},SKEY=(window.TEAM&&TEAM.storageKey)||"tt-demo";
+const URL0=(window.TEAM_CONFIG&&TEAM_CONFIG.supabaseUrl)||"https://demo.supabase.co",KEY=SKEY+"-db",FLAGS=SKEY+"-flags",TOKEN=`sb-${new URL(URL0).hostname.split(".")[0]}-auth-token`;
 const COACH="coach@sampletown.example";
 const ss={get(k){try{return JSON.parse(sessionStorage.getItem(k)||"null")}catch(e){return null}},
   set(k,v){try{sessionStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{sessionStorage.removeItem(k)}catch(e){}}};
 const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const flags=Object.assign({hidden:false},ss.get(FLAGS)||{});
 // "See it as an under-9s team": FA rules for U7 to U11 hide scores and scorers from parents
-if(flags.hidden&&window.TEAM)Object.assign(TEAM,{publicScores:false,ageGroup:"Under 9s",ageShort:"U9s",appName:"Sample Town U9s",potm:Object.assign({},TEAM.potm,{ribbon:"STFC U9s"})});
+if(flags.hidden&&window.TEAM)Object.assign(TEAM,DD.hiddenTeam||{publicScores:false,ageGroup:"Under 9s",ageShort:"U9s",appName:"Sample Town U9s",potm:Object.assign({},TEAM.potm,{ribbon:"STFC U9s"})});
 
 // ---------- the made-up season, dated around today so there's always a game on ----------
 const day=n=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+n);return d.toLocaleDateString("en-CA")};
@@ -75,19 +78,22 @@ function season(){
     page_views:Array.from({length:28},(_,i)=>{const d=27-i,wk=new Date(day(-d)).getDay(),v=(wk===0||wk===6)?40+((i*7)%25):8+((i*5)%12);return {day:day(-d),views:v,visitors:Math.round(v*.45)}})};
 }
 // what happens next in today's game, in seconds after the visitor first opens the demo
-const SCRIPT=[[30,{k:"goal",n:"Ava",a:"Mia"}],[75,{k:"sub",on:"Harper",off:"Ruby"}],[130,{k:"goal",n:"Mia",a:"Ella"}],[200,{k:"them"}],[260,{k:"sub",on:"Zara",off:"Isla"}]];
+const SCRIPT=DD.script||[[30,{k:"goal",n:"Ava",a:"Mia"}],[75,{k:"sub",on:"Harper",off:"Ruby"}],[130,{k:"goal",n:"Mia",a:"Ella"}],[200,{k:"them"}],[260,{k:"sub",on:"Zara",off:"Isla"}]];
 
 let DB=ss.get(KEY);
-if(!DB||DB.made!==day(0)||Date.now()-DB.start>3*3600e3){DB={made:day(0),start:Date.now(),done:0,touched:false,t:season()};ss.set(KEY,DB)}
+const makeSeason=()=>DD.season?DD.season(day,flags):season();
+if(!DB||DB.made!==day(0)||Date.now()-DB.start>3*3600e3){DB={made:day(0),start:Date.now(),done:0,touched:false,t:makeSeason()};ss.set(KEY,DB)}
 const T=DB.t,save=()=>ss.set(KEY,DB);
-if(!T.family_codes){const t=season();["parent_settings","family_codes","parent_links"].forEach(k=>T[k]=t[k]);save()}   // a tab opened before parent login
+if(!T.family_codes){const t=makeSeason();["parent_settings","family_codes","parent_links"].forEach(k=>T[k]=t[k]);save()}   // a tab opened before parent login
 function advanceLive(){
   const m=T.matches.find(x=>x.date===day(0)&&x.live&&x.live.status==="live");if(!m||DB.touched)return;
   const secs=(Date.now()-DB.start)/1000;
   while(DB.done<SCRIPT.length&&SCRIPT[DB.done][0]<=secs){
     const e=Object.assign({},SCRIPT[DB.done][1]),L=m.live,min=Math.min(L.halfLen*2,L.halfLen+Math.floor((DB.start+SCRIPT[DB.done][0]*1000-L.halfStart)/60000)+1);
-    if(e.k==="goal"){m.us++;m.played[e.n]=(m.played[e.n]||0)+1;if(e.a)m.assists[e.a]=(m.assists[e.a]||0)+1}
-    if(e.k==="them")m.them++;
+    // rugby events carry the kind of score (t) and its points (p); a kick goes in matches.kicks
+    if(e.k==="goal"&&e.t){m.us+=e.p||0;if(e.t==="try")m.played[e.n]=(m.played[e.n]||0)+1;else if(e.n){const k=(m.kicks=m.kicks||{})[e.n]=m.kicks[e.n]||{};k[e.t]=(k[e.t]||0)+1}}
+    else if(e.k==="goal"){m.us++;m.played[e.n]=(m.played[e.n]||0)+1;if(e.a)m.assists[e.a]=(m.assists[e.a]||0)+1}
+    if(e.k==="them")m.them+=e.p||1;
     if(e.k==="sub"){const i=L.slots.indexOf(e.off);if(i>=0)L.slots[i]=e.on;if(!(e.on in m.played))m.played[e.on]=0;if(!m.squad.includes(e.on))m.squad.push(e.on)}
     Object.assign(e,{m:min+"'",h:2,s:`${m.us}–${m.them}`});L.events.push(e);DB.done++}
   save();
@@ -215,15 +221,16 @@ const css=`.ttdemo{background:#0E2A1D;color:#F6F3EA;font:500 13px/1.35 Rubik,Arc
 .ttlead .x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:24px;line-height:1;color:#3E4F45;cursor:pointer;padding:4px}
 .ttlead .msg{min-height:1.2em;margin:8px 0 0;font-size:13px}
 .ttlead a{color:#13804A}`;
+const WD=Object.assign({ageBtn:"U7–U11 view",coachTip:"You're a coach now. Open today's game and tap ▶ Live match to record goals and subs, or make a matchday graphic.",
+  hiddenTip:"For under 7s to under 11s, parents see games, line-ups and awards but no scores or scorers (FA rules). Coaches still see everything.",
+  tip:"Today's game is live. Tap the red bar to follow it like a parent would. To try parent sign-in, open Parents and type Ava's family code, AVA-123."},DD.words||{});
 window.DEMO={paint(){
   const el=document.getElementById("ttdemo");if(!el)return;const c=isCoach();
   el.innerHTML=`<div class="in"><span><b>DEMO</b>A made-up team. Try anything: nothing you do is saved or seen by anyone else.</span>
     <span class="acts"><button class="go" data-demo="${c?"parent":"coach"}">${c?"Parents' view":"Try the coach view"}</button>
-    <button data-demo="age">${flags.hidden?"Show scores":"U7–U11 view"}</button>
+    <button data-demo="age">${flags.hidden?"Show scores":WD.ageBtn}</button>
     <button data-demo="reset">Start again</button><a href="../${REF?"?ref="+encodeURIComponent(REF):""}#signup">Get your own</a></span>
-    <span class="tip">${c?"You're a coach now. Open today's game and tap ▶ Live match to record goals and subs, or make a matchday graphic.":
-      flags.hidden?"For under 7s to under 11s, parents see games, line-ups and awards but no scores or scorers (FA rules). Coaches still see everything.":
-      "Today's game is live. Tap the red bar to follow it like a parent would. To try parent sign-in, open Parents and type Ava's family code, AVA-123."}</span></div>`}};
+    <span class="tip">${c?WD.coachTip:flags.hidden?WD.hiddenTip:WD.tip}</span></div>`}};
 // ---------- follow-up: after a couple of minutes, ask (once) who they are, unless the home page already did ----------
 // Sent to the Touchline Tales inbox by FormSubmit, the same as the home page sign-up form (FORM_ID in assets/home.js there).
 const FORM="https://formsubmit.co/ajax/5f26f2b94f7b8df49f80d9aced927305",LEAD="tt-lead",ASKED="tt-demo-asked";

@@ -12,6 +12,7 @@ let TEAM = Deno.env.get("APP_NAME") ?? "NAYFC U9s";
 let FULL = Deno.env.get("TEAM_FULL_NAME") ?? "Newton Aycliffe Youth FC";
 let AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
 let SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";   // false: no scores in event titles
+let SPORT = Deno.env.get("SPORT") ?? "football";            // rugby teams get a rugby ball on their games
 const HOST = new URL(SITE).hostname;
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { auth: { persistSession: false } });
 let LEAGUE = "Russell Foster League";
@@ -27,6 +28,7 @@ async function loadTeam() {
   if (t.fullName) FULL = t.fullName;
   if (t.ageGroup) AGE = t.ageGroup;
   if (t.league) LEAGUE = t.league;
+  if (t.sport) SPORT = t.sport;
   SCORES = ENV_SCORES && t.publicScores !== false;
 }
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -85,7 +87,7 @@ function matchEvent(m: Match) {
   // "updated" moves on every edit (supabase/6_match_updated.sql); SEQUENCE rises with it so calendars treat the
   // event as a newer version of the same game rather than keeping the old one.
   const lm = m.updated ? [`LAST-MODIFIED:${stamp(new Date(m.updated))}`, `SEQUENCE:${Math.max(0, Math.floor((Date.parse(m.updated) - Date.UTC(2026, 0, 1)) / 60000))}`] : [];
-  return event(`match-${m.id}`, [...when(m.date, m.ko, 60), ...lm], { SUMMARY: "⚽ " + title, LOCATION: m.venue, DESCRIPTION: desc, URL: `${SITE}?match=${encodeURIComponent(m.id)}` });
+  return event(`match-${m.id}`, [...when(m.date, m.ko, 60), ...lm], { SUMMARY: (SPORT.startsWith("rugby") ? "🏉 " : "⚽ ") + title, LOCATION: m.venue, DESCRIPTION: desc, URL: `${SITE}?match=${encodeURIComponent(m.id)}` });
 }
 // One event per tournament day. Day 1 keeps the tournament's original UID, so a one-day tournament that becomes
 // a two-day one updates in place and gains a second event.
