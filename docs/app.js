@@ -1009,6 +1009,11 @@ function tlView(){const m=matches.find(x=>x.id===tlMatch);if(!m)return `<div cla
 // Kept in localStorage SK+".tactics" = {cur: board key, boards:{key: board}, saved:[{name, board}]}
 const TB_OPP=[["#E53935","#FFFFFF","Red"],["#FFFFFF","#111111","White"],["#111111","#FFFFFF","Black"],["#1E5BD8","#FFFFFF","Blue"],["#FF8F1F","#111111","Orange"],["#7B2CBF","#FFFFFF","Purple"]];
 const TB_ARROW={run:["Run","#FFD200",""],pass:["Pass","#FFFFFF","2.2 1.6"],drib:["Dribble","#FFFFFF",""]};
+// a classic black-and-white football: a black pentagon in the middle with seams out to five more, cut off by the edge of the ball
+const TB_BALL=(()=>{const R=3,P=(cx,cy,r,a0)=>Array.from({length:5},(_,k)=>{const a=(a0+72*k)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]}),f=v=>v.toFixed(2),pg=pts=>`M${pts.map(p=>f(p[0])+" "+f(p[1])).join("L")}Z`;
+  const mid=P(0,0,1.1,-90),outer=mid.map((_,k)=>{const a=-90+72*k,r=a*Math.PI/180;return P(3.1*Math.cos(r),3.1*Math.sin(r),1.1,a+180)});
+  const seams=mid.map((p,k)=>`M${f(p[0])} ${f(p[1])}L${f(outer[k][0][0])} ${f(outer[k][0][1])}`).join("");
+  return `<circle r="${R}" fill="#fff"/><g clip-path="url(#tbBallClip)"><path d="${pg(mid)}${outer.map(pg).join("")}" fill="#111"/><path d="${seams}" stroke="#111" stroke-width=".18" fill="none"/></g><circle r="${R}" fill="none" stroke="#111" stroke-width=".3"/>`})();
 let TBS=null,tbMode="move",tbSel=null,tbUndo=[];
 function tbStore(){if(TBS)return TBS;try{TBS=JSON.parse(localStorage.getItem(SK+".tactics")||"null")}catch(e){}if(!TBS||!TBS.boards)TBS={cur:"",boards:{},saved:[]};return TBS}
 function tbSave(){const s=tbStore(),ks=Object.keys(s.boards).sort((a,b)=>(s.boards[b].at||0)-(s.boards[a].at||0));ks.slice(12).forEach(k=>{if(k!==s.cur)delete s.boards[k]});
@@ -1046,8 +1051,8 @@ function tbSvg(b,live){const [,kb,ki]=tbKit(b),[ob,oi]=tbOppCol(b),line='stroke=
   const tok=(x,y,fill,ink,txt,name,attr,sel,gk)=>`<g class="tbt" transform="translate(${x} ${y})"${attr}><circle r="4.2" fill="${gk?"#1AA8A0":fill}" stroke="${sel?"#FF4FA3":fill.toUpperCase()==="#FFFFFF"?"#111":"#fff"}" stroke-width="${sel?1:.6}"/><text y="1.5" text-anchor="middle" font-size="4" font-weight="800" fill="${gk?"#fff":ink}" font-family="Arial,sans-serif">${esc(txt)}</text>${name?`<text y="${y>140?-5.6:8.4}" text-anchor="middle" font-size="3" font-weight="700" fill="#fff" stroke="rgba(0,0,0,.75)" stroke-width=".9" stroke-linejoin="round" paint-order="stroke" font-family="Arial,sans-serif">${esc(name)}</text>`:""}</g>`;
   const them=b.oppOn?b.them.map((p,i)=>tok(p.x,p.y,ob,oi,String(i+1),"",live?` data-tbtok="t${i}"`:"",tbSel==="t"+i&&live)).join(""):"";
   const us=b.us.map((p,i)=>tok(p.x,p.y,kb,ki,p.n?(numOf(p.n)||p.n.slice(0,1)):"?",p.n||"Empty",live?` data-tbtok="u${i}"`:"",tbSel==="u"+i&&live,p.gk)).join("");
-  const ball=b.ball?`<g class="tbt" transform="translate(${b.ball.x} ${b.ball.y})"${live?' data-tbtok="ball"':""}><circle r="2" fill="#fff" stroke="#111" stroke-width=".5"/><circle r=".8" fill="#111"/></g>`:"";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150"${live?' class="tbpitch" id="tbPitch" role="img" aria-label="Tactics board"':' width="1000" height="1500"'}><defs>${heads}</defs>${stripes}${marks}<g id="tbArrows">${b.arrows.map((a,i)=>tbArrowSvg(a,i,live)).join("")}</g>${them}${us}${ball}</svg>`}
+  const ball=b.ball?`<g class="tbt" transform="translate(${b.ball.x} ${b.ball.y})"${live?' data-tbtok="ball"':""}>${TB_BALL}</g>`:"";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150"${live?' class="tbpitch" id="tbPitch" role="img" aria-label="Tactics board"':' width="1000" height="1500"'}><defs>${heads}<clipPath id="tbBallClip"><circle r="3"/></clipPath></defs>${stripes}${marks}<g id="tbArrows">${b.arrows.map((a,i)=>tbArrowSvg(a,i,live)).join("")}</g>${them}${us}${ball}</svg>`}
 function tbFixtures(){const today=todayLocal();return sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&!result(m)&&(m.date||"")>=today)).slice(0,6)}
 function tacticsView(){if(!canWrite)return `<div class="card empty">The tactics board is for coaches. Sign in to use it.</div>`;
   const s=tbStore();if(!TB()){s.boards.general=s.boards.general||tbNew("");s.cur="general"}const b=TB(),bn=tbBench(b),fx=tbFixtures();
