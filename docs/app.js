@@ -129,6 +129,7 @@ function render(){
   else if(view==="gallery")main.innerHTML=PHOTOS_ON?galleryView():homeView();
   else if(view==="calendar")main.innerHTML=calendarView();
   else if(view==="training")main.innerHTML=trainingView();
+  else if(view==="tactics")main.innerHTML=tacticsView();
   else if(view==="votes")main.innerHTML=votesView();
   else if(view==="parents")main.innerHTML=parentsView();
   else if(view==="matchday")main.innerHTML=matchdayView();
@@ -234,7 +235,7 @@ function matchRow(m){
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&!m.hidden&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}</div>
     <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:m.hidden&&!m.postponed?`<span class="chip N" title="Played">✓</span>`:m.postponed?`<span class="chip P" title="Postponed">P</span>`:`<span class="chip N">${m.comp==="Tournament"?"T":"–"}</span>`}</div>
-    <div class="mg edit-only"><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${(!r||isLive(m))&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>
+    <div class="mg edit-only"><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${(!r||isLive(m))&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>
     ${m.live&&m.live.events&&m.live.events.length?`<div class="mg"><button class="mini" data-tl="${esc(m.id)}">${m.live.status==="live"||m.live.status==="ht"?"🔴 Follow live":"Match timeline"}</button></div>`:""}
     ${!r&&!m.postponed&&!m.hidden&&canWrite&&m.comp!=="Tournament"?`<div class="avsum">${avSummary(m.id)}</div>`:""}
   </div>`;
@@ -454,7 +455,7 @@ function matchdayView(){const m=matches.find(x=>x.id===mdayMatch)||mdayPick();if
     <div class="btns">${live?`<button class="btn gold" data-tl="${id}">Follow live</button>`:`<button class="btn gold" data-mdayav="${id}">Can your ${PRN.kid} make it?</button>`}${mapsUrl(m)?`<a class="btn ghost" href="${mapsUrl(m)}" target="_blank" rel="noopener">🧭 Directions</a>`:""}<button class="btn ghost" data-view="alerts">🔔 Alerts</button></div></section>`;
   const coach=!canWrite?"":done?`<section class="card stack edit-only"><h3>After the game</h3><div class="btns"><button class="btn gold" data-edit="${id}">Result and ${esc(POTM)}</button><button class="btn ghost" data-mdayrep="${id}">${m.report&&m.report.trim()?"Edit the report":"✨ Write the report"}</button><button class="btn ghost" data-gfx="ft" data-mid="${id}"${r?"":" disabled"}>Result post</button><button class="btn ghost" data-gfx="potm" data-mid="${id}"${m.potm?"":" disabled"}>PotM post</button></div><div class="btns">${galAdd(m.id)}</div></section>`
     :`<section class="card stack edit-only"><h3>For coaches</h3>${m.comp!=="Tournament"?`<div class="avsum" style="margin:0">${avSummary(m.id)}</div>`:""}
-      <div class="btns"><button class="btn ghost" data-pick="${id}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="btn gold" data-live="${id}">▶ Line-up and live match</button><button class="btn ghost" data-msg="${id}">Parents' message</button><button class="btn ghost" data-medit="${id}">Matchday details</button></div>
+      <div class="btns"><button class="btn ghost" data-pick="${id}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="btn gold" data-live="${id}">▶ Line-up and live match</button><button class="btn ghost" data-tbmatch="${id}">📋 Tactics board</button><button class="btn ghost" data-msg="${id}">Parents' message</button><button class="btn ghost" data-medit="${id}">Matchday details</button></div>
       <p class="hint" style="margin:0">Live match has the line-up, the match timer, substitutions and goals; parents follow along and get alerts.</p></section>`;
   const after=!done?"":`${m.potm?`<section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3><p style="font:800 22px var(--body);margin:0">${POTM_IC} ${esc(m.potm)}</p></section>`:""}
     ${m.report&&m.report.trim()?`<section class="card"><h3>Match report</h3><p style="margin:0">${esc(clip(m.report,320))}</p><div class="btns" style="margin-top:8px"><button class="btn ghost" data-md="${id}">Read it all</button></div></section>`:""}
@@ -984,7 +985,7 @@ function liveView(){
       <label class="f" style="flex-direction:row;align-items:center;gap:8px">Minutes each half<input type="number" id="lvLen" min="5" max="45" value="${LV.halfLen}" style="width:70px"></label></div>
     ${pitchHtml(LV,!LV.locked)}
     <p class="hint">Subs: ${bench().map(esc).join(", ")||"none"}. ${LV.locked?`🔒 Line-up locked${m.practice?"":" and sent to parents"}. Unlock it to make a change; locking it again tells parents what changed.`:`Pick a player for each position. The keeper is the GK spot. Lock the line-up when it's final${m.practice?"":" and parents with alerts on get \"Line-up confirmed\""}.`}</p>
-    <div class="btns">${LV.locked?`<button class="btn gold bigbtn" id="lvKo">Kick off</button><button class="btn ghost" id="lvUnlock">🔓 Unlock line-up</button>`:`<button class="btn gold bigbtn" id="lvLock"${onPitch().length<SIDE?" disabled":""}>🔒 Lock line-up</button><button class="btn ghost" id="lvKo"${onPitch().length<5?" disabled":""}>Kick off</button>`}<button class="btn ghost" data-view="fixtures">Back</button></div></section>${planCard()}${fairNudge()}</div>`;
+    <div class="btns">${LV.locked?`<button class="btn gold bigbtn" id="lvKo">Kick off</button><button class="btn ghost" id="lvUnlock">🔓 Unlock line-up</button>`:`<button class="btn gold bigbtn" id="lvLock"${onPitch().length<SIDE?" disabled":""}>🔒 Lock line-up</button><button class="btn ghost" id="lvKo"${onPitch().length<5?" disabled":""}>Kick off</button>`}${m.practice?"":`<button class="btn ghost" data-tbmatch="${esc(m.id)}">📋 Tactics board</button>`}<button class="btn ghost" data-view="fixtures">Back</button></div></section>${planCard()}${fairNudge()}</div>`;
   const pl=played(m),as=assistsOf(m),on=onPitch(),F=FORMS[LV.form];
   return `<div class="live">${pr}${liveBoard(m,LV)}${planDueHtml()}
   <div class="btns">${LV.status==="live"&&LV.half===1?`<button class="btn" id="lvHt">Half time</button>`:""}${LV.status==="ht"?`<button class="btn gold" id="lv2h">Start 2nd half</button>`:""}
@@ -1003,6 +1004,141 @@ function liveView(){
   </div>`;
 }
 function tlView(){const m=matches.find(x=>x.id===tlMatch);if(!m)return `<div class="card empty">Match not found.</div>`;return `<div class="live">${tlBody(m)}</div>`}
+// ---------- tactics board (coaches only: boards stay on the coach's phone; a coach can share a picture of one) ----------
+// Pitch units: 100 wide by 150 long, our goal at the bottom. A board = {mid, title, form, kit, opp:colour, oppOn, ball, us:[{n,x,y,gk}], them:[{x,y}], arrows:[{t,x1,y1,x2,y2}], at}
+// Kept in localStorage SK+".tactics" = {cur: board key, boards:{key: board}, saved:[{name, board}]}
+const TB_OPP=[["#E53935","#FFFFFF","Red"],["#FFFFFF","#111111","White"],["#111111","#FFFFFF","Black"],["#1E5BD8","#FFFFFF","Blue"],["#FF8F1F","#111111","Orange"],["#7B2CBF","#FFFFFF","Purple"]];
+const TB_ARROW={run:["Run","#FFD200",""],pass:["Pass","#FFFFFF","2.2 1.6"],drib:["Dribble","#FFFFFF",""]};
+let TBS=null,tbMode="move",tbSel=null,tbUndo=[];
+function tbStore(){if(TBS)return TBS;try{TBS=JSON.parse(localStorage.getItem(SK+".tactics")||"null")}catch(e){}if(!TBS||!TBS.boards)TBS={cur:"",boards:{},saved:[]};return TBS}
+function tbSave(){const s=tbStore(),ks=Object.keys(s.boards).sort((a,b)=>(s.boards[b].at||0)-(s.boards[a].at||0));ks.slice(12).forEach(k=>{if(k!==s.cur)delete s.boards[k]});
+  try{localStorage.setItem(SK+".tactics",JSON.stringify(s))}catch(e){toast("This phone's storage is full, so the board wasn't kept.")}}
+function TB(){const s=tbStore();return s.boards[s.cur]}
+function tbKits(){const k=TEAM.kits||{},ks=Object.keys(k);return ks.length?ks.map(id=>[id,k[id].body,k[id].ink||"#fff",k[id].label||id]):[["club",(TEAM.colours||{}).club||"#2235E8",(TEAM.colours||{}).clubInk||"#fff","Club"]]}
+function tbKit(b){return tbKits().find(k=>k[0]===b.kit)||tbKits()[0]}
+function tbOppCol(b){return TB_OPP.find(c=>c[0]===b.opp)||TB_OPP[0]}
+// a formation laid out for a full pitch: ours in the bottom half, theirs mirrored in the top half
+function tbShape(form){const F=FORMS[form]||FORMS[FORM0];return F.xy.map(([x,y],i)=>({x,y:Math.round((75+y*.75)*10)/10,gk:i===0}))}
+function tbThem(n){return tbShape(FORM0).slice(0,n).map(p=>({x:100-p.x,y:Math.round((150-p.y)*10)/10}))}
+function tbNew(mid){const m=mid&&matches.find(x=>x.id===mid),L=m&&m.live,cur=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
+  const squad=m&&m.squad&&m.squad.length?m.squad.slice():cur,form=L&&L.form&&FORMS[L.form]?L.form:FORM0;
+  const names=L&&L.slots&&L.slots.filter(Boolean).length?L.slots.slice():squad.slice(0,SIDE);
+  return {mid:mid||"",title:m?`v ${m.opp}`:"",form,kit:tbKits()[0][0],opp:TB_OPP[0][0],oppOn:true,ball:{x:50,y:75},
+    us:tbShape(form).map((p,i)=>Object.assign(p,{n:names[i]||""})),them:tbThem(SIDE),arrows:[],squad,at:Date.now()}}
+function tbOpen(mid){const s=tbStore(),k=mid||"general";if(!s.boards[k])s.boards[k]=tbNew(mid);s.cur=k;tbSel=null;tbUndo=[];tbMode="move";tbSave();setView("tactics")}
+function tbPush(){const b=TB();if(!b)return;tbUndo.push(JSON.stringify(b));if(tbUndo.length>40)tbUndo.shift()}
+function tbChanged(){const b=TB();if(b)b.at=Date.now();tbSave();render()}
+function tbSquad(b){const sq=(b.squad&&b.squad.length?b.squad:players.filter(p=>p.current).map(p=>p.name));return sq.concat(b.us.map(p=>p.n).filter(n=>n&&!sq.includes(n)))}
+function tbBench(b){const on=b.us.map(p=>p.n);return tbSquad(b).filter(n=>!on.includes(n))}
+// the arrow's path: straight, or a wiggle for a dribble; it stops short so the arrowhead lands on the point
+function tbPath(a){const dx=a.x2-a.x1,dy=a.y2-a.y1,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,end=Math.max(0,L-2.4);
+  if(a.t!=="drib")return `M${a.x1.toFixed(1)} ${a.y1.toFixed(1)}L${(a.x1+ux*end).toFixed(1)} ${(a.y1+uy*end).toFixed(1)}`;
+  const n=Math.max(2,Math.round(end/3.2)),st=end/n;let d=`M${a.x1.toFixed(1)} ${a.y1.toFixed(1)}`;
+  for(let i=0;i<n;i++){const s=i*st,mx=a.x1+ux*(s+st/2)-uy*(i%2?1.6:-1.6),my=a.y1+uy*(s+st/2)+ux*(i%2?1.6:-1.6);d+=`Q${mx.toFixed(1)} ${my.toFixed(1)} ${(a.x1+ux*(s+st)).toFixed(1)} ${(a.y1+uy*(s+st)).toFixed(1)}`}return d}
+function tbArrowSvg(a,i,live){const [,c,dash]=TB_ARROW[a.t]||TB_ARROW.run,d=tbPath(a);
+  return `<g${live?` data-tbarrow="${i}"`:""}>${live?`<path d="${d}" stroke="transparent" stroke-width="5" fill="none"/>`:""}<path d="${d}" stroke="${tbSel==="a"+i&&live?"#FF4FA3":c}" stroke-width="1.1" fill="none" stroke-linecap="round"${dash?` stroke-dasharray="${dash}"`:""} marker-end="url(#tbh-${a.t})"/></g>`}
+function tbSvg(b,live){const [,kb,ki]=tbKit(b),[ob,oi]=tbOppCol(b),line='stroke="rgba(255,255,255,.85)" stroke-width=".5" fill="none"';
+  const stripes=Array.from({length:10},(_,i)=>`<rect x="0" y="${i*15}" width="100" height="15" fill="${i%2?"#2E8B3E":"#33963F"}"/>`).join("");
+  const marks=`<rect x="3" y="3" width="94" height="144" ${line}/><line x1="3" y1="75" x2="97" y2="75" ${line}/><circle cx="50" cy="75" r="9" ${line}/><circle cx="50" cy="75" r=".7" fill="#fff"/>
+    <rect x="21" y="3" width="58" height="21" ${line}/><rect x="36" y="3" width="28" height="7" ${line}/><circle cx="50" cy="17" r=".6" fill="#fff"/><rect x="44" y=".6" width="12" height="2.4" ${line}/>
+    <rect x="21" y="126" width="58" height="21" ${line}/><rect x="36" y="140" width="28" height="7" ${line}/><circle cx="50" cy="133" r=".6" fill="#fff"/><rect x="44" y="147" width="12" height="2.4" ${line}/>`;
+  const heads=Object.keys(TB_ARROW).map(t=>`<marker id="tbh-${t}" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M0 0L10 5L0 10z" fill="${TB_ARROW[t][1]}"/></marker>`).join("");
+  const tok=(x,y,fill,ink,txt,name,attr,sel,gk)=>`<g class="tbt" transform="translate(${x} ${y})"${attr}><circle r="4.2" fill="${gk?"#1AA8A0":fill}" stroke="${sel?"#FF4FA3":fill.toUpperCase()==="#FFFFFF"?"#111":"#fff"}" stroke-width="${sel?1:.6}"/><text y="1.5" text-anchor="middle" font-size="4" font-weight="800" fill="${gk?"#fff":ink}" font-family="Arial,sans-serif">${esc(txt)}</text>${name?`<text y="${y>140?-5.6:8.4}" text-anchor="middle" font-size="3" font-weight="700" fill="#fff" stroke="rgba(0,0,0,.75)" stroke-width=".9" stroke-linejoin="round" paint-order="stroke" font-family="Arial,sans-serif">${esc(name)}</text>`:""}</g>`;
+  const them=b.oppOn?b.them.map((p,i)=>tok(p.x,p.y,ob,oi,String(i+1),"",live?` data-tbtok="t${i}"`:"",tbSel==="t"+i&&live)).join(""):"";
+  const us=b.us.map((p,i)=>tok(p.x,p.y,kb,ki,p.n?(numOf(p.n)||p.n.slice(0,1)):"?",p.n||"Empty",live?` data-tbtok="u${i}"`:"",tbSel==="u"+i&&live,p.gk)).join("");
+  const ball=b.ball?`<g class="tbt" transform="translate(${b.ball.x} ${b.ball.y})"${live?' data-tbtok="ball"':""}><circle r="2" fill="#fff" stroke="#111" stroke-width=".5"/><circle r=".8" fill="#111"/></g>`:"";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150"${live?' class="tbpitch" id="tbPitch" role="img" aria-label="Tactics board"':' width="1000" height="1500"'}><defs>${heads}</defs>${stripes}${marks}<g id="tbArrows">${b.arrows.map((a,i)=>tbArrowSvg(a,i,live)).join("")}</g>${them}${us}${ball}</svg>`}
+function tbFixtures(){const today=todayLocal();return sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&!result(m)&&(m.date||"")>=today)).slice(0,6)}
+function tacticsView(){if(!canWrite)return `<div class="card empty">The tactics board is for coaches. Sign in to use it.</div>`;
+  const s=tbStore();if(!TB()){s.boards.general=s.boards.general||tbNew("");s.cur="general"}const b=TB(),bn=tbBench(b),fx=tbFixtures();
+  const sel=tbSel&&tbSel[0]==="u"?b.us[+tbSel.slice(1)]:null;
+  const selBar=sel?`<div class="note"><b>${sel.n?esc(sel.n):"Empty spot"}</b> ${bn.length?`· swap with <span class="chips">${bn.map(n=>`<button data-tbon="${esc(n)}">${esc(n)}</button>`).join("")}</span>`:""}<div class="btns" style="margin-top:6px">${sel.n?`<button class="mini" id="tbOff">Move to the bench</button>`:""}<button class="mini" id="tbGk">${sel.gk?"Not the keeper":"Make keeper"}</button><button class="mini" id="tbDesel">Done</button></div></div>`
+    :tbSel&&tbSel[0]==="t"?`<div class="note"><b>Opposition player ${+tbSel.slice(1)+1}</b><div class="btns" style="margin-top:6px"><button class="mini" id="tbThemDel">Remove</button><button class="mini" id="tbDesel">Done</button></div></div>`
+    :tbSel&&tbSel[0]==="a"?`<div class="note"><b>Arrow</b><div class="btns" style="margin-top:6px"><button class="mini" id="tbArrowDel">Delete arrow</button><button class="mini" id="tbDesel">Done</button></div></div>`:"";
+  const hint={move:"Drag players and the ball. Tap a player to swap them with a sub or move them to the bench.",run:"Draw a run: drag from where the player starts to where they should go.",pass:"Draw a pass: drag from the passer to where the ball goes.",drib:"Draw a dribble: drag from where the player picks the ball up to where they take it."}[tbMode];
+  return `<div class="stack tb">
+  <section class="card stack"><h2>📋 Tactics board</h2>
+    <div class="btns"><label class="f" style="flex:1;min-width:200px">Board for<select id="tbFor"><option value="general"${s.cur==="general"?" selected":""}>Training and general</option>${fx.map(m=>`<option value="${esc(m.id)}"${s.cur===m.id?" selected":""}>v ${esc(m.opp)}, ${esc(new Date(m.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}))}</option>`).join("")}${s.cur!=="general"&&!fx.some(m=>m.id===s.cur)?`<option value="${esc(s.cur)}" selected>${esc(b.title||"This match")}</option>`:""}</select></label>
+      <div><span class="hint">Formation</span><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-tbform="${f}" aria-pressed="${b.form===f}">${f}</button>`).join("")}</div></div></div>
+    <div class="seg tbmodes" role="group" aria-label="What a finger does">${[["move","✋ Move"],["run","➜ Run"],["pass","⇢ Pass"],["drib","〰 Dribble"]].map(([k,l])=>`<button data-tbmode="${k}" aria-pressed="${tbMode===k}">${l}</button>`).join("")}</div>
+    <div class="tbwrap">${tbSvg(b,true)}</div>
+    <p class="hint" style="margin:0">${hint}</p>
+    ${selBar}
+    <div class="btns"><button class="btn ghost" id="tbUndo"${tbUndo.length?"":" disabled"}>↶ Undo</button><button class="btn ghost" id="tbClearArrows"${b.arrows.length?"":" disabled"}>Clear arrows</button><button class="btn ghost" id="tbReset">Reset to ${esc(b.form)}</button><button class="btn gold" id="tbShare">📤 Save or share picture</button></div>
+    <p class="hint" style="margin:0"><b>Subs:</b> ${bn.length?`<span class="chips">${bn.map(n=>`<button data-tbon="${esc(n)}">${esc(n)}</button>`).join("")}</span> <span>Tap one to put them on the pitch${sel?` in place of ${esc(sel.n||"the empty spot")}`:""}.</span>`:"everyone's on the pitch."}</p>
+  </section>
+  <section class="card stack"><h3>Settings</h3>
+    <div class="btns"><span class="hint">Our shirts</span><div class="seg" role="group" aria-label="Our shirts">${tbKits().map(([id,c,,l])=>`<button data-tbkit="${esc(id)}" aria-pressed="${b.kit===id}"><i class="sw" style="background:${esc(c)}"></i>${esc(l)}</button>`).join("")}</div></div>
+    <div class="btns"><span class="hint">Opposition</span><div class="seg" role="group" aria-label="Show the opposition"><button data-tbopp="1" aria-pressed="${!!b.oppOn}">Show</button><button data-tbopp="0" aria-pressed="${!b.oppOn}">Hide</button></div>
+      ${b.oppOn?`<button class="mini" id="tbThemLess"${b.them.length?"":" disabled"} aria-label="One fewer opposition player">−</button><b>${b.them.length}</b><button class="mini" id="tbThemMore"${b.them.length>=11?" disabled":""} aria-label="One more opposition player">+</button>`:""}</div>
+    ${b.oppOn?`<div class="btns"><span class="hint">Their shirts</span><div class="seg" role="group" aria-label="Their shirts">${TB_OPP.map(([c,,l])=>`<button data-tboppcol="${c}" aria-pressed="${b.opp===c}"><i class="sw" style="background:${c}"></i>${l}</button>`).join("")}</div></div>`:""}
+    <div class="btns"><span class="hint">Ball</span><div class="seg" role="group" aria-label="Show the ball"><button data-tbball="1" aria-pressed="${!!b.ball}">Show</button><button data-tbball="0" aria-pressed="${!b.ball}">Hide</button></div></div>
+  </section>
+  <section class="card stack"><h3>Saved boards</h3>
+    <p class="hint" style="margin:0">Keep set-ups you use again, like a kick-off shape, defending corners or a press. They're kept on this phone.</p>
+    ${s.saved.length?`<div class="chips">${s.saved.map((x,i)=>`<span class="tbsaved"><button data-tbload="${i}">${esc(x.name)}</button><button data-tbdel="${i}" aria-label="Delete ${esc(x.name)}">✕</button></span>`).join("")}</div>`:""}
+    <div class="btns"><input type="text" id="tbName" placeholder="Name, e.g. Defending corners" maxlength="40" style="max-width:260px"><button class="btn ghost" id="tbKeep">Save this board</button></div>
+  </section>
+  <p class="hint">Only coaches see the tactics board, and boards stay on this phone. Share a picture in the team chat if you'd like the players to see it.</p></div>`}
+function tbPt(e){const sv=$("#tbPitch"),p=sv.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(sv.getScreenCTM().inverse());return {x:Math.round(q.x*10)/10,y:Math.round(q.y*10)/10}}
+let tbDrag=null;
+document.addEventListener("pointerdown",e=>{if(view!=="tactics"||!e.target.closest)return;const sv=e.target.closest("#tbPitch");if(!sv)return;const b=TB();if(!b)return;e.preventDefault();
+  const p=tbPt(e),tk=e.target.closest("[data-tbtok]"),ar=e.target.closest("[data-tbarrow]");
+  if(tbMode!=="move"){const g=document.createElementNS("http://www.w3.org/2000/svg","g");$("#tbArrows").appendChild(g);tbDrag={arrow:{t:tbMode,x1:p.x,y1:p.y,x2:p.x,y2:p.y},g};}
+  else if(tk){tbDrag={tok:tk.dataset.tbtok,el:tk,p0:p,moved:false}}
+  else if(ar){tbSel="a"+ar.dataset.tbarrow;render();return}
+  else{if(tbSel){tbSel=null;render()}return}
+  try{sv.setPointerCapture(e.pointerId)}catch(er){}});
+document.addEventListener("pointermove",e=>{if(!tbDrag||view!=="tactics")return;const p=tbPt(e),b=TB();
+  if(tbDrag.arrow){Object.assign(tbDrag.arrow,{x2:Math.max(1,Math.min(99,p.x)),y2:Math.max(1,Math.min(149,p.y))});tbDrag.g.innerHTML=Math.hypot(p.x-tbDrag.arrow.x1,p.y-tbDrag.arrow.y1)>3?tbArrowSvg(tbDrag.arrow,0,false):"";return}
+  if(!tbDrag.moved&&Math.hypot(p.x-tbDrag.p0.x,p.y-tbDrag.p0.y)<1.5)return;
+  if(!tbDrag.moved){tbPush();tbDrag.moved=true}
+  const x=Math.max(2,Math.min(98,p.x)),y=Math.max(2,Math.min(148,p.y)),k=tbDrag.tok,o=k==="ball"?b.ball:k[0]==="u"?b.us[+k.slice(1)]:b.them[+k.slice(1)];
+  o.x=x;o.y=y;tbDrag.el.setAttribute("transform",`translate(${x} ${y})`)});
+function tbUp(){if(!tbDrag||view!=="tactics")return;const d=tbDrag,b=TB();tbDrag=null;
+  if(d.arrow){if(Math.hypot(d.arrow.x2-d.arrow.x1,d.arrow.y2-d.arrow.y1)>3){tbPush();b.arrows.push(d.arrow);tbChanged()}else d.g.remove();return}
+  if(d.moved){tbChanged();return}
+  if(d.tok!=="ball"){tbSel=tbSel===d.tok?null:d.tok;render()}}
+document.addEventListener("pointerup",tbUp);document.addEventListener("pointercancel",tbUp);
+document.addEventListener("change",e=>{if(e.target.id==="tbFor"){const v=e.target.value;tbOpen(v==="general"?"":v)}});
+document.addEventListener("click",async e=>{if(view!=="tactics")return;const t=e.target.closest("button");if(!t)return;const b=TB();if(!b)return;const d=t.dataset;
+  if(d.tbmode){tbMode=d.tbmode;tbSel=null;render();return}
+  if(d.tbform){tbPush();b.form=d.tbform;const sh=tbShape(b.form),names=b.us.map(p=>p.n);b.us=sh.map((p,i)=>Object.assign(p,{n:names[i]||""}));tbChanged();return}
+  if(d.tbkit){b.kit=d.tbkit;tbChanged();return}
+  if(d.tboppcol){b.opp=d.tboppcol;tbChanged();return}
+  if(d.tbopp){b.oppOn=d.tbopp==="1";tbChanged();return}
+  if(d.tbball){tbPush();b.ball=d.tbball==="1"?{x:50,y:75}:null;tbChanged();return}
+  if(d.tbon){tbPush();const n=d.tbon,i=tbSel&&tbSel[0]==="u"?+tbSel.slice(1):b.us.findIndex(p=>!p.n);
+    if(i<0){toast("Tap the player they're replacing first.");return}b.us[i].n=n;tbSel=null;tbChanged();return}
+  if(t.id==="tbOff"&&tbSel){tbPush();const i=+tbSel.slice(1);b.us[i].n="";tbSel=null;tbChanged();return}
+  if(t.id==="tbGk"&&tbSel){tbPush();const i=+tbSel.slice(1),was=b.us[i].gk;b.us.forEach(p=>p.gk=false);b.us[i].gk=!was;tbChanged();return}
+  if(t.id==="tbThemDel"&&tbSel){tbPush();b.them.splice(+tbSel.slice(1),1);tbSel=null;tbChanged();return}
+  if(t.id==="tbArrowDel"&&tbSel){tbPush();b.arrows.splice(+tbSel.slice(1),1);tbSel=null;tbChanged();return}
+  if(t.id==="tbDesel"){tbSel=null;render();return}
+  if(t.id==="tbThemLess"){tbPush();b.them.pop();tbSel=null;tbChanged();return}
+  if(t.id==="tbThemMore"){tbPush();const all=tbThem(SIDE),free=all.find(q=>!b.them.some(o=>Math.hypot(o.x-q.x,o.y-q.y)<3));b.them.push(free||{x:50,y:40});tbChanged();return}
+  if(t.id==="tbUndo"&&tbUndo.length){const s=tbStore();s.boards[s.cur]=JSON.parse(tbUndo.pop());tbSel=null;tbSave();render();return}
+  if(t.id==="tbClearArrows"){tbPush();b.arrows=[];tbSel=null;tbChanged();return}
+  if(t.id==="tbReset"){tbPush();const sh=tbShape(b.form);b.us=sh.map((p,i)=>Object.assign(p,{n:(b.us[i]||{}).n||""}));b.them=tbThem(b.them.length);b.arrows=[];if(b.ball)b.ball={x:50,y:75};tbSel=null;tbChanged();return}
+  if(t.id==="tbKeep"){const name=($("#tbName").value||"").trim();if(!name){toast("Give the board a name first.");$("#tbName").focus();return}
+    const s=tbStore(),copy=JSON.parse(JSON.stringify(b)),i=s.saved.findIndex(x=>x.name.toLowerCase()===name.toLowerCase());if(i>=0)s.saved[i].board=copy;else s.saved.push({name,board:copy});tbSave();render();toast(`Saved "${name}" on this phone.`);return}
+  if(d.tbload){const s=tbStore(),x=s.saved[+d.tbload];if(!x)return;tbPush();const keep={mid:b.mid,title:b.title,squad:b.squad};
+    // a saved board brings its shapes and arrows; the names stay this board's own where they can
+    s.boards[s.cur]=Object.assign(JSON.parse(JSON.stringify(x.board)),keep,{at:Date.now()});const nb=TB(),sq=tbSquad(nb);if(nb.us.some(p=>p.n&&!sq.includes(p.n))){const left=sq.filter(n=>!nb.us.some(p=>p.n===n));nb.us.forEach(p=>{if(p.n&&!sq.includes(p.n))p.n=left.shift()||""})}
+    tbSel=null;tbChanged();toast(`Loaded "${x.name}".`);return}
+  if(d.tbdel){const s=tbStore(),x=s.saved[+d.tbdel];if(x&&confirm(`Delete the saved board "${x.name}"?`)){s.saved.splice(+d.tbdel,1);tbSave();render()}return}
+  if(t.id==="tbShare")tbShare(b)});
+// the picture: a heading in club colours above the board, for the team chat
+async function tbShare(b){const c=document.createElement("canvas");c.width=1000;c.height=1640;const x=c.getContext("2d"),col=TEAM.colours||{};
+  x.fillStyle=col.clubDeep||"#16239E";x.fillRect(0,0,1000,140);x.fillStyle=col.gold||"#FFD200";x.fillRect(0,134,1000,6);
+  try{const cr=await new Promise((ok,bad)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=bad;im.src=CREST});const h=96,w=h*cr.width/cr.height;x.drawImage(cr,28,22,w,h)}catch(e){}
+  x.fillStyle=col.clubInk||"#fff";x.font="800 44px Archivo, Arial, sans-serif";x.fillText(`${TEAM.name||""} ${TEAM.ageShort||""}`.trim()+(b.title?` ${b.title}`:""),150,72,820);
+  x.font="600 28px Archivo, Arial, sans-serif";x.globalAlpha=.85;x.fillText(`Tactics · ${b.form}`,150,112,820);x.globalAlpha=1;
+  const url=URL.createObjectURL(new Blob([tbSvg(b,false)],{type:"image/svg+xml"}));
+  try{const im=await new Promise((ok,bad)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=bad;i.src=url});x.drawImage(im,0,140,1000,1500)}catch(e){toast("Couldn't make the picture on this phone.");return}finally{URL.revokeObjectURL(url)}
+  const blob=await new Promise(r=>c.toBlob(r,"image/png")),name=`tactics-${(b.title||"board").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}.png`;
+  try{const f=new File([blob],name,{type:"image/png"});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"Tactics"});return}}catch(e){if(e&&e.name==="AbortError")return}
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast("Picture downloaded.")}catch(e){toast("Couldn't save the picture on this phone.")}}
 // While a game is live, Home leads with the whole match (score, pitch, commentary) and refreshes in place
 let homeLiveHtml="";
 function homeLive(){const ms=liveNow().filter(m=>m.live.status!=="ft");
@@ -1108,7 +1244,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const h2h=m.opp?`<section class="card"><h3>Against ${esc(m.opp)}</h3>${h.length?`<div class="h2h">${h.slice(0,8).map(x=>`<button class="sc-btn" data-md="${esc(x.id)}">${scChip(x)}</button>`).join("")}</div>`:`<p class="hint">${fx?"First time we've played them.":"No other games against them yet."}</p>`}<button class="mini" data-opp="${esc(m.opp)}">All about ${esc(m.opp)}</button></section>`:"";
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
-  const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
+  const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
   return `<div class="live md">${back}${board}${info}${fx?previewCard(m)+reportCard(m):reportCard(m)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
@@ -1254,6 +1390,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.id==="pickSave"){if(await pickSave())setView("fixtures")}
   if(b.id==="pickSavePost"){const m=await pickSave();if(m){setView("gfx");await (await gfxReady()).loadMatch(m,"squad")}}
   if(b.dataset.live){liveStart(b.dataset.live)}
+  if(b.dataset.tbmatch!=null)tbOpen(b.dataset.tbmatch);
   if(b.id==="practice"){try{localStorage.removeItem(liveKey("practice"))}catch(e){}matches=matches.filter(m=>!m.practice);
     PRACTICE={id:"practice",practice:true,date:todayLocal(),opp:"Practice FC",ha:"H",comp:"Friendly",venue:"Practice",ko:"",us:0,them:0,played:{},assists:{},keepers:{},apps:false,squad:players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name)};
     matches.push(PRACTICE);liveStart("practice");toast("Practice match: nothing is saved and parents won't see it.")}
