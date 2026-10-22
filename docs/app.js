@@ -905,9 +905,9 @@ const FORMATS={
 // rugby line-ups: union 15s and league 13s by shirt number (attacking up the page, forwards in front); other sizes in two lines
 const RFORMATS={
   "rugby-union":{"15s":{"Positions":{label:["LHP","HK","THP","LK","LK","BF","OF","N8","SH","FH","LW","IC","OC","RW","FB"],fwd:8,
-    xy:[[34,24],[50,24],[66,24],[42,35],[58,35],[20,38],[80,38],[50,46],[50,57],[34,64],[10,76],[54,68],[74,72],[90,76],[50,88]]}}},
+    xy:[[32,17],[50,17],[68,17],[37,30],[63,30],[20,38],[80,38],[50,42],[44,54],[28,62],[10,78],[52,66],[72,71],[90,78],[50,88]]}}},
   "rugby-league":{"13s":{"Positions":{label:["FB","RW","RC","LC","LW","SO","SH","P","HK","P","2R","2R","LF"],fwd:-6,
-    xy:[[50,86],[90,66],[70,66],[30,66],[10,66],[62,55],[38,55],[34,26],[50,26],[66,26],[22,38],[78,38],[50,44]]}}}};
+    xy:[[50,86],[90,68],[68,68],[32,68],[10,68],[62,53],[38,53],[32,18],[50,18],[68,18],[22,30],[78,30],[50,38]]}}}};
 function rugbyForms(fmt){const n=+String(fmt||"").replace(/\D/g,"")||7,known=(RFORMATS[SP.key]||{})[fmt];if(known)return known;
   const f=Math.ceil(n/2),b=n-f,row=(k,y,o)=>Array.from({length:k},(_,i)=>[Math.round(10+(80*(i+.5))/k),y+(o&&i%2?4:0)]);
   return {"Two lines":{label:Array.from({length:n},(_,i)=>String(i+1)),xy:[...row(f,32),...row(b,64,1)]}}}
