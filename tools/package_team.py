@@ -126,7 +126,7 @@ def build_site(team, src, site, keep_badges):
 def build_sql(team, out):
     parts = []
     for name in ("1_schema.sql", "3_notifications.sql", "4_gallery_training.sql", "5_help_requests.sql", "6_match_updated.sql",
-                 "7_team_setup.sql", "8_multi_day_tournaments.sql", "9_matchday_and_more.sql", "10_parent_login.sql"):
+                 "7_team_setup.sql", "8_multi_day_tournaments.sql", "9_matchday_and_more.sql", "10_parent_login.sql", "11_rugby.sql"):
         s = (SQL / name).read_text()
         s = s.replace("-- Newton Aycliffe U9s: ", f"-- {team['name']} {team.get('ageShort', '')}: ")
         if name == "3_notifications.sql":
@@ -168,7 +168,7 @@ Allow about an hour. Do the steps in order.
 ## 2. Edge functions (match alerts, calendar and AI match previews and reports)
 With the Supabase CLI (`supabase link --project-ref <ref>`):
 ```
-supabase secrets set SITE_URL={site}/ TEAM_NAME="{name}" APP_NAME="{app}" TEAM_FULL_NAME="{full}" AGE_GROUP="{age}" PUBLIC_SCORES={scores} POTM_SPONSOR="{potm}" POTM_ICON="{potm_icon}"
+supabase secrets set SITE_URL={site}/ TEAM_NAME="{name}" APP_NAME="{app}" TEAM_FULL_NAME="{full}" AGE_GROUP="{age}" PUBLIC_SCORES={scores} POTM_SPONSOR="{potm}" POTM_ICON="{potm_icon}" SPORT={sport}
 supabase functions deploy notify
 supabase functions deploy calendar --no-verify-jwt
 supabase functions deploy preview
@@ -218,8 +218,12 @@ def main():
             sys.exit(f"team.js needs a {k}")
     if "publicScores" not in team:
         sys.exit("team.js needs publicScores: true or false (the club's choice; see docs/team.js)")
+    sport = team.get("sport") or "football"
+    if sport not in ("football", "rugby-union", "rugby-league"):
+        sys.exit("team.js sport must be football, rugby-union or rugby-league")
+    rugby = sport.startswith("rugby")
     ages = [int(n) for n in re.findall(r"\d+", team["ageGroup"])]
-    young = bool(ages) and 7 <= ages[0] <= 11
+    young = bool(ages) and 7 <= ages[0] <= 11 and not rugby
     if team["publicScores"] and young:
         print(f"Note: {team['ageGroup']} with publicScores on. FA rules don't allow U7-U11 scores, results or scorers "
               "to be published; make sure the club has chosen this.", file=sys.stderr)
@@ -242,11 +246,11 @@ def main():
                  "set poweredBy: false in team.js to hide it.") if team.get("poweredBy", True) is not False else
                 'The "Powered by Touchline Tales" footer link is turned off (poweredBy: false in team.js).',
         scores="true" if team["publicScores"] else "false",
-        potm=(team.get("potm") or {}).get("sponsor") or "none", potm_icon=(team.get("potm") or {}).get("icon") or "⭐",
-        scores_note=("Scores are **public**: visitors see results, scorers and goal alerts."
+        potm=(team.get("potm") or {}).get("sponsor") or "none", potm_icon=(team.get("potm") or {}).get("icon") or "⭐", sport=sport,
+        scores_note=("Scores are **public**: visitors see results, scorers and " + ("try" if rugby else "goal") + " alerts."
                      + (" FA rules don't allow this for U7 to U11 teams, so the club has chosen to take that on." if young else ""))
                     if team["publicScores"] else
-                    "Scores are **hidden** from visitors (FA rules for U7 to U11): the public site, match alerts and calendar show "
+                    "Scores are **hidden** from visitors (" + ("the club's choice" if rugby else "FA rules for U7 to U11") + "): the public site, match alerts and calendar show "
                     "games, line-ups and awards without scores or scorers. Signed-in coaches still see and record everything. "
                     "To change it, set publicScores in docs/team.js and the PUBLIC_SCORES secret.",
         cname="" if host.endswith("github.io") else f"\n   Custom domain: `{host}` (the CNAME file is included; point the domain's DNS at GitHub Pages)."))

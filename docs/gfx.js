@@ -7,8 +7,18 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v)
              set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
 
 const TEAM=window.TEAM||{},SK=TEAM.storageKey||"team",TC=TEAM.colours||{};
+// rugby (window.SPORT, set by app.js): tries and kicks instead of goals and assists, and rugby balls in the background
+const SPT=window.SPORT||{},RG=!!SPT.rugby,BALL=SPT.ball||"⚽";
+const KSHORT={con:["C","con","cons"],pen:["P","pen","pens"],drop:["DG","drop goal","drop goals"]};
+const kickStr=k=>Object.keys(KSHORT).filter(t=>+k[t]>0).map(t=>`${k[t]} ${+k[t]>1?KSHORT[t][2]:KSHORT[t][1]}`).join(", ");
+const kickPts=()=>Object.values(S.kicks||{}).reduce((a,k)=>a+Object.keys(KSHORT).reduce((b,t)=>b+(+k[t]||0)*((SPT.pts||{})[t]||0),0),0);
+if(RG){const lab=(id,t)=>{const l=$(id)&&$(id).closest("label");if(l&&l.firstChild)l.firstChild.nodeValue=t};lab("usScore","Our points");lab("themScore","Their points");
+  const gp=$("goalPick"),ap=$("astPick");if(gp){gp.previousElementSibling.textContent="Try scorers";if(gp.nextElementSibling)gp.nextElementSibling.textContent="Tap + for each try. Our score fills in from the tries and kicks on the match; change it if there was a penalty try."}
+  if(ap){ap.hidden=true;ap.previousElementSibling.hidden=true}}
 const PP=/girl/i.test(TEAM.players||"")?"her":/boy|lad/i.test(TEAM.players||"")?"his":"their";
 document.getElementById("potmPhotoLabel").textContent=PP.charAt(0).toUpperCase()+PP.slice(1)+" photo with the award";
+// England Rugby asks for written parental consent before a named child is shown in a photo
+if(RG)document.getElementById("potmPhotoLabel").textContent+=" (only with written consent from a parent)";
 const POTM_UP=(((TEAM.potm&&TEAM.potm.sponsor)?TEAM.potm.sponsor+" ":"")+"player of the match").toUpperCase();
 const OWN=!!TC.club&&TC.club.toUpperCase()!=="#2235E8";// another team's colours: derive the extra graphics shades from theirs
 const C={blue:TC.club||"#2235E8",blueDeep:OWN?(TC.clubDeep||TC.club):"#1424B8",yellow:TC.gold||"#FFD200",ink:"#111111",white:"#FFFFFF",pink:TC.accent||"#F7A3D3",pinkDeep:TC.accentDeep||"#E5559F",teal:"#1AA8A0",faint:"#E7EAF4"};
@@ -63,6 +73,9 @@ function koText(t){return t?`${t} KO`:""}
 function footballs(seed,color){ // faint ball pattern like the Canva backgrounds
   let s=seed;const rnd=()=>(s=(s*9301+49297)%233280)/233280;
   X.save();X.strokeStyle=color;X.lineWidth=3;
+  if(RG){for(let i=0;i<26;i++){const x=rnd()*W,y=rnd()*W,r=22+rnd()*26,a=rnd()*Math.PI;// rugby balls: an oval with a seam and stitches
+    X.save();X.translate(x,y);X.rotate(a);X.beginPath();X.ellipse(0,0,r*1.3,r*.8,0,0,Math.PI*2);X.stroke();X.beginPath();X.moveTo(-r*.6,0);X.lineTo(r*.6,0);X.stroke();
+    for(let k=-2;k<=2;k++){X.beginPath();X.moveTo(k*r*.24,-r*.14);X.lineTo(k*r*.24,r*.14);X.stroke()}X.restore()}X.restore();return}
   for(let i=0;i<26;i++){const x=rnd()*W,y=rnd()*W,r=22+rnd()*26;
     X.beginPath();X.arc(x,y,r,0,Math.PI*2);X.stroke();
     X.beginPath();for(let k=0;k<5;k++){const a=-Math.PI/2+k*2*Math.PI/5;const px=x+r*.38*Math.cos(a),py=y+r*.38*Math.sin(a);k?X.lineTo(px,py):X.moveTo(px,py)}X.closePath();X.stroke();
@@ -221,8 +234,9 @@ function drawFT(){
   // scorers under our crest
   const sc=Object.entries(S.goals).filter(([n,g])=>g>0&&squad.some(p=>p.name===n));
   const sx=homeUs?left.x+left.w/2:right.x+right.w/2;
-  const as=Object.entries(S.assists||{}).filter(([n,a])=>a>0&&squad.some(p=>p.name===n));
+  const as=RG?[]:Object.entries(S.assists||{}).filter(([n,a])=>a>0&&squad.some(p=>p.name===n));
   const lines=sc.map(([n,g])=>({t:n.toUpperCase()+(g>1?` X${g}`:""),a:false}));
+  if(RG){const kk=Object.entries(S.kicks||{}).filter(([,k])=>kickStr(k));if(kk.length)lines.push({t:"KICKS: "+kk.map(([n,k])=>n.toUpperCase()+" "+Object.keys(KSHORT).filter(t=>+k[t]>0).map(t=>k[t]+KSHORT[t][0]).join(" ")).join(", "),a:true})}
   if(as.length)lines.push({t:"ASSISTS: "+as.map(([n,a])=>n.toUpperCase()+(a>1?` X${a}`:"")).join(", "),a:true});
   const step=lines.length>4?21:28;X.textAlign="center";
   lines.slice(0,5).forEach((l,i)=>{X.fillStyle=l.a?C.blueDeep:C.ink;const sz=l.a?(lines.length>4?16:19):(lines.length>4?20:26);fit(l.t,250,sz,DISPLAY);X.fillText(l.t,sx,982+i*step)});X.fillStyle=C.ink;
@@ -290,13 +304,14 @@ function caption(){
   const d=niceDate(S.date), opp=S.opp||"our opponents";let t="";
   if(S.mode==="squad"||S.mode==="setup"){
     const names=S.picked.filter(n=>squad.some(p=>p.name===n));
-    t=`⚽ ${String(TEAM.ageGroup||"").toUpperCase().replace(/S$/,"s")} SQUAD ANNOUNCEMENT ⚽\n\nHere's our squad for ${d||"this weekend"}${S.ha==="A"?" away at":" at home to"} ${opp}${S.ko?`, ${S.ko} kick-off`:""}${S.venue?` at ${S.venue}`:""}.\n\n${names.map(n=>`${n} (${playerNum(n)})${n===S.captain?" ©":""}`).join("\n")}${(h=>h&&h.length?`\n\nLast time we played them: ${h[0].us>h[0].them?"won":h[0].us==h[0].them?"drew":"lost"} ${h[0].us}-${h[0].them}.`:"")(window.H2H&&window.H2H(S.opp))}\n\nCome on ${TEAM.players||"team"}! ${TEAM.cheer||""}${sp}\n\n${TEAM.hashtags||""}`;
+    t=`${BALL} ${String(TEAM.ageGroup||"").toUpperCase().replace(/S$/,"s")} SQUAD ANNOUNCEMENT ${BALL}\n\nHere's our squad for ${d||"this weekend"}${S.ha==="A"?" away at":" at home to"} ${opp}${S.ko?`, ${S.ko} kick-off`:""}${S.venue?` at ${S.venue}`:""}.\n\n${names.map(n=>`${n} (${playerNum(n)})${n===S.captain?" ©":""}`).join("\n")}${(h=>h&&h.length?`\n\nLast time we played them: ${h[0].us>h[0].them?"won":h[0].us==h[0].them?"drew":"lost"} ${h[0].us}-${h[0].them}.`:"")(window.H2H&&window.H2H(S.opp))}\n\nCome on ${TEAM.players||"team"}! ${TEAM.cheer||""}${sp}\n\n${TEAM.hashtags||""}`;
   } else if(S.mode==="ft"){
     const us=S.us??"?",them=S.them??"?";const res=+us>+them?"WIN":(+us===+them?"DRAW":"DEFEAT");
-    const sc=Object.entries(S.goals).filter(([n,g])=>g>0).map(([n,g])=>`⚽ ${n}${g>1?` x${g}`:""}`).join("\n");
+    const sc=Object.entries(S.goals).filter(([n,g])=>g>0).map(([n,g])=>`${BALL} ${n}${g>1?` x${g}`:""}`).join("\n");
     const opener=res==="WIN"?"What a performance! 🎉":(res==="DRAW"?"Honours even today.":"Not our day, but so proud of the effort. 💪");
-    const asl=Object.entries(S.assists||{}).filter(([n,a])=>a>0).map(([n,a])=>`🅰️ ${n}${a>1?` x${a}`:""}`).join("\n");
-    t=`FULL TIME: ${TEAM.name} ${us} - ${them} ${opp}\n\n${opener}\n\n${sc?`Our scorers:\n${sc}\n\n`:""}${asl?`Assists:\n${asl}\n\n`:""}${S.ftPotm?`${(TEAM.potm&&TEAM.potm.icon)||"⭐"} ${(TEAM.potm&&TEAM.potm.sponsor?TEAM.potm.sponsor+" ":"")}Player of the Match: ${S.ftPotm}\n\n`:""}${sp.trim()}\n\n${TEAM.hashtags||""}`;
+    const asl=RG?"":Object.entries(S.assists||{}).filter(([n,a])=>a>0).map(([n,a])=>`🅰️ ${n}${a>1?` x${a}`:""}`).join("\n");
+    const kl=RG?Object.entries(S.kicks||{}).filter(([,k])=>kickStr(k)).map(([n,k])=>`🎯 ${n} (${kickStr(k)})`).join("\n"):"";
+    t=`FULL TIME: ${TEAM.name} ${us} - ${them} ${opp}\n\n${opener}\n\n${sc?`${RG?"Our try scorers":"Our scorers"}:\n${sc}\n\n`:""}${kl?`Kicks:\n${kl}\n\n`:""}${asl?`Assists:\n${asl}\n\n`:""}${S.ftPotm?`${(TEAM.potm&&TEAM.potm.icon)||"⭐"} ${(TEAM.potm&&TEAM.potm.sponsor?TEAM.potm.sponsor+" ":"")}Player of the Match: ${S.ftPotm}\n\n`:""}${sp.trim()}\n\n${TEAM.hashtags||""}`;
   } else if(S.mode==="month"){
     const mn=S.month?new Date(S.month+"-01T12:00:00").toLocaleDateString("en-GB",{month:"long"}):"";
     t=`📅 ${mn.toUpperCase()} FIXTURES 📅\n\n${MONTH_LIST.map(m=>`${new Date(m.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}: ${m.ha==="A"?"away at":"v"} ${m.opp}${m.ko?`, ${m.ko} KO`:""}${m.venue?` (${m.venue})`:""}`).join("\n")||"No fixtures this month."}\n\nCome and support the ${TEAM.players||"team"}! ${TEAM.cheer||""}${sp}\n\n${TEAM.shortHashtags||""}`;
@@ -314,7 +329,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 function buildPickers(){
   $("squadPick").innerHTML=squad.map((p,i)=>`<label class="pl${S.picked.includes(p.name)?" on":""}" for="pk${i}"><input type="checkbox" id="pk${i}" data-n="${esc(p.name)}"${S.picked.includes(p.name)?" checked":""}><b>${esc(p.num)}</b><span>${esc(p.name)}</span></label>`).join("");
   $("squadCount").textContent=`${S.picked.filter(n=>squad.some(p=>p.name===n)).length} picked. Shirts appear in squad-list order.`;
-  $("goalPick").innerHTML=squad.map((p,i)=>{const g=S.goals[p.name]||0;return `<div class="gl${g?" on":""}"><span class="n">${esc(p.name)}</span><button aria-label="One less goal for ${esc(p.name)}" data-g="-1" data-n="${esc(p.name)}">−</button><output>${g}</output><button aria-label="One more goal for ${esc(p.name)}" data-g="1" data-n="${esc(p.name)}">+</button></div>`}).join("");
+  $("goalPick").innerHTML=squad.map((p,i)=>{const g=S.goals[p.name]||0;return `<div class="gl${g?" on":""}"><span class="n">${esc(p.name)}</span><button aria-label="One less ${RG?"try":"goal"} for ${esc(p.name)}" data-g="-1" data-n="${esc(p.name)}">−</button><output>${g}</output><button aria-label="One more ${RG?"try":"goal"} for ${esc(p.name)}" data-g="1" data-n="${esc(p.name)}">+</button></div>`}).join("");
   $("astPick").innerHTML=squad.map(p=>{const a=(S.assists||{})[p.name]||0;return `<div class="gl${a?" on":""}"><span class="n">${esc(p.name)}</span><button aria-label="One less assist for ${esc(p.name)}" data-ga="-1" data-n="${esc(p.name)}">−</button><output>${a}</output><button aria-label="One more assist for ${esc(p.name)}" data-ga="1" data-n="${esc(p.name)}">+</button></div>`}).join("");
   playerOptions($("msPlayer"),S.msPlayer,false);$("msLabel").value=S.msLabel||"";$("gMonth").value=S.month||"";
   playerOptions($("ftPotm"),S.ftPotm,true);playerOptions($("potmPlayer"),S.potm,false);
@@ -344,7 +359,7 @@ ROOT.addEventListener("click",e=>{
   if(b.dataset.kit){S.kit=b.dataset.kit;syncInputs();save();render()}
   if(b.dataset.pkit){S.pkit=b.dataset.pkit;syncInputs();save();render()}
   if(b.dataset.g){const n=b.dataset.n;S.goals[n]=Math.max(0,(S.goals[n]||0)+ +b.dataset.g);if(!S.goals[n])delete S.goals[n];
-    if(!S.usManual)S.us=Object.values(S.goals).reduce((a,c)=>a+c,0);buildPickers();syncInputs();save();render()}
+    if(!S.usManual)S.us=RG?Object.values(S.goals).reduce((a,c)=>a+c,0)*((SPT.pts||{}).try||0)+kickPts():Object.values(S.goals).reduce((a,c)=>a+c,0);buildPickers();syncInputs();save();render()}
   if(b.dataset.ga){const n=b.dataset.n;S.assists=S.assists||{};S.assists[n]=Math.max(0,(S.assists[n]||0)+ +b.dataset.ga);if(!S.assists[n])delete S.assists[n];buildPickers();save();render()}
   if(b.dataset.rm){squad.splice(+b.dataset.rm,1);store.set(SK+".squad",squad);buildPickers();render()}
 });
@@ -399,6 +414,7 @@ window.GFX={
     Object.assign(S,{opp:m.opp||"",date:m.date||"",ko:m.ko||"",venue:m.venue||"",comp:m.comp||"League",ha:m.ha==="A"?"A":"H",
       picked:Object.keys(m.played||{}).length?Object.keys(m.played):(m.squad||[]).slice(),goals:Object.fromEntries(Object.entries(m.played||{}).filter(([,g])=>g>0)),
       us:m.us??null,them:m.them??null,usManual:m.us!=null,ftPotm:m.potm||"",assists:Object.assign({},m.assists||{})});
+    if(RG)S.kicks=JSON.parse(JSON.stringify(m.kicks||{}));
     if(m.potm)S.potm=m.potm;S.potmKind="match";
     S.picked.sort((a,b)=>squad.findIndex(p=>p.name===a)-squad.findIndex(p=>p.name===b));
     buildPickers();syncInputs();save();await setOppCrestFor(S.opp);setMode(mode||"squad")},

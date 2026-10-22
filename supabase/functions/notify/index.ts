@@ -14,6 +14,9 @@ let US = Deno.env.get("TEAM_NAME") ?? "Newton Aycliffe";
 // PUBLIC_SCORES=false: no goal alerts and no scores in alerts (FA rules for U7-U11). Matches the site's TEAM.publicScores.
 let SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";
 let AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
+// "football" (the default), "rugby-union" or "rugby-league" (TEAM.sport): rugby alerts say try, conversion and so on
+let SPORT = Deno.env.get("SPORT") ?? "football";
+const RSCORE: Record<string, string> = { try: "Try", con: "Conversion", pen: "Penalty goal", drop: "Drop goal", pt: "Penalty try" };
 // The player of the match sponsor (TEAM.potm.sponsor and .icon in docs/team.js). POTM_SPONSOR=none for a plain "Player of the match".
 const POTM_SPONSOR = (Deno.env.get("POTM_SPONSOR") ?? "Coffey Coffee").trim();
 let POTM = POTM_SPONSOR && POTM_SPONSOR !== "none" ? `${POTM_SPONSOR} Player of the Match` : "Player of the Match";
@@ -28,6 +31,7 @@ async function loadTeam() {
   if (!t) return;
   if (t.name) US = t.name;
   if (t.ageGroup) AGE = t.ageGroup;
+  if (t.sport) SPORT = t.sport;
   SCORES = ENV_SCORES && t.publicScores !== false;
   const sp = (t.potm?.sponsor ?? "").trim();
   POTM = sp ? `${sp} Player of the Match` : "Player of the Match";
@@ -83,13 +87,19 @@ async function send(kind: Kind | null, alert: Alert, only?: string) {
 }
 
 // ---- live match events ----
-type Ev = { k: string; at?: number; n?: string; a?: string; na?: number; on?: string; off?: string; s?: string; m?: string; form?: string; line?: string[]; bench?: string[]; re?: number };
+type Ev = { k: string; t?: string; p?: number; at?: number; n?: string; a?: string; na?: number; on?: string; off?: string; s?: string; m?: string; form?: string; line?: string[]; bench?: string[]; re?: number };
 type Match = { id: string; date: string; opp: string; ko: string; venue: string; ha: string; us: number | null; them: number | null; postponed: boolean; stage: string | null; comp?: string; squad?: string[] | null; potm?: string | null; live: { status?: string; events?: Ev[] } | null };
 
 function liveAlert(e: Ev, m: Match): Alert | null {
   const url = `${SITE}?live=${encodeURIComponent(m.id)}`, tag = `live-${m.id}`, opp = m.opp || "the opposition";
   const score = SCORES ? `${US} ${e.s ?? `${m.us ?? 0}–${m.them ?? 0}`} ${opp}` : `${US} v ${opp}`;
   if (!SCORES && (e.k === "goal" || e.k === "them")) return null;
+  if (SPORT.startsWith("rugby")) switch (e.k) {
+    case "lu": return e.line?.length ? { title: e.re ? "🔁 Line-up change" : "✅ Line-up confirmed", body: `${US} v ${opp}: ${e.line.filter(Boolean).join(", ")}.${e.bench?.length ? ` Replacements: ${e.bench.join(", ")}.` : ""}`, url, tag: `lu-${m.id}` } : null;
+    case "goal": return { title: e.t === "pt" ? "🏉 Penalty try!" : e.t && e.t !== "try" ? `🎯 ${RSCORE[e.t] ?? "Kick"}${e.n ? `: ${e.n}` : ""}` : `🏉 TRY! ${e.n ?? US} scores`, body: score, url, tag };
+    case "them": return { title: `${RSCORE[e.t ?? ""] ?? "Score"} for ${opp}`, body: score, url, tag };
+    case "sub": return e.on ? { title: `🔁 Replacement`, body: `${e.on} comes on for ${e.off ?? "a teammate"}${e.m ? ` (${e.m})` : ""}. ${score}`, url, tag } : null;
+  }
   switch (e.k) {
     // re = the coaches unlocked the line-up and locked a different one
     case "lu": return e.line?.length ? { title: e.re ? "🔁 Line-up change" : "✅ Line-up confirmed", body: `${US} v ${opp}${e.form ? ` (${e.form})` : ""}: ${e.line[0]} in goal, ${e.line.slice(1).filter(Boolean).join(", ")}.${e.bench?.length ? ` Subs: ${e.bench.join(", ")}.` : ""}`, url, tag: `lu-${m.id}` } : null;

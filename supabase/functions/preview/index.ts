@@ -15,14 +15,19 @@ const KEY = Deno.env.get("ANTHROPIC_API_KEY");
 let US = Deno.env.get("TEAM_NAME") ?? "our team";
 let AGE = Deno.env.get("AGE_GROUP") ?? "";
 let SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";
+// "football" (the default), "rugby-union" or "rugby-league": from the site (TEAM.sport), Team setup or the SPORT secret
+let SPORT = Deno.env.get("SPORT") ?? "football";
+const rugby = () => SPORT.startsWith("rugby");
+const sportName = () => rugby() ? SPORT.replace("-", " ") : "football";
+const KICKS: Record<string, string> = { con: "conversion", pen: "penalty goal", drop: "drop goal", pt: "penalty try" };
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 const out = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 type M = { id: string; date: string; opp: string; ha: string; venue: string; comp: string; ko: string; us: number | null; them: number | null;
   played: Record<string, number> | null; postponed: boolean; stage: string; squad: string[] | null;
   assists: Record<string, number> | null; potm: string | null; keepers: Record<string, number> | null; halves: Record<string, number> | null;
-  live: { events?: Ev[] } | null; report: string | null };
-type Ev = { k: string; m?: string; n?: string; a?: string; s?: string; on?: string; off?: string; form?: string; line?: string[] };
+  live: { events?: Ev[] } | null; report: string | null; kicks?: Record<string, Record<string, number>> | null };
+type Ev = { k: string; t?: string; m?: string; n?: string; a?: string; s?: string; on?: string; off?: string; form?: string; line?: string[] };
 const res = (m: M) => m.us == null || m.them == null ? null : m.us > m.them ? "W" : m.us === m.them ? "D" : "L";
 // same as oppKey() in docs/app.js, so head-to-heads match the site's
 const key = (n: string) => String(n || "").toLowerCase().replace(/\bcls\b/g, "chester le street").replace(/[^a-z0-9 ]+/g, " ")
@@ -32,8 +37,10 @@ const seasonOf = (d: string) => { const y = +d.slice(0, 4), m = +d.slice(5, 7); 
 // FA youth rule: no scores, results, scorers or league tables published for under-7s to under-11s.
 // The drafts follow it for those age groups even when the site itself shows scores.
 // An unknown age group counts as covered, so a draft never shows scores by mistake.
+// Rugby has no such fixed rule here: the drafts follow the club's own scores choice.
 const faAge = () => { const n = +((AGE.match(/\d+/) || [])[0] || 0); return !n || (n >= 7 && n <= 11); };
-const noScoreText = () => !SCORES || faAge();
+const noScoreText = () => !SCORES || (!rugby() && faAge());
+const noScoreRule = () => rugby() ? "The club doesn't publish scores for this age group" : "FA youth rules";
 
 async function loadTeam() {
   const { data } = await db.from("team_settings").select("settings").eq("id", 1).maybeSingle();
@@ -41,6 +48,7 @@ async function loadTeam() {
   if (!t) return;
   if (t.name) US = t.name;
   if (t.ageGroup) AGE = t.ageGroup;
+  if (t.sport) SPORT = t.sport;
   SCORES = SCORES && t.publicScores !== false;
 }
 
@@ -49,7 +57,7 @@ function facts(m: M, all: M[]) {
   const hide = noScoreText();
   const word = { W: "won", D: "drew", L: "lost" } as const;
   const lines = [
-    `Team: ${`${US} ${AGE}`.trim()} (grassroots football)`,
+    `Team: ${`${US} ${AGE}`.trim()} (grassroots ${sportName()})`,
     `Next game: ${m.ha === "A" ? "away at" : m.ha === "H" ? "at home to" : "against"} ${m.opp}, ${new Date(m.date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}`,
   ];
   if (m.ko) lines.push(`Kick-off: ${m.ko}`);
@@ -60,12 +68,12 @@ function facts(m: M, all: M[]) {
   else lines.push(`We haven't played ${m.opp} before.`);
   const form = done.slice(-5);
   if (form.length && !hide) lines.push(`Our last ${form.length} games (oldest first): ${form.map((x) => `${word[res(x)!]} ${x.us}-${x.them} v ${x.opp}`).join("; ")}`);
-  if (hide) lines.push("FA youth rules: don't mention any scores, results, win/loss records, goals, scorers or league positions.");
+  if (hide) lines.push(`${noScoreRule()}: don't mention any scores, results, win/loss records, ${rugby() ? "tries, points" : "goals"}, scorers or league positions.`);
   else {
     const goals: Record<string, number> = {};
     done.filter((x) => seasonOf(x.date) === seasonOf(m.date)).forEach((x) => Object.entries(x.played || {}).forEach(([n, g]) => goals[n] = (goals[n] || 0) + (+g || 0)));
     const top = Object.entries(goals).filter(([, g]) => g > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    if (top.length) lines.push(`Top scorers this season: ${top.map(([n, g]) => `${n} ${g}`).join(", ")}`);
+    if (top.length) lines.push(`Top ${rugby() ? "try " : ""}scorers this season: ${top.map(([n, g]) => `${n} ${g}`).join(", ")}`);
   }
   if (m.squad?.length) lines.push(`Squad picked: ${m.squad.join(", ")}`);
   return lines.join("\n");
@@ -73,17 +81,19 @@ function facts(m: M, all: M[]) {
 
 // what happened in a played game, in order, from the Live-mode timeline when there is one
 function reportFacts(m: M, all: M[]) {
-  const lines = [`Team: ${`${US} ${AGE}`.trim()} (grassroots football)`,
+  const lines = [`Team: ${`${US} ${AGE}`.trim()} (grassroots ${sportName()})`,
     `Game: ${m.ha === "A" ? "away at" : m.ha === "H" ? "at home to" : "against"} ${m.opp}, ${new Date(m.date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}${m.comp ? `, ${m.comp}` : ""}`];
   if (m.venue) lines.push(`Venue: ${m.venue}`);
   const SCORES = !noScoreText(), r = res(m);
   if (SCORES && r) lines.push(`Result: ${{ W: "won", D: "drew", L: "lost" }[r]} ${m.us}-${m.them}`);
-  if (!SCORES) lines.push("FA youth rules: don't mention the score, the result (won, drew or lost), goals, who scored or assisted, clean sheets or league positions.");
+  if (!SCORES) lines.push(rugby() ? `${noScoreRule()}: don't mention the score, the result (won, drew or lost), tries, kicks, points, who scored or league positions.` : "FA youth rules: don't mention the score, the result (won, drew or lost), goals, who scored or assisted, clean sheets or league positions.");
   const pl = Object.keys(m.played || {});
   if (pl.length) lines.push(`Played: ${pl.join(", ")}`);
   if (SCORES) {
     const g = Object.entries(m.played || {}).filter(([, n]) => +n > 0);
-    if (g.length) lines.push(`Our scorers: ${g.map(([n, c]) => +c > 1 ? `${n} ${c}` : n).join(", ")}`);
+    if (g.length) lines.push(`${rugby() ? "Our try scorers" : "Our scorers"}: ${g.map(([n, c]) => +c > 1 ? `${n} ${c}` : n).join(", ")}`);
+    const kk = Object.entries(m.kicks || {}).map(([n, k]) => [n, Object.entries(k).filter(([, c]) => +c > 0).map(([t, c]) => `${c} ${KICKS[t] || t}${+c > 1 ? "s" : ""}`).join(", ")]).filter(([, x]) => x);
+    if (kk.length) lines.push(`Kicks: ${kk.map(([n, x]) => `${n} (${x})`).join(", ")}`);
     const a = Object.entries(m.assists || {}).filter(([, n]) => +n > 0);
     if (a.length) lines.push(`Assists: ${a.map(([n, c]) => +c > 1 ? `${n} ${c}` : n).join(", ")}`);
   }
@@ -94,9 +104,9 @@ function reportFacts(m: M, all: M[]) {
   const tl = ev.map((e) => {
     const t = e.m ? `${e.m} ` : "";
     switch (e.k) {
-      case "ko": return `Kick-off, ${e.form} formation: ${(e.line || []).join(", ")} (first named in goal)`;
-      case "goal": return SCORES ? `${t}GOAL ${e.n}${e.a ? `, assisted by ${e.a}` : ""} (${e.s})` : "";
-      case "them": return SCORES ? `${t}${m.opp} scored (${e.s})` : "";
+      case "ko": return rugby() ? `Kick-off: ${(e.line || []).filter(Boolean).join(", ")}` : `Kick-off, ${e.form} formation: ${(e.line || []).join(", ")} (first named in goal)`;
+      case "goal": return !SCORES ? "" : rugby() ? `${t}${e.t && e.t !== "try" ? (KICKS[e.t] || e.t).toUpperCase() : "TRY"}${e.n ? ` ${e.n}` : ""} (${e.s})` : `${t}GOAL ${e.n}${e.a ? `, assisted by ${e.a}` : ""} (${e.s})`;
+      case "them": return SCORES ? `${t}${m.opp} scored${rugby() && e.t ? ` a ${e.t === "try" ? "try" : KICKS[e.t] || e.t}` : ""} (${e.s})` : "";
       case "sub": return `${t}${e.on} on for ${e.off}`;
       case "gk": return `${t}${e.n} went in goal`;
       case "form": return `${t}switched to ${e.form}`;
@@ -125,6 +135,10 @@ Write 2 or 3 short paragraphs, about 80 to 140 words in total, in warm, upbeat B
 Use only the facts you are given. Don't invent players, injuries, tactics, weather, quotes or anything about the opponents beyond what's listed. Only mention players by the first names given, and never single out a child for criticism. Keep the focus on effort, fun and teamwork rather than on having to win.
 If there are no previous meetings, say it's a first meeting. If a fact (like kick-off time or venue) is missing, leave it out rather than guessing. End with a friendly line to parents, for example about coming along to support.`;
 
+// the same instructions for a rugby team: rugby words and emojis instead of football ones
+const forSport = (p: string) => !rugby() ? p : p.replaceAll("football", sportName()).replaceAll("⚽ 🧤", "🏉").replaceAll("⚽", "🏉")
+  .replace("(goals, assists, substitutions, half time)", "(tries, conversions and kicks, replacements, half time)").replace("substitutions, the keepers and the player of the match", "replacements and the player of the match");
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -138,15 +152,16 @@ Deno.serve(async (req) => {
     if (team?.name) US = String(team.name);
     if (team?.ageGroup) AGE = String(team.ageGroup);
     if (team?.publicScores === false) SCORES = false;
-    const { data: all, error } = await db.from("matches").select("id,date,opp,ha,venue,comp,ko,us,them,played,postponed,stage,squad,assists,potm,keepers,halves,live,report");
+    if (team?.sport) SPORT = String(team.sport);
+    const { data: all, error } = await db.from("matches").select("id,date,opp,ha,venue,comp,ko,us,them,played,postponed,stage,squad,assists,potm,keepers,halves,live,report" + (rugby() ? ",kicks" : ""));
     if (error) throw error;
     const m = (all as M[]).find((x) => x.id === match);
     if (!m) return out({ error: "not_found" }, 404);
     await loadTeam();
-    let system = SYSTEM, content = `Write a preview of our next game from these facts:\n\n${facts(m, all as M[])}`;
+    let system = forSport(SYSTEM), content = `Write a preview of our next game from these facts:\n\n${facts(m, all as M[])}`;
     if (kind === "report") {
       const r = reportFacts(m, all as M[]);
-      system = REPORT;
+      system = forSport(REPORT);
       content = `${r.examples.length ? r.examples.map((t, i) => `<example_report_${i + 1}>\n${t}\n</example_report_${i + 1}>`).join("\n\n") + "\n\n" : ""}Write the report for this game from these facts:\n\n${r.facts}`;
     }
     const client = new Anthropic({ apiKey: KEY });
