@@ -425,3 +425,13 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 .tl li.bad{opacity:.7}
 /* get the app: numbered install steps */
 .steps{margin:0;padding-left:22px;display:grid;gap:8px;font-size:15px}
+/* tactics board (coaches only) */
+.tb .seg{flex-wrap:wrap}
+.tbwrap{display:flex;justify-content:center}
+.tbpitch{display:block;width:100%;max-width:560px;max-height:calc(100vh - 120px);max-height:calc(100svh - 120px);border-radius:12px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.18);touch-action:none;user-select:none;-webkit-user-select:none}
+.tbpitch .tbt{cursor:grab}.tbpitch [data-tbarrow]{cursor:pointer}
+.tbmodes{position:sticky;top:0;z-index:5;align-self:stretch;justify-content:center}.tbmodes button{flex:1;min-height:44px;font-weight:800;padding-inline:8px}
+.tb .chips{display:inline-flex;flex-wrap:wrap;gap:6px;vertical-align:middle}
+.tb .chips button{min-height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--field);font:700 14px var(--body);color:var(--ink);cursor:pointer}
+.tb .tbsaved{display:inline-flex}.tb .tbsaved button:first-child{border-radius:999px 0 0 999px}.tb .tbsaved button:last-child{border-radius:0 999px 999px 0;border-left:0;padding:0 10px}
+.tb .sw{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.35);margin-right:6px;vertical-align:-1px}
