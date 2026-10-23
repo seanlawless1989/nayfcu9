@@ -5,6 +5,7 @@
 //   POST {squad: "<id>"}  from a coach's phone after saving Pick squad: "squad announced" (again only if it changed)
 //   POST {potm: "<id>"}   from a coach's phone after saving the player of the match
 //   POST {postponed: "<id>"} from a coach's phone after marking an upcoming game postponed (or back on)
+//   POST {preview: "<id>"} from a coach's phone after saving a match preview (once per game)
 // Only names already shown on the site go in an alert. See supabase/3_notifications.sql.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -88,7 +89,7 @@ async function send(kind: Kind | null, alert: Alert, only?: string) {
 
 // ---- live match events ----
 type Ev = { k: string; t?: string; p?: number; at?: number; n?: string; a?: string; na?: number; on?: string; off?: string; s?: string; m?: string; form?: string; line?: string[]; bench?: string[]; re?: number };
-type Match = { id: string; date: string; opp: string; ko: string; venue: string; ha: string; us: number | null; them: number | null; postponed: boolean; stage: string | null; comp?: string; squad?: string[] | null; potm?: string | null; live: { status?: string; events?: Ev[] } | null };
+type Match = { id: string; date: string; opp: string; ko: string; venue: string; ha: string; us: number | null; them: number | null; postponed: boolean; stage: string | null; comp?: string; squad?: string[] | null; potm?: string | null; preview?: string | null; live: { status?: string; events?: Ev[] } | null };
 
 function liveAlert(e: Ev, m: Match): Alert | null {
   const url = `${SITE}?live=${encodeURIComponent(m.id)}`, tag = `live-${m.id}`, opp = m.opp || "the opposition";
@@ -181,7 +182,16 @@ async function postponedAlert(m: Match) {
   return await send("reminders", { title: "⚠️ Game postponed", body: `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"} on ${dayName(m.date)} is off. New date to follow.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `pp-${m.id}` });
 }
 
-const COLS = "id,date,opp,ko,venue,ha,us,them,postponed,stage,comp,squad,potm,live";
+// ---- match preview (written by a coach before the game) ----
+async function previewAlert(m: Match) {
+  const text = (m.preview ?? "").trim();
+  if (!text || m.postponed || m.us != null || m.stage === "placeholder" || m.date < londonDate(Date.now()) || (m.live?.status && m.live.status !== "pre")) return -1;
+  const { data: claimed } = await db.rpc("push_claim_preview", { p_match: m.id }); if (!claimed) return -1; // already sent for this game
+  const when = `${dayName(m.date)}${/\d[:.]\d\d/.test(m.ko || "") ? `, ${m.ko.trim()} KO` : ""}`;
+  return await send("reminders", { title: "📰 Match preview", body: `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"}, ${when}. Tap to read it.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `preview-${m.id}` });
+}
+
+const COLS = "id,date,opp,ko,venue,ha,us,them,postponed,stage,comp,squad,potm,preview,live";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
@@ -194,6 +204,9 @@ Deno.serve(async (req) => {
     } else if (typeof body.postponed === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.postponed).maybeSingle();
       out.postponed = data ? await postponedAlert(data as Match) : -1;
+    } else if (typeof body.preview === "string") {
+      const { data } = await db.from("matches").select(COLS).eq("id", body.preview).maybeSingle();
+      out.preview = data ? await previewAlert(data as Match) : -1;
     } else if (typeof body.squad === "string" || typeof body.potm === "string") {
       const id = typeof body.squad === "string" ? body.squad : body.potm;
       const { data } = await db.from("matches").select(COLS).eq("id", id).maybeSingle();
