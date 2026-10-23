@@ -512,7 +512,7 @@ function chaseView(){const m=matches.find(x=>x.id===msgMatch);if(!m)return `<div
 // ---------- match alerts (phone notifications) ----------
 // Families turn these on per phone. The "notify" Supabase function sends kick-off reminders 10 and 2 minutes
 // before and live updates (line-up, kick-off, goals, subs, half time, full time). iPhones only allow it from the home-screen app.
-// Each phone picks what it gets: reminders (squad, kick-off, postponed), goals, results (full time and player of the match), or everything live.
+// Each phone picks what it gets: reminders (squad, preview, kick-off, postponed), goals, results (full time and player of the match), or everything live.
 const AL={sub:null,checked:false,busy:false,prefs:{reminders:true,goals:false,results:false,live:true}};
 try{Object.assign(AL.prefs,JSON.parse(localStorage.getItem(SK+".alerts")||"{}"))}catch(e){}
 function alIos(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)}
@@ -534,7 +534,7 @@ async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.s
 // after a live update from the coach's phone: send any new alerts straight away (the every-minute check is the back-up)
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:{match:id}}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
-async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.potm??data.postponed;return typeof v==="number"?v:null}catch(e){return null}}
+async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.potm??data.postponed??data.preview;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
@@ -543,7 +543,7 @@ function alertsView(){if(!AL.checked)alCheck();
   else if(Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
   else{const on=!!AL.sub;
     const box=(id,k,label,hint)=>`<label class="row" style="cursor:pointer"><span style="white-space:nowrap"><input type="checkbox" id="${id}"${AL.prefs[k]?" checked":""}${k!=="reminders"&&k!=="live"&&AL.prefs.live?" disabled":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">${label}</span><span class="hint">${hint}</span></label>`;
-    bodyHtml=`<p class="hint" style="margin:0">Choose what this phone gets:</p><div class="av">${box("al-rem","reminders","Reminders","squad picked, 10 and 2 minutes before kick-off, games postponed")}
+    bodyHtml=`<p class="hint" style="margin:0">Choose what this phone gets:</p><div class="av">${box("al-rem","reminders","Reminders","squad picked, match previews, 10 and 2 minutes before kick-off, games postponed")}
       ${TEAM.publicScores===false?"":box("al-goals","goals",SP.Goals,`each ${SP.goal} as it goes in`)}
       ${box("al-res","results","Results",`full time and the ${esc(POTM)}`)}
       ${box("al-live","live","Everything live",`line-up, kick-off, ${TEAM.publicScores===false?"":SP.goals+", "}subs, half time and full time`)}</div>
@@ -1284,7 +1284,7 @@ function draftPreview(m){const d=new Date(m.date+"T12:00:00").toLocaleDateString
   return `${SP.ball} ${p1} ${p2}\n\n💪 The ${PL} have been working hard in training. Come along and cheer them on! 🙌`}
 function previewCard(m){const has=hasPreview(m),before=isFixture(m)&&!isLive(m)&&!m.postponed;
   if(canWrite&&mdPrevWrite)return `<section class="card report"><h3>Match preview</h3><textarea id="mdPreview" rows="8" placeholder="What's coming up? Who are we playing, what are we working on, anything parents should know. Everyone can read this once it's saved.">${esc(m.preview||"")}</textarea>
-    <div class="btns"><button class="btn ghost" id="mdPreviewAi">✨ Suggest a preview</button></div><p class="hint">The suggestion is written by AI from the stats. Read it and change anything before you save. Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdPreviewSave">Save preview</button><button class="btn ghost" id="mdPreviewCancel">Cancel</button></div></section>`;
+    <div class="btns"><button class="btn ghost" id="mdPreviewAi">✨ Suggest a preview</button></div><p class="hint">The suggestion is written by AI from the stats. Read it and change anything before you save. Use first names only. Leave a blank line between paragraphs.</p>${pickAlertable(m)?`<label class="row" style="cursor:pointer"><span><input type="checkbox" id="mdPreviewAlert" checked style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">📣 Send a preview alert to parents' phones</span></label><p class="hint">Sent once per game, the first time you save a preview. Later edits don't send another.</p>`:""}<div class="btns"><button class="btn gold" id="mdPreviewSave">Save preview</button><button class="btn ghost" id="mdPreviewCancel">Cancel</button></div></section>`;
   if(!before&&!has)return "";
   const facts=before?previewFacts(m):"";
   if(!has&&!facts&&!canWrite)return "";
@@ -2037,8 +2037,11 @@ document.addEventListener("click",async e=>{
   if(t.dataset.share){const m=matches.find(x=>x.id===mdMatch);if(!m)return;const text=shareText(m,t.dataset.share);
     if(navigator.share){try{await navigator.share({text});return}catch(e){if(e&&e.name==="AbortError")return}}
     try{await navigator.clipboard.writeText(text);toast("Copied. Paste it into WhatsApp.")}catch(e){prompt("Copy this",text)}return}
-  if(t.id==="mdPreviewSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdPreview").value.trim();t.disabled=true;
-    try{await db.collection("matches").doc(m.id).update({preview:txt||null});m.preview=txt||null;const raw=RAW.find(x=>x.id===m.id);if(raw)raw.preview=m.preview;mdPrevWrite=false;toast(txt?"Match preview saved.":"Match preview removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the preview. Check your connection and try again.")}return}
+  if(t.id==="mdPreviewSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdPreview").value.trim(),tell=!!(txt&&$("#mdPreviewAlert")&&$("#mdPreviewAlert").checked);t.disabled=true;
+    try{await db.collection("matches").doc(m.id).update({preview:txt||null});m.preview=txt||null;const raw=RAW.find(x=>x.id===m.id);if(raw)raw.preview=m.preview;mdPrevWrite=false;
+      // the function only sends the first time a game's preview is saved
+      const r=tell?await alSend({preview:m.id}):null;
+      toast(txt?`Match preview saved.${r==null?"":r>=0?" Parents with alerts on have been told.":" An alert was already sent for this game, so no new one."}`:"Match preview removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the preview. Check your connection and try again.")}return}
   if(t.id==="mdReportSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdReport").value.trim();t.disabled=true;
     try{await db.collection("matches").doc(m.id).update({report:txt||null});m.report=txt||null;mdWrite=false;toast(txt?"Match report saved.":"Match report removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the report. Check your connection and try again.")}return}
   if("mdback" in t.dataset){setView(mdFrom||"results");return}
