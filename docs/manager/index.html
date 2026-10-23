@@ -622,7 +622,9 @@ function mkPlayer([id,name,num,posD,foot,a,trait]){
 }
 function team(id){return S.teams[id]}
 function teamName(id){return id===US?"Newton Aycliffe":team(id).name}
-function badge(id,big){if(id===US)return `<img class="crestS${big?" big":""}" src="crest.png" alt="">`;const t=team(id);return `<span class="badgeT${big?" big":""}" style="background:${kit(id).s};color:${kit(id).t};border:2px solid ${kit(id).t==="#FFFFFF"?"rgba(255,255,255,.7)":kit(id).t}">${esc(t.short)}</span>`}
+// Club badges from the Touchline Tales team site (badges/). Clubs without one keep the kit-coloured initials.
+const BADGES={wfp:"wearside-fc",dla:"darlington-locomotive",chp:"chester-le-street-hilda-park",gch:"gateshead-cleveland-hall",wju:"washington-juniors",wfx:"whickham-fc",sar:"seaham-afc",glr:"leam-rangers",btj:"birtley-town",clsy:"chester-le-street-town",waw:"washington-afc",byf:"brandon-community",wun:"washington-united",mid:"middleton-rangers",bag:"bishop-auckland",hart:"fc-hartlepool",hebb:"clegwell",belm:"belmont-united",fell:"felling-magpies",amaz:"chester-le-street-amazons",hord:"horden-cw",beam:"beamish-lionesses",nes:"north-east-sport-youth",wal:"washington-afc"};
+function badge(id,big){if(id===US)return `<img class="crestS${big?" big":""}" src="crest.png" alt="">`;if(BADGES[id])return `<img class="crestS${big?" big":""}" src="badges/${BADGES[id]}.png" alt="">`;const t=team(id);return `<span class="badgeT${big?" big":""}" style="background:${kit(id).s};color:${kit(id).t};border:2px solid ${kit(id).t==="#FFFFFF"?"rgba(255,255,255,.7)":kit(id).t}">${esc(t.short)}</span>`}
 
 function firstSat(y){const d=new Date(y,8,5,12);while(d.getDay()!==6)d.setDate(d.getDate()+1);return d}
 // L league, C county cup, T one-day tournament, B no game
