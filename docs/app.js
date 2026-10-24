@@ -934,6 +934,15 @@ function minuteOf(L,at){if(!L||!L.halfStart)return "";const len=+L.halfLen||20;c
   if(L.status==="ht")return "HT";if(L.status==="ft")return "FT";
   const base=L.half===2?len:0;return el>len?`${base+len}+${el-len}'`:`${base+el}'`}
 function onPitch(){return LV.slots.filter(Boolean)}
+// current players who aren't in today's squad (a late arrival, or someone left off by mistake)
+function notInSquad(){return players.filter(p=>p.current&&!LV.squad.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name)}
+function lateAddHtml(){const r=notInSquad();return `${r.length?`<label class="f" style="max-width:320px">Late arrival: add to the squad<select id="lvAdd"><option value="">Choose…</option>${r.map(n=>`<option>${esc(n)}</option>`).join("")}</select></label>`:""}
+  <div class="btns"><input type="text" id="lvNewName" placeholder="Not listed? First name" aria-label="Player not listed: first name" style="max-width:220px"><button class="btn ghost" id="lvNewAdd">Add to squad</button></div>`}
+// a player who isn't on the site yet (or was marked as left) joins today's squad, and the Squad page, from the live match screen
+async function liveNewPlayer(name){const m=matches.find(x=>x.id===LV.id);name=name.trim();if(!name){toast("Type a first name.");return}
+  const p=players.find(p=>p.name.toLowerCase()===name.toLowerCase());if(p)name=p.name;
+  if(!m.practice){try{if(p){if(!p.current){await db.collection("players").doc(p.id).update({current:true});p.current=true}}else{await db.collection("players").doc(slug(name)).set({name,num:null,current:true});if(!players.some(x=>x.name===name))players.push({id:slug(name),name,num:null,current:true})}}catch(e){toast(`Couldn't add ${name}. Try again.`);return}}
+  if(!LV.squad.includes(name))LV.squad.push(name);liveSaveLocal();render();toast(`${name} added to the squad.`)}
 function bench(){return LV.squad.filter(n=>!LV.slots.includes(n)&&!(LV.sin&&LV.sin[n]))}
 // ---------- sub plan (coaches only: it stays on the coach's phone and never goes to parents) ----------
 // LV.plan = {mode:"off"|"equal"|"manual", gk2: keeper for the second half, ch:[{m,on,off}] for manual, at: last change point dealt with, due:{m,chs}}
@@ -1059,21 +1068,23 @@ function liveView(){
       <label class="f" style="flex-direction:row;align-items:center;gap:8px">Minutes each half<input type="number" id="lvLen" min="5" max="45" value="${LV.halfLen}" style="width:70px"></label></div>
     ${pitchHtml(LV,!LV.locked)}
     <p class="hint">Subs: ${bench().map(esc).join(", ")||"none"}. ${LV.locked?`🔒 Line-up locked${m.practice?"":" and sent to parents"}. Unlock it to make a change; locking it again tells parents what changed.`:`Pick a player for each position.${SP.keeper?" The keeper is the GK spot.":""} Lock the line-up when it's final${m.practice?"":" and parents with alerts on get \"Line-up confirmed\""}.`}</p>
+    ${lateAddHtml()}
     <div class="btns">${LV.locked?`<button class="btn gold bigbtn" id="lvKo">Kick off</button><button class="btn ghost" id="lvUnlock">🔓 Unlock line-up</button>`:`<button class="btn gold bigbtn" id="lvLock"${onPitch().length<SIDE?" disabled":""}>🔒 Lock line-up</button><button class="btn ghost" id="lvKo"${onPitch().length<5?" disabled":""}>Kick off</button>`}${m.practice?"":`<button class="btn ghost" data-tbmatch="${esc(m.id)}">📋 Tactics board</button>`}<button class="btn ghost" data-view="fixtures">Back</button></div></section>${planCard()}${fairNudge()}</div>`;
   const pl=played(m),as=assistsOf(m),on=onPitch(),F=FORMS[LV.form];
   return `<div class="live">${pr}${liveBoard(m,LV)}${planDueHtml()}
   <div class="btns">${LV.status==="live"&&LV.half===1?`<button class="btn" id="lvHt">Half time</button>`:""}${LV.status==="ht"?`<button class="btn gold" id="lv2h">Start 2nd half</button>`:""}
-    <button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" id="lvUndo">Undo last</button>
+    <button class="btn ghost" id="lvOther">${RUGBY?"🏉 Try by someone else":"⚽ Someone else scored"}</button><button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" id="lvUndo">Undo last</button>
     ${RUGBY&&Object.keys(FORMS).length<2?"":`<div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}">${f}</button>`).join("")}</div>`}</div>${RUGBY?rugbyLiveExtras(m):""}
   ${pitchHtml(LV,false)}
   <div class="lp">${LV.slots.map((n,i)=>n?`<div class="pl on"><div class="nm"><span>${esc(n)}</span><span class="tag">${F.label[i]}</span></div>
     <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">${RUGBY?`🏉 Try ${pl[n]||0}`:`⚽ ${pl[n]||0}`}</button><button data-lvsub="${i}">🔁 Sub</button>${RUGBY?`<button data-lvsin="${i}" aria-label="Sin bin ${esc(n)}">🟨</button>`:""}</div></div>`:"").join("")}</div>
   <p class="hint"><b>Subs bench:</b> ${bench().map(esc).join(", ")||"none"}. Rolling subs: tap 🔁 on the player coming off.</p>
-  ${(rest=>rest.length?`<label class="f" style="max-width:320px">Late arrival: add to the bench<select id="lvAdd"><option value="">Choose…</option>${rest.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select></label>`:"")(players.filter(p=>p.current&&!LV.squad.includes(p.name)))}
+  ${lateAddHtml()}
   <div class="btns">${LV.half===2&&LV.status==="live"?`<button class="btn gold bigbtn" id="lvDone">Full time: save and finish</button>`:""}<button class="btn ghost" data-tl="${esc(m.id)}">Parents' view</button><button class="btn ghost" data-view="fixtures">${m.practice?"End practice":"Leave (keeps going)"}</button></div>
   <section class="card"><h3>Timeline</h3>${timelineHtml(LV,m)}</section>
   ${RUGBY?rugbyAsk(m,on):LV.ask?`<div class="ask"><b>Who assisted ${esc(LV.ask)}'s goal?</b><div class="chips">${on.filter(n=>n!==LV.ask).map(n=>`<button data-lvasg="${esc(n)}">${esc(n)}</button>`).join("")}<button data-lvasg="">No assist</button></div></div>`:""}
-  ${LV.subSlot!=null?`<div class="ask"><b>Who's coming on for ${esc(LV.slots[LV.subSlot])}?</b><div class="chips">${bench().map(n=>`<button data-lvon="${esc(n)}">${esc(n)}</button>`).join("")}</div>
+  ${LV.askOther?`<div class="ask"><b>Who scored${RUGBY?" the try":""}?</b><div class="chips">${bench().map(n=>`<button data-lvother="${esc(n)}">${esc(n)}</button>`).join("")}${notInSquad().map(n=>`<button data-lvother="${esc(n)}">${esc(n)} (not in squad)</button>`).join("")}<button data-lvother="">Cancel</button></div><p class="hint" style="margin:6px 0 0">Players on the pitch have their own ${RUGBY?"🏉":"⚽"} button. Anyone not in the squad is added to it. Not listed at all? Type their name under "Not listed?" below, then come back here.</p></div>`:""}
+  ${LV.subSlot!=null?`<div class="ask"><b>Who's coming on for ${esc(LV.slots[LV.subSlot])}?</b><div class="chips">${bench().map(n=>`<button data-lvon="${esc(n)}">${esc(n)}</button>`).join("")}${notInSquad().map(n=>`<button data-lvon="${esc(n)}">${esc(n)} (not in squad)</button>`).join("")}</div>
     <b style="display:block;margin-top:10px">Or swap positions with</b><div class="chips">${on.filter(n=>n!==LV.slots[LV.subSlot]).map(n=>`<button data-lvswap="${esc(n)}">${esc(n)} (${F.label[LV.slots.indexOf(n)]})</button>`).join("")}<button data-lvcancel="1">Cancel</button></div></div>`:""}
   </div>`;
 }
@@ -1552,6 +1563,9 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       pl.at=d.m;pl.due=null;liveSaveLocal();render();livePush();return}
     if(b.id==="lvKo"){LV.status="live";LV.half=1;LV.halfStart=now;onPitch().forEach(n=>clockOn(n,now));addEv({k:"ko",form:LV.form,line:LV.slots.slice()});liveSaveLocal();render();livePush()}
     if(b.dataset.lvgoal){if(RUGBY)rugbyScore("try",b.dataset.lvgoal);else liveGoal(b.dataset.lvgoal)}
+    if(b.id==="lvNewAdd"){const i=$("#lvNewName");liveNewPlayer(i?i.value:"");return}
+    if(b.id==="lvOther"){LV.askOther=!LV.askOther;LV.subSlot=null;LV.ask=null;LV.askKick=null;LV.askThem=false;render()}
+    if(b.dataset.lvother!=null){const n=b.dataset.lvother;LV.askOther=false;if(!n){render()}else{if(!LV.squad.includes(n))LV.squad.push(n);if(RUGBY)rugbyScore("try",n);else liveGoal(n)}}
     if(b.dataset.lvcon!=null){if(b.dataset.lvcon)rugbyScore("con",b.dataset.lvcon);else{LV.ask=null;liveSaveLocal();render()}}
     if(b.dataset.lvkick){LV.askKick=b.dataset.lvkick;LV.ask=null;LV.askThem=false;render()}
     if(b.dataset.lvkicker!=null){if(b.dataset.lvkicker)rugbyScore(LV.askKick,b.dataset.lvkicker);else{LV.askKick=null;render()}}
@@ -1562,7 +1576,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     if(b.dataset.lvasg!=null)liveAssist(b.dataset.lvasg);
     if(b.dataset.lvsub){LV.subSlot=+b.dataset.lvsub;render()}
     if(b.dataset.lvcancel){LV.subSlot=null;render()}
-    if(b.dataset.lvon){const i=LV.subSlot,off=LV.slots[i],on=b.dataset.lvon;LV.slots[i]=on;LV.subSlot=null;if(LV.status==="live"){clockOff(off,now);clockOn(on,now)}addEv({k:"sub",off,on});if(i===0)addEv({k:"gk",n:on});liveSaveLocal();render();livePush()}
+    if(b.dataset.lvon){const i=LV.subSlot,off=LV.slots[i],on=b.dataset.lvon;if(!LV.squad.includes(on))LV.squad.push(on);LV.slots[i]=on;LV.subSlot=null;if(LV.status==="live"){clockOff(off,now);clockOn(on,now)}addEv({k:"sub",off,on});if(i===0)addEv({k:"gk",n:on});liveSaveLocal();render();livePush()}
     if(b.dataset.lvswap){const i=LV.subSlot,j=LV.slots.indexOf(b.dataset.lvswap),a=LV.slots[i];LV.slots[i]=LV.slots[j];LV.slots[j]=a;LV.subSlot=null;if(i===0||j===0)addEv({k:"gk",n:LV.slots[0]});liveSaveLocal();render();livePush()}
     if(b.id==="lvThem"&&RUGBY){LV.askThem=true;LV.ask=null;LV.askKick=null;render()}
     else if(b.id==="lvThem"){m.them=(+m.them||0)+1;addEv({k:"them"});liveSaveLocal();render();livePush({them:m.them})}
