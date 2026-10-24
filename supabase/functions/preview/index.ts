@@ -8,7 +8,9 @@ import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const URL_ = Deno.env.get("SUPABASE_URL")!;
-const db = createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+const service = (schema = "public") => createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema }, auth: { persistSession: false } });
+const HOME = service();
+let db = HOME;
 const KEY = Deno.env.get("ANTHROPIC_API_KEY");
 // The site sends its own team.js name, age group and score setting with each request, so every club's copy
 // works without extra secrets. Team setup answers (team_settings) win over both; see loadTeam().
@@ -142,13 +144,17 @@ const forSport = (p: string) => !rugby() ? p : p.replaceAll("football", sportNam
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    // coaches only: check the caller's sign-in against public.coaches
+    // A team sharing this project says which schema is theirs (tools/team_schema_sql.py); otherwise it's public.
+    const body = await req.json().catch(() => ({}));
+    const schema = typeof body.schema === "string" && /^[a-z][a-z0-9_]{0,40}$/.test(body.schema) ? body.schema : "public";
+    // coaches only: check the caller's sign-in against that team's coaches list
     const auth = req.headers.get("Authorization") ?? "";
-    const me = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
+    const me = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { db: { schema }, global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
     const { data: ok } = await me.rpc("is_coach");
     if (!ok) return out({ error: "coaches_only" }, 403);
     if (!KEY) return out({ error: "no_key" }); // 200 so the site can read why
-    const { match, kind, team } = await req.json();
+    db = schema === "public" ? HOME : service(schema);
+    const { match, kind, team } = body;
     if (team?.name) US = String(team.name);
     if (team?.ageGroup) AGE = String(team.ageGroup);
     if (team?.publicScores === false) SCORES = false;

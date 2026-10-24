@@ -195,9 +195,12 @@ const COLS = "id,date,opp,ko,venue,ha,us,them,postponed,stage,comp,squad,potm,pr
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
+    const body = await req.json().catch(() => ({}));
+    // A team sharing this project (its own schema, tools/team_schema_sql.py) has no match alerts yet: never send
+    // this team's alerts for it.
+    if (body.schema && body.schema !== "public") return new Response("{}", { headers: { ...CORS, "Content-Type": "application/json" } });
     await loadKeys();
     await loadTeam();
-    const body = await req.json().catch(() => ({}));
     const out: Record<string, number> = {};
     if (typeof body.test === "string") {
       out.test = await send(null, { title: "🔔 Match alerts are on", body: `You'll get kick-off reminders and ${SCORES ? "live scores" : "live updates"} for the ${AGE}.`, url: SITE, tag: "welcome" }, body.test);
