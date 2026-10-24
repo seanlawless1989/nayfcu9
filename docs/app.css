@@ -463,3 +463,10 @@ body.tbfs-on .toast{z-index:1001}
 .tbfssel .note{margin:0;font-size:17px}
 .tbfssel .chips button,.tbfssel .mini{min-height:48px;font-size:16px;padding:0 16px}
 @media (max-height:520px){.tbfsbar button{min-height:44px;font-size:15px}.tbfs.land .tbfsbar{width:118px}.tbfssel .note{font-size:15px}.tbfssel .chips button,.tbfssel .mini{min-height:40px;font-size:14px;padding:0 12px}}
+/* supporter cheers: the card on match pages and the live page, and the pop-up that slides in at the bottom */
+.cheers .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.cheers .chips button{min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--field);font:700 14.5px var(--body);color:var(--ink);cursor:pointer}
+.cheers .chips button:active{background:var(--gold);color:var(--goldInk)}.cheers .chips button:disabled{opacity:.5}
+.cwall{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}.cwall li{padding:8px 10px;border-radius:10px;background:var(--field);font-size:14px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.cheerpop{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);transform:translateX(-50%);z-index:9000;max-width:calc(100% - 32px);padding:12px 18px;border-radius:999px;background:var(--gold);color:var(--goldInk);font:700 16px var(--body);box-shadow:0 8px 24px rgb(var(--shadowRGB) / .35);cursor:pointer;animation:cpop .4s ease-out}
+@keyframes cpop{from{transform:translate(-50%,40px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+@media (prefers-reduced-motion:reduce){.cheerpop{animation:none}}
