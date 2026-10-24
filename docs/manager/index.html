@@ -13,6 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="U9s Manager">
+<script>window.__gcOn=true</script>
+<script data-goatcounter="https://nayfcmanager.goatcounter.com/count" async src="https://gc.zgo.at/count.js" onload="window.__gcFlush&&__gcFlush()"></script>
 <title>Aycliffe U9s Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -761,6 +763,9 @@ function buildSeason(){
     return {name,teams:g,fx,final:null,stage:"group",place:null,potm:null,goals:{}}});
   S.wk=0;S.day=0;S.trained=false;S.wkTrain=null;S.trainRep=null;S.today=[];
 }
+// Anonymous visit counts (live site only, see make_app.py). No cookies and nothing about the player is sent.
+function track(n){if(!window.__gcOn)return;const g=window.goatcounter;if(g&&g.count){try{g.count({path:n,title:n,event:true})}catch(e){}}else(window.__gcq=window.__gcq||[]).push(n)}
+window.__gcFlush=()=>(window.__gcq||[]).splice(0).forEach(track);
 function newGame(keepName){
   S={v:3,year:2026,age:9,season:1,teams:{},players:SQUAD.map(mkPlayer),
     tac:{form:"1-2-1",xi:[],subs:[],ment:1,cap:"lydia",plan:{mode:"off",gk:true,ch:[]}},train:{focus:"passing",int:1,indiv:{}},
@@ -943,7 +948,7 @@ function theirStr(){
 function startMatch(fr,ch){
   const ev=curEvent();const of=ch?{comp:"X",f:{h:US,a:ch.opp}}:fr?{comp:"F",f:{h:US,a:FRIENDLY_OPP}}:ourFixture(ev);if(!of||!of.f)return;
   if(!S.trained&&!fr&&!ch)applyTraining();
-  fixXI();
+  fixXI();track(CH?"challenge-played":"match-played");
   const T=of.comp==="T";const tour=T?of.tour:null;
   const opp=of.f.h===US?of.f.a:of.f.h;const home=!T&&of.f.h===US;
   const cond={};const base=[100,97,91][S.wkTrain?S.wkTrain.int:1]-(S.extraSession&&!ch?4:0);
@@ -1568,7 +1573,7 @@ function gameCard(){
     <p class="hint" style="margin:12px 0 6px">Load a game from a code:</p>
     <textarea id="loadCode" rows="3" placeholder="Paste a backup code here" style="width:100%;font:12px monospace;border-radius:9px;padding:8px;border:1.5px solid var(--line);background:var(--field);color:inherit"></textarea>
     <div class="btns" style="margin-top:6px"><button class="btn ghost small" data-act="loadcode">Load this game</button></div></details>
-   <div class="btns" style="margin-top:14px"><button class="btn ghost small" data-act="${confirmNew?"newgo":"new"}">${confirmNew?"Tap again to wipe this save and start over":"Start a new game"}</button></div></section>`;
+   <div class="btns" style="margin-top:14px"><button class="btn ghost small" data-act="${confirmNew?"newgo":"new"}">${confirmNew?"Tap again to wipe this save and start over":"Start a new game"}</button></div>${window.__gcOn?`<p class="hint" style="margin-top:12px">We count visits and matches played to see how many people enjoy the game. No cookies, no names and nothing about you is collected.</p>`:""}</section>`;
 }
 function clubV(){
   return `<div class="stack">${S.manager||S.guide===0?"":nameCard()}${challengesCard()}${timelineCard()}<section class="card"><h2>Trophy cabinet</h2>${cabinet()}</section>${gameCard()}</div>`;
@@ -2387,7 +2392,7 @@ document.addEventListener("click",e=>{
   if(d.act==="auto"){autoPick(false);sel=null;saveGame();render();toast("Best eight picked.");return}
   if(d.act==="share"){autoPick(true);sel=null;saveGame();render();toast("Squad rotated: girls left out last time come in first.");return}
   if(d.act==="new"){confirmNew=true;render();return}
-  if(d.act==="newgo"){confirmNew=false;newGame(S.manager);view="home";render();toast("New game started.");return}
+  if(d.act==="newgo"){confirmNew=false;newGame(S.manager);track("new-career");view="home";render();toast("New game started.");return}
   if(d.act==="nextseason"){nextSeason();window.scrollTo({top:0});return}
   if(d.msg){openMsg(+d.msg);return}
   if(d.inav){const i=S.inbox.findIndex(m=>m.id===inboxOpen);
@@ -2466,7 +2471,7 @@ function migrate(){
 }
 function start(data){
   S=(data&&data.S)||loadGame();
-  if(!S||S.v!==3)newGame();
+  if(!S||S.v!==3){newGame();track("new-career")}
   migrate();
   if(data&&data.view&&data.view!=="match")view=data.view;
   render();
