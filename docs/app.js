@@ -174,7 +174,17 @@ function render(){
   document.body.classList.toggle("ro",!canWrite);
 }
 
-function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const m=live||nextFixture();if(!m)return "";
+// a tournament we've entered whose games aren't on the site yet comes before the next match when it's sooner
+function nextTournament(before){const today=todayLocal();return tournaments.filter(t=>t.date&&tEnd(t)>=today&&!tGames(t).some(isFixture)&&(!before||t.date<before)).sort((a,b)=>a.date.localeCompare(b.date))[0]}
+function tHeroHtml(t){const d=new Date(t.date+"T12:00:00");const days=Math.max(0,Math.round((d-new Date(todayLocal()+"T12:00:00"))/864e5));
+  const ini=(t.name||"?").split(/\s+/).filter(w=>!/^(the|of)$/i.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase()||"🏆";
+  const cd=days===0?"Today":days===1?"Tomorrow":`In ${days} days`;
+  return `<section class="hero"><div class="kick">Next up · Tournament</div>
+    <div class="vs"><div class="side"><img src="${CREST}" alt=""><span>${esc(TEAM.name)}</span></div><div class="mid"><b>🏆</b><span>Tournament</span></div><div class="side"><span class="ini">${esc(ini)}</span><span>${esc(t.name||"Tournament")}</span></div></div>
+    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${t.venue?`<span class="pill">📍 ${esc(t.venue)}</span>`:""}</div>
+    <div class="hpv">${tGames(t).length?"Games and kick-off times are on the Fixtures page.":"We're entered. Games and kick-off times to follow."}${t.notes?` ${esc(clip(t.notes,140))}`:""}</div>
+    <div class="btns"><button class="btn gold" data-view="fixtures">🏆 Tournament details</button><button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
+function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=live?null:nextFixture(),tn=live?null:nextTournament(nm&&nm.date);if(tn)return tHeroHtml(tn);const m=live||nm;if(!m)return "";
   const d=new Date(m.date+"T12:00:00");const days=Math.round((d-new Date(todayLocal()+"T12:00:00"))/864e5);
   const ini=(m.opp||"?").split(/\s+/).filter(w=>!/^(fc|afc|the)$/i.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase();
   const us=`<div class="side"><img src="${CREST}" alt=""><span>${esc(TEAM.name)}</span></div>`,them=`<div class="side">${window.oppBadge(m.opp)?`<img src="${window.oppBadge(m.opp)}" alt="">`:`<span class="ini">${esc(ini)}</span>`}<span>${esc(m.opp)}</span></div>`;
@@ -230,7 +240,7 @@ function homeView(){if(noScores())return homeNoScores();
   </section>
   <div class="cols">
     <section class="card"><h3>Latest result, any competition</h3>${latest?matchRow(latest):`<p class="hint">No results yet this season.</p>`}
-      ${upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:""}</section>
+      ${(tn=>tn?`<h3 style="margin-top:14px">Next up</h3>${tCard(tn)}`:upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:"")(nextTournament(upcoming&&upcoming.date))}</section>
     ${(ms=>ms.length?`<section class="card"><h3>Recent milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>(x.date||"")>=new Date(Date.now()-60*864e5).toISOString().slice(0,10)).slice(0,6))}
     <section class="card"><h3>Top ${RUGBY?"try ":""}scorers, all games</h3>${scorers.length?`<table class="lb"><tbody>${scorers.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/max*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No ${SP.goals} logged yet.</p>`}</section>
     ${RUGBY?(pp=>`<section class="card"><h3>Top points scorers</h3>${pp.length?`<table class="lb"><tbody>${pp.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.pts/pp[0][1].pts*100)}%"></i><b>${o.pts}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No points logged yet.</p>`}</section>`)(Object.entries(ps).filter(([,o])=>o.pts>0).sort((a,b)=>b[1].pts-a[1].pts||a[0].localeCompare(b[0]))):""}
@@ -246,7 +256,7 @@ function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
   <h2 class="sect">${esc(season)} season</h2>
   <div class="cols">
     <section class="card"><h3>Recent games</h3>${done.length?done.slice(-3).reverse().map(matchRow).join(""):`<p class="hint">No games played yet this season.</p>`}
-      ${upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:""}</section>
+      ${(tn=>tn?`<h3 style="margin-top:14px">Next up</h3>${tCard(tn)}`:upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:"")(nextTournament(upcoming&&upcoming.date))}</section>
     ${(ms=>ms.length?`<section class="card"><h3>Recent milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>(x.date||"")>=new Date(Date.now()-60*864e5).toISOString().slice(0,10)).slice(-5).reverse())}
     <section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="text-align:right"><b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">None yet.</p>`}</section>
   </div><p class="hint">${RUGBY?"Scores and scorers aren't shown publicly for this age group, as the club has chosen.":"Scores and scorers aren't shown publicly for this age group, in line with FA rules for youth football."}</p></div>`;
