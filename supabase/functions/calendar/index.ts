@@ -1,7 +1,7 @@
 // Calendar feed (.ics) of fixtures, tournaments and training that families subscribe to on their phones.
 //   GET              matches, tournaments and weekly training
 //   GET ?training=0  matches and tournaments only
-//   GET ?team=<schema>&site=<url>  another team that shares this Supabase project (supabase/14_shared_project.sql)
+//   GET ?team=<schema>&site=<url>  another team that shares this Supabase project (tools/team_schema_sql.py)
 // Phones check the feed every few hours, so new kick-off times and venues turn up on their own.
 // Deployed with verify_jwt off (calendar apps can't send a key). It reads with the public key, so it only sees
 // what the website already shows. See supabase/4_gallery_training.sql.
@@ -23,6 +23,7 @@ let db = HOME;
 // Which team this request is for. Without ?team it's the project's own team (the secrets above).
 function pickTeam(url: URL): boolean {
   ({ SITE, TEAM, FULL, AGE, SCORES, SPORT } = ENV);
+  LEAGUE = ENV_LEAGUE;
   db = HOME;
   const team = url.searchParams.get("team");
   if (!team) return true;
@@ -33,9 +34,11 @@ function pickTeam(url: URL): boolean {
   SITE = site.origin + site.pathname;
   db = client(team);
   TEAM = FULL = AGE = "";   // filled in from that team's Team setup answers
+  LEAGUE = "League";
   return true;
 }
-let LEAGUE = "Russell Foster League";
+const ENV_LEAGUE = "Russell Foster League";
+let LEAGUE = ENV_LEAGUE;
 const compName = (c: string) => (c === "League" ? LEAGUE : c);
 // A coach's answers on the site's Team setup page (supabase/7_team_setup.sql) win over the secrets above.
 // Scores stay hidden if either the secret or the setup page says so.

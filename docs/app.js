@@ -545,9 +545,10 @@ async function alOn(){if(AL.busy)return;AL.busy=true;render();
 async function alTest(){if(!AL.sub)return;AL.busy=true;render();try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody({test:AL.sub.endpoint})});toast(!error&&data&&data.test>0?"Test alert sent. It should arrive in a few seconds.":"The test alert didn't go. Turn alerts off and on again.")}catch(e){toast("Couldn't send a test alert. Check your connection.")}finally{AL.busy=false;render()}}
 async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.sub.endpoint;await AL.sub.unsubscribe();await sb.rpc("push_unsubscribe",{p_endpoint:ep});AL.sub=null;toast("Alerts are off on this phone.")}catch(e){toast("Couldn't turn alerts off. Try again.")}finally{AL.busy=false;render()}}
 // after a live update from the coach's phone: send any new alerts straight away (the every-minute check is the back-up)
-function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:fnBody({match:id})}).catch(()=>{})}
+function alNotify(id){if(sb&&id&&id!=="practice"&&!CFG.schema)sb.functions.invoke("notify",{body:fnBody({match:id})}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
-async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.potm??data.postponed??data.preview;return typeof v==="number"?v:null}catch(e){return null}}
+async function alSend(body){if(!sb||CFG.schema)return null;   // no match alerts yet for a team sharing a project
+try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.potm??data.postponed??data.preview;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
