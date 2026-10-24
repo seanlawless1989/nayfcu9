@@ -431,10 +431,35 @@ h2.sect{font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin-top:
 /* tactics board (coaches only) */
 .tb .seg{flex-wrap:wrap}
 .tbwrap{display:flex;justify-content:center}
-.tbpitch{display:block;width:100%;max-width:560px;max-height:calc(100vh - 190px);max-height:calc(100svh - 190px);border-radius:12px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.18);touch-action:none;user-select:none;-webkit-user-select:none}
+.tbpitch{display:block;width:100%;max-width:560px;max-height:calc(100vh - 190px);max-height:calc(100svh - 190px);aspect-ratio:2/3;width:min(100%,560px,(100svh - 190px)*2/3);border-radius:12px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.18);touch-action:none;user-select:none;-webkit-user-select:none}
 .tbpitch .tbt{cursor:grab}.tbpitch [data-tbarrow]{cursor:pointer}
 .tbmodes{align-self:stretch;justify-content:center;scroll-margin-top:72px}.tbmodes button{flex:1;min-height:44px;font-weight:800;padding-inline:8px}
 .tb .chips{display:inline-flex;flex-wrap:wrap;gap:6px;vertical-align:middle}
 .tb .chips button{min-height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--field);font:700 14px var(--body);color:var(--ink);cursor:pointer}
 .tb .tbsaved{display:inline-flex}.tb .tbsaved button:first-child{border-radius:999px 0 0 999px}.tb .tbsaved button:last-child{border-radius:0 999px 999px 0;border-left:0;padding:0 10px}
 .tb .sw{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.35);margin-right:6px;vertical-align:-1px}
+.tbhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.tbhead h2{margin:0}
+/* full screen board: covers the page (and the browser's own full screen where there is one) for showing the team at a game */
+body.tbfs-on{overflow:hidden;overscroll-behavior:none}
+body.tbfs-on .mast,body.tbfs-on nav.tabs,body.tbfs-on .sitefoot,body.tbfs-on #ticker{display:none}
+body.tbfs-on .toast{z-index:1001}
+.tbfs{position:fixed;inset:0;z-index:900;background:#0E1A12;color:#fff;display:grid;gap:12px;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));-webkit-user-select:none;user-select:none}
+.tbfs.port{grid-template-rows:auto minmax(0,1fr)}
+.tbfs.land{grid-template-columns:auto minmax(0,1fr)}
+.tbfsbar{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.tbfs.land .tbfsbar{flex-direction:column;flex-wrap:nowrap;width:140px;overflow-y:auto}
+.tbfsmodes{display:flex;gap:8px;flex:1 1 360px}.tbfs.land .tbfsmodes{flex:none;flex-direction:column}
+.tbfsmodes button{flex:1}
+.tbfsbar button{min-height:56px;min-width:56px;border-radius:14px;border:2px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#fff;font:800 17px var(--body);padding:0 14px;touch-action:manipulation;cursor:pointer;white-space:nowrap}
+.tbfsbar button[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:#14182E}
+.tbfsbar button:disabled{opacity:.35;cursor:default}
+.tbfsbar .tbfsx{background:#fff;border-color:#fff;color:#14182E}
+.tbfspitch{position:relative;min-width:0;min-height:0;display:grid;place-items:center;container-type:size}
+.tbfs .tbpitch{max-width:100%;max-height:100%;border-width:4px;border-radius:16px}
+.tbfs.land .tbpitch{aspect-ratio:3/2;width:min(100cqw,150cqh);height:auto}
+.tbfs.port .tbpitch{aspect-ratio:2/3;width:min(100cqw,66.66cqh);height:auto}
+.tbfssel{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:max-content;max-width:min(620px,calc(100% - 20px));background:var(--card);color:var(--ink);border-radius:16px;padding:4px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+.tbfssel.top{bottom:auto;top:10px}
+.tbfssel .note{margin:0;font-size:17px}
+.tbfssel .chips button,.tbfssel .mini{min-height:48px;font-size:16px;padding:0 16px}
+@media (max-height:520px){.tbfsbar button{min-height:44px;font-size:15px}.tbfs.land .tbfsbar{width:118px}.tbfssel .note{font-size:15px}.tbfssel .chips button,.tbfssel .mini{min-height:40px;font-size:14px;padding:0 12px}}

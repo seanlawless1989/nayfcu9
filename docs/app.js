@@ -130,7 +130,7 @@ function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boo
 function appsTracked(list){return list.length>0}// scorers and PotM count as apps even without a team sheet
 
 // ---------- views ----------
-function setView(v){view=v;if(v!=="md"&&/[?&]match=/.test(location.search))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));render();window.scrollTo({top:0})}
+function setView(v){if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if(v!=="md"&&/[?&]match=/.test(location.search))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));render();window.scrollTo({top:0})}
 function render(){
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
@@ -1123,27 +1123,28 @@ function tbRugbyMarks(line){const dash=(y,d)=>`<line x1="3" y1="${y}" x2="97" y2
   return `<rect x="3" y="3" width="94" height="144" ${line}/><line x1="3" y1="11" x2="97" y2="11" ${line}/><line x1="3" y1="139" x2="97" y2="139" ${line}/><line x1="3" y1="75" x2="97" y2="75" ${line}/>
     <line x1="3" y1="39" x2="97" y2="39" ${line}/><line x1="3" y1="111" x2="97" y2="111" ${line}/>${dash(62,"2 2")}${dash(88,"2 2")}${dash(17,"1 2")}${dash(133,"1 2")}
     <line x1="8" y1="11" x2="8" y2="139" ${line} stroke-dasharray="1 2"/><line x1="92" y1="11" x2="92" y2="139" ${line} stroke-dasharray="1 2"/>${posts(11,1)}${posts(139,-1)}`}
-function tbSvg(b,live){const [,kb,ki]=tbKit(b),[ob,oi]=tbOppCol(b),line='stroke="rgba(255,255,255,.85)" stroke-width=".5" fill="none"';
+function tbSvg(b,live,rot){const [,kb,ki]=tbKit(b),[ob,oi]=tbOppCol(b),line='stroke="rgba(255,255,255,.85)" stroke-width=".5" fill="none"';
   const stripes=Array.from({length:10},(_,i)=>`<rect x="0" y="${i*15}" width="100" height="15" fill="${i%2?"#2E8B3E":"#33963F"}"/>`).join("");
   const marks=RUGBY?tbRugbyMarks(line):`<rect x="3" y="3" width="94" height="144" ${line}/><line x1="3" y1="75" x2="97" y2="75" ${line}/><circle cx="50" cy="75" r="9" ${line}/><circle cx="50" cy="75" r=".7" fill="#fff"/>
     <rect x="21" y="3" width="58" height="21" ${line}/><rect x="36" y="3" width="28" height="7" ${line}/><circle cx="50" cy="17" r=".6" fill="#fff"/><rect x="44" y=".6" width="12" height="2.4" ${line}/>
     <rect x="21" y="126" width="58" height="21" ${line}/><rect x="36" y="140" width="28" height="7" ${line}/><circle cx="50" cy="133" r=".6" fill="#fff"/><rect x="44" y="147" width="12" height="2.4" ${line}/>`;
   const heads=Object.keys(TB_ARROW).map(t=>`<marker id="tbh-${t}" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M0 0L10 5L0 10z" fill="${TB_ARROW[t][1]}"/></marker>`).join("");
-  const tok=(x,y,fill,ink,txt,name,attr,sel,gk)=>`<g class="tbt" transform="translate(${x} ${y})"${attr}><circle r="4.2" fill="${gk?"#1AA8A0":fill}" stroke="${sel?"#FF4FA3":fill.toUpperCase()==="#FFFFFF"?"#111":"#fff"}" stroke-width="${sel?1:.6}"/><text y="1.5" text-anchor="middle" font-size="4" font-weight="800" fill="${gk?"#fff":ink}" font-family="Arial,sans-serif">${esc(txt)}</text>${name?`<text y="${y>140?-5.6:8.4}" text-anchor="middle" font-size="3" font-weight="700" fill="#fff" stroke="rgba(0,0,0,.75)" stroke-width=".9" stroke-linejoin="round" paint-order="stroke" font-family="Arial,sans-serif">${esc(name)}</text>`:""}</g>`;
+  const tok=(x,y,fill,ink,txt,name,attr,sel,gk)=>`<g class="tbt" transform="translate(${x} ${y})"${attr}>${rot?'<g transform="rotate(-90)">':""}<circle r="4.2" fill="${gk?"#1AA8A0":fill}" stroke="${sel?"#FF4FA3":fill.toUpperCase()==="#FFFFFF"?"#111":"#fff"}" stroke-width="${sel?1:.6}"/><text y="1.5" text-anchor="middle" font-size="4" font-weight="800" fill="${gk?"#fff":ink}" font-family="Arial,sans-serif">${esc(txt)}</text>${name?`<text y="${(rot?x>92:y>140)?-5.6:8.4}" text-anchor="middle" font-size="3" font-weight="700" fill="#fff" stroke="rgba(0,0,0,.75)" stroke-width=".9" stroke-linejoin="round" paint-order="stroke" font-family="Arial,sans-serif">${esc(name)}</text>`:""}${rot?"</g>":""}</g>`;
   const them=b.oppOn?b.them.map((p,i)=>tok(p.x,p.y,ob,oi,String(i+1),"",live?` data-tbtok="t${i}"`:"",tbSel==="t"+i&&live)).join(""):"";
   const us=b.us.map((p,i)=>tok(p.x,p.y,kb,ki,p.n?(numOf(p.n)||p.n.slice(0,1)):"?",p.n||"Empty",live?` data-tbtok="u${i}"`:"",tbSel==="u"+i&&live,p.gk)).join("");
   const ball=b.ball?`<g class="tbt" transform="translate(${b.ball.x} ${b.ball.y})"${live?' data-tbtok="ball"':""}>${RUGBY?TB_OVAL:TB_BALL}</g>`:"";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 150"${live?' class="tbpitch" id="tbPitch" role="img" aria-label="Tactics board"':' width="1000" height="1500"'}><defs>${heads}<clipPath id="tbBallClip"><circle r="3"/></clipPath></defs>${stripes}${marks}<g id="tbArrows">${b.arrows.map((a,i)=>tbArrowSvg(a,i,live)).join("")}</g>${them}${us}${ball}</svg>`}
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${rot?"150 100":"100 150"}"${live?' class="tbpitch" id="tbPitch" role="img" aria-label="Tactics board"':' width="1000" height="1500"'}><defs>${heads}<clipPath id="tbBallClip"><circle r="3"/></clipPath></defs><g id="tbG"${rot?' transform="translate(150 0) rotate(90)"':""}>${stripes}${marks}<g id="tbArrows">${b.arrows.map((a,i)=>tbArrowSvg(a,i,live)).join("")}</g>${them}${us}${ball}</g></svg>`}
 function tbFixtures(){const today=todayLocal();return sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&!result(m)&&(m.date||"")>=today)).slice(0,6)}
-function tacticsView(){if(!canWrite)return `<div class="card empty">The tactics board is for coaches. Sign in to use it.</div>`;
+function tacticsView(){if(!canWrite){if(tbFs)tbFsOff();return `<div class="card empty">The tactics board is for coaches. Sign in to use it.</div>`}
   const s=tbStore();if(!TB()){s.boards.general=s.boards.general||tbNew("");s.cur="general"}const b=TB(),bn=tbBench(b),fx=tbFixtures();
   const sel=tbSel&&tbSel[0]==="u"?b.us[+tbSel.slice(1)]:null;
   const selBar=sel?`<div class="note"><b>${sel.n?esc(sel.n):"Empty spot"}</b> ${bn.length?`· swap with <span class="chips">${bn.map(n=>`<button data-tbon="${esc(n)}">${esc(n)}</button>`).join("")}</span>`:""}<div class="btns" style="margin-top:6px">${sel.n?`<button class="mini" id="tbOff">Move to the bench</button>`:""}${SP.keeper?`<button class="mini" id="tbGk">${sel.gk?"Not the keeper":"Make keeper"}</button>`:""}<button class="mini" id="tbDesel">Done</button></div></div>`
     :tbSel&&tbSel[0]==="t"?`<div class="note"><b>Opposition player ${+tbSel.slice(1)+1}</b><div class="btns" style="margin-top:6px"><button class="mini" id="tbThemDel">Remove</button><button class="mini" id="tbDesel">Done</button></div></div>`
     :tbSel&&tbSel[0]==="a"?`<div class="note"><b>Arrow</b><div class="btns" style="margin-top:6px"><button class="mini" id="tbArrowDel">Delete arrow</button><button class="mini" id="tbDesel">Done</button></div></div>`:"";
   const hint={move:"Drag players and the ball. Tap a player to swap them with a sub or move them to the bench.",run:"Draw a run: drag from where the player starts to where they should go.",pass:"Draw a pass: drag from the passer to where the ball goes.",drib:"Draw a dribble: drag from where the player picks the ball up to where they take it.",kick:"Draw a kick: drag from the kicker to where the ball lands."}[tbMode];
+  if(tbFs)return tbFsView(b,selBar);
   return `<div class="stack tb">
-  <section class="card stack"><h2>📋 Tactics board</h2>
+  <section class="card stack"><div class="tbhead"><h2>📋 Tactics board</h2><button class="btn gold" id="tbFsBtn">⛶ Full screen</button></div>
     <div class="btns"><label class="f" style="flex:1;min-width:200px">Board for<select id="tbFor"><option value="general"${s.cur==="general"?" selected":""}>Training and general</option>${fx.map(m=>`<option value="${esc(m.id)}"${s.cur===m.id?" selected":""}>v ${esc(m.opp)}, ${esc(new Date(m.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}))}</option>`).join("")}${s.cur!=="general"&&!fx.some(m=>m.id===s.cur)?`<option value="${esc(s.cur)}" selected>${esc(b.title||"This match")}</option>`:""}</select></label>
       ${RUGBY&&Object.keys(FORMS).length<2?"":`<div><span class="hint">Formation</span><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-tbform="${f}" aria-pressed="${b.form===f}">${f}</button>`).join("")}</div></div>`}</div>
     <div class="seg tbmodes" role="group" aria-label="What a finger does">${[["move","✋ Move"],["run","➜ Run"],["pass","⇢ Pass"],RUGBY?["kick","⤴ Kick"]:["drib","〰 Dribble"]].map(([k,l])=>`<button data-tbmode="${k}" aria-pressed="${tbMode===k}">${l}</button>`).join("")}</div>
@@ -1166,7 +1167,7 @@ function tacticsView(){if(!canWrite)return `<div class="card empty">The tactics 
     <div class="btns"><input type="text" id="tbName" placeholder="Name, e.g. ${RUGBY?"Lineout move":"Defending corners"}" maxlength="40" style="max-width:260px"><button class="btn ghost" id="tbKeep">Save this board</button></div>
   </section>
   <p class="hint">Only coaches see the tactics board, and boards stay on this phone. Share a picture in the team chat if you'd like the players to see it.</p></div>`}
-function tbPt(e){const sv=$("#tbPitch"),p=sv.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(sv.getScreenCTM().inverse());return {x:Math.round(q.x*10)/10,y:Math.round(q.y*10)/10}}
+function tbPt(e){const sv=$("#tbPitch"),p=sv.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(($("#tbG")||sv).getScreenCTM().inverse());return {x:Math.round(q.x*10)/10,y:Math.round(q.y*10)/10}}
 let tbDrag=null;
 document.addEventListener("pointerdown",e=>{if(view!=="tactics"||!e.target.closest)return;const sv=e.target.closest("#tbPitch");if(!sv)return;const b=TB();if(!b)return;e.preventDefault();
   const p=tbPt(e),tk=e.target.closest("[data-tbtok]"),ar=e.target.closest("[data-tbarrow]");
@@ -1213,7 +1214,40 @@ document.addEventListener("click",async e=>{if(view!=="tactics")return;const t=e
     s.boards[s.cur]=Object.assign(JSON.parse(JSON.stringify(x.board)),keep,{at:Date.now()});const nb=TB(),sq=tbSquad(nb);if(nb.us.some(p=>p.n&&!sq.includes(p.n))){const left=sq.filter(n=>!nb.us.some(p=>p.n===n));nb.us.forEach(p=>{if(p.n&&!sq.includes(p.n))p.n=left.shift()||""})}
     tbSel=null;tbChanged();toast(`Loaded "${x.name}".`);return}
   if(d.tbdel){const s=tbStore(),x=s.saved[+d.tbdel];if(x&&confirm(`Delete the saved board "${x.name}"?`)){s.saved.splice(+d.tbdel,1);tbSave();render()}return}
+  if(t.id==="tbFsBtn"){tbFsOn();return}
+  if(t.id==="tbFsExit"){tbFsOff();return}
   if(t.id==="tbShare")tbShare(b)});
+// Full screen: the board fills the screen for showing the team on an iPad or phone at a game. The pitch turns sideways when
+// the screen is wider than it is tall, the buttons get big, and the screen is kept awake. Safari on iPhone has no real full
+// screen for pages, so the board covers the page there instead (and from the Home Screen there are no Safari bars at all).
+let tbFs=false,tbFsNative=false,tbLock=null,tbRot=false;
+const tbWide=()=>innerWidth>innerHeight;
+function tbFsView(b,selBar){tbRot=tbWide();
+  const btn=(id,label,dis)=>`<button id="${id}"${dis?" disabled":""}>${label}</button>`;
+  return `<div class="tb tbfs ${tbRot?"land":"port"}" role="dialog" aria-label="Tactics board, full screen">
+  <div class="tbfsbar">
+    <button class="tbfsx" id="tbFsExit" aria-label="Exit full screen">✕ Exit</button>
+    <div class="tbfsmodes" role="group" aria-label="What a finger does">${[["move","✋ Move"],["run","➜ Run"],["pass","⇢ Pass"],RUGBY?["kick","⤴ Kick"]:["drib","〰 Dribble"]].map(([k,l])=>`<button data-tbmode="${k}" aria-pressed="${tbMode===k}">${l}</button>`).join("")}</div>
+    ${btn("tbUndo","↶ Undo",!tbUndo.length)}${btn("tbClearArrows","Clear arrows",!b.arrows.length)}${btn("tbReset","Reset")}${btn("tbShare","📤 Share")}
+  </div>
+  <div class="tbfspitch">${tbSvg(b,true,tbRot)}${selBar?`<div class="tbfssel${tbFsSelTop(b)?" top":""}">${selBar}</div>`:""}</div></div>`}
+// the swap panel sits at the other end of the screen from whatever was tapped, so it never hides it
+function tbFsSelTop(b){const k=tbSel||"",i=+k.slice(1),o=k[0]==="u"?b.us[i]:k[0]==="t"?b.them[i]:k[0]==="a"&&b.arrows[i]?{x:(b.arrows[i].x1+b.arrows[i].x2)/2,y:(b.arrows[i].y1+b.arrows[i].y2)/2}:null;
+  return !!o&&(tbRot?o.x>50:o.y>75)}
+async function tbWake(){try{if(navigator.wakeLock&&!tbLock){tbLock=await navigator.wakeLock.request("screen");tbLock.addEventListener("release",()=>{tbLock=null})}}catch(e){}}
+function tbFsOn(){tbFs=true;tbSel=null;document.body.classList.add("tbfs-on");const el=document.documentElement,req=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(req&&!(document.fullscreenElement||document.webkitFullscreenElement)){try{const r=req.call(el);tbFsNative=true;if(r&&r.catch)r.catch(()=>{tbFsNative=false})}catch(e){tbFsNative=false}}
+  else if(!req&&!(navigator.standalone||matchMedia("(display-mode: standalone)").matches)){try{if(!localStorage.getItem(SK+".tbfsTip")){localStorage.setItem(SK+".tbfsTip","1");setTimeout(()=>toast("Tip: tap Share, then Add to Home Screen. Opened from there, the board hides Safari's bars too."),600)}}catch(e){}}
+  tbWake();render();window.scrollTo(0,0)}
+function tbFsOff(){tbFs=false;tbSel=null;document.body.classList.remove("tbfs-on");
+  if(tbFsNative&&(document.fullscreenElement||document.webkitFullscreenElement)){try{(document.exitFullscreen||document.webkitExitFullscreen).call(document)}catch(e){}}tbFsNative=false;
+  if(tbLock){tbLock.release().catch(()=>{});tbLock=null}if(view==="tactics")render()}
+// leaving the browser's full screen (Esc, or swiping it away on an iPad) leaves the board's full screen too
+["fullscreenchange","webkitfullscreenchange"].forEach(ev=>document.addEventListener(ev,()=>{if(tbFs&&tbFsNative&&!(document.fullscreenElement||document.webkitFullscreenElement)){tbFsNative=false;tbFsOff()}}));
+document.addEventListener("keydown",e=>{if(tbFs&&e.key==="Escape"&&!tbFsNative)tbFsOff()});
+document.addEventListener("visibilitychange",()=>{if(tbFs&&document.visibilityState==="visible")tbWake()});
+// turning the iPad round turns the pitch with it
+addEventListener("resize",()=>{if(!tbFs||view!=="tactics")return;clearTimeout(tbFsOn.t);tbFsOn.t=setTimeout(()=>{if(tbFs&&!tbDrag&&tbWide()!==tbRot)render()},150)});
 // the picture: a heading in club colours above the board, for the team chat
 async function tbShare(b){const c=document.createElement("canvas");c.width=1000;c.height=1640;const x=c.getContext("2d"),col=TEAM.colours||{};
   x.fillStyle=col.clubDeep||"#16239E";x.fillRect(0,0,1000,140);x.fillStyle=col.gold||"#FFD200";x.fillRect(0,134,1000,6);
