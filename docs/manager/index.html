@@ -409,16 +409,8 @@ body{margin:0}
 @media (max-width:520px){#planCard .seg{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}}
 @media (min-width:760px){#pitch{max-width:min(440px,max(260px,calc((100vh - 290px)*.75)))}}
 @media (min-width:1000px){
-  body:not(.inmatch){padding-left:210px}
-  body:not(.inmatch) .tabwrap{top:0;bottom:0;right:auto;width:210px;border-top:0;border-right:1px solid var(--line);padding:84px 0 0;z-index:8}
-  body:not(.inmatch) nav.tabs{grid-template-columns:1fr;grid-auto-rows:54px;max-width:none}
-  body:not(.inmatch) nav.tabs button{flex-direction:row;justify-content:flex-start;gap:14px;height:54px;padding:0 22px;font-size:15px}
-  body:not(.inmatch) nav.tabs button[aria-current="page"]{background:color-mix(in srgb,var(--club) 10%,transparent)}
-  body:not(.inmatch) nav.tabs button[aria-current="page"]::before{top:8px;bottom:8px;left:0;right:auto;width:4px;height:auto;border-radius:0 3px 3px 0}
-  body:not(.inmatch) .mast{margin-left:-210px;padding-left:210px}
   #pitch{max-width:min(440px,max(260px,calc((100vh - 430px)*.75)))}
   .pickcard{position:sticky;top:76px}
-  body:not(.inmatch) .actbar{left:210px;bottom:0;padding:10px 0 12px}
   main.hasbar,body:not(.inmatch) main.hasbar{padding-bottom:110px}
   .toast{bottom:100px}
 }
@@ -500,6 +492,57 @@ h3{font-weight:800;letter-spacing:.07em}
 .fx.next{box-shadow:0 0 0 2px var(--club)}
 .bp,.opt{border-radius:14px}
 .toast{border-radius:999px}
+/* v14 FM27-style layout: club-blue top bar with Continue top right, sections across the top, a white second bar, inbox-led Portal with info tiles */
+.mast{background:var(--club);color:#fff;position:sticky;top:0;z-index:9;box-shadow:0 2px 10px rgba(22,35,158,.18)}
+.mast .wrap{padding-block:10px 4px;flex-wrap:nowrap;gap:10px}
+.mast .mid b{color:#fff;font-size:18px;white-space:nowrap}
+.mast .mid span{color:rgba(255,255,255,.85)}
+.mast .crest{width:36px;height:36px;box-shadow:none}
+.bell{display:none}
+.tabwrap{position:static;background:transparent;border:0;box-shadow:none;padding:0}
+nav.tabs{display:flex;flex-wrap:nowrap;gap:0;max-width:1100px;margin:0 auto;padding:0 max(8px,env(safe-area-inset-left,0px));overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{flex:none;flex-direction:row;height:auto;padding:10px 9px 8px;border-bottom:3px solid transparent;color:rgba(255,255,255,.8);font:700 14.5px var(--body)}
+nav.tabs button[aria-current="page"]{color:#fff;font-weight:800;border-bottom-color:var(--gold);background:transparent}
+nav.tabs button[aria-current="page"]::before{display:none}
+nav.tabs svg{display:none}
+nav.tabs .badge{display:none}
+/* Continue lives in the top bar */
+.mast .actbar{position:static;flex:none;padding:0;background:none;box-shadow:none}
+.mast .actbar .in{padding:0;margin:0;max-width:none;gap:6px;justify-content:flex-end}
+.mast .actbar .cont{flex:none;min-height:42px;padding:0 16px;border-radius:999px;background:var(--gold);color:var(--goldInk);box-shadow:none}
+.mast .actbar .cont b{font-size:17px;padding-top:0}
+.mast .actbar .cont::after{width:8px;height:8px;border-width:3px 3px 0 0}
+.mast .actbar .skip{min-width:0;max-width:72px;min-height:42px;padding:2px 8px;border:1.5px solid rgba(255,255,255,.45);border-radius:14px;background:transparent;color:#fff;font:700 10.5px/1.1 var(--body)}
+.mast .actbar .skip svg{width:15px;height:15px}
+.mast .actbar .btn.ghost{min-height:42px;border-color:rgba(255,255,255,.45);background:transparent;color:#fff;border-radius:999px}
+@media (max-width:600px){.mast .actbar .btn.ghost{display:none}.mast .mid span{display:none}}
+main.hasbar,body:not(.inmatch) main.hasbar{padding-bottom:48px}
+.toast{bottom:calc(env(safe-area-inset-bottom,0px) + 24px)}
+body.inmatch .actbar{position:fixed}
+/* second bar */
+.subtabs{margin:-16px calc(-1*max(16px,env(safe-area-inset-left,0px))) 14px;padding:8px max(16px,env(safe-area-inset-left,0px));gap:4px;background:var(--card);border-bottom:1px solid var(--line)}
+.subtabs button{padding:8px 14px;background:transparent;color:var(--muted);font-size:13.5px}
+.subtabs button[aria-current="page"]{background:var(--bg);color:var(--clubDeep)}
+/* colour-coded inbox */
+.msg{border:0;border-left:4px solid var(--mc,var(--line));border-radius:12px;background:var(--field)}
+.msg.unread{border-left:4px solid var(--mc,var(--line));background:var(--card);box-shadow:0 0 0 1.5px var(--line)}
+.msg.unread .s::after{content:"";display:inline-block;width:8px;height:8px;margin-left:8px;border-radius:50%;background:var(--pink);vertical-align:middle}
+.msg .f{color:var(--mc,var(--muted))}
+.c-spon{--mc:#A87D00}.c-club{--mc:var(--club)}.c-par{--mc:#C2307C}.c-rep{--mc:var(--win)}.c-tour{--mc:#7A3FC0}
+/* info tiles */
+.infot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:760px){.infot{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.it{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:104px;padding:14px;border:0;border-radius:18px;background:var(--card);color:var(--ink);font:inherit;text-align:left;box-shadow:0 1px 2px rgba(22,35,158,.06)}
+button.it{cursor:pointer}
+.it h3{margin:0 0 2px}
+.it .big{font:700 30px/1 var(--display);color:var(--clubDeep)}
+.it .big small,.it .mid small{font:700 13px var(--body);color:var(--muted)}
+.it .mid{font:700 16px/1.2 var(--display);color:var(--clubDeep)}
+.it>small{color:var(--muted);font-size:13px}
+.it .mini{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 6px;align-items:center;width:100%;margin-top:4px}
+.it .mini .bar{height:6px;min-width:0}
+.it .mini small{font-size:11px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -512,8 +555,8 @@ h3{font-weight:800;letter-spacing:.07em}
     <div class="mid"><b id="when"></b><span id="mastSub">Newton Aycliffe Youth · Under 9s girls</span></div>
     <button class="bell" id="bell" data-view="inbox" aria-label="Messages"></button>
   </div>
-</header>
 <div class="tabwrap"><nav class="tabs" id="tabs" aria-label="Sections"></nav></div>
+</header>
 <main class="wrap" id="main"></main>
 <div class="actbar" id="actbar"></div>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -1334,9 +1377,9 @@ function nextSeason(){
 const ICO={training:'<circle cx="12" cy="12" r="8"/><path d="M12 4v4M12 16v4M4 12h4M16 12h4"/>',inbox:'<path d="M4 5h16v11H8l-4 4z"/>',home:'<path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/>',team:'<path d="M8 3L3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z"/>',games:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
   table:'<path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8"/>',club:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'};
 const svgI=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
-const TABS=[["home","Home","home"],["team","Team","tactics"],["games","Games","fixtures"],["club","Club","club"]];
-const SUBTABS={team:[["tactics","Pick your team"],["squad","Squad"],["training","Training"],["gametime","Game time"]],games:[["fixtures","Games"],["table","League"],["cup","County Cup"],["tours","Tournaments"]]};
-const GROUP={home:"home",inbox:"home",tactics:"team",squad:"team",training:"team",gametime:"team",fixtures:"games",cup:"games",tours:"games",table:"games",club:"club"};
+const TABS=[["home","Portal","home"],["squad","Squad","squad"],["tactics","Tactics","tactics"],["training","Training","training"],["games","Games","fixtures"],["club","Club","club"]];
+const SUBTABS={home:[["home","Overview"],["inbox","Inbox"]],squad:[["squad","Players"],["gametime","Game time"]],games:[["fixtures","Fixtures"],["table","League"],["cup","County Cup"],["tours","Tournaments"]]};
+const GROUP={home:"home",inbox:"home",tactics:"tactics",squad:"squad",training:"training",gametime:"squad",fixtures:"games",cup:"games",tours:"games",table:"games",club:"club"};
 function render(){
   $("#when").textContent=S.seasonOver?`Season over · ${seasonStr()}`:fmt(curDate());
   $("#mastSub").textContent=CH?`Challenge: ${CHAL.find(c=>c.id===CH.id).n}`:`${S.manager?`${S.manager} · `:""}Under ${S.age}s · ${divName()} · ${seasonStr()}`;
@@ -1345,7 +1388,7 @@ function render(){
   $("#bell").setAttribute("aria-label",unread?`Messages, ${unread} new`:"Messages");
   document.body.classList.toggle("inmatch",view==="match"&&!!M);
   const grp=GROUP[view]||"home";
-  $("#tabs").innerHTML=TABS.map(([g,n,v])=>`<button data-view="${v}" aria-current="${g===grp?"page":"false"}">${svgI(g)}${n}</button>`).join("");
+  $("#tabs").innerHTML=TABS.map(([g,n,v])=>`<button data-view="${v}" aria-current="${g===grp?"page":"false"}">${n}</button>`).join("");
   const main=$("#main");
   main.classList.add("hasbar");
   if(view==="match"&&M){renderMatch();return}
@@ -1381,7 +1424,7 @@ function heroV(){
   const ev=curEvent(),of=ourFixture(ev);const d=S.day;
   const head=`<h3>Week ${S.wk+1} of ${S.cal.length}</h3>${weekStrip()}`;
   const todays=S.inbox.filter(m=>m.date===curDate()&&m.from!=="Match report"&&m.from!=="Tournament report");
-  const notes=[...S.today.map(t=>`<div class="note tip">${esc(t)}</div>`),...todays.slice(0,4).map(m=>`<button class="msg" data-msg="${m.id}" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff"><span class="f" style="color:rgba(255,255,255,.75)">${esc(m.from)}${m.read?"":" · new"}</span><span class="s">${esc(m.subj)}</span></button>`)].join("");
+  const notes=[...S.today.map(t=>`<div class="note tip">${esc(t)}</div>`)].join("");
   const towLine=S.trainRep&&S.trainRep.tow&&d>3?`<p style="margin:0">⭐ Trainer of the week: <b>${esc(P(S.trainRep.tow).name)}</b></p>`:"";
   // Wednesday: training night
   if(d===3){
@@ -1453,7 +1496,7 @@ function matchBar(){
     contBtn(`data-m="done"`,M.comp==="T"?"Back to the tournament":M.comp==="X"?"See how you did":"Leave the ground");
   return main;
 }
-function setBar(){const el=$("#actbar");if(!el)return;const h=view==="match"&&M?matchBar():actBar();if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=`<div class="wrap in">${h}</div>`}}
+function setBar(){const el=$("#actbar");if(!el)return;const host=view==="match"&&M?document.body:$(".mast .wrap");if(el.parentNode!==host)host.appendChild(el);const h=view==="match"&&M?matchBar():actBar();if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=`<div class="wrap in">${h}</div>`}}
 function tourHero(ev,head){
   const t=S.tours[ev.round];const tb=tourTable(t);const nx=tourNext(t);
   const fxl=[...t.fx,...(t.final?[t.final]:[])];
@@ -1465,6 +1508,7 @@ function tourHero(ev,head){
     act=`<p style="margin:0">${t.stage==="final"?"We're in the final!":`Group game ${gi+1} of 3.`} Next up: <b>${esc(teamName(opp))}</b>. Games are two halves of 7 minutes. Tired legs carry over between games.</p>`}
   return `<section class="card hero">${head}<h3>Tournament day</h3><div class="nm" style="font:700 26px var(--display)">${esc(t.name)}</div>${table}${games?`<div style="font-size:13.5px;display:grid;gap:3px">${games}</div>`:""}${act}</section>`;
 }
+const MCAT=f=>/Coffey|Grey-Smith/.test(f)?"spon":/committee|County FA/i.test(f)?"club":/Parents/.test(f)?"par":/report|Scouting/i.test(f)?"rep":/Tournament/.test(f)?"tour":"oth";
 function inboxCard(){
   const unread=S.inbox.filter(m=>!m.read).length;
   const i=S.inbox.findIndex(m=>m.id===inboxOpen);
@@ -1474,10 +1518,10 @@ function inboxCard(){
       <div class="body">${esc(m.body)}</div>
       <div class="nav"><button class="btn ghost small" data-inav="prev"${i===0?" disabled":""}>← Newer</button>${unread?`<button class="btn gold small" data-inav="unread">Next unread (${unread})</button>`:""}<button class="btn ghost small" data-inav="next"${i===S.inbox.length-1?" disabled":""}>Older →</button></div>
       <button class="btn ghost small" data-inav="close" style="align-self:flex-start">Back to the inbox</button></div></section>`}
-  const list=inboxAll?S.inbox:S.inbox.slice(0,6);
+  const list=inboxAll?S.inbox:S.inbox.slice(0,view==="home"?4:6);
   return `<section class="card" id="inbox"><h3>Inbox${unread?` · ${unread} unread`:""}</h3>
    ${unread?`<div class="btns" style="margin-bottom:10px"><button class="btn gold small" data-inav="unread">Read the unread messages</button></div>`:""}
-   <div class="stack" style="gap:8px">${list.map(m=>`<button class="msg${m.read?"":" unread"}" data-msg="${m.id}"><span class="f">${esc(m.from)} · ${fmt(m.date)}</span><span class="s">${esc(m.subj)}</span></button>`).join("")}</div>
+   <div class="stack" style="gap:8px">${list.map(m=>`<button class="msg c-${MCAT(m.from)}${m.read?"":" unread"}" data-msg="${m.id}"><span class="f">${esc(m.from)} · ${fmt(m.date)}</span><span class="s">${esc(m.subj)}</span></button>`).join("")}</div>
    ${S.inbox.length>6?`<div class="btns" style="margin-top:10px"><button class="btn ghost small" data-act="inboxall">${inboxAll?"Show fewer":`Show all ${S.inbox.length}`}</button></div>`:""}</section>`;
 }
 function homeV(){
@@ -1488,21 +1532,20 @@ function homeV(){
   const cupState=S.cup.won?"Winners! 🏆":S.cup.out?`Knocked out`:cupNext>=0?`${CUPNAME[S.cal[cupNext].round]} on ${fmt(S.cal[cupNext].date)}`:"-";
   const tourNextI=S.cal.findIndex((e,i)=>i>=S.wk&&e.type==="T"&&S.tours[e.round].stage!=="done");
   return `<div class="stack">${S.manager||S.guide===0?"":nameCard()}${celebrateCard()}${dilemmaCard()}${friendlyCard()}${heroV()}${coachNudge()}
-  ${inboxOpen?inboxCard():""}
-  ${homeTiles(t,me)}
-  <details class="card comm"><summary><span class="ct">Committee</span><span class="bar"><i style="width:${c}%"></i></span><b>${grade(c)}</b></summary>
-     <div style="display:flex;align-items:baseline;gap:10px;margin:14px 0 12px"><span style="font:700 40px var(--display)">${grade(c)}</span><span class="hint">${c}/100 overall</span></div>
-     <div class="meters">${[["Enjoyment",B.fun],["Squad harmony",B.harm],["Development",B.dev],["Results",B.res]].map(([n,v])=>`<div class="meter"><span>${n}</span><div class="bar ${v>=65?"good":v>=45?"mid":"bad"}"><i style="width:${v}%"></i></div><b>${v}</b></div>`).join("")}</div>
-     <p class="hint" style="margin-top:10px">Squad harmony drops when girls are left out or sat on the bench too often.</p>
-     <p class="hint" style="margin-top:6px">County Cup: ${cupState}. ${tourNextI>=0?`Next tournament: ${esc(S.tours[S.cal[tourNextI].round].name)}, ${fmt(S.cal[tourNextI].date)}.`:"All tournaments played."}</p>
-  </details>
+  ${inboxCard()}
+  ${infoTiles(t,me,c,B,cupState,tourNextI)}
   </div>`;
 }
-function homeTiles(t,me){
-  const unread=S.inbox.filter(m=>!m.read).length;
-  const lg=me>=0&&t[0].P?`${ord(me+1)} of ${t.length}`:"Not started";
-  const tile=(v,ic,n,sub,tag)=>`<button class="tile" data-view="${v}"><span class="ti">${svgI(ic)}</span><b>${n}</b><small>${sub}</small>${tag?`<span class="tag">${tag}</span>`:""}</button>`;
-  return `<div class="tiles">${tile("tactics","team","Pick the team",`${squadIds().length} of 8 picked`)}${tile("training","training","Training","Wednesday")}${tile("inbox","inbox","Messages",unread?"Catch up":"All read",unread?`${unread} new`:"")}${tile("table","table","League",lg)}</div>`;
+function infoTiles(t,me,c,B,cupState,tourNextI){
+  const lg=me>=0&&t[0].P?`${ord(me+1)}<small> of ${t.length}</small>`:"–";
+  const mini=[["Fun",B.fun],["Fair",B.harm],["Dev",B.dev],["Wins",B.res]].map(([n,v])=>`<span class="bar ${v>=65?"good":v>=45?"mid":"bad"}"><i style="width:${v}%"></i></span><small>${n}</small>`).join("");
+  const tn=tourNextI>=0?S.tours[S.cal[tourNextI].round]:null;
+  return `<div class="infot">
+   <button class="it" data-view="table"><h3>League</h3><span class="big">${lg}</span><small>${me>=0&&t[0].P?`${t[me].Pts} pts · ${divName()}`:"Not started yet"}</small></button>
+   <div class="it"><h3>Committee</h3><span class="big">${grade(c)}<small> ${c}</small></span><div class="mini">${mini}</div></div>
+   <button class="it" data-view="cup"><h3>County Cup</h3><span class="mid">${cupState}</span></button>
+   <button class="it" data-view="tours"><h3>Tournaments</h3><span class="mid">${tn?`${esc(tn.name)}<small> ${fmt(S.cal[tourNextI].date)}</small>`:"All played"}</span></button>
+  </div>`;
 }
 function nameCard(){return `<section class="card hero"><h3>Before we start</h3><div class="nm" style="font:700 24px var(--display)">What's your name, gaffer?</div>
   <div class="btns"><input id="mgrName" type="text" maxlength="24" placeholder="Your name" autocomplete="given-name" style="flex:1;min-width:160px;padding:10px 12px;border-radius:10px;border:0;font:inherit"><button class="btn gold" data-act="setname">Take charge</button></div></section>`}
@@ -1665,7 +1708,7 @@ function toursV(){
       ${t.final&&t.final.hs!=null?`<p class="hint" style="margin-top:8px">Final: ${esc(teamName(t.final.h))} ${t.final.hs}–${t.final.as} ${esc(teamName(t.final.a))}${t.final.pens?` (${t.final.pens[0]}-${t.final.pens[1]} pens)`:""}${t.potm?` · Player of the tournament: ${esc(P(t.potm).name)}`:""}</p>`:""}</section>`}).join("")}</div>`;
 }
 function inboxV(){
-  return `<section class="card"><h2>Inbox</h2><div class="stack" style="gap:8px">${S.inbox.map(m=>`<button class="msg${m.read?"":" unread"}" data-msg="${m.id}"><span class="f">${esc(m.from)} · ${fmt(m.date)}</span><span class="s">${esc(m.subj)}</span>${inboxOpen===m.id?`<span class="b">${esc(m.body)}</span>`:""}</button>`).join("")}</div></section>`;
+  return `<section class="card"><h2>Inbox</h2><div class="stack" style="gap:8px">${S.inbox.map(m=>`<button class="msg c-${MCAT(m.from)}${m.read?"":" unread"}" data-msg="${m.id}"><span class="f">${esc(m.from)} · ${fmt(m.date)}</span><span class="s">${esc(m.subj)}</span>${inboxOpen===m.id?`<span class="b">${esc(m.body)}</span>`:""}</button>`).join("")}</div></section>`;
 }
 
 // ---------------- match screen ----------------
