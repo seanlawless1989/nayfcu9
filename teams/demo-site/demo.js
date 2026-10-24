@@ -85,6 +85,12 @@ const makeSeason=()=>DD.season?DD.season(day,flags):season();
 if(!DB||DB.made!==day(0)||Date.now()-DB.start>3*3600e3){DB={made:day(0),start:Date.now(),done:0,touched:false,t:makeSeason()};ss.set(KEY,DB)}
 const T=DB.t,save=()=>ss.set(KEY,DB);
 if(!T.family_codes){const t=makeSeason();["parent_settings","family_codes","parent_links"].forEach(k=>T[k]=t[k]);save()}   // a tab opened before parent login
+// supporter cheers: a few already sent for today's game, and more that arrive while the visitor watches
+const CHEER_SCRIPT=[[20,{cheer:1,name:"Grandad"}],[50,{cheer:3,name:null}],[95,{cheer:5,name:"Auntie Sam"}],[150,{cheer:2,name:"Nana"}],[230,{cheer:4,name:null}]];
+if(!T.cheer_settings){T.cheer_settings=[{id:1,muted:false}];const lv=T.matches.find(x=>x.date===day(0)&&x.live);
+  T.cheers=lv?[{cheer:0,name:"Nana"},{cheer:0,name:null},{cheer:7,name:"Uncle Dev"}].map((c,i)=>Object.assign({id:i+1,match_id:lv.id,at:new Date().toISOString(),hidden:false},c)):[];DB.cdone=0;save()}
+function advanceCheers(){const lv=T.matches.find(x=>x.date===day(0)&&x.live&&x.live.status==="live");if(!lv)return;const secs=(Date.now()-DB.start)/1000;DB.cdone=DB.cdone||0;
+  while(DB.cdone<CHEER_SCRIPT.length&&CHEER_SCRIPT[DB.cdone][0]<=secs){T.cheers.push(Object.assign({id:++seq+5000,match_id:lv.id,at:new Date().toISOString(),hidden:false},CHEER_SCRIPT[DB.cdone][1]));DB.cdone++}save()}
 function advanceLive(){
   const m=T.matches.find(x=>x.date===day(0)&&x.live&&x.live.status==="live");if(!m||DB.touched)return;
   const secs=(Date.now()-DB.start)/1000;
@@ -160,6 +166,11 @@ function rpc(fn,a){
     case "set_availability":if(mustSignIn()&&!kidNames().includes(a.p_player))return json({message:"Sign in with your family code first"},400);upsert("availability",{match_id:a.p_match,player:a.p_player,status:a.p_status},["match_id","player"]);save();return json(null);
     case "cast_vote":if(mustSignIn()&&!famKey())return json({message:"Sign in with your family code to vote"},400);upsert("poll_votes",{poll_id:a.p_poll,voter:famKey()||a.p_voter,choice:a.p_choice},["poll_id","voter"]);save();return json(null);
     case "poll_totals":{const c={};(T.poll_votes||[]).filter(v=>v.poll_id===a.p_poll).forEach(v=>c[v.choice]=(c[v.choice]||0)+1);return json(Object.entries(c).map(([choice,votes])=>({choice:+choice,votes})))}
+    case "cheers_for":advanceCheers();return json(T.cheer_settings[0].muted?[]:T.cheers.filter(c=>c.match_id===a.p_match&&!c.hidden).slice(-50).map(({id,cheer,name,at})=>({id,cheer,name,at})));
+    case "send_cheer":{if(T.cheer_settings[0].muted)return json({message:"Cheers are off for this team"},400);const mine=T.cheers.filter(c=>c.voter===a.p_voter&&Date.now()-Date.parse(c.at)<600e3);
+      if(mine.length>=3)return json({message:"Slow down: 3 cheers every 10 minutes"},400);const c={id:++seq+5000,match_id:a.p_match,cheer:a.p_cheer,name:String(a.p_name||"").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' -]/g,"").trim().slice(0,20)||null,voter:a.p_voter,at:new Date().toISOString(),hidden:false};
+      T.cheers.push(c);save();return json(c.id)}
+    case "hide_cheer":T.cheers.forEach(c=>{if(c.id===a.p_id)c.hidden=true});save();return json(null);
     default:return json(null)}  // log_view, push_subscribe and the rest: nothing to record in a demo
 }
 
