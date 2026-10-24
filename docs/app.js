@@ -97,6 +97,9 @@ function badge(n,cls){const b=BADGES[oppKey(n)];return b?`<img class="badge ${cl
 window.oppBadge=n=>BADGES[oppKey(n)]||null;window.saveBadgeFile=(n,f)=>canWrite&&saveBadge(n,f);
 function shrinkBadge(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=200,c=document.createElement("canvas");const k=Math.min(S/im.width,S/im.height,1);c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/png"))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function saveBadge(name,file){try{const img=await shrinkBadge(file);const {error}=await sb.from("badges").upsert({key:oppKey(name),name,img});if(error)throw error;BADGES[oppKey(name)]=img;toast(`Badge saved for ${name}.`);render()}catch(e){toast("Couldn't save that badge. Try a PNG or JPG.")}}
+// tournament logos live in the badges table too, under "t:" + the tournament's id
+const tLogo=t=>t&&BADGES["t:"+t.id]||null;
+async function saveTLogo(id,file){const t=tournaments.find(x=>x.id===id);if(!t)return;try{const img=await shrinkBadge(file);const {error}=await sb.from("badges").upsert({key:"t:"+id,name:t.name||"Tournament",img});if(error)throw error;BADGES["t:"+id]=img;toast(`Logo saved for ${t.name||"the tournament"}.`);render()}catch(e){toast("Couldn't save that logo. Try a PNG or JPG.")}}
 function meetings(opp,before){const k=oppKey(opp);return sortMatches(matches.filter(m=>result(m)&&oppKey(m.opp)===k&&(!before||m.date<before))).reverse()}
 function scChip(m){const r=result(m);return `<span class="sc-chip ${r}" title="${esc(m.date)} ${esc(m.comp||"")}">${r} ${m.us}–${m.them}</span>`}
 window.H2H=opp=>meetings(opp,new Date().toISOString().slice(0,10));
@@ -180,7 +183,7 @@ function tHeroHtml(t){const d=new Date(t.date+"T12:00:00");const days=Math.max(0
   const ini=(t.name||"?").split(/\s+/).filter(w=>!/^(the|of)$/i.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase()||"🏆";
   const cd=days===0?"Today":days===1?"Tomorrow":`In ${days} days`;
   return `<section class="hero"><div class="kick">Next up · Tournament</div>
-    <div class="vs"><div class="side"><img src="${CREST}" alt=""><span>${esc(TEAM.name)}</span></div><div class="mid"><b>🏆</b><span>Tournament</span></div><div class="side"><span class="ini">${esc(ini)}</span><span>${esc(t.name||"Tournament")}</span></div></div>
+    <div class="vs"><div class="side"><img src="${CREST}" alt=""><span>${esc(TEAM.name)}</span></div><div class="mid"><b>🏆</b><span>Tournament</span></div><div class="side">${tLogo(t)?`<img src="${tLogo(t)}" alt="">`:`<span class="ini">${esc(ini)}</span>`}<span>${esc(t.name||"Tournament")}</span></div></div>
     <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${t.venue?`<span class="pill">📍 ${esc(t.venue)}</span>`:""}</div>
     <div class="hpv">${tGames(t).length?"Games and kick-off times are on the Fixtures page.":"We're entered. Games and kick-off times to follow."}${t.notes?` ${esc(clip(t.notes,140))}`:""}</div>
     <div class="btns"><button class="btn gold" data-view="fixtures">🏆 Tournament details</button><button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
@@ -310,12 +313,12 @@ function tCard(t){
   const games=multi?[...new Set(g.map(m=>m.date))].map(dt=>`<div class="tday">${days.includes(dt)?`Day ${days.indexOf(dt)+1} · `:""}${esc(dt?dayLabel(dt):"Date to add")}</div>`+g.filter(m=>m.date===dt).map(tGameRow).join("")).join(""):g.map(tGameRow).join("");
   return `<div class="match tcard c-tournament"><div class="thead">
     <div class="d">${d?multi?`<b>${d.getDate()}–${e.getDate()}</b>${MONTHS[d.getMonth()]}${e.getMonth()!==d.getMonth()?"–"+MONTHS[e.getMonth()]:""}`:`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
-    <div style="min-width:0"><div class="o">${esc(t.name||"Tournament")}${t.trophy?`<span class="trophy">${trophyIcon(t.trophy)} ${esc(t.trophy)}</span>`:""}</div>
+    <div style="min-width:0"><div class="o">${tLogo(t)?`<img class="badge sm" src="${tLogo(t)}" alt="">`:""}${esc(t.name||"Tournament")}${t.trophy?`<span class="trophy">${trophyIcon(t.trophy)} ${esc(t.trophy)}</span>`:""}</div>
       <div class="meta"><span class="ctag">Tournament</span>${multi?`${days.length} days${t.venue?" · ":""}`:""}${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
       ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}</div>
     <div></div></div>
     ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">${tEnd(t)>=new Date().toISOString().slice(0,10)?"Tournament entered. Fixtures to follow.":"No games added yet."}</p>`}
-    <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div>
+    <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div>
   </div>`;
 }
 // one list of cards: plain matches plus one card per tournament
@@ -1656,7 +1659,7 @@ document.addEventListener("change",e=>{if(e.target.id==="attDay"){attDay=e.targe
 document.addEventListener("change",e=>{const al={"al-rem":"reminders","al-goals":"goals","al-res":"results","al-live":"live"}[e.target.id];if(!al)return;AL.prefs[al]=e.target.checked;if(view==="alerts")render();
   try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(x){}
   if(AL.sub)alSave(AL.sub).then(()=>toast("Saved."),()=>toast("Couldn't save that. Try again."))});
-document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files[0]){saveBadge(e.target.dataset.badge,e.target.files[0]);return}if(e.target.dataset.photo&&e.target.files[0]){savePhoto(e.target.dataset.photo,e.target.files[0]);return}
+document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files[0]){saveBadge(e.target.dataset.badge,e.target.files[0]);return}if(e.target.dataset.tlogo&&e.target.files[0]){saveTLogo(e.target.dataset.tlogo,e.target.files[0]);return}if(e.target.dataset.photo&&e.target.files[0]){savePhoto(e.target.dataset.photo,e.target.files[0]);return}
   if(e.target.dataset.pk&&PICK){const n=e.target.dataset.pk;if(e.target.checked)PICK.set.add(n);else PICK.set.delete(n);const h=e.target.closest(".card").querySelector(".av + .hint");if(h)h.textContent=`${PICK.set.size} picked.`;return}
   if(!LV)return;
   if(e.target.dataset.slot!=null){const i=+e.target.dataset.slot,n=e.target.value;const j=LV.slots.indexOf(n);if(n&&j>=0&&j!==i)LV.slots[j]=LV.slots[i];LV.slots[i]=n;liveSaveLocal();render();return}
