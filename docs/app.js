@@ -922,7 +922,8 @@ function liveStart(id){const m=matches.find(x=>x.id===id);if(!m)return;let saved
   const sq=(m.squad&&m.squad.length)?m.squad.slice():Object.keys(played(m)).length?Object.keys(played(m)):players.filter(p=>p.current&&!out.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
   // another coach's phone may have started the game, or locked the line-up before kick-off
   const srv=m.live&&m.live.status&&(m.live.status!=="pre"||(m.live.events||[]).some(e=>e.k==="lu"))?m.live:null;
-  LV=saved&&saved.v===3?saved:srv?Object.assign({v:3,id,onSince:{},touched:{1:[],2:[]}},JSON.parse(JSON.stringify(srv))):{v:3,id,status:"pre",half:1,halfStart:null,halfLen:+TEAM.halfLength||20,form:FORM0,squad:sq,slots:sq.slice(0,SIDE).concat(Array(SIDE).fill("")).slice(0,SIDE),events:[],mins:{},onSince:{},touched:{1:[],2:[]}};
+  // a game already finished on the server (by another phone, or fixed by hand) wins over this phone's copy
+  LV=saved&&saved.v===3&&!(srv&&srv.status==="ft")?saved:srv?Object.assign({v:3,id,onSince:{},touched:{1:[],2:[]}},JSON.parse(JSON.stringify(srv))):{v:3,id,status:"pre",half:1,halfStart:null,halfLen:+TEAM.halfLength||20,form:FORM0,squad:sq,slots:sq.slice(0,SIDE).concat(Array(SIDE).fill("")).slice(0,SIDE),events:[],mins:{},onSince:{},touched:{1:[],2:[]}};
   if(!LV.squad||!LV.squad.length)LV.squad=sq;setView("live")}
 function liveSaveLocal(){try{localStorage.setItem(liveKey(LV.id),JSON.stringify(LV))}catch(e){}}
 function livePublic(){return {locked:!!LV.locked,status:LV.status,half:LV.half,halfStart:LV.halfStart,halfLen:LV.halfLen,form:LV.form,slots:LV.sin?LV.slots.map((n,i)=>n||(Object.entries(LV.sin).find(([,v])=>v.slot===i)||[""])[0]):LV.slots,squad:LV.squad,events:LV.events,mins:LV.mins}}
