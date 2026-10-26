@@ -73,6 +73,15 @@ h3{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.09em;color
 .md .h2h{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.md .sc-btn{border:0;background:none;padding:0;cursor:pointer}
 .tgame .o{font-weight:700;overflow:hidden;text-overflow:ellipsis}
 .tgame .sc{font:400 18px var(--display);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tteams{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
+.tchips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}
+.tteam{padding:3px 9px;border-radius:999px;background:var(--field);border:1px solid var(--line);font:600 13px var(--body)}
+.tteam.us{background:var(--club);border-color:var(--club);color:var(--clubInk)}
+.tdraw{color:var(--club)}
+.tgpick{display:flex;flex-direction:column;gap:6px}
+.tgrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:4px 8px;border-radius:8px;background:var(--field)}
+.tgrow span{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tgrow select{width:auto}
 .stag{display:inline-block;padding:1px 7px;border-radius:6px;background:var(--card);border:1px solid var(--line);font:700 11px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-right:6px;vertical-align:1px}
 .trophy{display:inline-block;padding:2px 9px;border-radius:999px;background:var(--gold);color:#111;font:800 12px var(--body);margin-left:6px;vertical-align:2px}
 .hon{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card)}

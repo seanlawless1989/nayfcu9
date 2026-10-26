@@ -61,7 +61,10 @@ function season(){
     M({id:id(day(28),"Oakwood Rangers"),date:day(28),opp:"Oakwood Rangers",ha:"H",venue:HOME,comp:"League",ko:"10:30"}));
   const next=matches.find(m=>m.date===day(7)).id,st={Poppy:"maybe",Harper:"no",Zara:"maybe"};
   const back=((new Date().getDay()+4)%7)||7,wed=[0,1,2,3].map(i=>day(-back-7*i));   // the last four Wednesday sessions
-  return {players,matches,tournaments:[],
+  return {players,matches,
+    // a tournament we've entered where the groups haven't been drawn yet
+    tournaments:[{id:day(10)+"-winter-cup",name:"Sample Town Winter Cup",date:day(10),end_date:null,venue:HOME,potm:null,trophy:"",notes:"",
+      teams:["Sample Town","Ashford Town","Northfield Lions","Meadow Park","Oakwood Rangers","Riverside Juniors","Hillcrest","Castle Vale"].map(name=>({name,group:""}))}],
     honours:[{id:"h1",date:day(-150),title:"Under 11s Spring Cup",achievement:"Winners",notes:"Beat Meadow Park 2-1 in the final"},
       {id:"h2",date:day(-120),title:"Fair Play Award",achievement:"County Youth League",notes:"Voted for by the referees"}],
     training:[{id:1,day:"Wednesday",start:"18:00",finish:"19:15",venue:"Sample Town Recreation Ground, 3G pitch",kit:"Boots, shin pads, water bottle and a warm top",

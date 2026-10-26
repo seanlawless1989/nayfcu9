@@ -92,6 +92,8 @@ create table if not exists public.honours(
 alter table public.tournaments add column if not exists end_date date;
 alter table public.tournaments drop constraint if exists tournaments_end_after_start;
 alter table public.tournaments add constraint tournaments_end_after_start check (end_date is null or end_date >= date);
+-- Added 2026-10-26: the teams entered and their groups ("" = groups not drawn yet), see 14_tournament_teams.sql.
+alter table public.tournaments add column if not exists teams jsonb not null default '[]'::jsonb;
 alter table public.tournaments enable row level security;
 alter table public.honours enable row level security;
 drop policy if exists "read tournaments" on public.tournaments;
