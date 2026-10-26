@@ -185,7 +185,7 @@ function tHeroHtml(t){const d=new Date(t.date+"T12:00:00");const days=Math.max(0
   return `<section class="hero"><div class="kick">Next up · Tournament</div>
     <div class="vs"><div class="side"><img src="${CREST}" alt=""><span>${esc(TEAM.name)}</span></div><div class="mid"><b>🏆</b><span>Tournament</span></div><div class="side">${tLogo(t)?`<img src="${tLogo(t)}" alt="">`:`<span class="ini">${esc(ini)}</span>`}<span>${esc(t.name||"Tournament")}</span></div></div>
     <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${t.venue?`<span class="pill">📍 ${esc(t.venue)}</span>`:""}</div>
-    <div class="hpv">${tGames(t).length?"Games and kick-off times are on the Fixtures page.":"We're entered. Games and kick-off times to follow."}${t.notes?` ${esc(clip(t.notes,140))}`:""}</div>
+    <div class="hpv">${esc(tTeamsLine(t))}${tGames(t).length?"Games and kick-off times are on the Fixtures page.":"We're entered. Games and kick-off times to follow."}${t.notes?` ${esc(clip(t.notes,140))}`:""}</div>
     <div class="btns"><button class="btn gold" data-view="fixtures">🏆 Tournament details</button><button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=live?null:nextFixture(),tn=live?null:nextTournament(nm&&nm.date);if(tn)return tHeroHtml(tn);const m=live||nm;if(!m)return "";
   const d=new Date(m.date+"T12:00:00");const days=Math.round((d-new Date(todayLocal()+"T12:00:00"))/864e5);
@@ -301,6 +301,20 @@ function tRange(t,long){if(!t.date)return"";const M=long?LONGM:MONTHS,a=new Date
   if(t.date===tEnd(t))return `${a.getDate()} ${M[a.getMonth()]}${y}`;
   return a.getMonth()===b.getMonth()?`${a.getDate()}–${b.getDate()} ${M[b.getMonth()]}${y}`:`${a.getDate()} ${M[a.getMonth()]} – ${b.getDate()} ${M[b.getMonth()]}${y}`}
 const dayLabel=iso=>(d=>`${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`)(new Date(iso+"T12:00:00"));
+// Teams entered in a tournament: [{name,group}]. group "" means the groups haven't been drawn yet.
+const GROUPS=["A","B","C","D","E","F","G","H"];
+const tTeams=t=>(Array.isArray(t&&t.teams)?t.teams:[]).filter(x=>x&&x.name);
+const tDrawn=t=>tTeams(t).some(x=>GROUPS.includes(x.group));
+function isUs(n){const k=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");const a=k(n);return !!a&&[TEAM.name,TEAM.shortName,TEAM.abbr,TEAM.appName,`${TEAM.name} ${TEAM.ageShort||""}`,`${TEAM.name} ${TEAM.ageGroup||""}`].some(x=>x&&k(x)===a)}
+function tTeamsHtml(t){const ts=tTeams(t);if(!ts.length)return "";
+  const chips=l=>`<div class="tchips">${l.map(x=>`<span class="tteam${isUs(x.name)?" us":""}">${esc(x.name)}</span>`).join("")}</div>`;
+  const drawn=GROUPS.filter(g=>ts.some(x=>x.group===g)),left=ts.filter(x=>!GROUPS.includes(x.group));
+  if(!drawn.length)return `<div class="tteams"><div class="tday">${ts.length} team${ts.length>1?"s":""} entered · <span class="tdraw">Groups to be drawn</span></div>${chips(ts)}</div>`;
+  return `<div class="tteams">${drawn.map(g=>`<div class="tday">Group ${g}</div>${chips(ts.filter(x=>x.group===g))}`).join("")}${left.length?`<div class="tday">Still to be drawn</div>${chips(left)}`:""}</div>`}
+// one line for the home page: who's in and whether the groups are out
+function tTeamsLine(t){const ts=tTeams(t);if(!ts.length)return "";const mine=ts.find(x=>isUs(x.name)&&GROUPS.includes(x.group));
+  if(mine){const w=ts.filter(x=>x.group===mine.group&&x!==mine).map(x=>x.name);return `We're in Group ${mine.group}${w.length?` with ${w.join(", ")}`:""}. `}
+  return tDrawn(t)?`${ts.length} teams entered and the groups are drawn. `:`${ts.length} teams entered. Groups to be drawn. `}
 function trophyIcon(x){return /^winners|plate winners|shield winners/i.test(x||"")?"🏆":/runners/i.test(x||"")?"🥈":"🏅"}
 // a multi-day tournament stays under Fixtures until its last day, even once the first day's results are in
 function tIsFixture(t){const today=new Date().toISOString().slice(0,10);return tEnd(t)>=today&&((t.date!==tEnd(t)&&today<tEnd(t))||!tGames(t).some(result))}
@@ -316,8 +330,8 @@ function tCard(t){
     <div style="min-width:0"><div class="o">${tLogo(t)?`<img class="badge sm" src="${tLogo(t)}" alt="">`:""}${esc(t.name||"Tournament")}${t.trophy?`<span class="trophy">${trophyIcon(t.trophy)} ${esc(t.trophy)}</span>`:""}</div>
       <div class="meta"><span class="ctag">Tournament</span>${multi?`${days.length} days${t.venue?" · ":""}`:""}${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
       ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}</div>
-    <div></div></div>
-    ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">${tEnd(t)>=new Date().toISOString().slice(0,10)?"Tournament entered. Fixtures to follow.":"No games added yet."}</p>`}
+    <div></div></div>${tTeamsHtml(t)}
+    ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">${tEnd(t)>=new Date().toISOString().slice(0,10)?tTeams(t).length&&!tDrawn(t)?"Fixtures to follow once the groups are drawn.":"Tournament entered. Fixtures to follow.":"No games added yet."}</p>`}
     <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div>
   </div>`;
 }
@@ -1692,6 +1706,9 @@ function tFormView(){
     <div class="grid2"><label class="f">First day<input type="date" id="t-date" value="${esc(T.date||"")}"></label><label class="f">Last day<input type="date" id="t-end" value="${esc(T.end_date&&T.end_date>(T.date||"")?T.end_date:"")}" min="${esc(T.date||"")}"></label></div>
     <p class="hint" style="margin-top:-6px">For a tournament over 2 or 3 days, set the last day. Leave it blank for a one-day tournament.</p>
     <label class="f">Venue<input type="text" id="t-venue" value="${esc(T.venue||"")}"></label>
+    <label class="f">Teams entered<textarea id="t-teams" rows="6" placeholder="One team per line, us included">${esc(tTeams(T).map(x=>x.name).join("\n"))}</textarea></label>
+    <p class="hint" style="margin-top:-6px">One team per line. Leave each group as <b>To be drawn</b> until the draw is made, and the site shows "Groups to be drawn".</p>
+    <div id="t-groups">${tGroupPick(tTeams(T))}</div>
     <label class="f">Player of the tournament<select id="t-potm"><option value="">Not chosen yet</option>${pool.map(n=>`<option${n===T.potm?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
     <label class="f">Trophy won<select id="t-trophy"><option value="">No trophy</option>${TROPHIES.map(x=>`<option${x===T.trophy?" selected":""}>${x}</option>`).join("")}<option value="__other"${other?" selected":""}>Something else…</option></select></label>
     <label class="f" id="t-other-wrap"${other?"":" hidden"}>What did we win?<input type="text" id="t-other" value="${other?esc(T.trophy):""}" placeholder="e.g. Fair play award"></label>
@@ -1701,6 +1718,14 @@ function tFormView(){
   <div class="btns"><button class="btn gold" type="submit" id="saveT">${T.id?"Save tournament":"Create tournament"}</button><button type="button" class="btn ghost" data-view="results">Cancel</button>
   ${T.id&&!g.length?`<button type="button" class="btn danger" id="delT" style="margin-left:auto">Delete tournament</button>`:""}</div></form>`;
 }
+function tGroupPick(ts){if(!ts.length)return "";
+  return `<div class="tgpick">${ts.map(x=>`<label class="tgrow"><span>${esc(x.name)}</span><select data-tgroup="${esc(x.name)}"><option value="">To be drawn</option>${GROUPS.map(g=>`<option value="${g}"${x.group===g?" selected":""}>Group ${g}</option>`).join("")}</select></label>`).join("")}</div>`}
+// the teams box as it stands on the form, keeping any groups already picked
+function tReadTeams(){const box=$("#t-teams");if(!box)return tTeams(T);const was={};document.querySelectorAll("[data-tgroup]").forEach(el=>was[el.dataset.tgroup.toLowerCase()]=el.value);
+  const old={};tTeams(T).forEach(x=>old[x.name.toLowerCase()]=x.group||"");const seen=new Set(),out=[];
+  box.value.split(/\n/).map(x=>x.replace(/\s+/g," ").trim().slice(0,60)).filter(Boolean).forEach(n=>{const k=n.toLowerCase();if(seen.has(k))return;seen.add(k);out.push({name:n,group:(k in was?was[k]:old[k])||""})});
+  return out.slice(0,64)}
+document.addEventListener("input",e=>{if(e.target.id==="t-teams"){const el=$("#t-groups");if(el)el.innerHTML=tGroupPick(tReadTeams())}});
 async function saveTournament(){
   const v=id=>$("#"+id)?.value??"";const tr=v("t-trophy")==="__other"?v("t-other").trim():v("t-trophy");
   const body={name:v("t-name").trim(),date:v("t-date")||null,venue:v("t-venue").trim(),potm:v("t-potm")||null,trophy:tr,notes:v("t-notes").trim(),updated:new Date().toISOString()};
@@ -1710,10 +1735,12 @@ async function saveTournament(){
   if(multi&&tDays({date:body.date,end_date:end}).length>7){toast("A tournament can run for up to a week.");return}
   // only send end_date when it's used, or when the database already has the column (rows loaded with it)
   if(multi||"end_date" in T)body.end_date=multi?end:null;
+  // same for teams: older databases have no teams column until supabase/14_tournament_teams.sql is run
+  const teams=tReadTeams();if(teams.length||"teams" in T)body.teams=teams;
   const id=T.id||`${body.date}-${slug(body.name)}`;
   const off=T.id?tGames(T).filter(m=>m.date&&(m.date<body.date||m.date>(multi?end:body.date))).length:0;
   try{await db.collection("tournaments").doc(id).set(body);toast(off?`Tournament saved. ${off} game${off>1?"s are":" is"} on a date outside the tournament days, so open ${off>1?"them":"it"} to change the date.`:"Tournament saved.");season=seasonOf(body.date)||season;T=null;setView(tIsFixture(Object.assign({id},body))?"fixtures":"results")}
-  catch(e){toast("Couldn't save. Check your connection and try again.")}
+  catch(e){toast(/teams/.test(e&&e.message||"")?"The site's database needs a quick update before it can save the teams. Ask Touchline Tales, or save without them for now.":"Couldn't save. Check your connection and try again.")}
 }
 function hFormView(){
   if(!H)H={id:null,title:"",achievement:"Winners",date:new Date().toISOString().slice(0,10),notes:""};
@@ -2010,7 +2037,7 @@ function formView(){
   ${F.check?`<div class="note"><b>To check:</b> ${esc(F.check)}<br><span class="hint">Saving this match marks it as checked and removes the Check tag.</span></div>`:""}
   <section class="card stack" style="gap:12px"><h3>The match</h3>
     <div class="grid2">
-      <label class="f" style="grid-column:1/-1">Opponent<input type="text" id="f-opp" list="opps" value="${esc(F.opp)}" required></label>
+      <label class="f" style="grid-column:1/-1">Opponent<input type="text" id="f-opp" list="${F.comp==="Tournament"&&tTeams(tournaments.find(y=>y.id===F.tournament_id)).length?"tteams":"opps"}" value="${esc(F.opp)}" required></label>
       <label class="f">Date<input type="date" id="f-date" value="${esc(F.date)}" required></label>
       <label class="f">Kick-off<input type="time" id="f-ko" value="${esc(F.ko)}"></label>
       <label class="f">Venue<input type="text" id="f-venue" list="venues" value="${esc(F.venue)}"></label>
@@ -2025,6 +2052,7 @@ function formView(){
       <label class="f">Stage<select id="f-stage">${STAGES.map(x=>`<option${x===(F.stage||"Group stage")?" selected":""}>${x}</option>`).join("")}</select></label></div>
       ${(x=>x&&tDays(x).length>1?`<div><div class="hint" style="margin-bottom:6px">Which day was this game?</div><div class="mg">${tDays(x).map((d,i)=>`<button type="button" class="mini" data-tday="${d}" aria-pressed="${F.date===d}"${F.date===d?' style="border-color:var(--club)"':""}>${F.date===d?"✓ ":""}Day ${i+1} · ${dayLabel(d)}</button>`).join("")}</div></div>`:"")(tournaments.find(y=>y.id===F.tournament_id))}
       <p class="hint">New tournament? Create it first with <b>+ Add a tournament</b>.</p>`:""}
+    <datalist id="tteams">${tTeams(tournaments.find(y=>y.id===F.tournament_id)).filter(x=>!isUs(x.name)).map(x=>`<option value="${esc(x.name)}">`).join("")}</datalist>
     <datalist id="opps">${opps.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
     <datalist id="venues">${venues.map(o=>`<option value="${esc(o)}">`).join("")}</datalist>
     <label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="f-pp"${F.postponed?" checked":""} style="width:20px;height:20px"> Postponed (new date to be confirmed)</label>
