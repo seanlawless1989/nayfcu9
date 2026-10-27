@@ -219,7 +219,7 @@ const css=`.ttdemo{background:#0E2A1D;color:#F6F3EA;font:500 13px/1.35 Rubik,Arc
 .ttdemo .in{max-width:980px;margin:0 auto;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between}
 .ttdemo b{font-family:Oswald,Archivo,sans-serif;letter-spacing:.06em;color:#F2C230;margin-right:6px}
 .ttdemo .acts{display:flex;flex-wrap:wrap;gap:6px}
-.ttdemo button,.ttdemo a{font:600 12px/1 Rubik,Archivo,system-ui,sans-serif;border-radius:999px;padding:6px 10px;border:1px solid rgba(246,243,234,.35);background:transparent;color:#F6F3EA;cursor:pointer;text-decoration:none;white-space:nowrap}
+.ttdemo button,.ttdemo a{font:600 14px/1 Rubik,Archivo,system-ui,sans-serif;border-radius:999px;padding:0 14px;min-height:40px;display:inline-flex;align-items:center;box-sizing:border-box;border:1px solid rgba(246,243,234,.35);background:transparent;color:#F6F3EA;cursor:pointer;text-decoration:none;white-space:nowrap}
 .ttdemo .go{background:#F2C230;border-color:#F2C230;color:#0E2A1D}
 .ttdemo .tip{flex-basis:100%;color:#BFE3CC;font-size:12px}
 .ttlead{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;max-width:440px;margin:0 auto;background:#F6F3EA;color:#0E2A1D;border-top:5px solid #F2C230;border-radius:14px;
@@ -232,7 +232,7 @@ const css=`.ttdemo{background:#0E2A1D;color:#F6F3EA;font:500 13px/1.35 Rubik,Arc
 .ttlead label.tk{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;margin:2px 0 10px}
 .ttlead label.tk input{width:18px;height:18px;flex:none;margin:1px 0 0;accent-color:#13804A}
 .ttlead .send{width:100%;font:600 15px/1 Rubik,system-ui,sans-serif;border:0;border-radius:999px;padding:12px;background:#13804A;color:#fff;cursor:pointer}
-.ttlead .x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:24px;line-height:1;color:#3E4F45;cursor:pointer;padding:4px}
+.ttlead .x{position:absolute;top:2px;right:4px;border:0;background:none;font-size:24px;line-height:1;color:#3E4F45;cursor:pointer;padding:10px}
 .ttlead .msg{min-height:1.2em;margin:8px 0 0;font-size:13px}
 .ttlead a{color:#13804A}`;
 const WD=Object.assign({ageBtn:"U7–U11 view",coachTip:"You're a coach now. Open today's game and tap ▶ Live match to record goals and subs, or make a matchday graphic.",
