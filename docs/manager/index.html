@@ -117,8 +117,8 @@ select{font:15px var(--body);color:var(--ink);background:var(--field);border:1.5
 .pitch .net.bulge{animation:netBulge .6s ease-out 2}
 @keyframes netBulge{50%{transform:scale(1.18,1.5);background-color:rgba(255,210,0,.5)}}
 .tok{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:0;cursor:pointer;padding:0;width:78px;color:#fff;font:inherit;z-index:2}
-.tok .sh{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--gold);color:#16239E;font:700 18px var(--shirt);padding-top:3px;border:3px solid #16239E;box-shadow:0 3px 8px rgba(0,0,0,.3);position:relative}
-.tok.gk .sh{background:#E94E9E;color:#fff;border-color:#fff}
+.tok .sh{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--kBg,var(--gold));color:var(--kNum,#16239E);text-shadow:var(--kTs,none);font:700 18px var(--shirt);padding-top:3px;border:3px solid var(--kNum,#16239E);box-shadow:0 3px 8px rgba(0,0,0,.3);position:relative}
+.tok.gk .sh{background:var(--gkBg,#E94E9E);color:#fff;border-color:#fff;text-shadow:none}
 .tok .nm{font:700 12px var(--body);background:rgba(10,16,50,.72);padding:1px 6px;border-radius:5px;max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tok .rl{font:800 9.5px var(--body);letter-spacing:.06em;opacity:.9;text-shadow:0 1px 2px rgba(0,0,0,.6)}
 .tok.sel .sh{outline:4px solid #fff;outline-offset:2px}
@@ -130,9 +130,8 @@ select{font:15px var(--body);color:var(--ink);background:var(--field);border:1.5
 .ball{position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #111 inset,0 2px 4px rgba(0,0,0,.4);transform:translate(-50%,-50%);transition:left .45s ease,top .45s ease;z-index:3}
 .mp .dot{position:absolute;transform:translate(-50%,-50%);will-change:left,top;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;padding:0;border:2px solid rgba(0,0,0,.45);box-shadow:0 2px 5px rgba(0,0,0,.35);z-index:2;font:inherit}
 .mp .dot .n{font:700 12.5px var(--shirt);line-height:1;padding:4px 3px 2px;border-radius:5px}
-.mp .dot.us{background:#FFD200;color:#16239E;border-color:#16239E;cursor:pointer}
-.mp .dot.us.gk{background:#E94E9E;color:#fff;border-color:#fff}
-.mp.pinkopp .dot.us.gk{background:#1FA855}
+.mp .dot.us{background:var(--kBg,#FFD200);color:var(--kNum,#16239E);text-shadow:var(--kTs,none);border-color:var(--kNum,#16239E);cursor:pointer}
+.mp .dot.us.gk{background:var(--gkBg,#E94E9E);color:#fff;border-color:#fff;text-shadow:none}
 .mp .dot.them .n{min-width:16px;text-align:center}
 .mp .dot.us .lb{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:2px;font:700 10.5px var(--body);color:#fff;background:rgba(10,16,50,.72);padding:0 5px;border-radius:4px;white-space:nowrap;pointer-events:none}
 .mp .dot.sel{outline:3px solid #fff;outline-offset:2px}
@@ -163,7 +162,7 @@ select{font:15px var(--body);color:var(--ink);background:var(--field);border:1.5
 .att .v{font:700 15px var(--display);text-align:right;font-variant-numeric:tabular-nums}
 .up{color:var(--win);font-weight:800}
 .pcard{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.pcard .big{display:grid;place-items:center;width:72px;height:72px;border-radius:16px;background:var(--gold);color:#16239E;font:700 38px var(--shirt);padding-top:5px;border:4px solid #16239E}
+.pcard .big{display:grid;place-items:center;width:72px;height:72px;border-radius:16px;background:var(--kBg,var(--gold));color:var(--kNum,#16239E);text-shadow:var(--kTs,none);font:700 38px var(--shirt);padding-top:5px;border:4px solid var(--kNum,#16239E)}
 .trait{display:inline-block;font:700 12px var(--body);padding:3px 8px;border-radius:6px;background:var(--field);border:1px solid var(--line)}
 .face{font-size:18px}
 .na-tag{display:inline-block;font:700 11px var(--body);background:var(--warn);color:var(--warnInk);border-radius:6px;padding:2px 6px}
@@ -343,11 +342,39 @@ details.tacd .tg{margin-top:14px}
 .board .side span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.15}
 .board .spd{margin-top:6px;border:0;border-radius:999px;padding:4px 12px;background:var(--gold);color:var(--goldInk);font:800 12px var(--body);cursor:pointer}
 .mp .dot.them{border:2.5px solid #fff}
+/* kits: a shirt drawn with clip-path so any CSS pattern fills it */
+.kfig{--w:120px;width:var(--w);display:flex;flex-direction:column;align-items:center;flex:none}
+.kshirt{position:relative;width:100%;aspect-ratio:1/.96;clip-path:polygon(31% 0,40% 0,50% 9%,60% 0,69% 0,100% 19%,90% 40%,78% 33%,78% 100%,22% 100%,22% 33%,10% 40%,0 19%);filter:drop-shadow(0 2px 0 rgba(0,0,0,.15))}
+.kshirt .slv{position:absolute;inset:0}
+.kshirt .slv.l{clip-path:polygon(31% 0,24% 31%,22% 33%,10% 40%,0 19%)}
+.kshirt .slv.r{clip-path:polygon(69% 0,76% 31%,78% 33%,90% 40%,100% 19%)}
+.kshirt .col{position:absolute;left:38%;top:0;width:24%;height:11%;clip-path:polygon(0 0,12% 0,50% 70%,88% 0,100% 0,50% 100%)}
+.kshirt .ksp{position:absolute;left:24%;right:24%;top:40%;text-align:center;font:800 calc(var(--w)*.085)/1.05 var(--body);letter-spacing:.01em;overflow:hidden}
+.kshirt .kcr{position:absolute;left:58%;top:17%;width:11%}
+.kshorts{width:58%;aspect-ratio:1/.5;margin-top:3%;clip-path:polygon(0 0,100% 0,100% 100%,55% 100%,50% 35%,45% 100%,0 100%)}
+.ksocks{display:flex;gap:16%;width:44%;justify-content:center;margin-top:3%}.ksocks i{display:block;width:22%;aspect-ratio:1/2.2;border-radius:0 0 3px 3px}
+.kits{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kitc{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border:1.5px solid var(--line);border-radius:12px;background:var(--field);cursor:pointer;font:inherit;color:inherit;text-align:center}
+.kitc[aria-pressed="true"]{border-color:var(--club);background:var(--card);box-shadow:0 0 0 2px var(--club)}
+.kitc b{font-size:15px}.kitc small{font-size:12px;color:var(--muted);line-height:1.3}
+.sw{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sw button{width:30px;height:30px;border-radius:50%;border:2px solid rgba(0,0,0,.18);cursor:pointer;padding:0}
+.sw button[aria-pressed="true"]{outline:3px solid var(--club);outline-offset:2px}
+.sw button.same{width:auto;border-radius:999px;padding:0 10px;font:700 12px var(--body);background:var(--card);color:var(--ink)}
+.sw input[type=color]{width:34px;height:32px;border:0;padding:0;background:none;cursor:pointer}
+.ked{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:560px){.ked{grid-template-columns:minmax(0,1fr)}.ked>.kfig{margin:0 auto}}
+.ked .row{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.ked .row>span{font:800 12px var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.ked input[type=text]{font:inherit;padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);min-width:0}
+.clash{display:inline-block;font:800 11px var(--body);padding:2px 7px;border-radius:6px}
+.clash.c0{background:color-mix(in srgb,var(--win) 18%,transparent);color:var(--win)}.clash.c1{background:var(--warn);color:var(--warnInk)}.clash.c2{background:var(--loss);color:#fff}
+.vsk{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+#kitPick .kits{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
 .mshouts .shouts{grid-template-columns:repeat(3,minmax(0,1fr))}
 .mshouts .shout{min-height:52px;justify-content:center;align-items:center;text-align:center}
 .goalfx{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;overflow:hidden;background:color-mix(in srgb,#2235E8 94%,transparent);color:#fff;text-align:center;animation:gfIn .3s ease-out;cursor:pointer}
 .goalfx h2{position:relative;font:700 clamp(76px,26vw,124px)/1 var(--shirt);color:var(--gold);margin:0 0 18px;text-shadow:0 6px 0 #16239E;transform:rotate(-4deg)}
-.goalfx .sh{position:relative;width:132px;height:132px;border-radius:50%;background:var(--gold);border:7px solid #fff;display:grid;place-items:center;font:700 70px var(--shirt);color:#16239E;padding-top:8px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:gfPop .5s .1s both cubic-bezier(.3,1.6,.6,1)}
+.goalfx .sh{position:relative;width:132px;height:132px;border-radius:50%;background:var(--kBg,var(--gold));border:7px solid #fff;display:grid;place-items:center;font:700 70px var(--shirt);color:var(--kNum,#16239E);text-shadow:var(--kTs,none);padding-top:8px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:gfPop .5s .1s both cubic-bezier(.3,1.6,.6,1)}
 .goalfx .who{position:relative;font:700 42px var(--shirt);letter-spacing:.03em;margin-top:8px}
 .goalfx .sub{position:relative;font-size:17px;font-weight:600}
 .goalfx .scr{position:relative;margin-top:18px;font:700 22px var(--display);background:#16239E;padding:6px 16px;border-radius:999px}
@@ -625,6 +652,90 @@ const KITS={wfp:{s:"#E94E9E",t:"#FFFFFF"},dla:{s:"#1A1A1A",t:"#FFFFFF",p:"stripe
  wun:{s:"#C8102E",t:"#1A1A1A"},mid:{s:"#006B5C",t:"#FFFFFF"},bag:{s:"#6CB4E4",t:"#0B1F4A"}};
 function kit(id){return KITS[id]||{s:team(id).col,t:"#FFFFFF"}}
 function kitBg(k){return k.p==="stripes"?`repeating-linear-gradient(90deg,${k.s} 0 5px,${k.t} 5px 9px)`:k.p==="hoops"?`repeating-linear-gradient(0deg,${k.s} 0 5px,${k.t} 5px 9px)`:k.s}
+// ---------------- our kits ----------------
+// p pattern, c1 main colour, c2 second colour, sl sleeves ("" = same as the shirt), sh shorts, so socks, nm numbers and trim, sp sponsor, rec [W,D,L]
+const KIT_PAT=[["plain","Plain"],["stripes","Stripes"],["hoops","Hoops"],["halves","Halves"],["quarters","Quarters"],["sash","Sash"],["pin","Pinstripes"],["chevron","Chevron"]];
+const KIT_COLS=["#FFD200","#2235E8","#16239E","#6CB4E4","#FFFFFF","#1A1A1A","#8A8F9C","#C8102E","#7A1F2B","#E94E9E","#7B2D8E","#0A7A3B","#00A3AD","#E07B00"];
+const SPONSORS=["Grey-Smith Legal","Coffey Coffee",""];
+const KIT_MAX=5;
+function defKits(){return [
+  {id:"k1",n:"Home",p:"plain",c1:"#FFD200",c2:"#2235E8",sl:"",sh:"#2235E8",so:"#FFD200",nm:"#16239E",sp:"Grey-Smith Legal",rec:[0,0,0]},
+  {id:"k2",n:"Away",p:"plain",c1:"#2235E8",c2:"#FFD200",sl:"#FFD200",sh:"#16239E",so:"#2235E8",nm:"#FFFFFF",sp:"Grey-Smith Legal",rec:[0,0,0]},
+  {id:"k3",n:"Third",p:"sash",c1:"#FFFFFF",c2:"#2235E8",sl:"",sh:"#FFFFFF",so:"#FFFFFF",nm:"#16239E",sp:"Grey-Smith Legal",rec:[0,0,0]}]}
+const BIBS=[{id:"bib",n:"Orange bibs",p:"plain",c1:"#FF7A00",c2:"#FF7A00",sl:"",sh:"#16239E",so:"#FFD200",nm:"#1A1A1A",sp:""},
+  {id:"bib",n:"Green bibs",p:"plain",c1:"#7ED321",c2:"#7ED321",sl:"",sh:"#16239E",so:"#FFD200",nm:"#1A1A1A",sp:""}];
+function shirtBg(k){const a=k.c1,b=k.c2;return {
+  stripes:`repeating-linear-gradient(90deg,${a} 0 12.5%,${b} 12.5% 25%)`,hoops:`repeating-linear-gradient(180deg,${a} 0 12.5%,${b} 12.5% 25%)`,
+  halves:`linear-gradient(90deg,${a} 50%,${b} 50%)`,quarters:`conic-gradient(${b} 0 25%,${a} 0 50%,${b} 0 75%,${a} 0)`,
+  sash:`linear-gradient(135deg,${a} 40%,${b} 40% 58%,${a} 58%)`,pin:`repeating-linear-gradient(90deg,${a} 0 10%,${b} 10% 12.5%)`,
+  chevron:`linear-gradient(to bottom left,transparent 42%,${b} 42% 58%,transparent 58%) left top/50% 55% no-repeat,linear-gradient(to bottom right,transparent 42%,${b} 42% 58%,transparent 58%) right top/50% 55% no-repeat,${a}`}[k.p]||a}
+// a front view of the kit; w in px
+function kitFig(k,w,num){
+  const sl=k.sl?`<i class="slv l" style="background:${k.sl}"></i><i class="slv r" style="background:${k.sl}"></i>`:"";
+  return `<div class="kfig" style="--w:${w}px" aria-hidden="true"><div class="kshirt" style="background:${shirtBg(k)}">${sl}<i class="col" style="background:${k.nm}"></i>
+   ${w>=90?`<img class="kcr" src="crest.png" alt="">`:""}${k.sp.trim()&&w>=60?`<b class="ksp" style="color:${k.nm}${k.p==="plain"?"":`;background:${k.c1};border-radius:3px;padding:2px 0`}">${esc(k.sp.trim())}</b>`:num?`<b class="ksp" style="color:${k.nm};font-size:${Math.round(w*.3)}px;top:30%">${num}</b>`:""}</div>
+   <div class="kshorts" style="background:${k.sh}"></div><div class="ksocks"><i style="background:${k.so}"></i><i style="background:${k.so}"></i></div></div>`}
+// colour distance in CIE Lab: under ~25 reads as the same colour at a glance
+function lab(h){const c=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(v=>v>.04045?Math.pow((v+.055)/1.055,2.4):v/12.92);
+  const f=t=>t>.008856?Math.cbrt(t):7.787*t+16/116;const x=f((c[0]*.4124+c[1]*.3576+c[2]*.1805)/.95047),y=f(c[0]*.2126+c[1]*.7152+c[2]*.0722),z=f((c[0]*.0193+c[1]*.1192+c[2]*.9505)/1.08883);
+  return [116*y-16,500*(x-y),200*(y-z)]}
+function cdist(a,b){const A=lab(a),B=lab(b);return Math.hypot(A[0]-B[0],A[1]-B[1],A[2]-B[2])}
+// 0 fine, 1 a bit close, 2 clash (the ref will want bibs)
+function kitClash(k,opp){const o=kit(opp);const ours=[k.c1].concat(["plain","pin","sash","chevron"].includes(k.p)?[]:[k.c2]);const theirs=[o.s].concat(o.p?[o.t]:[]);
+  const main=cdist(k.c1,o.s);const any=Math.min(...ours.flatMap(a=>theirs.map(b=>cdist(a,b))));
+  return main<28?2:any<24||main<42?1:0}
+const CLASH_N=["Good contrast","A bit close","Clashes"];
+function oppKit(id){const o=kit(id);return {n:"",p:o.p||"plain",c1:o.s,c2:o.t,sl:"",sh:o.p?o.t:o.s,so:o.s,nm:o.t,sp:""}}
+function bestKit(opp){let bi=0,bs=9;S.kits.forEach((k,i)=>{const c=kitClash(k,opp);if(c<bs){bs=c;bi=i}});return bi}
+function bibsFor(opp){const o=kit(opp).s;return BIBS.slice().sort((a,b)=>cdist(b.c1,o)-cdist(a.c1,o))[0]}
+// the kit on show right now: the match kit (or bibs) during a game, otherwise the first-choice kit
+function wornKit(){return view==="match"&&M&&M.kitK?M.kitK:S.kits[0]}
+function gkColour(k,opp){const pink="#E94E9E";return (opp&&cdist(kit(opp).s,pink)<30)||cdist(k.c1,pink)<30?"#1FA855":pink}
+function applyKit(){const k=wornKit();const r=document.documentElement.style;if(!k)return;
+  r.setProperty("--kBg",shirtBg(k));r.setProperty("--kNum",k.nm);r.setProperty("--kTs",k.p==="plain"?"none":`0 0 3px ${k.c1},0 0 3px ${k.c1},0 0 2px ${k.c1}`);
+  r.setProperty("--gkBg",gkColour(k,view==="match"&&M?M.opp:null))}
+function setMatchKit(i){M.kit=i;M.kitK=S.kits[i];M.clash=kitClash(M.kitK,M.opp)}
+function kitRecord(m){const k=S.kits.find(x=>x.id===m.kitId);if(!k||!m.res)return;k.rec=k.rec||[0,0,0];k.rec[{W:0,D:1,L:2}[m.res]]++}
+function recStr(k){const r=k.rec||[0,0,0];const n=r[0]+r[1]+r[2];return n?`Played ${n} · W${r[0]} D${r[1]} L${r[2]}`:"Not worn yet"}
+function kitPickCard(){
+  const o=kit(M.opp);const t=team(M.opp);
+  return `<section class="card" id="kitPick"><h3>Which kit today?</h3>
+   <div class="vsk">${kitFig(oppKit(M.opp),56)}<span class="hint">${esc(t.name)} play in ${o.p==="stripes"?"stripes":o.p==="hoops"?"hoops":"these colours"}${M.comp==="T"?"":M.home?". You're at home, so pick something that stands out.":". You're away, so it's on you to avoid a clash."}</span></div>
+   <div class="kits">${S.kits.map((k,i)=>{const c=kitClash(k,M.opp);return `<button class="kitc" data-mkit="${i}" aria-pressed="${i===M.kit}">${kitFig(k,64)}<b>${esc(k.n)}</b><span class="clash c${c}">${CLASH_N[c]}</span></button>`}).join("")}</div>
+   ${M.clash===2?`<p class="note" style="margin-top:10px">That's too close to ${esc(t.name)}'s colours. The ref will make you wear bibs over it.</p>`:""}
+   <p class="hint" style="margin-top:8px">Design your kits on Club, then Kits.</p></section>`}
+let kitEd=0;
+function kitsV(){
+  if(kitEd>=S.kits.length)kitEd=0;const k=S.kits[kitEd];
+  const sw=(f,allowSame)=>`<div class="sw">${allowSame?`<button class="same" data-kc="${f}" data-col="" aria-pressed="${!k[f]}">Same as shirt</button>`:""}${KIT_COLS.map(c=>`<button data-kc="${f}" data-col="${c}" style="background:${c}" aria-pressed="${k[f].toUpperCase()===c}" aria-label="${c}"></button>`).join("")}<input type="color" data-kcol="${f}" value="${k[f]||k.c1}" aria-label="Pick any colour"></div>`;
+  const sp=SPONSORS.includes(k.sp)?k.sp:"custom";
+  return `<div class="stack"><section class="card"><h2>Your kits</h2><p class="hint" style="margin-bottom:10px">Design up to ${KIT_MAX} kits. Before every game you pick which one to wear. The first kit is your first choice, and it's what the girls wear on the Tactics pitch.</p>
+   <div class="kits">${S.kits.map((x,i)=>`<button class="kitc" data-ked="${i}" aria-pressed="${i===kitEd}">${kitFig(x,84)}<b>${esc(x.n)}${i===0?" ⭐":""}</b><small>${recStr(x)}</small></button>`).join("")}
+   ${S.kits.length<KIT_MAX?`<button class="kitc" data-kact="add" style="justify-content:center;min-height:150px"><b style="font-size:28px">+</b><small>New kit</small></button>`:""}</div></section>
+  <section class="card"><h2>Edit: ${esc(k.n)}</h2><div class="ked">${kitFig(k,150,7)}<div>
+   <label class="row"><span>Name</span><input type="text" id="kitName" maxlength="16" value="${esc(k.n)}"></label>
+   <div class="row"><span>Pattern</span><div class="seg" role="group" aria-label="Pattern" style="flex-wrap:wrap">${KIT_PAT.map(([v,n])=>`<button data-kp="${v}" aria-pressed="${k.p===v}">${n}</button>`).join("")}</div></div>
+   <div class="row"><span>Main colour</span>${sw("c1")}</div>
+   ${k.p!=="plain"?`<div class="row"><span>${{stripes:"Stripes",hoops:"Hoops",sash:"Sash",pin:"Pinstripes",chevron:"Chevron"}[k.p]||"Second colour"}</span>${sw("c2")}</div>`:""}
+   <div class="row"><span>Sleeves</span>${sw("sl",true)}</div>
+   <div class="row"><span>Numbers and trim</span>${sw("nm")}</div>
+   <div class="row"><span>Shorts</span>${sw("sh")}</div>
+   <div class="row"><span>Socks</span>${sw("so")}</div>
+   <div class="row"><span>Shirt sponsor</span><div class="seg" role="group" aria-label="Sponsor" style="flex-wrap:wrap">${SPONSORS.map(v=>`<button data-ksp="${esc(v)}" aria-pressed="${sp===v}">${v||"None"}</button>`).join("")}<button data-ksp="custom" aria-pressed="${sp==="custom"}">Your own</button></div>
+    ${sp==="custom"?`<input type="text" id="kitSp" maxlength="20" placeholder="Sponsor name" value="${esc(k.sp.trim())}">`:""}</div>
+   <div class="btns">${kitEd>0?`<button class="btn ghost small" data-kact="first">Make first choice</button>`:""}${S.kits.length<KIT_MAX?`<button class="btn ghost small" data-kact="copy">Copy this kit</button>`:""}${S.kits.length>1?`<button class="btn ghost small" data-kact="del">Delete</button>`:""}<button class="btn ghost small" data-kact="reset">Back to the club kit</button></div>
+  </div></div></section></div>`}
+function kitClick(d){const k=S.kits[kitEd];
+  if(d.ked!=null){kitEd=+d.ked;return true}
+  if(d.kp){k.p=d.kp;return true}
+  if(d.kc){k[d.kc]=d.col;return true}
+  if(d.ksp!=null){k.sp=d.ksp==="custom"?(SPONSORS.includes(k.sp)?"":k.sp):d.ksp;if(d.ksp==="custom")k.sp=k.sp||" ";return true}
+  if(d.kact==="add"||d.kact==="copy"){if(S.kits.length>=KIT_MAX)return false;const base=d.kact==="copy"?k:defKits()[S.kits.length%3];
+    const n={...JSON.parse(JSON.stringify(base)),id:"k"+Date.now().toString(36),n:d.kact==="copy"?`${k.n} 2`.slice(0,16):["Home","Away","Third","Fourth","Fifth"][S.kits.length],rec:[0,0,0]};S.kits.push(n);kitEd=S.kits.length-1;return true}
+  if(d.kact==="del"&&S.kits.length>1){S.kits.splice(kitEd,1);kitEd=0;toast("Kit deleted.");return true}
+  if(d.kact==="first"){S.kits.unshift(S.kits.splice(kitEd,1)[0]);kitEd=0;toast(`${S.kits[0].n} is now your first choice.`);return true}
+  if(d.kact==="reset"){const r=defKits()[0];Object.assign(k,{p:r.p,c1:r.c1,c2:r.c2,sl:r.sl,sh:r.sh,so:r.so,nm:r.nm,sp:r.sp});return true}
+  return false}
 // [engine role, x, y, position]
 const FORMS={
  "1-2-1":[["GK",50,90,"GK"],["DEF",50,70,"D"],["MID",20,48,"LW"],["MID",80,48,"RW"],["ATT",50,24,"ST"]],
@@ -770,7 +881,7 @@ function newGame(keepName){
   S={v:3,year:2026,age:9,season:1,teams:{},players:SQUAD.map(mkPlayer),
     tac:{form:"1-2-1",xi:[],subs:[],ment:1,cap:"lydia",plan:{mode:"off",gk:true,ch:[]}},train:{focus:"passing",int:1,indiv:{}},
     inbox:[],board:{fun:70,harm:72,dev:50,res:50},hist:[],lastRes:null,lastStats:null,seasonOver:false,msgId:1,trophies:[],posV:1};
-  ensureTeams();S.div=1;S.leagueIds=DIV1.slice();S.manager=keepName||"";S.guide=keepName?9:0;S.friendly={done:false};S.mlog=[];S.story=[];
+  ensureTeams();S.div=1;S.leagueIds=DIV1.slice();S.manager=keepName||"";S.guide=keepName?9:0;S.friendly={done:false};S.mlog=[];S.story=[];S.kits=defKits();
   buildSeason();
   autoPick();
   mail("Club committee","Welcome to the dugout",`Welcome aboard, gaffer. You're in charge of the Under 9s girls for ${S.year}/${String((S.year+1)%100).padStart(2,"0")}.\n\nWe play 5v5 (a keeper and four outfield), two halves of 20 minutes, with rolling subs. Each week you pick a matchday squad of 8: five to start and three subs. Anyone left out will be disappointed, so rotate the squad fairly.\n\nTraining is on Wednesday nights. There's the County Cup, a league, and four one-day tournaments to look forward to.\n\nThe committee cares most about the girls enjoying it, the girls getting better and a happy squad. Results are nice too. Good luck!`);
@@ -959,6 +1070,7 @@ function startMatch(fr,ch){
     us:0,them:0,min:0,q:0,shots:[0,0],sot:[0,0],possT:[0,0],feed:[],state:"pre",speed:1,timer:null,ball:[50,50],
     weather:T&&tour.weather?tour.weather:pick(WEATHER),selTok:null,talks:{},talkSaid:null,mod:{atk:1,def:1,ctl:1},goalLog:[],
     oppNums:shuffle([7,8,9,10,11,5,6,14]),poss:"us",pitchEl:null,queue:[],dUs:0,dThem:0};
+  setMatchKit(bestKit(opp));
   if(T)tour.weather=M.weather;
   const pl=S.tac.plan;M.plan=pl&&pl.mode!=="off"?JSON.parse(JSON.stringify(pl)):null;M.planB=planBounds(M.half);
   squad.forEach(id=>{M.mins[id]=0;M.rt[id]=6.2;M.goals[id]=0;M.ast[id]=0});
@@ -1181,7 +1293,7 @@ function finishMatch(){
   if(M.comp==="X"){finishChallenge();return}
   matchStories(M);
   if(M.comp==="F"){finishFriendly();return}
-  const m=M;const ev=curEvent();const of=ourFixture(ev);const f=of.f;const T=m.comp==="T";const tour=T?S.tours[m.tour]:null;
+  const m=M;kitRecord(m);const ev=curEvent();const of=ourFixture(ev);const f=of.f;const T=m.comp==="T";const tour=T?S.tours[m.tour]:null;
   if(f.h===US){f.hs=m.us;f.as=m.them}else{f.hs=m.them;f.as=m.us}
   if(m.comp==="C"||(T&&m.final)){f.pens=m.pens?(f.h===US?m.pens:[m.pens[1],m.pens[0]]):null;f.w=m.res==="W"?US:m.opp}
   if(m.comp==="C"){if(m.res!=="W")S.cup.out=true;if(m.round===2&&m.res==="W")S.cup.won=true}
@@ -1383,8 +1495,8 @@ const ICO={training:'<circle cx="12" cy="12" r="8"/><path d="M12 4v4M12 16v4M4 1
   table:'<path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8"/>',club:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'};
 const svgI=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
 const TABS=[["home","Portal","home"],["squad","Squad","squad"],["tactics","Tactics","tactics"],["training","Training","training"],["games","Games","fixtures"],["club","Club","club"]];
-const SUBTABS={home:[["home","Overview"],["inbox","Inbox"]],squad:[["squad","Players"],["gametime","Game time"]],games:[["fixtures","Fixtures"],["table","League"],["cup","County Cup"],["tours","Tournaments"]]};
-const GROUP={home:"home",inbox:"home",tactics:"tactics",squad:"squad",training:"training",gametime:"squad",fixtures:"games",cup:"games",tours:"games",table:"games",club:"club"};
+const SUBTABS={home:[["home","Overview"],["inbox","Inbox"]],squad:[["squad","Players"],["gametime","Game time"]],games:[["fixtures","Fixtures"],["table","League"],["cup","County Cup"],["tours","Tournaments"]],club:[["club","Club"],["kits","Kits"]]};
+const GROUP={home:"home",inbox:"home",tactics:"tactics",squad:"squad",training:"training",gametime:"squad",fixtures:"games",cup:"games",tours:"games",table:"games",club:"club",kits:"club"};
 function render(){
   $("#when").textContent=S.seasonOver?`Season over · ${seasonStr()}`:fmt(curDate());
   $("#mastSub").textContent=CH?`Challenge: ${CHAL.find(c=>c.id===CH.id).n}`:`${S.manager?`${S.manager} · `:""}Under ${S.age}s · ${divName()} · ${seasonStr()}`;
@@ -1392,15 +1504,15 @@ function render(){
   $("#bell").innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg>${unread?`<span class="badge">${unread}</span>`:""}`;
   $("#bell").setAttribute("aria-label",unread?`Messages, ${unread} new`:"Messages");
   document.body.classList.toggle("inmatch",view==="match"&&!!M);
-  const grp=GROUP[view]||"home";
+  applyKit();const grp=GROUP[view]||"home";
   $("#tabs").innerHTML=TABS.map(([g,n,v])=>`<button data-view="${v}" aria-current="${g===grp?"page":"false"}">${n}</button>`).join("");
   const main=$("#main");
   main.classList.add("hasbar");
   if(view==="match"&&M){renderMatch();return}
   if(view==="match")view="home";
   const sub=SUBTABS[GROUP[view]];
-  main.innerHTML=(sub&&!(view==="squad"&&playerView)?`<nav class="subtabs" aria-label="${GROUP[view]==="team"?"Team":"Games"}">${sub.map(([v,n])=>`<button data-view="${v}" aria-current="${v===view?"page":"false"}">${n}</button>`).join("")}</nav>`:"")+
-    ({home:homeV,squad:squadV,tactics:tacticsV,training:trainingV,gametime:gameTimeV,fixtures:fixturesV,table:tableV,cup:cupV,tours:toursV,inbox:inboxV,club:clubV}[view]||homeV)()+
+  main.innerHTML=(sub&&!(view==="squad"&&playerView)?`<nav class="subtabs" aria-label="${{squad:"Squad",games:"Games",club:"Club",home:"Portal"}[GROUP[view]]||"Sections"}">${sub.map(([v,n])=>`<button data-view="${v}" aria-current="${v===view?"page":"false"}">${n}</button>`).join("")}</nav>`:"")+
+    ({home:homeV,squad:squadV,tactics:tacticsV,training:trainingV,gametime:gameTimeV,fixtures:fixturesV,table:tableV,cup:cupV,tours:toursV,inbox:inboxV,club:clubV,kits:kitsV}[view]||homeV)()+
     (S.guide===0?guideIntro():"");
   setBar();
 }
@@ -1723,7 +1835,7 @@ function talkCard(phase,title){
 }
 function renderMatch(){
   if(view!=="match"||!M)return;
-  const t=team(M.opp);const pu=M.possT[0]+M.possT[1]?Math.round(M.possT[0]/(M.possT[0]+M.possT[1])*100):50;
+  applyKit();const t=team(M.opp);const pu=M.possT[0]+M.possT[1]?Math.round(M.possT[0]/(M.possT[0]+M.possT[1])*100):50;
   const bench=M.squad.filter(id=>!M.xi.includes(id));
   const ctrl=M.state==="pre"?`<button class="btn gold" data-m="go">Kick off</button>`:
     M.state==="live"?`<button class="btn" data-m="pause">Pause to make changes</button>`:
@@ -1741,11 +1853,11 @@ function renderMatch(){
   <div class="board${fresh&&top.cls==="goal"?" gflash":""}${fresh&&top.cls==="them"?" tflash":""}" style="${dly}"><div class="side">${badge(US)}<span>Newton Aycliffe</span></div><div style="display:flex;flex-direction:column;align-items:center"><div class="sc">${M.dUs}–${M.dThem}</div><span class="clk">${quarter}</span>${M.state!=="ft"?`<button class="spd" data-speed="${M.speed%3+1}" aria-label="Game speed ${["slow","normal","fast"][M.speed-1]}. Tap to change">${["Slow","Normal","Fast"][M.speed-1]} ▸</button>`:""}</div><div class="side r"><span>${esc(t.name)}</span>${badge(M.opp)}</div>
    ${gl.length?`<div class="scorers" aria-label="Goals"><div>${gl.filter(g=>g.side==="us").map(g=>`<span>⚽ ${esc(g.name)} ${g.min}'${g.ast?` <small>(${esc(g.ast)})</small>`:""}</span>`).join("")}</div><div class="r">${gl.filter(g=>g.side==="them").map(g=>`<span>${esc(g.name)} ${g.min}' ⚽</span>`).join("")}</div></div>`:""}</div>
   <div class="mtop">
-   <div class="mpwrap"><div id="mpitchSlot"></div><div class="legend"><span><i style="background:#FFD200;border-color:#16239E"></i>Newton Aycliffe</span><span><i style="background:${kitBg(kit(M.opp))}"></i>${esc(t.name)}</span></div>
+   <div class="mpwrap"><div id="mpitchSlot"></div><div class="legend"><span><i style="background:var(--kBg);border-color:var(--kNum)"></i>Newton Aycliffe${M.kitK.id==="bib"?" (bibs)":""}</span><span><i style="background:${kitBg(kit(M.opp))}"></i>${esc(t.name)}</span></div>
     ${M.state!=="pre"&&M.state!=="ft"?`<p class="hint" style="margin-top:6px">To make a sub, tap a sub's name below, then tap who's coming off.</p>`:""}</div>
    <div class="stack" style="gap:12px">
     ${M.comp==="F"?matchTip():""}${M.comp==="X"?`<section class="card tip"><h3>Challenge · ${esc(M.chal.n)}</h3><p style="margin:0">${esc(M.chal.d)}</p></section>`:""}
-    ${M.state==="pre"?prePlanCard():""}
+    ${M.state==="pre"?kitPickCard():""}${M.state==="pre"?prePlanCard():""}
     ${M.state!=="pre"&&top?`<div class="flash ${flashCls}${fresh?" anim":""}" style="${dly}" role="status" aria-live="polite"><span class="fm">${top.m}'</span><span>${top.cls==="goal"?"⚽ ":""}${esc(top.text)}</span></div>`:""}
     ${M.state!=="pre"&&top?`<div class="roll" aria-hidden="true" style="margin:0">${M.feed.slice(1,4).map((e,i)=>`<div style="opacity:${[.85,.6,.4][i]}"><span>${e.m}'</span> ${esc(e.text)}</div>`).join("")}</div>`:""}
     ${M.state==="live"||M.state==="paused"?`<div class="mshouts"><div class="shouts">${Object.entries(SHOUTS).map(([k,v])=>`<button class="shout${shoutOn()===k?" on":""}" data-shout="${k}"${M.min<(M.shoutCd||0)?" disabled":""}><b>${v.n}</b><small>${shoutOn()===k?`Working · ${M.shout.until-M.min} min left`:v.d}</small></button>`).join("")}</div>
@@ -1762,7 +1874,7 @@ function renderMatch(){
   <div class="mview">
     <section class="card"><h3>Minutes and legs</h3><div class="mins">${M.squad.map(id=>`<div class="mn${M.cond[id]<55&&M.xi.includes(id)&&M.state!=="ft"?" low":""}"><span>${esc(P(id).name)}</span><b>${M.mins[id]}' · ${Math.round(M.cond[id])}%</b></div>`).join("")}</div>
      <div class="stat3" style="margin-top:14px"><span>${pu}%</span><span>Possession</span><span>${100-pu}%</span><span>${M.shots[0]}</span><span>Shots</span><span>${M.shots[1]}</span><span>${M.sot[0]}</span><span>On target</span><span>${M.sot[1]}</span></div><div class="poss" style="margin-top:10px"><i style="width:${pu}%"></i></div></section>
-    <section class="card"><h3>${M.state==="pre"?`${esc(compT)} · ${M.comp==="T"?"Neutral":M.home?"Home":"Away"} · ${esc(M.weather)}`:"Commentary"}</h3><div class="feed">${M.state==="pre"?`<div class="ev"><span class="m"></span><span>The girls are warmed up. ${esc(P(S.tac.cap)?.name||"")} leads them out as captain.</span></div>${M.feed.map(e=>`<div class="ev ${e.cls}"><span class="m"></span><span>${esc(e.text)}</span></div>`).join("")}`:M.feed.map((e,i)=>`<div class="ev ${e.cls}${i===0&&evNew?" new":""}"${i===0?` style="${dly}"`:""}><span class="m">${e.m}'</span><span>${esc(e.text)}</span></div>`).join("")}</div></section>
+    <section class="card"><h3>${M.state==="pre"?`${esc(compT)} · ${M.comp==="T"?"Neutral":M.home?"Home":"Away"} · ${esc(M.weather)}`:"Commentary"}</h3><div class="feed">${M.state==="pre"?`<div class="ev"><span class="m"></span><span>The girls are warmed up and in their ${esc(M.kitK.n.toLowerCase())} kit. ${esc(P(S.tac.cap)?.name||"")} leads them out as captain.</span></div>${M.feed.map(e=>`<div class="ev ${e.cls}"><span class="m"></span><span>${esc(e.text)}</span></div>`).join("")}`:M.feed.map((e,i)=>`<div class="ev ${e.cls}${i===0&&evNew?" new":""}"${i===0?` style="${dly}"`:""}><span class="m">${e.m}'</span><span>${esc(e.text)}</span></div>`).join("")}</div></section>
   </div></div>`;
   const slot=document.getElementById("mpitchSlot");if(slot){if(!M.pitchEl)M.pitchEl=buildMPitch();slot.replaceWith(M.pitchEl);updateMPitch()}
   const ours=M.goalLog.filter(g=>g.side==="us");if(ours.length>(M.gfx||0)){M.gfx=ours.length;showGoal(ours[ours.length-1])}
@@ -1824,7 +1936,7 @@ function passTo(side,i,tx,ty,o){o=o||{};const A=M.an;
   const lofted=o.lofted||pd([A.ball.x,A.ball.y],[tx,ty])>40;
   kick(tx,ty,lofted?34:48,lofted?7:0,()=>hold(side,i));A.lastPass=now()}
 function buildMPitch(){
-  const el=document.createElement("div");el.className="pitch mp"+(["wfp"].includes(M.opp)?" pinkopp":"");el.id="mpitch";const k=kit(M.opp);
+  const el=document.createElement("div");el.className="pitch mp";el.id="mpitch";const k=kit(M.opp);
   el.innerHTML=`<div class="box top"></div><div class="box bot"></div><div class="six top"></div><div class="six bot"></div><div class="circ"></div><span class="spot"></span><div class="net top"></div><div class="net bot"></div><span class="zone"></span>`+
    [0,1,2,3,4].map(i=>`<button class="dot us" data-slot="${i}"><span class="n"></span><span class="lb"></span></button>`).join("")+
    [0,1,2,3,4].map(i=>(i===0?`<span class="dot them" style="background:#6B7280;color:#fff;border-color:#fff"><span class="n">1</span></span>`:`<span class="dot them" style="background:${kitBg(k)};color:${k.t}"><span class="n" style="background:${k.s}">${M.oppNums[i-1]}</span></span>`)).join("")+
@@ -2287,7 +2399,7 @@ function challengesCard(){if(CH)return "";const rec=chalLoad();const fi=weekNo()
   return `<section class="card"><h2>Challenges</h2><p class="hint" style="margin-bottom:10px">Short scenarios you can play any time. They run on a copy of your squad, so your season isn't affected.</p><div class="chl2">
    ${CHAL.map((c,i)=>`<button class="opt" data-chal="${c.id}"><b>${i===fi?"⭐ This week: ":""}${esc(c.n)}${rec[c.id]&&rec[c.id].won?" ✅":""}</b><small>${esc(c.d)}${rec[c.id]?` · Played ${rec[c.id].n}, won ${rec[c.id].w}`:""}</small></button>`).join("")}</div></section>`}
 function enterChallenge(id){const c=CHAL.find(x=>x.id===id);if(!c||CH)return;CH={id,back:JSON.stringify(S),view};const mgr=S.manager,base=JSON.parse(CH.back);
-  newGame(mgr);S.guide=9;S.friendly.done=true;S.inbox=[];S.players=base.players.map(p=>({...p,avail:true,away:"",awayWks:0,morale:72,fun:75}));
+  newGame(mgr);if(base.kits)S.kits=base.kits;S.guide=9;S.friendly.done=true;S.inbox=[];S.players=base.players.map(p=>({...p,avail:true,away:"",awayWks:0,morale:72,fun:75}));
   c.setup();autoPick(false);S.tac.plan={mode:"off",gk:true,ch:[]};view="tactics";sel=null;render()}
 function leaveChallenge(){if(!CH)return;S=JSON.parse(CH.back);view=CH.view==="match"?"home":"club";CH=null;M=null;render()}
 function finishChallenge(){const c=M.chal;const r=c.check(M);const sc=`${M.us}–${M.them}${M.pens?` (${M.pens[0]}-${M.pens[1]} pens)`:""}`;const fb=M.fb||[];
@@ -2356,6 +2468,7 @@ document.addEventListener("click",e=>{
   const t=e.target.closest("button,tr.click");if(!t||t.disabled)return;
   const d=t.dataset;
   if(d.view){view=d.view;tacOpen=false;playerView=null;sel=null;confirmNew=false;render();window.scrollTo({top:0});return}
+  if(view==="kits"&&kitClick(d)){saveGame();render();return}
   if(d.player){view="squad";playerView=d.player;render();window.scrollTo({top:0});return}
   if(d.act==="back"){playerView=null;render();return}
   if(d.act==="day"){advanceDay();if(S.dil)view="home";render();if(S.dil)window.scrollTo({top:0});return}
@@ -2419,7 +2532,8 @@ document.addEventListener("click",e=>{
   // match
   if(view==="match"&&M){
     if(d.m==="go"){if(M.state==="break"&&!M.flip){M.flip=true;feed("Second half! The teams have swapped ends.","brk");drawPitch()}
-      M.state="live";if(M.min===0){feed(`Kick-off! ${M.weather}.`,"brk");M.xi0=M.xi.slice()}M.selTok=null;M.an&&(M.an.nextPass=performance.now()/1000+.6);runTimer();renderMatch();return}
+      M.state="live";if(M.min===0){M.kitId=M.kitK.id;if(M.clash===2){M.kitK=bibsFor(M.opp);feed(`The referee says the colours are too close. On go the ${M.kitK.n.toLowerCase()}.`,"brk");applyKit()}feed(`Kick-off! ${M.weather}.`,"brk");M.xi0=M.xi.slice()}M.selTok=null;M.an&&(M.an.nextPass=performance.now()/1000+.6);runTimer();renderMatch();return}
+    if(d.mkit!=null&&M.state==="pre"){setMatchKit(+d.mkit);renderMatch();return}
     if(d.m==="pause"){stopTimer();M.state="paused";renderMatch();return}
     if(d.m==="planoff"){M.plan=null;M.queue=M.queue.filter(b=>!(b.meta&&b.meta.kind==="plan"));toast("Sub plan stopped for this game.");renderMatch();return}
     if(d.m==="done"){finishMatch();window.scrollTo({top:0});return}
@@ -2447,6 +2561,7 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",e=>{
   const t=e.target;
   if(t.id==="indiv"){if(t.value)S.train.indiv[t.dataset.indiv]=t.value;else delete S.train.indiv[t.dataset.indiv];saveGame();toast("Extra coaching set.");return}
+  if(view==="kits"&&(t.id==="kitName"||t.id==="kitSp"||t.dataset.kcol)){const k=S.kits[kitEd];if(t.id==="kitName")k.n=t.value.trim().slice(0,16)||k.n;else if(t.id==="kitSp")k.sp=t.value.trim().slice(0,20)||" ";else k[t.dataset.kcol]=t.value.toUpperCase();saveGame();render();return}
   if(t.id==="capSel"){S.tac.cap=t.value;tacOpen=true;saveGame();render();return}
 });
 
@@ -2468,6 +2583,8 @@ function migrate(){
   if(S.guide==null)S.guide=S.manager||S.wk>0||S.day>0?9:0;
   if(!S.friendly)S.friendly={done:!(S.wk===0&&S.day===0&&!S.lastRes&&!(S.hist||[]).length)};
   if(!S.mlog)S.mlog=[];if(!S.story)S.story=[];S.players.forEach(p=>{p.posMins=p.posMins||{}});if(!S.tac.plan)S.tac.plan={mode:"off",gk:true,ch:[]};
+  // kits (v15): older saves get the club's home, away and third kits
+  if(!Array.isArray(S.kits)||!S.kits.length)S.kits=defKits();S.kits.forEach(k=>{k.rec=k.rec||[0,0,0];if(k.sl==null)k.sl=""});
 }
 function start(data){
   S=(data&&data.S)||loadGame();
