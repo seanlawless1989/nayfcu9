@@ -204,8 +204,11 @@ async function tournamentAlert(t: Tournament) {
   const teams = (Array.isArray(t.teams) ? t.teams : []).filter((x) => x && x.name);
   const mine = teams.find((x) => key(x.name).startsWith(key(US)) && /^[A-H]$/.test(x.group || ""));
   const rivals = mine ? teams.filter((x) => x.group === mine.group && x !== mine).map((x) => x.name) : [];
-  const { data: games } = await db.from("matches").select("date,ko,opp").eq("tournament_id", t.id).order("date").order("ko");
-  const first = ((games ?? []) as { date: string; ko: string; opp: string }[]).find((g) => /\d[:.]\d\d/.test(g.ko || ""));
+  // earliest game with a kick-off time ("9:30" comes before "10:00", so not a plain text sort)
+  const { data: games } = await db.from("matches").select("date,ko,opp").eq("tournament_id", t.id);
+  const mins = (ko: string) => { const x = /(\d{1,2})[:.](\d{2})/.exec(ko || ""); return x ? +x[1] * 60 + +x[2] : NaN; };
+  const first = ((games ?? []) as { date: string; ko: string; opp: string }[]).filter((g) => !isNaN(mins(g.ko)))
+    .sort((x, y) => (x.date || "").localeCompare(y.date || "") || mins(x.ko) - mins(y.ko))[0];
   const body = [mine ? `We're in Group ${mine.group}${rivals.length ? ` with ${rivals.join(", ")}` : ""}.` : "",
     first ? `First game ${first.ko.trim()}${first.opp ? ` v ${first.opp}` : ""}${first.date !== t.date ? ` on ${dayName(first.date)}` : ""}.` : "",
     "Tap for every game and kick-off time."].filter(Boolean).join(" ");
