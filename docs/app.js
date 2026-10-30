@@ -332,7 +332,7 @@ function tCard(t){
       ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}</div>
     <div></div></div>${tTeamsHtml(t)}
     ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">${tEnd(t)>=new Date().toISOString().slice(0,10)?tTeams(t).length&&!tDrawn(t)?"Fixtures to follow once the groups are drawn.":"Tournament entered. Fixtures to follow.":"No games added yet."}</p>`}
-    <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div>
+    <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button>${(window.TEAM_CONFIG||window.NAYFC_CONFIG||{}).vapidPublicKey&&tEnd(t)>=todayLocal()?`<button class="mini" data-ttell="${esc(t.id)}">📣 Tell parents: groups and games confirmed</button>`:""}</div>
   </div>`;
 }
 // one list of cards: plain matches plus one card per tournament
@@ -537,7 +537,7 @@ function chaseView(){const m=matches.find(x=>x.id===msgMatch);if(!m)return `<div
   <div class="btns"><button class="btn" id="waMsg">Open in WhatsApp</button><button class="btn ghost" id="copyMsg">Copy message</button><button class="btn ghost" data-view="fixtures">Back to fixtures</button></div></section>`}
 
 // ---------- match alerts (phone notifications) ----------
-// Families turn these on per phone. The "notify" Supabase function sends kick-off reminders 10 and 2 minutes
+// Families turn these on per phone. The "notify" Supabase function sends kick-off reminders 10 and 2 minutes (not for tournament games)
 // before and live updates (line-up, kick-off, goals, subs, half time, full time). iPhones only allow it from the home-screen app.
 // Each phone picks what it gets: reminders (squad, preview, kick-off, postponed), goals, results (full time and player of the match), or everything live.
 const AL={sub:null,checked:false,busy:false,prefs:{reminders:true,goals:false,results:false,live:true}};
@@ -561,7 +561,7 @@ async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.s
 // after a live update from the coach's phone: send any new alerts straight away (the every-minute check is the back-up)
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:{match:id}}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
-async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.potm??data.postponed??data.preview;return typeof v==="number"?v:null}catch(e){return null}}
+async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.potm??data.postponed??data.preview??data.tournament;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
@@ -2187,6 +2187,10 @@ document.addEventListener("click",async e=>{
   if(t.dataset.hedit){const x=honours.find(y=>y.id===t.dataset.hedit);if(x&&canWrite){H=JSON.parse(JSON.stringify(x));setView("hedit")}return}
   if(t.dataset.tgame){const x=tournaments.find(y=>y.id===t.dataset.tgame);if(!x)return;F=Object.assign(blankForm(),{comp:"Tournament",tournament_id:x.id,date:x.date||blankForm().date,venue:x.venue||"",ha:"N",stage:"Group stage"});
     const prev=tGames(x).slice(-1)[0];if(prev){F.played=Object.fromEntries(Object.keys(played(prev)).map(n=>[n,0]));if(tDays(x).includes(prev.date))F.date=prev.date}setView("new");return}
+  // one alert for the whole tournament when the draw and kick-off times are in (no kick-off countdown for tournament games)
+  if(t.dataset.ttell){if(!t.dataset.sure){t.dataset.sure="1";t.textContent="Tap again to send to parents' phones";return}
+    t.disabled=true;const r=await alSend({tournament:t.dataset.ttell});t.disabled=false;delete t.dataset.sure;t.textContent="📣 Tell parents: groups and games confirmed";
+    toast(r==null?"Couldn't send it. Check your connection and try again.":r<0?"Parents have already been told about this tournament.":`Sent to ${r} phone${r===1?"":"s"}.`);return}
   if(t.dataset.tpost){const x=tournaments.find(y=>y.id===t.dataset.tpost);if(x&&x.potm){F=null;setView("gfx");await (await gfxReady()).loadTournament(x)}return}
   if(t.id==="delT"){if(t.dataset.sure){try{await db.collection("tournaments").doc(T.id).delete();toast("Tournament deleted.");T=null;setView("results")}catch(err){toast("Couldn't delete it.")}}else{t.dataset.sure="1";t.textContent="Tap again to delete"}return}
   if(t.id==="delH"){if(t.dataset.sure){try{await db.collection("honours").doc(H.id).delete();toast("Removed.");H=null;setView("honours")}catch(err){toast("Couldn't delete it.")}}else{t.dataset.sure="1";t.textContent="Tap again to delete"}return}
@@ -2298,7 +2302,7 @@ document.addEventListener("submit",async e=>{
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["gallery","calendar","training","help","setup","votes","matchday","privacy","parents"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}

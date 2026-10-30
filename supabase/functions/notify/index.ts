@@ -6,6 +6,7 @@
 //   POST {potm: "<id>"}   from a coach's phone after saving the player of the match
 //   POST {postponed: "<id>"} from a coach's phone after marking an upcoming game postponed (or back on)
 //   POST {preview: "<id>"} from a coach's phone after saving a match preview (once per game)
+//   POST {tournament: "<id>"} from a coach's phone when a tournament's groups and games are confirmed (once per tournament)
 // Only names already shown on the site go in an alert. See supabase/3_notifications.sql.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -138,10 +139,12 @@ async function flushLive(m: Match) {
 }
 
 // ---- kick-off reminders (10 and 2 minutes before) ----
+// Not for tournament games: there are lots of them close together, so the reminders would pile up and clash.
+// Families get one "groups and games are out" alert for the whole tournament instead (tournamentAlert below).
 async function reminders(list: Match[]) {
   let sent = 0; const now = Date.now();
   for (const m of list) {
-    if (m.postponed || m.us != null || m.stage === "placeholder" || (m.live?.status && m.live.status !== "pre")) continue;
+    if (m.comp === "Tournament" || m.postponed || m.us != null || m.stage === "placeholder" || (m.live?.status && m.live.status !== "pre")) continue;
     const ko = kickOff(m.date, m.ko); if (ko == null) continue;
     const mins = (ko - now) / 60_000; if (mins <= 0 || mins > 10.5) continue;
     const at = mins > 2.5 ? 10 : 2; // the cron runs every minute, so each reminder lands within a minute of its time
@@ -191,6 +194,24 @@ async function previewAlert(m: Match) {
   return await send("reminders", { title: "📰 Match preview", body: `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"}, ${when}. Tap to read it.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `preview-${m.id}` });
 }
 
+// ---- tournament: groups and games confirmed (one alert instead of a countdown for every game) ----
+type Tournament = { id: string; name: string; date: string; end_date?: string | null; venue?: string; teams?: { name: string; group: string }[] };
+async function tournamentAlert(t: Tournament) {
+  if ((t.end_date || t.date) < londonDate(Date.now())) return -1; // over already
+  // push_log is keyed by text with no link to matches, so "t:<id>" keeps this to once per tournament without a database change
+  const { data: claimed } = await db.rpc("push_claim_preview", { p_match: `t:${t.id}` }); if (!claimed) return -1;
+  const key = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const teams = (Array.isArray(t.teams) ? t.teams : []).filter((x) => x && x.name);
+  const mine = teams.find((x) => key(x.name).startsWith(key(US)) && /^[A-H]$/.test(x.group || ""));
+  const rivals = mine ? teams.filter((x) => x.group === mine.group && x !== mine).map((x) => x.name) : [];
+  const { data: games } = await db.from("matches").select("date,ko,opp").eq("tournament_id", t.id).order("date").order("ko");
+  const first = ((games ?? []) as { date: string; ko: string; opp: string }[]).find((g) => /\d[:.]\d\d/.test(g.ko || ""));
+  const body = [mine ? `We're in Group ${mine.group}${rivals.length ? ` with ${rivals.join(", ")}` : ""}.` : "",
+    first ? `First game ${first.ko.trim()}${first.opp ? ` v ${first.opp}` : ""}${first.date !== t.date ? ` on ${dayName(first.date)}` : ""}.` : "",
+    "Tap for every game and kick-off time."].filter(Boolean).join(" ");
+  return await send("reminders", { title: `🏆 ${t.name || "Tournament"}: groups and games are out`, body, url: `${SITE}?fixtures`, tag: `t-${t.id}` });
+}
+
 const COLS = "id,date,opp,ko,venue,ha,us,them,postponed,stage,comp,squad,potm,preview,live";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -204,6 +225,9 @@ Deno.serve(async (req) => {
     } else if (typeof body.postponed === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.postponed).maybeSingle();
       out.postponed = data ? await postponedAlert(data as Match) : -1;
+    } else if (typeof body.tournament === "string") {
+      const { data } = await db.from("tournaments").select("*").eq("id", body.tournament).maybeSingle();
+      out.tournament = data ? await tournamentAlert(data as Tournament) : -1;
     } else if (typeof body.preview === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.preview).maybeSingle();
       out.preview = data ? await previewAlert(data as Match) : -1;
