@@ -94,6 +94,8 @@ alter table public.tournaments drop constraint if exists tournaments_end_after_s
 alter table public.tournaments add constraint tournaments_end_after_start check (end_date is null or end_date >= date);
 -- Added 2026-10-26: the teams entered and their groups ("" = groups not drawn yet), see 14_tournament_teams.sql.
 alter table public.tournaments add column if not exists teams jsonb not null default '[]'::jsonb;
+-- Added 2026-10-31: the squad picked for the whole tournament, see 15_tournament_squad.sql.
+alter table public.tournaments add column if not exists squad jsonb;
 alter table public.tournaments enable row level security;
 alter table public.honours enable row level security;
 drop policy if exists "read tournaments" on public.tournaments;
