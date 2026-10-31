@@ -91,7 +91,8 @@ const BADGE_FILES={"beamish lionesses":"beamish-lionesses","brandon community":"
   "heaton stannington":"heaton-stannington","hebburn":"hebburn","horden cw":"horden-cw","middleton rangers":"middleton-rangers",
   "newcastle city":"newcastle-city-juniors","north east sports sapphires":"north-east-sport-youth","rutherford":"rutherford-afc",
   "seaham reds":"seaham-afc","washington wildcats":"washington-afc","washington association":"washington-afc","washington":"washington-juniors",
-  "washington united":"washington-united","wearside pinks":"wearside-fc","whickham phoenix":"whickham-fc","whitley bay sporting":"whitley-bay-sporting"};
+  "washington united":"washington-united","wearside pinks":"wearside-fc","whickham phoenix":"whickham-fc","whitley bay sporting":"whitley-bay-sporting",
+  "hebburn town":"hebburn","wearside pink":"wearside-fc","beamish panthers":"beamish-lionesses"};
 const badgeDefaults=()=>Object.fromEntries(Object.entries(BADGE_FILES).map(([k,f])=>[k,`badges/${f}.png`]));
 let BADGES=badgeDefaults();
 async function loadBadges(){try{const {data}=await sb.from("badges").select("*");BADGES=badgeDefaults();(data||[]).forEach(r=>BADGES[r.key]=r.img)}catch(e){}}
