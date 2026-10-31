@@ -16,7 +16,7 @@ self.TEAM = {
 
   league: "Russell Foster League",
   assistsFrom: "2026-27",
-  format: "9v9",
+  format: "7v7",
   halfLength: 25,
   publicScores: false,                           // U11s: scores hidden from visitors (FA rule); coaches still see them
   poweredBy: true,
