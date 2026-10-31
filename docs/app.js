@@ -152,6 +152,7 @@ function render(){
   renderTicker();
   if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+homeView();
   else if(view==="setup")main.innerHTML=setupView();
+  else if(view==="sponsors")main.innerHTML=sponsorsView();
   else if(view==="results")main.innerHTML=resultsView();
   else if(view==="fixtures")main.innerHTML=fixturesView();
   else if(view==="honours")main.innerHTML=honoursView();
@@ -210,7 +211,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -257,7 +258,7 @@ function homeView(){if(noScores())return homeNoScores();
     ${RUGBY?(pp=>`<section class="card"><h3>Top points scorers</h3>${pp.length?`<table class="lb"><tbody>${pp.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.pts/pp[0][1].pts*100)}%"></i><b>${o.pts}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No points logged yet.</p>`}</section>`)(Object.entries(ps).filter(([,o])=>o.pts>0).sort((a,b)=>b[1].pts-a[1].pts||a[0].localeCompare(b[0]))):""}
     ${SP.assists&&assistsTracked(season)?`<section class="card"><h3>Top assists</h3>${assisters.length?`<table class="lb"><tbody>${assisters.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.assists/assisters[0][1].assists*100)}%"></i><b>${o.assists}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No assists logged yet.</p>`}</section>`:""}
     <section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td><span class="potm">${"☕".repeat(Math.min(o.potm,6))}</span> <b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No awards logged yet.</p>`}</section>
-  </div></div>`;
+  </div>${sponsorStrip()}</div>`;
 }
 
 function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
@@ -270,7 +271,7 @@ function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
       ${(tn=>tn?`<h3 style="margin-top:14px">Next up</h3>${tCard(tn)}`:upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:"")(nextTournament(upcoming&&upcoming.date))}</section>
     ${(ms=>ms.length?`<section class="card"><h3>Recent milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>(x.date||"")>=new Date(Date.now()-60*864e5).toISOString().slice(0,10)).slice(-5).reverse())}
     <section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="text-align:right"><b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">None yet.</p>`}</section>
-  </div><p class="hint">${RUGBY?"Scores and scorers aren't shown publicly for this age group, as the club has chosen.":"Scores and scorers aren't shown publicly for this age group, in line with FA rules for youth football."}</p></div>`;
+  </div><p class="hint">${RUGBY?"Scores and scorers aren't shown publicly for this age group, as the club has chosen.":"Scores and scorers aren't shown publicly for this age group, in line with FA rules for youth football."}</p>${sponsorStrip()}</div>`;
 }
 function matchRow(m){
   const d=m.date?new Date(m.date+"T12:00:00"):null;const r=result(m);
@@ -393,6 +394,59 @@ function sponsorCard(){const sp=SPONSORS();if(!canWrite||!sp.length||!POSTS||!VI
     <p class="hint" style="margin-top:8px">Visits to the site in the same period: ${sponsorReport("",from).views}.</p></section>`}
 function sponsorText(n){const from=`${season.slice(0,4)}-07-01`,r=sponsorReport(n,from);
   return `${TEAM.name} ${TEAM.ageGroup||""}: thank you, ${n}\n\nSince 1 July ${season.slice(0,4)}:\n• ${r.posts} matchday post${r.posts===1?"":"s"} with your logo${Object.keys(r.kinds).length?` (${kindsText(r.kinds)})`:""}\n• ${r.views} visits to the team website\n\nThank you for supporting the team.`}
+// ---------- team sponsors (public.sponsors, supabase/17_sponsors.sql) ----------
+// Coaches add, change, reorder and remove sponsors on the Sponsors page; everyone sees them on the home page.
+let SPON=[],SPON_ON=false,spEdit=null,spBusy=false;
+async function loadSponsors(){if(!sb)return;try{const {data,error}=await sb.from("sponsors").select("*").order("sort").order("id");if(error)return;SPON_ON=true;SPON=data||[]}catch(e){}}
+const spHref=u=>/^https?:\/\/[^\s"<>]+$/i.test(u||"")?u:"";
+const spIni=n=>String(n||"?").split(/\s+/).filter(w=>/^[A-Za-z0-9]/.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase()||"?";
+function spItem(s){const inner=`<span class="sp-logo">${s.logo?`<img src="${esc(s.logo)}" alt="">`:`<span class="sp-ini">${esc(spIni(s.name))}</span>`}</span><b>${esc(s.name)}</b>${s.about?`<span>${esc(s.about)}</span>`:""}`;
+  const h=spHref(s.url);return h?`<a class="sp-item" href="${esc(h)}" target="_blank" rel="noopener sponsored">${inner}</a>`:`<div class="sp-item">${inner}</div>`}
+function sponsorStrip(){if(!SPON.length)return canWrite&&SPON_ON?`<section class="card edit-only"><h3>Sponsors</h3><p class="hint">Got team sponsors? Add their logos and they'll show here for everyone.</p><div class="btns" style="margin-top:8px"><button class="btn ghost" data-view="sponsors">🤝 Add sponsors</button></div></section>`:"";
+  return `<h2 class="sect">Thank you to our sponsors</h2><section class="card"><div class="sp-strip">${SPON.map(spItem).join("")}</div>${canWrite?`<div class="btns edit-only" style="margin-top:10px"><button class="btn ghost" data-view="sponsors">Edit sponsors</button></div>`:""}</section>`}
+// sponsors already set for matchday graphics (team.js or Team setup), offered as a one-tap start
+function spFromTeam(){const t=TEAM,out=[],seen=new Set(),add=(name,logo,about)=>{name=String(name||"").trim();if(!name||seen.has(name.toLowerCase()))return;seen.add(name.toLowerCase());out.push({name,logo:logo||null,about})};
+  if(t.sponsor)add(t.sponsor.name,t.sponsor.logo,"Main sponsor");if(t.kitSponsor)add(t.kitSponsor.name,t.kitSponsor.logo,"Kit sponsor");if(t.potm)add(t.potm.sponsor,t.potm.logo,"Player of the match");return out}
+function spRead(){if(!spEdit)return;const v=id=>{const el=document.getElementById(id);return el?el.value:null};["name","about","url"].forEach(k=>{const x=v("sp-"+k);if(x!==null)spEdit[k]=x})}
+function sponsorsView(){
+  if(!canWrite)return `<div class="stack"><section class="card"><h2 style="margin-top:0">Our sponsors</h2>${SPON.length?`<div class="sp-strip">${SPON.map(spItem).join("")}</div>`:`<p class="hint">No sponsors yet.</p>`}</section></div>`;
+  if(!SPON_ON)return `<section class="card empty">Sponsors need a quick update to the site's database first. Ask ${esc(TEAM.supportName||"the site admin")} via Help and changes.</section>`;
+  const f=spEdit,imp=SPON.length?[]:spFromTeam();
+  const row=(s,i)=>`<div class="sp-row"><span class="sp-logo">${s.logo?`<img src="${esc(s.logo)}" alt="">`:`<span class="sp-ini">${esc(spIni(s.name))}</span>`}</span><div style="flex:1;min-width:0"><b>${esc(s.name)}</b>${s.about?`<div class="hint">${esc(s.about)}</div>`:""}${spHref(s.url)?`<div class="hint" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.url.replace(/^https?:\/\/(www\.)?/i,""))}</div>`:""}</div>
+    <div class="btns" style="flex:none">${i?`<button class="mini" data-spup="${s.id}" aria-label="Move up">↑</button>`:""}<button class="mini" data-spedit="${s.id}">Edit</button><button class="mini" data-spdel="${s.id}">Remove</button></div></div>`;
+  return `<div class="stack">
+  <section class="card"><h2 style="margin-top:0">Sponsors</h2><p class="hint">Sponsors added here show for everyone at the bottom of the home page, in this order, with a link to their website if you add one. Business names and logos only: nothing about the children.</p>
+    ${SPON.length?`<div class="stack" style="gap:0;margin-top:10px">${SPON.map(row).join("")}</div>`:`<p class="hint" style="margin-top:10px">No sponsors yet.</p>`}
+    ${imp.length&&!f?`<div class="note" style="margin-top:10px">Already on your matchday graphics: ${imp.map(s=>esc(s.name)).join(", ")}.<div class="btns" style="margin-top:8px"><button class="btn" id="spImport">Add ${imp.length>1?"them":"it"} here</button></div></div>`:""}
+    ${f?"":`<div class="btns" style="margin-top:12px"><button class="btn gold" id="spNew">➕ Add a sponsor</button></div>`}</section>
+  ${f?`<section class="card stack" style="gap:10px"><h3 style="margin:0">${f.id?"Change sponsor":"Add a sponsor"}</h3>
+    <label class="f">Business name<input type="text" id="sp-name" maxlength="80" value="${esc(f.name)}"></label>
+    <label class="f">What they sponsor (optional, e.g. Home kit, Player of the match)<input type="text" id="sp-about" maxlength="60" value="${esc(f.about)}"></label>
+    <label class="f">Website or Facebook page (optional)<input type="text" id="sp-url" inputmode="url" placeholder="www.example.co.uk" value="${esc(f.url)}"></label>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--muted)">Logo${f.logo?`<img src="${esc(f.logo)}" alt="" style="max-height:72px;max-width:180px;object-fit:contain;align-self:flex-start">`:""}
+      <div class="btns"><label class="bup btn ghost">${f.logo?"Change logo":"Upload logo"}<input type="file" accept="image/*" data-splogo="1" hidden></label>${f.logo?`<button class="mini" id="spLogoOff">Remove logo</button>`:""}</div></div>
+    <div class="btns"><button class="btn gold" id="spSave"${spBusy?" disabled":""}>Save sponsor</button><button class="btn ghost" id="spCancel">Cancel</button></div></section>`:""}
+  ${hasSetup()?`<p class="hint">The sponsor logos drawn on matchday graphics are set in <button class="mini" data-view="setup">Team setup</button>.</p>`:""}</div>`}
+function spUrl(u){u=String(u||"").trim();if(!u)return null;if(!/^https?:\/\//i.test(u))u="https://"+u;return spHref(u)&&/\.[a-z]{2,}/i.test(u)?u:undefined}
+document.addEventListener("input",e=>{if(view==="sponsors"&&e.target.id&&e.target.id.startsWith("sp-"))spRead()});
+document.addEventListener("change",async e=>{if(!(e.target.dataset&&e.target.dataset.splogo)||!e.target.files[0]||!spEdit)return;spRead();
+  try{spEdit.logo=await shrinkLogo(e.target.files[0],400);render()}catch(er){toast("Couldn't read that picture. Try a PNG or JPG.")}});
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b||view!=="sponsors"||!canWrite||!sb)return;const d=b.dataset;
+  if(b.id==="spNew"){spEdit={name:"",about:"",url:"",logo:null};render();return}
+  if(b.id==="spCancel"){spEdit=null;render();return}
+  if(b.id==="spLogoOff"){spRead();spEdit.logo=null;render();return}
+  if(d.spedit){const s=SPON.find(x=>String(x.id)===d.spedit);if(s){spEdit={id:s.id,name:s.name||"",about:s.about||"",url:s.url||"",logo:s.logo||null};render();window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"})}return}
+  if(d.spdel){const s=SPON.find(x=>String(x.id)===d.spdel);if(!s||!confirm(`Remove ${s.name} from the site?`))return;const {error}=await sb.from("sponsors").delete().eq("id",s.id);if(error){toast("Couldn't remove that. Try again.");return}if(spEdit&&spEdit.id===s.id)spEdit=null;await loadSponsors();toast(`${s.name} removed.`);render();return}
+  if(d.spup){const i=SPON.findIndex(x=>String(x.id)===d.spup);if(i<1)return;const L=SPON.slice();[L[i-1],L[i]]=[L[i],L[i-1]];
+    const res=await Promise.all(L.map((s,k)=>s.sort===k?null:sb.from("sponsors").update({sort:k}).eq("id",s.id)).filter(Boolean));if(res.some(r=>r.error))toast("Couldn't move that. Try again.");await loadSponsors();render();return}
+  if(b.id==="spImport"){const L=spFromTeam();if(!L.length)return;const {error}=await sb.from("sponsors").insert(L.map((s,k)=>Object.assign({sort:k},s)));if(error){toast("Couldn't add them. Try again.");return}await loadSponsors();toast("Sponsors added. They're on the home page now.");render();return}
+  if(b.id==="spSave"&&!spBusy){spRead();const f=spEdit,name=String(f.name||"").trim().replace(/\s+/g," "),url=spUrl(f.url),about=String(f.about||"").trim().slice(0,60)||null;
+    if(!name){toast("Type the business name.");return}if(url===undefined){toast("That website address doesn't look right.");return}
+    const row={name:name.slice(0,80),about,url,logo:f.logo||null};spBusy=true;render();
+    const q=f.id?sb.from("sponsors").update(row).eq("id",f.id):sb.from("sponsors").insert(Object.assign({sort:SPON.reduce((m,s)=>Math.max(m,s.sort+1),0)},row));
+    const {error}=await q;spBusy=false;if(error){toast(/logo/i.test(error.message||"")?"That logo is too big. Try a smaller picture.":"Couldn't save that. Try again.");render();return}
+    spEdit=null;await loadSponsors();toast(f.id?"Sponsor updated.":`${name} added. They're on the home page now.`);render();return}
+});
 function pface(n,cls){return PHOTOS[n]?`<img class="${cls}" src="${PHOTOS[n]}" alt="">`:""}
 function shrinkPhoto(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=300,c=document.createElement("canvas"),k=Math.min(im.width,im.height);c.width=c.height=S;c.getContext("2d").drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,0,0,S,S);ok(c.toDataURL("image/jpeg",.82))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function savePhoto(n,file){try{const img=await shrinkPhoto(file);const {error}=await sb.from("player_photos").upsert({player:n,img});if(error)throw error;PHOTOS[n]=img;toast(`Photo saved for ${n}.`);render()}catch(e){toast("Couldn't save that photo. Try a JPG or PNG.")}}
@@ -2391,12 +2445,12 @@ document.addEventListener("submit",async e=>{
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
-  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings()]);
+  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors()]);
   if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
