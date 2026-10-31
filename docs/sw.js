@@ -1,7 +1,7 @@
 // Keeps the site's own files on the phone so it opens quickly and works with a poor signal.
 // Data always comes live from the database; only the page shell is cached.
 importScripts("team.js");// self.TEAM: name, logos and the cache name
-const KEY=(self.TEAM&&TEAM.storageKey)||"team",CACHE=KEY+"-v19";
+const KEY=(self.TEAM&&TEAM.storageKey)||"team",CACHE=KEY+"-v20";
 const LOGOS=[TEAM.crest||"crest.png",TEAM.sponsor&&TEAM.sponsor.logo,TEAM.potm&&TEAM.potm.logo,TEAM.kitSponsor&&TEAM.kitSponsor.logo].filter(Boolean);
 const SHELL=["./","index.html","app.css","app.js","team.js","config.js",...new Set(LOGOS),"icon-192.png","icon-512.png","apple-touch-icon.png","manifest.webmanifest"];
 const NAME=`${TEAM.name||""} ${TEAM.ageShort||""}`.trim()||"Match alerts";
