@@ -11,6 +11,7 @@ self.TEAM = {
   appName: "NAYFC U11s Pumas",
   siteUrl: "https://touchlinetales.club/newton-aycliffe-u11s-pumas/",
   club: { name: "Newton Aycliffe", url: "https://touchlinetales.club/newton-aycliffe/" },
+  sisterTeams: [{ name: "Under 11s Wildcats", url: "https://touchlinetales.club/newton-aycliffe-u11s-wildcats/" }],   // link in the masthead
   supportName: "Touchline Tales",
 
   league: "Russell Foster League",

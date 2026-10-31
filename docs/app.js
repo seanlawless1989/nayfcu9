@@ -51,6 +51,9 @@ const fileTag=APP.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
   const tl=document.getElementById("teamTagline");if(tl)tl.textContent=t.tagline||"";
   // a club with several teams: TEAM.club = {name, url} links back to the club page (tools/package_club.py)
   if(tl&&t.club&&/^https?:\/\//.test(t.club.url||"")){const a=document.createElement("a");a.className="clublink";a.href=t.club.url;a.textContent=`All ${t.club.name||"club"} teams →`;tl.after(a)}
+  // teams in the same age group that follow each other: TEAM.sisterTeams = [{name, url}] adds a link to each one's site
+  const sis=(t.sisterTeams||[]).filter(x=>x&&x.name&&/^https?:\/\//.test(x.url||""));
+  if(tl&&sis.length){const d=document.createElement("div");d.className="sisters";d.innerHTML=sis.map(x=>`<a class="clublink" href="${esc(x.url)}">${esc(x.name)} →</a>`).join("");tl.after(d)}
   document.querySelectorAll("[data-potm]").forEach(el=>el.textContent=POTM.charAt(0).toUpperCase()+POTM.slice(1));
   const c=t.colours||{},css={club:"--club",clubDeep:"--clubDeep",clubInk:"--clubInk",gold:"--gold",goldInk:"--goldInk"};Object.entries(css).forEach(([k,v])=>c[k]&&document.documentElement.style.setProperty(v,c[k]));
   const rgb=h=>{const m=/^#?([0-9a-f]{6})$/i.exec(h||"");return m?[0,2,4].map(i=>parseInt(m[1].substr(i,2),16)):null},set=(k,v)=>document.documentElement.style.setProperty(k,v);
