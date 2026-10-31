@@ -1,21 +1,44 @@
 // Calendar feed (.ics) of fixtures, tournaments and training that families subscribe to on their phones.
 //   GET              matches, tournaments and weekly training
 //   GET ?training=0  matches and tournaments only
+//   GET ?team=<schema>&site=<url>  another team that shares this Supabase project (tools/team_schema_sql.py)
 // Phones check the feed every few hours, so new kick-off times and venues turn up on their own.
 // Deployed with verify_jwt off (calendar apps can't send a key). It reads with the public key, so it only sees
 // what the website already shows. See supabase/4_gallery_training.sql.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
-const SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
+let SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
 // Team details come from the function's secrets so the same code serves any team; defaults are Newton Aycliffe's.
 let TEAM = Deno.env.get("APP_NAME") ?? "NAYFC U9s";
 let FULL = Deno.env.get("TEAM_FULL_NAME") ?? "Newton Aycliffe Youth FC";
 let AGE = Deno.env.get("AGE_GROUP") ?? "Under 9s";
 let SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";   // false: no scores in event titles
 let SPORT = Deno.env.get("SPORT") ?? "football";            // rugby teams get a rugby ball on their games
-const HOST = new URL(SITE).hostname;
-const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { auth: { persistSession: false } });
-let LEAGUE = "Russell Foster League";
+let HOST = new URL(SITE).hostname;
+const ENV = { SITE, TEAM, FULL, AGE, SCORES, SPORT };
+const client = (schema = "public") =>
+  createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { db: { schema }, auth: { persistSession: false } });
+const HOME = client();
+let db = HOME;
+// Which team this request is for. Without ?team it's the project's own team (the secrets above).
+function pickTeam(url: URL): boolean {
+  ({ SITE, TEAM, FULL, AGE, SCORES, SPORT } = ENV);
+  LEAGUE = ENV_LEAGUE;
+  db = HOME;
+  const team = url.searchParams.get("team");
+  if (!team) return true;
+  if (!/^[a-z][a-z0-9_]{0,40}$/.test(team)) return false;
+  let site: URL;
+  try { site = new URL(url.searchParams.get("site") ?? ""); } catch { return false; }
+  if (site.protocol !== "https:") return false;
+  SITE = site.origin + site.pathname;
+  db = client(team);
+  TEAM = FULL = AGE = "";   // filled in from that team's Team setup answers
+  LEAGUE = "League";
+  return true;
+}
+const ENV_LEAGUE = "Russell Foster League";
+let LEAGUE = ENV_LEAGUE;
 const compName = (c: string) => (c === "League" ? LEAGUE : c);
 // A coach's answers on the site's Team setup page (supabase/7_team_setup.sql) win over the secrets above.
 // Scores stay hidden if either the secret or the setup page says so.
@@ -123,10 +146,23 @@ function trainingEvent(t: Training, from: string) {
   return event("training", lines, { SUMMARY: `🏃 ${TEAM} training`, LOCATION: t.venue, DESCRIPTION: desc, URL: `${SITE}?training` });
 }
 
-Deno.serve(async (req) => {
+// One request at a time: the team details above are shared, and requests are quick.
+let queue: Promise<unknown> = Promise.resolve();
+Deno.serve((req) => {
+  const r = queue.then(() => feed(req));
+  queue = r.catch(() => {});
+  return r;
+});
+
+async function feed(req: Request) {
   const url = new URL(req.url);
   const withTraining = url.searchParams.get("training") !== "0";
+  if (!pickTeam(url)) return new Response("Unknown team", { status: 400 });
+  const team = url.searchParams.get("team");
+  HOST = (team ? team.replace(/_/g, "-") + "." : "") + new URL(SITE).hostname;   // event ids stay unique per team
   await loadTeam();
+  TEAM ||= FULL || "Team";
+  FULL ||= TEAM;
   const today = new Date().toISOString().slice(0, 10);
   const since = addDays(today, -120); // recent results stay in the calendar for a few months
   const [mq, tq, trq] = await Promise.all([
@@ -154,4 +190,4 @@ Deno.serve(async (req) => {
       "Access-Control-Allow-Origin": "*",
     },
   });
-});
+}

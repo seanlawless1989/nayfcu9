@@ -63,11 +63,16 @@ insert into public.coaches (email) values ('coach@example.com') on conflict do n
 -- Only emails on the coaches list can create a sign-in account.
 create or replace function public.only_coaches_can_sign_up()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare s text; ok boolean;
 begin
-  if not exists (select 1 from public.coaches where email = lower(new.email)) then
-    raise exception 'Only club coaches can sign in';
-  end if;
-  return new;
+  if coalesce(new.is_anonymous, false) then return new; end if;   -- a parent's phone, no email
+  if exists (select 1 from public.coaches where email = lower(new.email)) then return new; end if;
+  -- other teams sharing this project each have their own schema with a coaches list (tools/team_schema_sql.py)
+  for s in select schemaname from pg_tables where tablename = 'coaches' and schemaname <> 'public' loop
+    execute format('select exists (select 1 from %I.coaches where email = $1)', s) into ok using lower(new.email);
+    if ok then return new; end if;
+  end loop;
+  raise exception 'Only club coaches can sign in';
 end $$;
 revoke execute on function public.only_coaches_can_sign_up() from public, anon, authenticated;
 drop trigger if exists only_coaches_can_sign_up on auth.users;
