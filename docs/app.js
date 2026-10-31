@@ -92,7 +92,10 @@ const BADGE_FILES={"beamish lionesses":"beamish-lionesses","brandon community":"
   "newcastle city":"newcastle-city-juniors","north east sports sapphires":"north-east-sport-youth","rutherford":"rutherford-afc",
   "seaham reds":"seaham-afc","washington wildcats":"washington-afc","washington association":"washington-afc","washington":"washington-juniors",
   "washington united":"washington-united","wearside pinks":"wearside-fc","whickham phoenix":"whickham-fc","whitley bay sporting":"whitley-bay-sporting",
-  "hebburn town":"hebburn","wearside pink":"wearside-fc","beamish panthers":"beamish-lionesses"};
+  "hebburn town":"hebburn","wearside pink":"wearside-fc","beamish panthers":"beamish-lionesses",
+  "hetton":"hetton-juniors","hetton athena":"hetton-juniors","shincliffe":"shincliffe-juniors","sunderland west end":"sunderland-west-end",
+  "hartlepool":"fc-hartlepool","fc hartlepool":"fc-hartlepool","harton and westoe":"harton-westoe","harton westoe":"harton-westoe",
+  "consett":"consett-juniors","consett lionesses":"consett-juniors","washington athletic":"washington-athletic","washington athletic wolves":"washington-athletic"};
 const badgeDefaults=()=>Object.fromEntries(Object.entries(BADGE_FILES).map(([k,f])=>[k,`badges/${f}.png`]));
 let BADGES=badgeDefaults();
 async function loadBadges(){try{const {data}=await sb.from("badges").select("*");BADGES=badgeDefaults();(data||[]).forEach(r=>BADGES[r.key]=r.img)}catch(e){}}
