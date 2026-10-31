@@ -158,6 +158,7 @@ function render(){
   else if(view==="reports")main.innerHTML=reportsView();
   else if(view==="pick")main.innerHTML=pickView();
   else if(view==="avail")main.innerHTML=availView();
+  else if(view==="tavail")main.innerHTML=tavView();
   else if(view==="msg")main.innerHTML=msgChase?chaseView():msgView();
   else if(view==="alerts")main.innerHTML=alertsView();
   else if(view==="app")main.innerHTML=appView();
@@ -432,7 +433,7 @@ async function parentJoin(){const el=$("#pCode"),code=(el&&el.value||"").replace
   const {data,error}=await sb.rpc("link_family",{p_code:code});
   if(error){toast(/too many/i.test(error.message)?"Too many tries. Wait an hour, or ask the coach to check the code.":"Couldn't check that code. Try again.");return}
   if(!data){toast("That code isn't right. Check it with the coach.");return}
-  await loadParent();authBox();toast(`Signed in. This phone is linked to ${data}.`);
+  await loadParent();await loadTav();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
   const nx=parentNext;parentNext=null;if(nx)setView(nx);else render()}
 async function parentLeave(n){
   if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();authBox();render();toast(`${n} is no longer linked to this phone.`);return}
@@ -566,15 +567,21 @@ function chaseView(){const m=matches.find(x=>x.id===msgMatch);if(!m)return `<div
 // Families turn these on per phone. The "notify" Supabase function sends kick-off reminders 10 and 2 minutes (not for tournament games)
 // before and live updates (line-up, kick-off, goals, subs, half time, full time). iPhones only allow it from the home-screen app.
 // Each phone picks what it gets: reminders (squad, preview, kick-off, postponed), goals, results (full time and player of the match), or everything live.
-const AL={sub:null,checked:false,busy:false,prefs:{reminders:true,goals:false,results:false,live:true}};
+const AL={sub:null,checked:false,busy:false,prefs:{reminders:true,goals:false,results:false,live:true,avail:true}};
 try{Object.assign(AL.prefs,JSON.parse(localStorage.getItem(SK+".alerts")||"{}"))}catch(e){}
 function alIos(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)}
 function alStandalone(){return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}
 function alSupported(){return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&!!CFG.vapidPublicKey}
 async function alCheck(){if(!alSupported()){AL.checked=true;return}try{const r=await navigator.serviceWorker.ready;AL.sub=await r.pushManager.getSubscription()}catch(e){}AL.checked=true;if(view==="alerts")render()}
+// after signing in or out (coach or family code): save the phone's alerts again under the new sign-in
+async function alSync(){if(!sb||!alSupported())return;try{const r=await navigator.serviceWorker.ready,sub=await r.pushManager.getSubscription();if(!sub)return;AL.sub=sub;
+  const k=`${me?me.id:""}|${canWrite}|${myKids().join(",")}`;if(localStorage.getItem(SK+".alSync")===k)return;await alSave(sub);localStorage.setItem(SK+".alSync",k)}catch(e){}}
 function alKey(b64){const p=(b64+"=".repeat((4-b64.length%4)%4)).replace(/-/g,"+").replace(/_/g,"/");return Uint8Array.from(atob(p),c=>c.charCodeAt(0))}
+// The sign-in (a coach, or a parent's family code) is saved with the phone's alerts, so reminders to answer availability
+// only go while this family's own child hasn't answered, and coaches can get availability answers (16_availability_alerts.sql).
 async function alSave(sub){const j=sub.toJSON(),P=AL.prefs,a={p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_reminders:P.reminders,p_live:P.live};
-  let {error}=await sb.rpc("push_subscribe2",Object.assign({p_goals:!!P.goals,p_results:!!P.results},a));
+  let {error}=await sb.rpc("push_subscribe2",Object.assign({p_goals:!!P.goals,p_results:!!P.results,p_avail:canWrite?P.avail!==false:false},a));
+  if(error)({error}=await sb.rpc("push_subscribe2",Object.assign({p_goals:!!P.goals,p_results:!!P.results},a)));// a database without supabase/16_availability_alerts.sql
   if(error)({error}=await sb.rpc("push_subscribe",Object.assign({},a,{p_live:P.live||P.goals||P.results})));// a database without supabase/9_matchday_and_more.sql
   if(error)throw error;try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(e){}return j.endpoint}
 async function alOn(){if(AL.busy)return;AL.busy=true;render();
@@ -585,10 +592,10 @@ async function alOn(){if(AL.busy)return;AL.busy=true;render();
 async function alTest(){if(!AL.sub)return;AL.busy=true;render();try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody({test:AL.sub.endpoint})});toast(!error&&data&&data.test>0?"Test alert sent. It should arrive in a few seconds.":"The test alert didn't go. Turn alerts off and on again.")}catch(e){toast("Couldn't send a test alert. Check your connection.")}finally{AL.busy=false;render()}}
 async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.sub.endpoint;await AL.sub.unsubscribe();await sb.rpc("push_unsubscribe",{p_endpoint:ep});AL.sub=null;toast("Alerts are off on this phone.")}catch(e){toast("Couldn't turn alerts off. Try again.")}finally{AL.busy=false;render()}}
 // after a live update from the coach's phone: send any new alerts straight away (the every-minute check is the back-up)
-function alNotify(id){if(sb&&id&&id!=="practice"&&!CFG.schema)sb.functions.invoke("notify",{body:fnBody({match:id})}).catch(()=>{})}
+function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:fnBody({match:id})}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
-async function alSend(body){if(!sb||CFG.schema)return null;   // no match alerts yet for a team sharing a project
-try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament;return typeof v==="number"?v:null}catch(e){return null}}
+async function alSend(body){if(!sb||!CFG.vapidPublicKey)return null;   // alerts not switched on for this team
+try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament??data.avail;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
@@ -597,11 +604,12 @@ function alertsView(){if(!AL.checked)alCheck();
   else if(!alSupported())bodyHtml=`<div class="note">This browser can't show alerts. On Android use Chrome; on iPhone add the site to your home screen first.</div>`;
   else if(Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
   else{const on=!!AL.sub;
-    const box=(id,k,label,hint)=>`<label class="row" style="cursor:pointer"><span style="white-space:nowrap"><input type="checkbox" id="${id}"${AL.prefs[k]?" checked":""}${k!=="reminders"&&k!=="live"&&AL.prefs.live?" disabled":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">${label}</span><span class="hint">${hint}</span></label>`;
-    bodyHtml=`<p class="hint" style="margin:0">Choose what this phone gets:</p><div class="av">${box("al-rem","reminders","Reminders","squad picked, match previews, 10 and 2 minutes before kick-off, games postponed")}
+    const box=(id,k,label,hint)=>`<label class="row" style="cursor:pointer"><span style="white-space:nowrap"><input type="checkbox" id="${id}"${AL.prefs[k]?" checked":""}${k!=="reminders"&&k!=="live"&&k!=="avail"&&AL.prefs.live?" disabled":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">${label}</span><span class="hint">${hint}</span></label>`;
+    bodyHtml=`<p class="hint" style="margin:0">Choose what this phone gets:</p><div class="av">${box("al-rem","reminders","Reminders",`squad picked, match previews, 10 and 2 minutes before kick-off, games postponed${TAV_ON?`, and a nudge to say if your ${PRN.kid} can make games and training`:""}`)}
       ${TEAM.publicScores===false?"":box("al-goals","goals",SP.Goals,`each ${SP.goal} as it goes in`)}
       ${box("al-res","results","Results",`full time and the ${esc(POTM)}`)}
-      ${box("al-live","live","Everything live",`line-up, kick-off, ${TEAM.publicScores===false?"":SP.goals+", "}subs, half time and full time`)}</div>
+      ${box("al-live","live","Everything live",`line-up, kick-off, ${TEAM.publicScores===false?"":SP.goals+", "}subs, half time and full time`)}
+      ${canWrite&&TAV_ON?box("al-avail","avail","Availability answers (coaches)",`each time a parent says whether their ${PRN.kid} can make a game or training`):""}</div>
       <div class="btns">${on?`<span class="pill">✅ On for this phone</span><button class="btn ghost" id="alTest"${AL.busy?" disabled":""}>Send a test alert</button><button class="btn ghost" id="alOff"${AL.busy?" disabled":""}>Turn off</button>`:`<button class="btn gold" id="alOn"${AL.busy?" disabled":""}>${AL.busy?"Turning on…":"Turn on alerts"}</button>`}</div>`}
   const help=`<details class="note"><summary><b>How to set it up on your phone</b></summary>
     <p><b>iPhone or iPad:</b> open this site in Safari, tap Share <b>⬆︎</b>, then <b>Add to Home Screen</b>. Open ${esc(APP)} from your home screen, come back to this page and tap <b>Turn on alerts</b>, then <b>Allow</b>. Needs iOS 16.4 or later.</p>
@@ -635,8 +643,8 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match reports the coaches write.</li><li>Availability answers for each game, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
-  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when. Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match reports the coaches write.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
+  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when. Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
   ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts. Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
@@ -801,6 +809,43 @@ async function attSave(){const names=[...document.querySelectorAll("[data-att]")
     ATT[day]=names;if(!names.length)delete ATT[day];toast(`Saved: ${names.length} at training on ${shortDay(day)}.`);render()}catch(e){toast("Couldn't save attendance. Try again.")}}
 // sessions recorded and attended per player, for one season
 function attStats(seasonName){const out={},days=Object.keys(ATT||{}).filter(d=>seasonOf(d)===seasonName);days.forEach(d=>ATT[d].forEach(n=>out[n]=(out[n]||0)+1));return {sessions:days.length,out}}
+// ---------- training availability (public.training_availability, supabase/16_availability_alerts.sql) ----------
+// Parents say whether their child is coming to a session; only coaches see the answers. The notify function
+// reminds parents who haven't answered 24 hours before, and tells coaches who asked for it as answers come in.
+let TAV_ON=false,TAV={},tavDay=null;const TAV_MINE={};
+async function loadTav(){if(!sb)return;try{
+  if(canWrite){const {data,error}=await sb.from("training_availability").select("day,player,status").gte("day",todayLocal());if(error){TAV_ON=false;return}TAV_ON=true;TAV={};(data||[]).forEach(r=>{(TAV[r.day]=TAV[r.day]||{})[r.player]=r.status});return}
+  const {error}=await sb.from("training_availability").select("day").limit(1);TAV_ON=!error;   // no rows for parents: this just checks it's switched on
+  if(TAV_ON&&myKids().length){const {data}=await sb.rpc("my_training_availability");(data||[]).forEach(r=>{(TAV_MINE[r.day]=TAV_MINE[r.day]||{})[r.player]=r.status})}}catch(e){}}
+const tavNext=()=>{const n=trUpcoming(6).find(x=>!x.off);return n?n.iso:null};
+const tavLink=d=>`${siteUrl()}?tavail=${d}`;
+function tavText(d){const a=TAV[d]||{},w=players.filter(p=>p.current&&!a[p.name]).sort((x,y)=>(+x.num||99)-(+y.num||99)).map(p=>p.name);
+  return `🏃 Training on ${longDate(d).replace(/ \d{4}$/,"")}, ${clock(TR.start)} to ${clock(TR.finish)}${TR.venue?`, ${TR.venue.split(",")[0]}`:""}.\n\nPlease let us know if your ${PRN.kid} is coming${PREQ?" (first time? type in your family code)":""}:\n${tavLink(d)}${w.length&&w.length<players.filter(p=>p.current).length?`\n\nNot answered yet: ${w.join(", ")}`:""}\n\nThank you! ${TEAM.cheer||SP.ball}`}
+// the Training page: parents get a button to answer for the next session; coaches see who's coming
+function tavCard(){if(!TAV_ON||!TR)return "";const d=tavNext();if(!d)return "";
+  if(!canWrite){const mine=TAV_MINE[d]||{},kids=myKids(),done=kids.length&&kids.every(n=>mine[n]);
+    return `<section class="card stack"><h3>Coming to training on ${esc(shortDay(d))}?</h3><p class="hint" style="margin:0">${done?`Thanks, you've answered for ${kids.map(n=>`${esc(n)} (${({yes:"yes",no:"no",maybe:"maybe"})[mine[n]]})`).join(" and ")}.`:`Let the coaches know if your ${PRN.kid} can come. Only the coaches see the answers.`}</p>
+      <div class="btns"><button class="btn${done?" ghost":" gold"}" data-tavopen="${d}">${done?"Change answer":"Answer now"}</button></div></section>`}
+  const a=TAV[d]||{},c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));
+  const w=players.filter(p=>p.current&&!a[p.name]).sort((x,y)=>(+x.num||99)-(+y.num||99)).map(p=>p.name);
+  return `<section class="card stack edit-only"><h3>Who's coming on ${esc(shortDay(d))}</h3>
+    <p style="margin:0">✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}</p>
+    ${c.yes.length?`<p class="hint" style="margin:0"><b>Coming:</b> ${c.yes.map(esc).join(", ")}</p>`:""}${c.maybe.length?`<p class="hint" style="margin:0"><b>Maybe:</b> ${c.maybe.map(esc).join(", ")}</p>`:""}${c.no.length?`<p class="hint" style="margin:0"><b>Not coming:</b> ${c.no.map(esc).join(", ")}</p>`:""}${w.length?`<p class="hint" style="margin:0"><b>Not answered yet:</b> ${w.map(esc).join(", ")}</p>`:`<p class="hint" style="margin:0">Everyone has answered.</p>`}
+    <p class="hint" style="margin:0">Parents who haven't answered get a reminder on their phone 24 hours before (if they have match alerts on). Only coaches see this.</p>
+    <div class="btns"><button class="btn ghost" data-tavcopy="${d}">Copy message for parents</button><button class="mini" data-tavopen="${d}">Answer for a ${esc(PRN.kid)}</button></div></section>`}
+function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answers aren't switched on for this team yet.</div>`;
+  const ok=trUpcoming(8).filter(x=>!x.off).map(x=>x.iso);if(!tavDay||!ok.includes(tavDay))tavDay=ok[0]||null;
+  if(!tavDay)return `<div class="card empty">There's no training coming up. Check the Training page for when it starts again.</div>`;
+  const kids=canWrite?[]:myKids();let roster=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99));
+  const head=`<h2>Coming to training?</h2><p><b>${esc(longDate(tavDay).replace(/ \d{4}$/,""))}</b><br>${esc(clock(TR.start))} to ${esc(clock(TR.finish))}${TR.venue?` · ${esc(TR.venue)}`:""}</p>`;
+  if(kids.length)roster=roster.filter(p=>kids.includes(p.name));
+  else if(PREQ&&!canWrite){parentNext="tavail";return `<section class="card stack">${head}${joinBox(`To answer, type the family code the coach sent you. You only do this once on this phone.`)}</section>`}
+  const mine=canWrite?(TAV[tavDay]||{}):(TAV_MINE[tavDay]||{});
+  return `<section class="card stack">${head}
+    ${ok.length>1?`<label class="f">Session<select id="tavDay">${ok.map(d=>`<option value="${d}"${d===tavDay?" selected":""}>${esc(shortDay(d))}</option>`).join("")}</select></label>`:""}
+    <p class="hint">${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="tavail">Sign in</button>`:""}</p>
+    <div class="av">${roster.map(p=>{const v=mine[p.name];return `<div class="row"><span>${esc(p.name)}</span><div class="seg" role="group" aria-label="${esc(p.name)}"><button data-tav="yes" data-n="${esc(p.name)}" aria-pressed="${v==="yes"}">Yes</button><button data-tav="maybe" data-n="${esc(p.name)}" aria-pressed="${v==="maybe"}">Maybe</button><button data-tav="no" data-n="${esc(p.name)}" aria-pressed="${v==="no"}">No</button></div></div>`}).join("")}</div>
+    <div class="btns"><button class="btn ghost" data-view="training">Training details</button></div></section>`}
 function trainingView(){
   if(trEdit&&canWrite)return trFormView();
   if(!TR)return `<div class="card empty">Training details are on their way.</div>`;
@@ -812,7 +857,7 @@ function trainingView(){
     <div class="trbig"><b>Every ${esc(TR.day)}</b><span>${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span></div>
     <div class="trfacts">${facts.map(([i,v])=>`<div><span>${i}</span><span>${v}</span></div>`).join("")}</div>
     ${TR.notes?`<p style="margin:0">${esc(TR.notes)}</p>`:""}
-    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section>${attCard()}</div>`}
+    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section>${tavCard()}${attCard()}</div>`}
 function trFormView(){const F2=trEdit;const off=(F2.off||[]).slice().sort();
   return `<section class="card stack"><h2>Edit training</h2>
     <div class="grid2"><label class="f">Day<select id="tr-day">${WEEKDAYS.map(d=>`<option${d===F2.day?" selected":""}>${d}</option>`).join("")}</select></label>
@@ -1639,7 +1684,13 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.id==="waMsg"){const t=$("#msgText").value;window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank","noopener")}
   if(b.id==="copyMsg"){const ta=$("#msgText");try{navigator.clipboard.writeText(ta.value).then(()=>toast("Copied. Paste it into WhatsApp."),()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select()}}
   if(b.dataset.av){const n=b.dataset.n,v=b.dataset.av;(AV_MINE[availMatch]=AV_MINE[availMatch]||{})[n]=v;render();
-    sb.rpc("set_availability",{p_match:availMatch,p_player:n,p_status:v}).then(({error})=>toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`Thanks, ${n}: ${v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`))}
+    const mid=availMatch;sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`Thanks, ${n}: ${v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`);
+      if(!error&&!canWrite)alSend({avail:{match:mid,player:n}})})}// tells the coaches who asked for availability alerts
+  if(b.dataset.tav){const n=b.dataset.n,v=b.dataset.tav,day=tavDay;(TAV_MINE[day]=TAV_MINE[day]||{})[n]=v;if(canWrite)(TAV[day]=TAV[day]||{})[n]=v;render();
+    sb.rpc("set_training_availability",{p_day:day,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`Thanks, ${n}: ${v==="yes"?"coming to training":v==="no"?"not coming to training":"maybe coming to training"}.`);
+      if(!error&&!canWrite)alSend({tavail:{day,player:n}})})}
+  if(b.dataset.tavopen){tavDay=b.dataset.tavopen;setView("tavail");return}
+  if(b.dataset.tavcopy){const d=b.dataset.tavcopy;copyOut(tavText(d),"Copied. Paste it into WhatsApp.")}
   if(b.dataset.msgfx){const [n,label]=b.dataset.msgfx.split("|");setView("gfx");(await gfxReady()).loadMilestone(n,label)}
   if(b.id==="bkJson")dl(`${(TEAM.abbr||"team")+"_"+(TEAM.ageShort||"")}_backup_${new Date().toISOString().slice(0,10)}.json`,backupJson(),"application/json");
   if(b.id==="bkCsv")dl(`${(TEAM.abbr||"team")+"_"+(TEAM.ageShort||"")}_results_${new Date().toISOString().slice(0,10)}.csv`,backupCsv(),"text/csv");
@@ -1702,9 +1753,9 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       await livePush({played:pl,halves:liveHalves(),us:+m.us||0,them:+m.them||0,keepers:kk});try{localStorage.removeItem(liveKey(LV.id))}catch(e){}
       const id=LV.id;LV=null;toast("Full time saved. Pick the player of the match on the match form.");const mm=matches.find(x=>x.id===id);if(mm&&canWrite){F=JSON.parse(JSON.stringify(mm));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit")}}
   }});
-document.addEventListener("change",e=>{if(e.target.id==="attDay"){attDay=e.target.value;render()}
+document.addEventListener("change",e=>{if(e.target.id==="attDay"){attDay=e.target.value;render()}if(e.target.id==="tavDay"){tavDay=e.target.value;render()}
   if(e.target.dataset.ftpick&&FT){e.target.checked?FT.picks.add(e.target.dataset.ftpick):FT.picks.delete(e.target.dataset.ftpick)}});
-document.addEventListener("change",e=>{const al={"al-rem":"reminders","al-goals":"goals","al-res":"results","al-live":"live"}[e.target.id];if(!al)return;AL.prefs[al]=e.target.checked;if(view==="alerts")render();
+document.addEventListener("change",e=>{const al={"al-rem":"reminders","al-goals":"goals","al-res":"results","al-live":"live","al-avail":"avail"}[e.target.id];if(!al)return;AL.prefs[al]=e.target.checked;if(view==="alerts")render();
   try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(x){}
   if(AL.sub)alSave(AL.sub).then(()=>toast("Saved."),()=>toast("Couldn't save that. Try again."))});
 document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files[0]){saveBadge(e.target.dataset.badge,e.target.files[0]);return}if(e.target.dataset.tlogo&&e.target.files[0]){saveTLogo(e.target.dataset.tlogo,e.target.files[0]);return}if(e.target.dataset.photo&&e.target.files[0]){savePhoto(e.target.dataset.photo,e.target.files[0]);return}
@@ -2301,6 +2352,7 @@ async function checkCoach(){
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();
+  await loadTav();alSync();
   await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();
   authBox();render();
 }
@@ -2344,6 +2396,7 @@ document.addEventListener("submit",async e=>{
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
+  const qt=new URLSearchParams(location.search).get("tavail");if(qt!==null){tavDay=qt;view="tavail";render()}
   const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
 })();
 })();
