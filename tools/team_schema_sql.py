@@ -10,13 +10,17 @@ tables, rules and functions. Each team's coaches can only change their own team'
 
 The output is the usual setup (the same files package_team.py uses) with every `public.` moved to the team's schema.
 Left out, because the project already has one shared copy: the coaches-only sign-up check on auth.users (it looks in
-every team's coaches list, see 10_parent_login.sql) and the every-minute match-alerts job (alerts for shared teams
-aren't built yet; the notify function ignores them).
+every team's coaches list, see 10_parent_login.sql), the every-minute match-alerts job (the project's one job covers
+every team schema), and anything marked "[project only]".
+
+Match alerts for a team here: the notify function sends them using the project's key pair, so put the project's
+vapidPublicKey in the team's config.js, and fill in the team's alert_team row (name, ageGroup, publicScores...).
 
 After running it in the SQL Editor:
   1. Project Settings > Data API > Exposed schemas: add the schema, then Save.
   2. In the team's config.js: the project's URL and anon key, plus  schema: "<schema>".
   3. Authentication > URL Configuration > Redirect URLs: add the team's site address.
+For a change to an existing team, --only 16_availability_alerts.sql (for example) makes just that file.
 Re-running it behaves like re-running the files it is made from.
 """
 import argparse, re, sys
@@ -26,7 +30,9 @@ ROOT = Path(__file__).resolve().parent.parent
 SQL = ROOT / "supabase"
 FILES = ("1_schema.sql", "3_notifications.sql", "4_gallery_training.sql", "5_help_requests.sql", "6_match_updated.sql",
          "7_team_setup.sql", "8_multi_day_tournaments.sql", "9_matchday_and_more.sql", "10_parent_login.sql", "11_rugby.sql",
-         "12_preview_alert.sql", "13_cheers.sql", "14_tournament_teams.sql", "15_tournament_squad.sql")
+         "12_preview_alert.sql", "13_cheers.sql", "14_tournament_teams.sql", "15_tournament_squad.sql",
+         "16_availability_alerts.sql")
+PROJECT_ONLY = re.compile(r"-- \[project only\].*?-- \[end project only\]\n", re.S)
 SIGN_UP_CHECK = re.compile(r"create or replace function public\.only_coaches_can_sign_up\(\).*?end \$\$;\n"
                            r"revoke execute on function public\.only_coaches_can_sign_up\(\) from public, anon, authenticated;\n", re.S)
 SIGN_UP_TRIGGER = ("drop trigger if exists only_coaches_can_sign_up on auth.users;\n"
@@ -45,9 +51,9 @@ alter default privileges for role postgres in schema {schema} grant all on funct
 """
 
 
-def build(schema, coach=None):
+def build(schema, coach=None, only=None):
     parts = [header(schema)]
-    for name in FILES:
+    for name in (only or FILES):
         s = (SQL / name).read_text()
         n = len(SIGN_UP_CHECK.findall(s))
         if name in ("1_schema.sql", "10_parent_login.sql"):
@@ -68,6 +74,7 @@ def build(schema, coach=None):
             # a bucket of the team's own; the site uses <schema>-gallery (galBucket() in app.js)
             s = s.replace("'gallery'", f"'{schema}-gallery'")
             s = re.sub(r'"(coaches (?:upload|see|delete) gallery)"', rf'"{schema} \1"', s)
+        s = PROJECT_ONLY.sub("", s)   # shared by the whole project, lives in public only
         if name == "7_team_setup.sql":
             s += "\ninsert into public.team_settings (id, ready) values (1, false) on conflict (id) do nothing;\n"
         s = s.replace("public.", f"{schema}.").replace("search_path = public", f"search_path = {schema}")
@@ -83,12 +90,15 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("schema", help="lower case letters, numbers and _, e.g. darlington_u14s")
     ap.add_argument("--coach", help="first coach's email")
+    ap.add_argument("--only", nargs="+", metavar="FILE", help="just these numbered files (an update for an existing team), e.g. 16_availability_alerts.sql")
     a = ap.parse_args()
+    if a.only and not set(a.only) <= set(FILES):
+        sys.exit(f"--only takes files from: {', '.join(FILES)}")
     if not re.fullmatch(r"[a-z][a-z0-9_]{0,40}", a.schema) or a.schema in ("public", "auth", "storage", "extensions"):
         sys.exit("The schema name must be lower case letters, numbers and _, and not one of Supabase's own")
-    out = ROOT / "dist" / "schemas" / f"{a.schema}.sql"
+    out = ROOT / "dist" / "schemas" / (f"{a.schema}_{'_'.join(f.split('_')[0] for f in a.only)}.sql" if a.only else f"{a.schema}.sql")
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(build(a.schema, a.coach))
+    out.write_text(build(a.schema, a.coach, a.only))
     print(out)
 
 
