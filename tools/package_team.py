@@ -187,10 +187,10 @@ Turn on custom SMTP (**Authentication > Emails**) with a sending service; Supaba
 1. Create a GitHub repository and upload everything in `site/` into a `docs` folder.
 2. Edit `docs/config.js` with the project URL, anon key and the public VAPID key.
 3. **Settings > Pages**: deploy from `main`, `/docs`.{cname}
-4. Open `{site}/?coach`, tap **Coach sign in**, and sign in with the coach email from step 1.3.
+4. Open `{site}`, tap **Coach sign in** at the top of the page, and sign in with the coach email from step 1.3.
 
 ## 5. Hand over to the coach
-Send the coach the link `{site}/?coach`. Until they finish **Team setup** (a tile on the home page once they've signed in),
+Send the coach the link `{site}` (Coach sign in is at the top of every page). Until they finish **Team setup** (a tile on the home page once they've signed in),
 only coaches can see the site. Team setup covers the club name, age group, league, format, crest, colours, kits, sponsors,
 squad (first names only), fixtures, other coaches and the welfare officer's sign-off. Going live there is what opens the site
 to parents. Their answers are kept in the `team_settings` table and win over `team.js`; the sign-off is in `team_signoff`.

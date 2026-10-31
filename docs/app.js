@@ -2287,8 +2287,8 @@ function authBox(){
   const el=document.getElementById("auth");if(!el)return;
   if(me&&isParent()){el.innerHTML=KIDS.length?`<button class="mini" data-view="parents">👪 ${esc(KIDS.join(", "))}</button>`:""}
   else if(me){el.innerHTML=`<span class="who">${canWrite?"Coach":"Signed in"}: ${esc(me.email)}</span><button class="mini" id="signOut">Sign out</button>`}
-  else if(/[?&]coach\b/.test(location.search)){el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
-  else{el.innerHTML=""}
+  // shown to everyone (not only with ?coach) so coaches can find it; parents never need it
+  else{el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
 }
 // the graphics maker (gfx.js) is only for coaches, so it's fetched once one signs in
 function loadGfx(){if(window.GFX||document.getElementById("gfxjs"))return;const el=document.createElement("script");el.id="gfxjs";el.src="gfx.js";
