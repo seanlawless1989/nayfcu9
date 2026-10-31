@@ -6,6 +6,7 @@
 //   POST {potm: "<id>"}   from a coach's phone after saving the player of the match
 //   POST {postponed: "<id>"} from a coach's phone after marking an upcoming game postponed (or back on)
 //   POST {preview: "<id>"} from a coach's phone after saving a match preview (once per game)
+//   POST {tsquad: "<id>"}  from a coach's phone after picking a tournament's squad (again only if it changed)
 //   POST {tournament: "<id>"} from a coach's phone when a tournament's groups and games are confirmed (once per tournament)
 // Only names already shown on the site go in an alert. See supabase/3_notifications.sql.
 import webpush from "npm:web-push@3.6.7";
@@ -195,7 +196,17 @@ async function previewAlert(m: Match) {
 }
 
 // ---- tournament: groups and games confirmed (one alert instead of a countdown for every game) ----
-type Tournament = { id: string; name: string; date: string; end_date?: string | null; venue?: string; teams?: { name: string; group: string }[] };
+type Tournament = { id: string; name: string; date: string; end_date?: string | null; venue?: string; teams?: { name: string; group: string }[]; squad?: string[] | null };
+
+// ---- tournament squad picked (before the games are on the site); push_log row "t:<id>", like tournamentAlert ----
+async function tSquadAlert(t: Tournament) {
+  const sq = (Array.isArray(t.squad) ? t.squad : []).filter(Boolean);
+  if (!sq.length || (t.end_date || t.date) < londonDate(Date.now())) return -1;
+  const { data: kind } = await db.rpc("push_claim_squad", { p_match: `t:${t.id}`, p_squad: sq });
+  if (!kind) return -1; // already sent as it is
+  const when = t.end_date && t.end_date !== t.date ? `${dayName(t.date)} to ${dayName(t.end_date)}` : dayName(t.date);
+  return await send("reminders", { title: `${kind === 2 ? "📋 Squad update" : "📋 Squad announced"}: ${t.name || "Tournament"}`, body: `${US} at the ${(t.name || "tournament").replace(/^the /i, "")}, ${when}: ${sq.join(", ")}.`, url: `${SITE}?fixtures`, tag: `tsquad-${t.id}` });
+}
 async function tournamentAlert(t: Tournament) {
   if ((t.end_date || t.date) < londonDate(Date.now())) return -1; // over already
   // push_log is keyed by text with no link to matches, so "t:<id>" keeps this to once per tournament without a database change
@@ -225,6 +236,9 @@ Deno.serve(async (req) => {
     } else if (typeof body.postponed === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.postponed).maybeSingle();
       out.postponed = data ? await postponedAlert(data as Match) : -1;
+    } else if (typeof body.tsquad === "string") {
+      const { data } = await db.from("tournaments").select("*").eq("id", body.tsquad).maybeSingle();
+      out.tsquad = data ? await tSquadAlert(data as Tournament) : -1;
     } else if (typeof body.tournament === "string") {
       const { data } = await db.from("tournaments").select("*").eq("id", body.tournament).maybeSingle();
       out.tournament = data ? await tournamentAlert(data as Tournament) : -1;

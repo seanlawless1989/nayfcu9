@@ -200,7 +200,7 @@ function drawSquad(){
   X.fillStyle=C.blue;X.beginPath();X.moveTo(0,875);X.lineTo(W,815);X.lineTo(W,W);X.lineTo(0,W);X.closePath();X.fill();
   drawOppCrest(28,895,165,165,S.opp);
   X.fillStyle=C.yellow;X.textAlign="left";X.textBaseline="alphabetic";
-  const opp=("v "+(S.opp||"Opponent")).toUpperCase();fit(opp,560,48,DISPLAY);X.fillText(opp,215,940);
+  const opp=(S.tour?(S.opp||"Tournament"):"v "+(S.opp||"Opponent")).toUpperCase();fit(opp,560,48,DISPLAY);X.fillText(opp,215,940);
   X.fillStyle=C.white;X.font=font(38,DISPLAY);fit(niceDate(S.date),560,38,DISPLAY);X.fillText(niceDate(S.date),215,992);
   X.font=font(38,DISPLAY);const ln=[koText(S.ko),S.venue].filter(Boolean).join("  ·  ");fit(ln,560,38,DISPLAY);X.fillText(ln,215,1040);
   X.fillStyle=C.white;X.font=font(26,BODY,800);X.textAlign="center";if(HAS_SP())X.fillText("Proudly sponsored by",925,860);
@@ -304,7 +304,7 @@ function caption(){
   const d=niceDate(S.date), opp=S.opp||"our opponents";let t="";
   if(S.mode==="squad"||S.mode==="setup"){
     const names=S.picked.filter(n=>squad.some(p=>p.name===n));
-    t=`${BALL} ${String(TEAM.ageGroup||"").toUpperCase().replace(/S$/,"s")} SQUAD ANNOUNCEMENT ${BALL}\n\nHere's our squad for ${d||"this weekend"}${S.ha==="A"?" away at":" at home to"} ${opp}${S.ko?`, ${S.ko} kick-off`:""}${S.venue?` at ${S.venue}`:""}.\n\n${names.map(n=>`${n} (${playerNum(n)})${n===S.captain?" ©":""}`).join("\n")}${(h=>h&&h.length?`\n\nLast time we played them: ${h[0].us>h[0].them?"won":h[0].us==h[0].them?"drew":"lost"} ${h[0].us}-${h[0].them}.`:"")(window.H2H&&window.H2H(S.opp))}\n\nCome on ${TEAM.players||"team"}! ${TEAM.cheer||""}${sp}\n\n${TEAM.hashtags||""}`;
+    t=`${BALL} ${String(TEAM.ageGroup||"").toUpperCase().replace(/S$/,"s")} SQUAD ANNOUNCEMENT ${BALL}\n\nHere's our squad for ${S.tour?`the ${opp}${d?`, ${d}`:""}`:`${d||"this weekend"}${S.ha==="A"?" away at":" at home to"} ${opp}`}${S.ko?`, ${S.ko} kick-off`:""}${S.venue?` at ${S.venue}`:""}.\n\n${names.map(n=>`${n} (${playerNum(n)})${n===S.captain?" ©":""}`).join("\n")}${(h=>h&&h.length?`\n\nLast time we played them: ${h[0].us>h[0].them?"won":h[0].us==h[0].them?"drew":"lost"} ${h[0].us}-${h[0].them}.`:"")(window.H2H&&window.H2H(S.opp))}\n\nCome on ${TEAM.players||"team"}! ${TEAM.cheer||""}${sp}\n\n${TEAM.hashtags||""}`;
   } else if(S.mode==="ft"){
     const us=S.us??"?",them=S.them??"?";const res=+us>+them?"WIN":(+us===+them?"DRAW":"DEFEAT");
     const sc=Object.entries(S.goals).filter(([n,g])=>g>0).map(([n,g])=>`${BALL} ${n}${g>1?` x${g}`:""}`).join("\n");
@@ -355,7 +355,7 @@ ROOT.querySelector(".gtabs").addEventListener("click",e=>{const b=e.target.close
 ["opp","date","ko","venue","comp"].forEach(k=>$(k).addEventListener("input",()=>{S[k]=$(k).value;save();if(k==="opp")setOppCrestFor(S.opp);else render()}));
 ROOT.addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
-  if(b.dataset.gha){S.ha=b.dataset.gha;syncInputs();save();render()}
+  if(b.dataset.gha){S.ha=b.dataset.gha;S.tour=false;syncInputs();save();render()}
   if(b.dataset.kit){S.kit=b.dataset.kit;syncInputs();save();render()}
   if(b.dataset.pkit){S.pkit=b.dataset.pkit;syncInputs();save();render()}
   if(b.dataset.g){const n=b.dataset.n;S.goals[n]=Math.max(0,(S.goals[n]||0)+ +b.dataset.g);if(!S.goals[n])delete S.goals[n];
@@ -411,13 +411,16 @@ $("copyCap").addEventListener("click",()=>{const ta=$("caption");const done=()=>
 window.GFX={
   setSquad(list){squad=list.map(p=>({name:p.name,num:p.num??""}));buildPickers();render()},
   async loadMatch(m,mode){
-    Object.assign(S,{opp:m.opp||"",date:m.date||"",ko:m.ko||"",venue:m.venue||"",comp:m.comp||"League",ha:m.ha==="A"?"A":"H",
+    Object.assign(S,{tour:false,opp:m.opp||"",date:m.date||"",ko:m.ko||"",venue:m.venue||"",comp:m.comp||"League",ha:m.ha==="A"?"A":"H",
       picked:Object.keys(m.played||{}).length?Object.keys(m.played):(m.squad||[]).slice(),goals:Object.fromEntries(Object.entries(m.played||{}).filter(([,g])=>g>0)),
       us:m.us??null,them:m.them??null,usManual:m.us!=null,ftPotm:m.potm||"",assists:Object.assign({},m.assists||{})});
     if(RG)S.kicks=JSON.parse(JSON.stringify(m.kicks||{}));
     if(m.potm)S.potm=m.potm;S.potmKind="match";
     S.picked.sort((a,b)=>squad.findIndex(p=>p.name===a)-squad.findIndex(p=>p.name===b));
     buildPickers();syncInputs();save();await setOppCrestFor(S.opp);setMode(mode||"squad")},
+  // the squad for a whole tournament (before its games are on the site): "UNDER 9s SQUAD ANNOUNCEMENT · SPOOKTACULAR CUP"
+  async loadTSquad(t){Object.assign(S,{tour:true,opp:t.name||"Tournament",date:t.date||S.date,ko:"",venue:t.venue||"",comp:"Tournament",ha:"N",picked:(t.squad||[]).slice(),goals:{},us:null,them:null,usManual:false,assists:{}});
+    S.picked.sort((a,b)=>squad.findIndex(p=>p.name===a)-squad.findIndex(p=>p.name===b));IMG.opp=null;buildPickers();syncInputs();save();setMode("squad")},
   async loadTournament(t){Object.assign(S,{potm:t.potm,potmKind:"tournament",tname:t.name,date:t.date||S.date,venue:t.venue||"",opp:""});buildPickers();syncInputs();save();setMode("potm")},
   loadMilestone(n,label){Object.assign(S,{msPlayer:n,msLabel:label});buildPickers();save();setMode("ms")},
   loadMonth(ym){S.month=ym;MONTH_LIST=window.monthFixtures?window.monthFixtures(ym):[];buildPickers();save();setMode("month")},

@@ -185,7 +185,7 @@ function tHeroHtml(t){const d=new Date(t.date+"T12:00:00");const days=Math.max(0
   return `<section class="hero"><div class="kick">Next up · Tournament</div>
     <div class="vs"><div class="side"><img src="${CREST}" alt=""><span>${esc(TEAM.name)}</span></div><div class="mid"><b>🏆</b><span>Tournament</span></div><div class="side">${tLogo(t)?`<img src="${tLogo(t)}" alt="">`:`<span class="ini">${esc(ini)}</span>`}<span>${esc(t.name||"Tournament")}</span></div></div>
     <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${t.venue?`<span class="pill">📍 ${esc(t.venue)}</span>`:""}</div>
-    <div class="hpv">${esc(tTeamsLine(t))}${tGames(t).length?"Games and kick-off times are on the Fixtures page.":"We're entered. Games and kick-off times to follow."}${t.notes?` ${esc(clip(t.notes,140))}`:""}</div>
+    <div class="hpv">${tSquad(t).length?`Squad: ${esc(tSquad(t).join(", "))}. `:""}${esc(tTeamsLine(t))}${tGames(t).length?"Games and kick-off times are on the Fixtures page.":"We're entered. Games and kick-off times to follow."}${t.notes?` ${esc(clip(t.notes,140))}`:""}</div>
     <div class="btns"><button class="btn gold" data-view="fixtures">🏆 Tournament details</button><button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=live?null:nextFixture(),tn=live?null:nextTournament(nm&&nm.date);if(tn)return tHeroHtml(tn);const m=live||nm;if(!m)return "";
   const d=new Date(m.date+"T12:00:00");const days=Math.round((d-new Date(todayLocal()+"T12:00:00"))/864e5);
@@ -330,9 +330,9 @@ function tCard(t){
     <div style="min-width:0"><div class="o">${tLogo(t)?`<img class="badge sm" src="${tLogo(t)}" alt="">`:""}${esc(t.name||"Tournament")}${t.trophy?`<span class="trophy">${trophyIcon(t.trophy)} ${esc(t.trophy)}</span>`:""}</div>
       <div class="meta"><span class="ctag">Tournament</span>${multi?`${days.length} days${t.venue?" · ":""}`:""}${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
       ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}</div>
-    <div></div></div>${tTeamsHtml(t)}
+    <div></div></div>${tTeamsHtml(t)}${tSquad(t).length&&tSquadOpen(t)?`<div class="tteams"><div class="tday">👕 Squad (${tSquad(t).length})</div><div class="tchips">${tSquad(t).map(n=>`<span class="tteam">${esc(n)}</span>`).join("")}</div></div>`:""}
     ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">${tEnd(t)>=new Date().toISOString().slice(0,10)?tTeams(t).length&&!tDrawn(t)?"Fixtures to follow once the groups are drawn.":"Tournament entered. Fixtures to follow.":"No games added yet."}</p>`}
-    <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button><label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button>${(window.TEAM_CONFIG||window.NAYFC_CONFIG||{}).vapidPublicKey&&tEnd(t)>=todayLocal()?`<button class="mini" data-ttell="${esc(t.id)}">📣 Tell parents: groups and games confirmed</button>`:""}</div>
+    <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button>${tSquadOpen(t)?`<button class="mini" data-pick="t:${esc(t.id)}">${tSquad(t).length?`Squad picked (${tSquad(t).length})`:"Pick squad"}</button>`:""}<label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button>${(window.TEAM_CONFIG||window.NAYFC_CONFIG||{}).vapidPublicKey&&tEnd(t)>=todayLocal()?`<button class="mini" data-ttell="${esc(t.id)}">📣 Tell parents: groups and games confirmed</button>`:""}</div>
   </div>`;
 }
 // one list of cards: plain matches plus one card per tournament
@@ -459,9 +459,32 @@ function famCard(){if(!canWrite||!PL_ON)return "";const kid=PRN.kid;
 
 // ---------- pick the squad for a fixture (Live match uses it) ----------
 let pickMatch=null,PICK=null;
-function pickView(){const m=matches.find(x=>x.id===pickMatch);if(!m)return `<div class="card empty">Fixture not found.</div>`;
+// a tournament's squad (tournaments.squad, supabase/15_tournament_squad.sql) is picked before its games are on the site:
+// pickMatch is then "t:<tournament id>", and every game added to the tournament starts with that squad
+const pickTourn=()=>pickMatch&&String(pickMatch).startsWith("t:")?tournaments.find(t=>t.id===pickMatch.slice(2)):null;
+const tSquad=t=>(t&&Array.isArray(t.squad)?t.squad:[]).filter(Boolean);
+const tSquadOpen=t=>!!t&&tEnd(t)>=todayLocal();
+function pickTView(t){const a=AV[pickMatch]||{};const roster=players.filter(p=>p.current).sort((x,y)=>(+x.num||99)-(+y.num||99));
+  if(!PICK||PICK.id!==pickMatch)PICK={id:pickMatch,set:new Set(tSquad(t).length?tSquad(t):roster.filter(p=>a[p.name]!=="no").map(p=>p.name))};
+  const lab={yes:"✅ Can make it",maybe:"❔ Maybe",no:"❌ Can't make it"};const d=new Date(t.date+"T12:00:00");
+  return `<section class="card stack"><h2>Pick the tournament squad</h2><p><b>🏆 ${esc(t.name||"Tournament")}</b>, ${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}${t.venue?` · ${esc(t.venue)}`:""}</p>
+  <p class="hint">Tick who's going. Parents see the squad on the tournament card, every game you add to the tournament starts with these players, and Live match uses them on the day.</p>
+  <div class="av">${roster.map(p=>`<label class="row" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||""}</span></label>`).join("")}</div>
+  <p class="hint">${PICK.set.size} picked.</p>
+  ${tSquadOpen(t)?`<label class="row" style="cursor:pointer"><span><input type="checkbox" id="pickAlert" checked style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">📣 Send a squad alert to parents' phones</span></label><p class="hint">Only sent when the squad is new or has changed since the last alert.</p>`:""}
+  <div class="btns"><button class="btn gold" id="pickSave">Save squad</button><button class="btn" id="pickSavePost">Save and make the squad post</button><button class="btn ghost" data-view="fixtures">Cancel</button></div></section>`}
+async function pickTSave(t){const sq=[...PICK.set].sort((a,b)=>(+(players.find(p=>p.name===a)||{}).num||99)-(+(players.find(p=>p.name===b)||{}).num||99));
+  const tell=!!($("#pickAlert")&&$("#pickAlert").checked&&sq.length);
+  try{await db.collection("tournaments").doc(t.id).update({squad:sq});t.squad=sq}catch(e){toast(/squad/.test(e&&e.message||"")?"The site's database needs a quick update before it can save a tournament squad. Ask Touchline Tales.":"Couldn't save the squad. Try again.");return null}
+  // games already added that haven't kicked off get the same squad
+  for(const g of tGames(t).filter(g=>!result(g)&&!g.postponed&&!(g.live&&g.live.status&&g.live.status!=="pre"))){try{await db.collection("matches").doc(g.id).update({squad:sq});g.squad=sq;try{localStorage.removeItem(liveKey(g.id))}catch(e){}}catch(e){}}
+  const r=tell?await alSend({tsquad:t.id}):null;
+  toast(`Squad saved: ${sq.length} players.${r==null?"":r>=0?" Parents with alerts on have been told.":" No change since the last alert, so none sent."}`);return t}
+function pickView(){const pt=pickTourn();if(pt)return pickTView(pt);if(String(pickMatch||"").startsWith("t:"))return `<div class="card empty">Tournament not found.</div>`;
+  const m=matches.find(x=>x.id===pickMatch);if(!m)return `<div class="card empty">Fixture not found.</div>`;
   const a=AV[m.id]||{};const roster=players.filter(p=>p.current).sort((x,y)=>(+x.num||99)-(+y.num||99));
-  if(!PICK||PICK.id!==m.id)PICK={id:m.id,set:new Set(m.squad&&m.squad.length?m.squad:roster.filter(p=>a[p.name]!=="no").map(p=>p.name))};
+  const ts=m.tournament_id?tSquad(tournaments.find(t=>t.id===m.tournament_id)):[];
+  if(!PICK||PICK.id!==m.id)PICK={id:m.id,set:new Set(m.squad&&m.squad.length?m.squad:ts.length?ts:roster.filter(p=>a[p.name]!=="no").map(p=>p.name))};
   const lab={yes:"✅ Can make it",maybe:"❔ Maybe",no:"❌ Can't make it"};const d=new Date(m.date+"T12:00:00");
   return `<section class="card stack"><h2>Pick the squad</h2><p><b>${m.ha==="A"?"at ":"v "}${esc(m.opp)}</b>, ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}${m.ko?` · ${esc(m.ko)} KO`:""}</p>
   <p class="hint">Tick who's in the squad. Live match will use exactly these players on the day, and the squad post will use them too. Parents' answers are shown where they've replied.</p>
@@ -470,7 +493,7 @@ function pickView(){const m=matches.find(x=>x.id===pickMatch);if(!m)return `<div
   ${pickAlertable(m)?`<label class="row" style="cursor:pointer"><span><input type="checkbox" id="pickAlert" checked style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">📣 Send a squad alert to parents' phones</span></label><p class="hint">Only sent when the squad is new or has changed since the last alert.</p>`:""}
   <div class="btns"><button class="btn gold" id="pickSave">Save squad</button><button class="btn" id="pickSavePost">Save and make the squad post</button><button class="btn ghost" data-view="fixtures">Cancel</button></div></section>`}
 function pickAlertable(m){return !m.practice&&!m.postponed&&!result(m)&&(m.date||"")>=todayLocal()&&!(m.live&&m.live.status&&m.live.status!=="pre")}
-async function pickSave(){const m=matches.find(x=>x.id===pickMatch);const roster=players.map(p=>p.name);const sq=[...PICK.set].sort((a,b)=>(+(players.find(p=>p.name===a)||{}).num||99)-(+(players.find(p=>p.name===b)||{}).num||99));
+async function pickSave(){const pt=pickTourn();if(pt)return pickTSave(pt);const m=matches.find(x=>x.id===pickMatch);const roster=players.map(p=>p.name);const sq=[...PICK.set].sort((a,b)=>(+(players.find(p=>p.name===a)||{}).num||99)-(+(players.find(p=>p.name===b)||{}).num||99));
   const tell=!!($("#pickAlert")&&$("#pickAlert").checked&&sq.length);
   try{await db.collection("matches").doc(m.id).update({squad:sq});m.squad=sq;try{localStorage.removeItem(liveKey(m.id))}catch(e){}}catch(e){toast("Couldn't save the squad. Try again.");return null}
   // the alert goes to phones with kick-off reminders on; the function only sends it when the squad is new or changed
@@ -561,7 +584,7 @@ async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.s
 // after a live update from the coach's phone: send any new alerts straight away (the every-minute check is the back-up)
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:{match:id}}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
-async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.potm??data.postponed??data.preview??data.tournament;return typeof v==="number"?v:null}catch(e){return null}}
+async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
@@ -946,7 +969,8 @@ function liveKey(id){return SK+".live3."+id}
 function todayLocal(){return new Date().toLocaleDateString("en-CA")}
 function liveStart(id){const m=matches.find(x=>x.id===id);if(!m)return;let saved=null;try{saved=JSON.parse(localStorage.getItem(liveKey(id))||"null")}catch(e){}
   const out=Object.entries(AV[id]||{}).filter(([,v])=>v==="no").map(([n])=>n);
-  const sq=(m.squad&&m.squad.length)?m.squad.slice():Object.keys(played(m)).length?Object.keys(played(m)):players.filter(p=>p.current&&!out.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
+  const tsq=m.tournament_id?tSquad(tournaments.find(t=>t.id===m.tournament_id)):[];
+  const sq=(m.squad&&m.squad.length)?m.squad.slice():tsq.length&&!Object.keys(played(m)).length?tsq.slice():Object.keys(played(m)).length?Object.keys(played(m)):players.filter(p=>p.current&&!out.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
   // another coach's phone may have started the game, or locked the line-up before kick-off
   const srv=m.live&&m.live.status&&(m.live.status!=="pre"||(m.live.events||[]).some(e=>e.k==="lu"))?m.live:null;
   // a game already finished on the server (by another phone, or fixed by hand) wins over this phone's copy
@@ -1593,7 +1617,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.pscope){pScope=b.dataset.pscope;render()}
   if(b.dataset.pick){pickMatch=b.dataset.pick;PICK=null;setView("pick")}
   if(b.id==="pickSave"){if(await pickSave())setView("fixtures")}
-  if(b.id==="pickSavePost"){const m=await pickSave();if(m){setView("gfx");await (await gfxReady()).loadMatch(m,"squad")}}
+  if(b.id==="pickSavePost"){const pt=pickTourn(),m=await pickSave();if(m){setView("gfx");const g=await gfxReady();if(pt&&g.loadTSquad)await g.loadTSquad(pt);else await g.loadMatch(pt?{opp:pt.name,date:pt.date,venue:pt.venue,comp:"Tournament",squad:tSquad(pt)}:m,"squad")}}
   if(b.dataset.live){liveStart(b.dataset.live)}
   if(b.dataset.tbmatch!=null)tbOpen(b.dataset.tbmatch);
   if(b.id==="practice"){try{localStorage.removeItem(liveKey("practice"))}catch(e){}matches=matches.filter(m=>!m.practice);
@@ -2094,6 +2118,7 @@ async function saveMatch(){
   const body={date:F.date,opp:F.opp,ha:F.ha,venue:F.venue,comp:F.comp,ko:F.ko,us:F.us===""?(Object.keys(F.played).length&&F.them!==""?goalSum:null):F.us,them:F.them===""?null:F.them,
     potm:F.potm||null,played:F.played,assists:F.assists||{},postponed:!!F.postponed&&F.us===""&&F.them==="",tournament_id:F.tournament_id||null,stage:F.stage||"",halves:F.halves||{},keepers:F.keepers||{},gk:Object.keys(F.keepers||{})[0]||null,saves:F.saves===""||F.saves==null?null:+F.saves,notes:F.notes,apps:F.apps!==false||Object.values(F.played).some(g=>!(+g>0)),check:"",updated:new Date().toISOString()};
   if(F.matchday&&(Object.keys(F.matchday).length||(matches.find(x=>x.id===F.id)||{}).matchday))body.matchday=F.matchday;
+  if(!F.id&&body.tournament_id&&(sq=>sq.length)(tSquad(tournaments.find(t=>t.id===body.tournament_id))))body.squad=tSquad(tournaments.find(t=>t.id===body.tournament_id));
   if(RUGBY)body.kicks=Object.fromEntries(Object.entries(F.kicks||{}).filter(([n,k])=>n in F.played&&kickText(k)));
   const id=F.id||`${F.date}-${slug(F.opp)}-${Math.random().toString(36).slice(2,6)}`;
   $("#saveM").disabled=true;
