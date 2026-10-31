@@ -605,7 +605,7 @@ function alertsView(){if(!AL.checked)alCheck();
   else if(Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
   else{const on=!!AL.sub;
     const box=(id,k,label,hint)=>`<label class="row" style="cursor:pointer"><span style="white-space:nowrap"><input type="checkbox" id="${id}"${AL.prefs[k]?" checked":""}${k!=="reminders"&&k!=="live"&&k!=="avail"&&AL.prefs.live?" disabled":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">${label}</span><span class="hint">${hint}</span></label>`;
-    bodyHtml=`<p class="hint" style="margin:0">Choose what this phone gets:</p><div class="av">${box("al-rem","reminders","Reminders",`squad picked, match previews, 10 and 2 minutes before kick-off, games postponed${TAV_ON?`, and a nudge to say if your ${PRN.kid} can make games and training`:""}`)}
+    bodyHtml=`<p class="hint" style="margin:0">Choose what this phone gets:</p><div class="av">${box("al-rem","reminders","Reminders",`squad picked, match previews, 10 and 2 minutes before kick-off, games postponed${TAV_ON?`, and (once you've signed in with your family code) a nudge to say if your ${PRN.kid} can make games and training`:""}`)}
       ${TEAM.publicScores===false?"":box("al-goals","goals",SP.Goals,`each ${SP.goal} as it goes in`)}
       ${box("al-res","results","Results",`full time and the ${esc(POTM)}`)}
       ${box("al-live","live","Everything live",`line-up, kick-off, ${TEAM.publicScores===false?"":SP.goals+", "}subs, half time and full time`)}
@@ -831,7 +831,7 @@ function tavCard(){if(!TAV_ON||!TR)return "";const d=tavNext();if(!d)return "";
   return `<section class="card stack edit-only"><h3>Who's coming on ${esc(shortDay(d))}</h3>
     <p style="margin:0">✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}</p>
     ${c.yes.length?`<p class="hint" style="margin:0"><b>Coming:</b> ${c.yes.map(esc).join(", ")}</p>`:""}${c.maybe.length?`<p class="hint" style="margin:0"><b>Maybe:</b> ${c.maybe.map(esc).join(", ")}</p>`:""}${c.no.length?`<p class="hint" style="margin:0"><b>Not coming:</b> ${c.no.map(esc).join(", ")}</p>`:""}${w.length?`<p class="hint" style="margin:0"><b>Not answered yet:</b> ${w.map(esc).join(", ")}</p>`:`<p class="hint" style="margin:0">Everyone has answered.</p>`}
-    <p class="hint" style="margin:0">Parents who haven't answered get a reminder on their phone 24 hours before (if they have match alerts on). Only coaches see this.</p>
+    <p class="hint" style="margin:0">Parents who haven't answered get a reminder on their phone 24 hours before, if they have alerts on and have signed in with their family code. Only coaches see this.</p>
     <div class="btns"><button class="btn ghost" data-tavcopy="${d}">Copy message for parents</button><button class="mini" data-tavopen="${d}">Answer for a ${esc(PRN.kid)}</button></div></section>`}
 function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answers aren't switched on for this team yet.</div>`;
   const ok=trUpcoming(8).filter(x=>!x.off).map(x=>x.iso);if(!tavDay||!ok.includes(tavDay))tavDay=ok[0]||null;

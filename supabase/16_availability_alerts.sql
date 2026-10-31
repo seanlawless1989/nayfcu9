@@ -2,8 +2,8 @@
 -- 1. A coach can have an alert on their phone each time a parent says whether their child can make a game or training.
 -- 2. Parents answer for training as well as games (training_availability; only coaches see the answers).
 -- 3. Reminders to answer go the Wednesday evening before a game and 24 hours before training. A phone signed in
---    with a family code only gets one while its own child hasn't answered; a phone that isn't signed in gets one
---    while anyone in the squad is still to answer. Coaches' phones don't get them.
+--    with a family code gets one while its own child hasn't answered; phones that aren't signed in and coaches'
+--    phones don't get them.
 -- Run it on every team's database (and for every team schema), then redeploy the notify edge function.
 
 -- ---------- Which sign-in turned alerts on ----------
@@ -99,8 +99,8 @@ $$;
 revoke all on function public.avail_coach_targets() from public, anon, authenticated;
 
 -- who to remind about a game (p_match) or a training session (p_day), and which of their children haven't answered.
--- Phones with Reminders on, not coaches. Signed-in phones: only while one of their own children is still to answer.
--- Phones not signed in: while anyone is still to answer (kids is then empty).
+-- Phones with Reminders on, not coaches, signed in with a family code, and only while one of their own children is
+-- still to answer. Phones not signed in never get one: they could be anyone's (grandparents, fans).
 create or replace function public.avail_reminder_targets(p_match text, p_day date)
 returns table(endpoint text, p256dh text, auth text, kids text[])
 language sql stable security definer set search_path = public as $$
@@ -121,7 +121,7 @@ language sql stable security definer set search_path = public as $$
     where s.uid is not null and l.uid = s.uid
   ) x
   where s.reminders and not s.coach
-    and case when x.linked > 0 then cardinality(x.kids) > 0 else exists (select 1 from waiting) end;
+    and x.linked > 0 and cardinality(x.kids) > 0;   -- only phones signed in with a family code (Sean, 31 Oct)
 $$;
 revoke all on function public.avail_reminder_targets(text, date) from public, anon, authenticated;
 
