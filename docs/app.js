@@ -47,7 +47,7 @@ const POTM=((TEAM.potm&&TEAM.potm.sponsor)?TEAM.potm.sponsor+" ":"")+"player of 
 const SITE=(TEAM.siteUrl||location.origin).replace(/\/$/,""),APP=TEAM.appName||document.title,CREST=TEAM.crest||"crest.png";
 const fileTag=APP.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 (function applyTeam(){const t=TEAM;if(!t.name)return;document.title=`${t.name} ${t.ageGroup||""}`.trim();
-  const age=String(t.ageGroup||""),h=document.getElementById("teamTitle");if(h)h.innerHTML=`${esc(t.name)} <em>${/s$/.test(age)?esc(age.slice(0,-1))+'<span class="lc">s</span>':esc(age)}</em>`;
+  const age=String(t.ageGroup||""),h=document.getElementById("teamTitle");if(h)h.innerHTML=`${esc(t.name)} <em>${esc(age).replace(/(\d)s\b/,'$1<span class="lc">s</span>')}</em>`;
   const tl=document.getElementById("teamTagline");if(tl)tl.textContent=t.tagline||"";
   // a club with several teams: TEAM.club = {name, url} links back to the club page (tools/package_club.py)
   if(tl&&t.club&&/^https?:\/\//.test(t.club.url||"")){const a=document.createElement("a");a.className="clublink";a.href=t.club.url;a.textContent=`All ${t.club.name||"club"} teams →`;tl.after(a)}
@@ -589,7 +589,8 @@ try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});i
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
-  if(alIos()&&!alStandalone())bodyHtml=`<div class="note">On an iPhone or iPad, alerts only work from the club app on your home screen:<br>1. Tap the Share button <b>⬆︎</b> in Safari (on newer iPhones tap <b>⋯</b> first, then <b>Share</b>).<br>2. Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.<br>3. Open <b>${esc(APP)}</b> from your home screen and come back to this page.</div>`;
+  if(!CFG.vapidPublicKey)bodyHtml=`<div class="note">${window.DEMO?"Match alerts are switched off in this demo. On a real team site, parents get them on their phones.":"Match alerts aren't switched on for this team yet. Everything else on the site works as normal."}</div>`;
+  else if(alIos()&&!alStandalone())bodyHtml=`<div class="note">On an iPhone or iPad, alerts only work from the club app on your home screen:<br>1. Tap the Share button <b>⬆︎</b> in Safari (on newer iPhones tap <b>⋯</b> first, then <b>Share</b>).<br>2. Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.<br>3. Open <b>${esc(APP)}</b> from your home screen and come back to this page.</div>`;
   else if(!alSupported())bodyHtml=`<div class="note">This browser can't show alerts. On Android use Chrome; on iPhone add the site to your home screen first.</div>`;
   else if(Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
   else{const on=!!AL.sub;
