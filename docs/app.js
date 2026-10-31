@@ -47,10 +47,13 @@ const POTM=((TEAM.potm&&TEAM.potm.sponsor)?TEAM.potm.sponsor+" ":"")+"player of 
 const SITE=(TEAM.siteUrl||location.origin).replace(/\/$/,""),APP=TEAM.appName||document.title,CREST=TEAM.crest||"crest.png";
 const fileTag=APP.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 (function applyTeam(){const t=TEAM;if(!t.name)return;document.title=`${t.name} ${t.ageGroup||""}`.trim();
-  const age=String(t.ageGroup||""),h=document.getElementById("teamTitle");if(h)h.innerHTML=`${esc(t.name)} <em>${/s$/.test(age)?esc(age.slice(0,-1))+'<span class="lc">s</span>':esc(age)}</em>`;
+  const age=String(t.ageGroup||""),h=document.getElementById("teamTitle");if(h)h.innerHTML=`${esc(t.name)} <em>${esc(age).replace(/(\d)s\b/,'$1<span class="lc">s</span>')}</em>`;
   const tl=document.getElementById("teamTagline");if(tl)tl.textContent=t.tagline||"";
   // a club with several teams: TEAM.club = {name, url} links back to the club page (tools/package_club.py)
   if(tl&&t.club&&/^https?:\/\//.test(t.club.url||"")){const a=document.createElement("a");a.className="clublink";a.href=t.club.url;a.textContent=`All ${t.club.name||"club"} teams →`;tl.after(a)}
+  // teams in the same age group that follow each other: TEAM.sisterTeams = [{name, url}] adds a link to each one's site
+  const sis=(t.sisterTeams||[]).filter(x=>x&&x.name&&/^https?:\/\//.test(x.url||""));
+  if(tl&&sis.length){const d=document.createElement("div");d.className="sisters";d.innerHTML=sis.map(x=>`<a class="clublink" href="${esc(x.url)}">${esc(x.name)} →</a>`).join("");tl.after(d)}
   document.querySelectorAll("[data-potm]").forEach(el=>el.textContent=POTM.charAt(0).toUpperCase()+POTM.slice(1));
   const c=t.colours||{},css={club:"--club",clubDeep:"--clubDeep",clubInk:"--clubInk",gold:"--gold",goldInk:"--goldInk"};Object.entries(css).forEach(([k,v])=>c[k]&&document.documentElement.style.setProperty(v,c[k]));
   const rgb=h=>{const m=/^#?([0-9a-f]{6})$/i.exec(h||"");return m?[0,2,4].map(i=>parseInt(m[1].substr(i,2),16)):null},set=(k,v)=>document.documentElement.style.setProperty(k,v);
@@ -577,18 +580,20 @@ async function alSave(sub){const j=sub.toJSON(),P=AL.prefs,a={p_endpoint:j.endpo
 async function alOn(){if(AL.busy)return;AL.busy=true;render();
   try{if(await Notification.requestPermission()!=="granted"){toast("Alerts weren't allowed on this phone.");return}
     const r=await navigator.serviceWorker.ready;const sub=(await r.pushManager.getSubscription())||await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:alKey(CFG.vapidPublicKey)});
-    const ep=await alSave(sub);AL.sub=sub;sb.functions.invoke("notify",{body:{test:ep}}).catch(()=>{});toast("Alerts are on. You should get a test one now.")}
+    const ep=await alSave(sub);AL.sub=sub;sb.functions.invoke("notify",{body:fnBody({test:ep})}).catch(()=>{});toast("Alerts are on. You should get a test one now.")}
   catch(e){toast("Couldn't turn alerts on. Try again in a moment.")}finally{AL.busy=false;render()}}
-async function alTest(){if(!AL.sub)return;AL.busy=true;render();try{const {data,error}=await sb.functions.invoke("notify",{body:{test:AL.sub.endpoint}});toast(!error&&data&&data.test>0?"Test alert sent. It should arrive in a few seconds.":"The test alert didn't go. Turn alerts off and on again.")}catch(e){toast("Couldn't send a test alert. Check your connection.")}finally{AL.busy=false;render()}}
+async function alTest(){if(!AL.sub)return;AL.busy=true;render();try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody({test:AL.sub.endpoint})});toast(!error&&data&&data.test>0?"Test alert sent. It should arrive in a few seconds.":"The test alert didn't go. Turn alerts off and on again.")}catch(e){toast("Couldn't send a test alert. Check your connection.")}finally{AL.busy=false;render()}}
 async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.sub.endpoint;await AL.sub.unsubscribe();await sb.rpc("push_unsubscribe",{p_endpoint:ep});AL.sub=null;toast("Alerts are off on this phone.")}catch(e){toast("Couldn't turn alerts off. Try again.")}finally{AL.busy=false;render()}}
 // after a live update from the coach's phone: send any new alerts straight away (the every-minute check is the back-up)
-function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:{match:id}}).catch(()=>{})}
+function alNotify(id){if(sb&&id&&id!=="practice"&&!CFG.schema)sb.functions.invoke("notify",{body:fnBody({match:id})}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
-async function alSend(body){if(!sb)return null;try{const {data,error}=await sb.functions.invoke("notify",{body});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament;return typeof v==="number"?v:null}catch(e){return null}}
+async function alSend(body){if(!sb||CFG.schema)return null;   // no match alerts yet for a team sharing a project
+try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
-  if(alIos()&&!alStandalone())bodyHtml=`<div class="note">On an iPhone or iPad, alerts only work from the club app on your home screen:<br>1. Tap the Share button <b>⬆︎</b> in Safari (on newer iPhones tap <b>⋯</b> first, then <b>Share</b>).<br>2. Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.<br>3. Open <b>${esc(APP)}</b> from your home screen and come back to this page.</div>`;
+  if(!CFG.vapidPublicKey)bodyHtml=`<div class="note">${window.DEMO?"Match alerts are switched off in this demo. On a real team site, parents get them on their phones.":"Match alerts aren't switched on for this team yet. Everything else on the site works as normal."}</div>`;
+  else if(alIos()&&!alStandalone())bodyHtml=`<div class="note">On an iPhone or iPad, alerts only work from the club app on your home screen:<br>1. Tap the Share button <b>⬆︎</b> in Safari (on newer iPhones tap <b>⋯</b> first, then <b>Share</b>).<br>2. Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.<br>3. Open <b>${esc(APP)}</b> from your home screen and come back to this page.</div>`;
   else if(!alSupported())bodyHtml=`<div class="note">This browser can't show alerts. On Android use Chrome; on iPhone add the site to your home screen first.</div>`;
   else if(Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
   else{const on=!!AL.sub;
@@ -644,7 +649,10 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
 // Coaches add photos from a match page or the Photos page. Each one is re-drawn (1600px max, plus a 480px thumbnail),
 // which also drops the location data phones put in pictures.
 let GAL=[],galMatch="",LB=null;
-const galUrl=p=>CFG.supabaseUrl+"/storage/v1/object/public/gallery/"+String(p).split("/").map(encodeURIComponent).join("/");
+// Edge functions serve the project's own team; another team sharing the project says which schema is theirs.
+const fnBody=b=>CFG.schema?Object.assign({schema:CFG.schema},b):b;
+const galBucket=()=>CFG.schema?CFG.schema+"-gallery":"gallery";
+const galUrl=p=>CFG.supabaseUrl+"/storage/v1/object/public/"+galBucket()+"/"+String(p).split("/").map(encodeURIComponent).join("/");
 // The Photos page is archived until parents have their own login: no tab, tile or match-page photos, and nothing is loaded.
 // Player profile pictures (player_photos) are separate and stay. A team can bring Photos back with photos: true in team.js.
 const PHOTOS_ON=TEAM.photos===true;
@@ -680,7 +688,7 @@ function galShrink(file,max,q){return new Promise((ok,bad)=>{const url=URL.creat
 async function galUpload(mid,files){files=[...files];if(!files.length||!canWrite||!mid)return;let ok=0;
   for(let i=0;i<files.length;i++){toast(`Adding photo ${i+1} of ${files.length}…`);
     try{const id=crypto.randomUUID(),big=await galShrink(files[i],1600,.85),sm=await galShrink(files[i],480,.75),path=`${mid}/${id}.jpg`,thumb=`${mid}/${id}_t.jpg`;
-      for(const [p,b] of [[path,big.b],[thumb,sm.b]]){const {error}=await sb.storage.from("gallery").upload(p,b,{contentType:"image/jpeg",cacheControl:"31536000"});if(error)throw error}
+      for(const [p,b] of [[path,big.b],[thumb,sm.b]]){const {error}=await sb.storage.from(galBucket()).upload(p,b,{contentType:"image/jpeg",cacheControl:"31536000"});if(error)throw error}
       const {data,error}=await sb.from("match_photos").insert({id,match_id:mid,path,thumb,w:big.w,h:big.h}).select().single();if(error)throw error;GAL.push(data);ok++}
     catch(e){console.warn("photo upload",e)}}
   toast(ok===files.length?`${ok} photo${ok>1?"s":""} added.`:ok?`${ok} of ${files.length} photos added. Try the others again.`:"Couldn't add those photos. Check your signal and try again.");render()}
@@ -698,14 +706,16 @@ function lbDraw(){document.querySelectorAll(".lb-ov").forEach(x=>x.remove());con
 async function lbAction(a){const p=LB&&LB.list[LB.i];if(a==="x"||a==="bg"){lbClose();return}if(a==="prev"){lbStep(-1);return}if(a==="next"){lbStep(1);return}if(!p||!canWrite)return;
   if(a==="cap"){const c=prompt("Caption (first names only)",p.caption||"");if(c==null)return;const {error}=await sb.from("match_photos").update({caption:c.trim()}).eq("id",p.id);if(error){toast("Couldn't save the caption.");return}p.caption=c.trim();lbDraw();return}
   if(a==="del"){if(!confirm("Delete this photo for everyone?"))return;const {error}=await sb.from("match_photos").delete().eq("id",p.id);if(error){toast("Couldn't delete it. Try again.");return}
-    sb.storage.from("gallery").remove([p.path,p.thumb]).catch(()=>{});GAL=GAL.filter(x=>x.id!==p.id);LB.list.splice(LB.i,1);if(LB.i>=LB.list.length)LB.i=0;toast("Photo deleted.");lbDraw();render()}}
+    sb.storage.from(galBucket()).remove([p.path,p.thumb]).catch(()=>{});GAL=GAL.filter(x=>x.id!==p.id);LB.list.splice(LB.i,1);if(LB.i>=LB.list.length)LB.i=0;toast("Photo deleted.");lbDraw();render()}}
 document.addEventListener("keydown",e=>{if(!LB)return;if(e.key==="Escape")lbClose();else if(e.key==="ArrowRight")lbStep(1);else if(e.key==="ArrowLeft")lbStep(-1)});
 
 // ---------- calendar ----------
 // The "calendar" Supabase function serves every fixture, tournament and training session as a feed that phones
 // subscribe to and re-check by themselves (supabase/functions/calendar).
 let calTraining=true;
-const CAL_URL=()=>CFG.supabaseUrl+"/functions/v1/calendar"+(calTraining?"":"?training=0");
+const CAL_URL=()=>{const q=new URLSearchParams();if(!calTraining)q.set("training","0");
+  if(CFG.schema){q.set("team",CFG.schema);q.set("site",location.origin+location.pathname)}
+  return CFG.supabaseUrl+"/functions/v1/calendar"+(q.toString()?"?"+q:"")};
 function calendarView(){const https=CAL_URL(),web=https.replace(/^https:/,"webcal:");
   return `<section class="card stack"><h2>🗓️ Fixtures in your calendar</h2>
     <p style="margin:0">Add every game to your phone's calendar in one go. When a kick-off time or venue is added or changes, your calendar updates by itself.</p>
@@ -2189,7 +2199,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="mdPreviewAi"||t.id==="mdReportAi"){const rep=t.id==="mdReportAi",m=matches.find(x=>x.id===mdMatch),ta=$(rep?"#mdReport":"#mdPreview");if(!m||!ta||!canWrite)return;
     if(ta.value.trim()&&!confirm(`Replace what's in the box with a suggested ${rep?"report":"preview"}?`))return;
     t.disabled=true;const was=t.textContent;t.textContent="Writing…";let txt=null,why="";
-    try{const {data,error}=await sb.functions.invoke("preview",{body:{match:m.id,kind:rep?"report":"preview",team:Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup,publicScores:TEAM.publicScores},RUGBY?{sport:SP.key}:{})}});if(!error&&data&&data.text)txt=data.text;else why=(data&&data.error)||""}catch(e){}
+    try{const {data,error}=await sb.functions.invoke("preview",{body:fnBody({match:m.id,kind:rep?"report":"preview",team:Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup,publicScores:TEAM.publicScores},RUGBY?{sport:SP.key}:{})})});if(!error&&data&&data.text)txt=data.text;else why=(data&&data.error)||""}catch(e){}
     t.disabled=false;t.textContent=was;
     if(txt)toast("Here's a suggestion. Check it and make it your own before saving.");else{txt=rep?draftReport(m):draftPreview(m);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a simple draft from the stats.":"Couldn't get an AI suggestion, so here's a simple draft from the stats.")}
     ta.value=txt;ta.focus();return}
@@ -2310,7 +2320,9 @@ document.addEventListener("submit",async e=>{
 (async function(){
   render();
   if(!window.supabase||!CFG.supabaseUrl||!CFG.supabaseAnonKey){document.getElementById("main").innerHTML=`<div class="card empty">This site isn't connected to its database yet. Add the Supabase details to config.js (see the README).</div>`;return}
-  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);
+  // CFG.schema: this team's own section when several teams share one Supabase project (tools/team_schema_sql.py).
+  // Its sign-in is kept apart too, so a coach of one team signing in on another team's page can't sign them out of their own.
+  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey,CFG.schema?{db:{schema:CFG.schema},auth:{storageKey:"sb-"+CFG.schema+"-auth-token"}}:{});
   db=makeDb(sb);canWrite=false;
   if(window.SETUP_WAIT)suRefresh().catch(()=>{window.SETUP_WAIT=false;render()});
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
