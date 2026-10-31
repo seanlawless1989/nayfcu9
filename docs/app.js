@@ -2315,7 +2315,8 @@ document.addEventListener("submit",async e=>{
   if(e.target.id!=="loginForm")return;e.preventDefault();
   const email=document.getElementById("loginEmail").value.trim();if(!email){toast("Type your email.");return}
   const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
-  toast(error?"That email isn't on the club's coach list.":"Check your email for the sign-in link.");
+  // a refused sign-up (only_coaches_can_sign_up) comes back as a database error; Supabase's own email limit as 429
+  toast(!error?"Check your email for the sign-in link (it can land in junk).":error.status===429||/rate limit/i.test(error.message||"")?"Too many sign-in emails in the last hour. Use the last link we sent, or try again in an hour.":/database error|coach/i.test(error.message||"")?"That email isn't on the club's coach list.":"Couldn't send the sign-in email just now. Try again in a few minutes.");
 });
 (async function(){
   render();
