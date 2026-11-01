@@ -101,7 +101,7 @@ alter table public.tournaments add constraint tournaments_end_after_start check 
 alter table public.tournaments add column if not exists teams jsonb not null default '[]'::jsonb;
 -- Added 2026-10-31: the squad picked for the whole tournament, see 15_tournament_squad.sql.
 alter table public.tournaments add column if not exists squad jsonb;
--- Added 2026-11-01: one report for the whole tournament, see 18_tournament_report.sql.
+-- Added 2026-11-01: one report for the whole tournament, see 23_tournament_report.sql.
 alter table public.tournaments add column if not exists report text;
 alter table public.tournaments enable row level security;
 alter table public.honours enable row level security;

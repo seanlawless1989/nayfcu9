@@ -150,9 +150,13 @@ function render(){
   if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   if(setupPending()&&!canWrite&&view!=="login"){main.innerHTML=settingUpView();document.body.classList.toggle("ro",true);return}
   renderTicker();
-  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+homeView();
+  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+homeView();
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
+  else if(view==="ratings")main.innerHTML=ratingsView();
+  else if(view==="kit")main.innerHTML=kitView();
+  else if(view==="pom")main.innerHTML=pomView();
+  else if(view==="birthdays")main.innerHTML=birthdaysView();
   else if(view==="results")main.innerHTML=resultsView();
   else if(view==="fixtures")main.innerHTML=fixturesView();
   else if(view==="honours")main.innerHTML=honoursView();
@@ -164,6 +168,7 @@ function render(){
   else if(view==="tr")main.innerHTML=trView();
   else if(view==="pick")main.innerHTML=pickView();
   else if(view==="avail")main.innerHTML=availView();
+  else if(view==="availall")main.innerHTML=availAllView();
   else if(view==="tavail")main.innerHTML=tavView();
   else if(view==="msg")main.innerHTML=msgChase?chaseView():msgView();
   else if(view==="alerts")main.innerHTML=alertsView();
@@ -212,7 +217,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -235,7 +240,7 @@ function homeView(){if(noScores())return homeNoScores();
   return `<div class="stack">
   ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
   ${homeLive()||heroHtml()}
-  ${homeMenu()}
+  ${homeMenu()}${pomHome()}
   <h2 class="sect"><span class="ctag c-league">${LEAGUE_NAME}</span> ${season}</h2>
   <section class="card"><h3>${LEAGUE_NAME} record</h3>${REC(lt)}
       ${ldone.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${ldone.slice(-6).map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}</section>
@@ -265,7 +270,7 @@ function homeView(){if(noScores())return homeNoScores();
 function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
   const done=list.filter(m=>!isFixture(m)&&!m.postponed),upcoming=list.filter(isFixture).filter(m=>!m.postponed&&!isLive(m))[0];
   const potms=Object.entries(ps).filter(([,o])=>o.potm>0).sort((a,b)=>b[1].potm-a[1].potm||a[0].localeCompare(b[0]));
-  return `<div class="stack">${homeLive()||heroHtml()}${homeMenu()}
+  return `<div class="stack">${homeLive()||heroHtml()}${homeMenu()}${pomHome()}
   <h2 class="sect">${esc(season)} season</h2>
   <div class="cols">
     <section class="card"><h3>Recent games</h3>${done.length?done.slice(-3).reverse().map(matchRow).join(""):`<p class="hint">No games played yet this season.</p>`}
@@ -448,12 +453,104 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     const {error}=await q;spBusy=false;if(error){toast(/logo/i.test(error.message||"")?"That logo is too big. Try a smaller picture.":"Couldn't save that. Try again.");render();return}
     spEdit=null;await loadSponsors();toast(f.id?"Sponsor updated.":`${name} added. They're on the home page now.`);render();return}
 });
+// ---------- player of the month (public.player_of_month, supabase/20_player_of_month.sql) ----------
+// Coaches pick one player each month on the Player of the month page (optional line on why). Everyone sees the latest
+// on the home page, every award on the honours board and on the player's page; coaches make the poster from here.
+let POMS=[],POM_ON=false,pomEdit=null,pomBusy=false;
+const POM_IC="🏅";
+async function loadPom(){if(!sb)return;try{const {data,error}=await sb.from("player_of_month").select("month,player,note").order("month",{ascending:false});if(error)return;POM_ON=true;POMS=data||[]}catch(e){}}
+const ymNow=(k=0)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+k);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`};
+const pomMonthName=ym=>LONGM[+ym.slice(5,7)-1]||"";
+const pomLabel=ym=>`${pomMonthName(ym)} ${ym.slice(0,4)}`;
+const pomOf=n=>POMS.filter(x=>x.player===n);
+const pomSeason=s=>POMS.filter(x=>seasonOf(x.month+"-01")===s);
+const pomFace=n=>PHOTOS[n]?pface(n,"pom-face"):`<span class="pom-face pom-num">${esc(numOf(n))||POM_IC}</span>`;
+// home page: the latest award while it's still fresh (this month or the last two)
+function pomHome(){const x=POMS[0];
+  if(!x||x.month<ymNow(-2))return canWrite&&POM_ON?`<section class="card edit-only"><h3>${POM_IC} Player of the month</h3><p class="hint">Pick a player of the month and it shows here for everyone, with a poster ready for Facebook.</p><div class="btns" style="margin-top:8px"><button class="btn ghost" data-view="pom">${POM_IC} Choose player of the month</button></div></section>`:"";
+  return `<section class="card pom-home"><div class="kick">${POM_IC} ${esc(pomMonthName(x.month))} player of the month</div>
+    <div class="pom-row click" data-player="${esc(x.player)}">${pomFace(x.player)}<div style="min-width:0"><b class="pom-name">${esc(x.player)}</b>${x.note?`<p class="pom-note">${esc(x.note)}</p>`:""}</div></div>
+    <div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="pom">All players of the month</button>${canWrite?`<button class="btn ghost edit-only" data-pomgfx="${esc(x.month)}">Poster</button>`:""}</div></section>`}
+// honours board and the list on the page
+function pomList(L,coach){return `<div class="stack" style="gap:8px">${L.map(x=>`<div class="pom-item"><div class="pom-row click" data-player="${esc(x.player)}">${pomFace(x.player)}<div style="min-width:0"><div class="meta">${esc(pomLabel(x.month))}</div><b>${esc(x.player)}</b>${x.note?`<div class="meta">${esc(x.note)}</div>`:""}</div></div>
+  ${coach?`<div class="mg edit-only"><button class="mini" data-pomgfx="${esc(x.month)}">Poster</button><button class="mini" data-pomedit="${esc(x.month)}">Edit</button><button class="mini" data-pomdel="${esc(x.month)}">Remove</button></div>`:""}</div>`).join("")}</div>`}
+function pomView(){
+  const bySeason={};POMS.forEach(x=>{const s=seasonOf(x.month+"-01");(bySeason[s]=bySeason[s]||[]).push(x)});
+  const lists=Object.keys(bySeason).length?Object.entries(bySeason).map(([s,L])=>`<section class="card"><h3>${esc(s)}</h3>${pomList(L,canWrite)}</section>`).join(""):`<div class="card empty">No player of the month yet. ${POM_IC}</div>`;
+  if(!canWrite)return `<div class="stack"><section class="card"><h2 style="margin-top:0">${POM_IC} Player of the month</h2><p class="hint">Each month the coaches pick one ${esc(PL.replace(/s$/,""))} who has really stood out.</p></section>${lists}</div>`;
+  if(!POM_ON)return `<div class="stack"><section class="card"><h2 style="margin-top:0">${POM_IC} Player of the month</h2><p class="hint">Player of the month isn't switched on for this team's database yet. Ask Touchline Tales to turn it on.</p></section></div>`;
+  if(!pomEdit){const def=new Date().getDate()<=15?ymNow(-1):ymNow(0),had=POMS.find(x=>x.month===def);pomEdit={month:def,player:had?had.player:"",note:had?had.note||"":""}}
+  const months=[1,0,-1,-2,-3,-4,-5,-6,-7,-8,-9,-10,-11].map(ymNow);if(!months.includes(pomEdit.month))months.push(pomEdit.month);
+  const cur=players.filter(p=>p.current).map(p=>p.name),pool=[...new Set([...cur,...(pomEdit.player?[pomEdit.player]:[])])];
+  const had=POMS.find(x=>x.month===pomEdit.month);
+  const s=seasonOf(pomEdit.month+"-01"),won=new Set(pomSeason(s).filter(x=>x.month!==pomEdit.month).map(x=>x.player)),none=won.size?cur.filter(n=>!won.has(n)):[];
+  return `<div class="stack"><section class="card stack"><h2 style="margin-top:0">${POM_IC} Player of the month</h2>
+    <p class="hint">Pick one ${esc(PL.replace(/s$/,""))} each month. Everyone sees it on the home page, the honours board and ${PRN.p} own page, and you get a poster for Facebook and WhatsApp.</p>
+    <label class="f">Month<select id="pom-month">${months.sort().reverse().map(m=>`<option value="${m}"${m===pomEdit.month?" selected":""}>${esc(pomLabel(m))}${POMS.some(x=>x.month===m)?" ✓":""}</option>`).join("")}</select></label>
+    <label class="f">${esc(PL.replace(/s$/,"").replace(/^./,c=>c.toUpperCase()))}<select id="pom-player"><option value="">Choose…</option>${pool.map(n=>`<option${n===pomEdit.player?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
+    ${none.length?`<p class="hint" style="margin-top:-6px">Not been player of the month yet this season: ${none.map(esc).join(", ")}.</p>`:""}
+    <label class="f">Why, in a few words <span class="hint">(optional, everyone can see it)</span><input type="text" id="pom-note" maxlength="160" value="${esc(pomEdit.note||"")}" placeholder="e.g. Brilliant in goal all month"></label>
+    <div class="btns"><button class="btn gold" id="pomSave"${pomBusy?" disabled":""}>${had?"Save changes":"Save"}</button>${had?`<button class="btn ghost" data-pomgfx="${esc(had.month)}">Make the poster</button>`:""}</div></section>
+  ${lists}</div>`}
+function pomRead(){if(!pomEdit)return;const v=id=>(document.getElementById(id)||{}).value;pomEdit.player=v("pom-player")||"";pomEdit.note=v("pom-note")||""}
+document.addEventListener("change",e=>{if(view!=="pom"||!pomEdit)return;
+  if(e.target.id==="pom-month"){const m=e.target.value,had=POMS.find(x=>x.month===m);pomEdit=had?{month:m,player:had.player,note:had.note||""}:{month:m,player:"",note:""};render();return}
+  if(e.target.id==="pom-player"||e.target.id==="pom-note")pomRead()});
+document.addEventListener("input",e=>{if(view==="pom"&&e.target.id==="pom-note")pomRead()});
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  if(d.pomgfx){if(!canWrite)return;e.stopPropagation();const x=POMS.find(y=>y.month===d.pomgfx);if(!x)return;F=null;setView("gfx");await (await gfxReady()).loadPom(x);return}
+  if(view!=="pom"||!canWrite||!sb)return;
+  if(d.pomedit){const x=POMS.find(y=>y.month===d.pomedit);if(x){pomEdit={month:x.month,player:x.player,note:x.note||""};render();window.scrollTo({top:0})}return}
+  if(d.pomdel){const x=POMS.find(y=>y.month===d.pomdel);if(!x||!confirm(`Remove ${x.player} as ${pomLabel(x.month)} player of the month?`))return;
+    const {error}=await sb.from("player_of_month").delete().eq("month",x.month);if(error){toast("Couldn't remove that. Try again.");return}
+    await loadPom();if(pomEdit&&pomEdit.month===x.month)pomEdit={month:x.month,player:"",note:""};toast("Removed.");render();return}
+  if(b.id==="pomSave"&&!pomBusy){pomRead();const f=pomEdit;if(!f.player){toast(`Choose the ${PL.replace(/s$/,"")}.`);return}
+    pomBusy=true;render();const {error}=await sb.from("player_of_month").upsert({month:f.month,player:f.player,note:String(f.note||"").trim().slice(0,160)||null,updated:new Date().toISOString()},{onConflict:"month"});pomBusy=false;
+    if(error){toast("Couldn't save that. Try again.");render();return}
+    await loadPom();toast(`${f.player} is ${pomMonthName(f.month)} player of the month. Make the poster below.`);render();return}
+});
 function pface(n,cls){return PHOTOS[n]?`<img class="${cls}" src="${PHOTOS[n]}" alt="">`:""}
 function shrinkPhoto(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=300,c=document.createElement("canvas"),k=Math.min(im.width,im.height);c.width=c.height=S;c.getContext("2d").drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,0,0,S,S);ok(c.toDataURL("image/jpeg",.82))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function savePhoto(n,file){try{const img=await shrinkPhoto(file);const {error}=await sb.from("player_photos").upsert({player:n,img});if(error)throw error;PHOTOS[n]=img;toast(`Photo saved for ${n}.`);render()}catch(e){toast("Couldn't save that photo. Try a JPG or PNG.")}}
-async function loadAvail(){if(!sb||!canWrite){AV={};return}const {data}=await sb.from("availability").select("*");AV={};(data||[]).forEach(r=>{(AV[r.match_id]=AV[r.match_id]||{})[r.player]=r.status})}
-function avSummary(id){const a=AV[id]||{};if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask.`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
-  return `Availability: ✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}${c.no.length?` (can't make it: ${c.no.map(esc).join(", ")})`:""}${w.length?`<br>Not answered yet: ${w.map(esc).join(", ")} <button class="mini" data-chase="${esc(id)}">Chase replies</button>`:" · Everyone has answered."}`}
+async function loadAvail(){if(!sb||!canWrite){AV={};AVBY={};return}const {data}=await sb.from("availability").select("*");AV={};AVBY={};(data||[]).forEach(r=>{(AV[r.match_id]=AV[r.match_id]||{})[r.player]=r.status;if(r.by_coach)(AVBY[r.match_id]=AVBY[r.match_id]||{})[r.player]=true})}
+// Coaches answer for any player too (supabase/22_coach_availability.sql), e.g. when a parent tells them on WhatsApp.
+// AVBY / TAVBY mark the answers a coach set, so the coaches can tell them apart from the parents' own.
+let AVBY={},TAVBY={};
+// one player's row on the answer page: coaches see who set it and can clear it
+function avRow(n,v,attr,by,x="",label=""){const k=`data-n="${esc(n)}"${x}`;return `<div class="row"><span>${label||esc(n)}${canWrite&&v?`${label?"<br>":" "}<span class="hint avby">${by?"set by coach":"parent said"}</span>`:""}</span><div class="seg" role="group" aria-label="${esc(n)}"><button data-${attr}="yes" ${k} aria-pressed="${v==="yes"}">Yes</button><button data-${attr}="maybe" ${k} aria-pressed="${v==="maybe"}">Maybe</button><button data-${attr}="no" ${k} aria-pressed="${v==="no"}">No</button>${canWrite&&v?`<button data-${attr}clr="1" ${k} aria-label="Clear ${esc(n)}'s answer" title="Clear the answer">✕</button>`:""}</div></div>`}
+// ---------- every upcoming game (and training) on one page, for one player at a time (?avail=all) ----------
+// A parent answers for all the coming games in one go instead of one link per game; a coach picks any player, e.g.
+// "Leo's away for the next three weekends".
+document.addEventListener("change",e=>{if(e.target.id!=="avAllKid")return;avAllKid=e.target.value||null;try{localStorage.setItem(SK+"-avkid",avAllKid||"")}catch(err){}render()});
+let avAllKid=null;try{avAllKid=localStorage.getItem(SK+"-avkid")}catch(e){}
+const avAllGames=()=>sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&!m.hidden&&m.comp!=="Tournament"&&m.stage!=="placeholder"&&!result(m)&&!(m.live&&m.live.status&&m.live.status!=="pre")&&(m.date||"")>=todayLocal()));
+let avAllCur=null;
+// "Yes to every game": fills in every game on the list that has no answer yet for this child, so a No or Maybe stays put.
+// Coaches who asked for availability alerts get one alert (for the next game), not one per game.
+async function avAllYes(){const n=avAllCur;if(!n)return;const src=canWrite?AV:AV_MINE;
+  const todo=avAllGames().filter(m=>!(src[m.id]||{})[n]);if(!todo.length){toast("Every game already has an answer.");return}
+  todo.forEach(m=>{(AV_MINE[m.id]=AV_MINE[m.id]||{})[n]="yes";if(canWrite){(AV[m.id]=AV[m.id]||{})[n]="yes";(AVBY[m.id]=AVBY[m.id]||{})[n]=true}});render();
+  let bad=0;for(const m of todo){const {error}=await sb.rpc("set_availability",{p_match:m.id,p_player:n,p_status:"yes"});if(error){bad++;delete AV_MINE[m.id][n];if(canWrite&&AV[m.id])delete AV[m.id][n]}}
+  if(bad===todo.length){toast("Couldn't save that. Try again.");render();return}
+  if(!canWrite)alSend({avail:{match:todo[0].id,player:n}});
+  toast(`${n}: yes to ${todo.length-bad} game${todo.length-bad>1?"s":""}.${bad?` ${bad} didn't save, try those again.`:""}`);render()}
+function availAllView(){const kids=canWrite?[]:myKids();
+  if(!kids.length&&PREQ&&!canWrite){parentNext="availall";return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>${joinBox(`To answer, type the family code the coach sent you. You only do this once on this phone.`)}</section>`}
+  const names=kids.length?kids:players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
+  const n=names.includes(avAllKid)?avAllKid:(kids.length?kids[0]:null);
+  const games=avAllGames(),sess=TAV_ON&&TR?trUpcoming(8).filter(x=>!x.off).slice(0,4).map(x=>x.iso):[];
+  const pick=names.length>1||!kids.length?`<label class="f">${canWrite?`Which ${PRN.kid}?`:`Your ${PRN.kid}`}<select id="avAllKid"><option value="">Choose…</option>${names.map(x=>`<option${x===n?" selected":""}>${esc(x)}</option>`).join("")}</select></label>`:"";
+  const gm=m=>`<b>${esc(shortDay(m.date))}</b><br><span class="hint">${esc(m.ha==="A"?"at ":"v ")}${esc(m.opp)}${m.ko?` · ${esc(m.ko)}`:""}</span>`;
+  avAllCur=n;const open=n?games.filter(m=>!((canWrite?AV:AV_MINE)[m.id]||{})[n]).length:0;
+  const rows=!n?`<p class="hint">Choose ${canWrite?`a ${PRN.kid}`:`your ${PRN.kid}`} above.</p>`:`
+    <h3>Games</h3>${open>1?`<div class="btns"><button class="btn gold" id="avAllYes">✅ Yes to every game (${open})</button></div><p class="hint" style="margin:0">Fills in every game below that hasn't got an answer yet. Any No or Maybe stays as it is, and you can change any game after.</p>`:""}${games.length?`<div class="av">${games.map(m=>avRow(n,((canWrite?AV:AV_MINE)[m.id]||{})[n],"av",(AVBY[m.id]||{})[n],` data-mid="${esc(m.id)}"`,gm(m))).join("")}</div>`:`<p class="hint">No games coming up yet.</p>`}
+    ${sess.length?`<h3>Training</h3><div class="av">${sess.map(d=>avRow(n,((canWrite?TAV:TAV_MINE)[d]||{})[n],"tav",(TAVBY[d]||{})[n],` data-day="${d}"`,`<b>${esc(shortDay(d))}</b><br><span class="hint">${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span>`)).join("")}</div>`:""}`;
+  return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>
+    <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${esc(n||kids[0])}.`:""} Say Yes, Maybe or No for every game coming up this season, or say yes to them all in one tap. You can change an answer any time. Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="availall">Sign in</button>`:""}</p>
+    ${pick}${rows}</section>`}
+const avCoachHint=()=>`You're a coach, so you can set the answer for any ${PRN.kid}, for example when a parent tells you on WhatsApp. It counts just like the parent's own answer, and a parent signed in with their family code sees it too. Tap ✕ to clear an answer.`;
+function avSummary(id){const a=AV[id]||{};const set=`<button class="mini" data-avset="${esc(id)}">Set answers</button>`;if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask. ${set}`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
+  return `Availability: ✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}${c.no.length?` (can't make it: ${c.no.map(esc).join(", ")})`:""}${w.length?`<br>Not answered yet: ${w.map(esc).join(", ")} <button class="mini" data-chase="${esc(id)}">Chase replies</button> ${set}`:` · Everyone has answered. ${set}`}`}
 // current players with no answer yet for this fixture, in shirt-number order
 function avWaiting(id){const a=AV[id]||{};return players.filter(p=>p.current&&!a[p.name]).sort((x,y)=>(+x.num||99)-(+y.num||99)).map(p=>p.name)}
 function siteUrl(){return location.origin+location.pathname}
@@ -465,8 +562,9 @@ function availView(){
   if(kids.length)roster=roster.filter(p=>kids.includes(p.name));
   else if(PREQ&&!canWrite){parentNext="avail";return `<section class="card stack">${head}${joinBox(`To answer, type the family code the coach sent you. You only do this once on this phone.`)}</section>`}
   return `<section class="card stack">${head}
-    <p class="hint">${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="avail">Sign in</button>`:""}</p>
-    <div class="av">${roster.map(p=>{const v=(AV_MINE[m.id]||{})[p.name];return `<div class="row"><span>${esc(p.name)}</span><div class="seg" role="group" aria-label="${esc(p.name)}"><button data-av="yes" data-n="${esc(p.name)}" aria-pressed="${v==="yes"}">Yes</button><button data-av="maybe" data-n="${esc(p.name)}" aria-pressed="${v==="maybe"}">Maybe</button><button data-av="no" data-n="${esc(p.name)}" aria-pressed="${v==="no"}">No</button></div></div>`}).join("")}</div></section>`;
+    <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="avail">Sign in</button>`:""}</p>
+    <div class="av">${roster.map(p=>avRow(p.name,(canWrite?AV:AV_MINE)[m.id]&&(canWrite?AV:AV_MINE)[m.id][p.name],"av",(AVBY[m.id]||{})[p.name])).join("")}</div>
+    ${canWrite?`<div class="btns"><button class="btn gold" data-pick="${esc(m.id)}">${m.squad&&m.squad.length?"Back to the squad":"Pick squad"}</button><button class="btn ghost" data-view="availall">One ${esc(PRN.kid)}, every game</button><button class="btn ghost" data-view="fixtures">Fixtures</button></div>`:`<div class="btns"><button class="btn ghost" data-view="availall">Answer for every game coming up</button></div>`}</section>`;
 }
 let availMatch=null;const AV_MINE={};
 // ---------- parent login (family codes, supabase/10_parent_login.sql) ----------
@@ -492,29 +590,30 @@ async function parentJoin(){const el=$("#pCode"),code=(el&&el.value||"").replace
   const {data,error}=await sb.rpc("link_family",{p_code:code});
   if(error){toast(/too many/i.test(error.message)?"Too many tries. Wait an hour, or ask the coach to check the code.":"Couldn't check that code. Try again.");return}
   if(!data){toast("That code isn't right. Check it with the coach.");return}
-  await loadParent();await loadTav();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
+  await loadParent();await loadKit();kitDraft=null;await loadTav();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
   const nx=parentNext;parentNext=null;if(nx)setView(nx);else render()}
 async function parentLeave(n){
-  if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();authBox();render();toast(`${n} is no longer linked to this phone.`);return}
+  if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();await loadKit();kitDraft=null;authBox();render();toast(`${n} is no longer linked to this phone.`);return}
   if(!confirm("Sign this phone out? You'll need the family code to sign in again."))return;
   await sb.rpc("unlink_family",{p_player:null});KIDS=[];FAMV={};await sb.auth.signOut();toast("This phone is signed out.")}
 function parentsView(){const kid=PRN.kid,kids=myKids();
-  const what=`<ul style="margin:0;padding-left:20px"><li>Tell the coaches whether your ${kid} can make each game</li><li>Vote in team votes, one vote per family</li></ul>`;
+  const what=`<ul style="margin:0;padding-left:20px"><li>Tell the coaches whether your ${kid} can make each game</li><li>Vote in team votes, one vote per family</li><li>Add your ${kid}'s kit sizes for the coaches</li></ul>`;
   if(!PL_ON)return `<section class="card stack"><h2>👪 Parents</h2><p>Parent sign-in isn't switched on for this team yet.</p></section>`;
   if(canWrite)return `<section class="card stack"><h2>👪 Parents</h2><p>You're signed in as a coach. Each family's code is on the Squad page.</p><div class="btns"><button class="btn gold" data-view="squad">Family codes</button></div></section>`;
   if(kids.length)return `<section class="card stack"><h2>👪 Parents</h2><p>This phone is signed in for <b>${kids.map(esc).join(" and ")}</b>. You can:</p>${what}
     <div class="av">${kids.map(n=>`<div class="row"><span>${esc(n)}</span><button class="mini" data-punlink="${esc(n)}">Remove</button></div>`).join("")}</div>
+    <div class="btns"><button class="btn gold" data-view="availall">Answer for the games coming up</button></div>
     <h3>Another ${kid} in the squad?</h3>${joinBox("Type their family code as well.")}
-    <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div></section>`;
+    <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div></section>${kitFamCard()}`;
   return `<section class="card stack"><h2>👪 Parents</h2><p>Sign in with the family code the coach sent you. You only do this once on each phone. Then you can:</p>${what}${joinBox("")}
     <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p></section>`}
 // coaches: every player's code, how many phones use it, and the "parents must sign in" switch (on the Squad page)
 async function loadFam(){if(!sb||!canWrite)return;const {data,error}=await sb.rpc("family_overview");FAM=error?[]:(data||[]);if(view==="squad")render()}
-const famText=f=>`Hi! Here's ${f.player}'s family code for the ${TEAM.name||""} ${TEAM.ageGroup||""} website:\n\n${fmtCode(f.code)}\n\nOpen ${siteUrl()}?parents on your phone and type it in once. Then you can tell us whether ${f.player} can make each game, and vote in team votes.\n\nPlease keep it to your family. Thank you! ${TEAM.cheer||SP.ball}`;
+const famText=f=>`Hi! Here's ${f.player}'s family code for the ${TEAM.name||""} ${TEAM.ageGroup||""} website:\n\n${fmtCode(f.code)}\n\nOpen ${siteUrl()}?parents on your phone and type it in once. Then you can tell us whether ${f.player} can make each game, add ${f.player}'s kit sizes, and vote in team votes.\n\nPlease keep it to your family. Thank you! ${TEAM.cheer||SP.ball}`;
 function famCard(){if(!canWrite||!PL_ON)return "";const kid=PRN.kid;
   if(!FAM){loadFam();return `<section class="card edit-only"><h2>👪 Family codes</h2><p class="hint">Loading…</p></section>`}
   return `<section class="card stack edit-only"><h2>👪 Family codes</h2>
-    <p class="hint">Send each family their ${kid}'s code privately, not in the group chat. They type it once on the Parents page, then they can answer availability for their own ${kid} and vote, one vote per family. "New code" stops the old one working and signs out every phone that used it.</p>
+    <p class="hint">Send each family their ${kid}'s code privately, not in the group chat. They type it once on the Parents page, then they can answer availability for their own ${kid}, add their kit sizes, and vote, one vote per family. "New code" stops the old one working and signs out every phone that used it.</p>
     ${FAM.length?`<div class="av">${FAM.map(f=>`<div class="row" style="flex-wrap:wrap;gap:6px"><span style="flex:1 1 140px"><b>${esc(f.player)}</b> <code>${esc(fmtCode(f.code))}</code></span><span class="hint">${f.phones?`${f.phones} phone${f.phones>1?"s":""}`:"No phones yet"}</span><button class="mini" data-famcopy="${esc(f.player_id)}">Copy message</button><button class="mini" data-famnew="${esc(f.player_id)}">New code</button></div>`).join("")}</div>
     <div class="btns"><button class="btn ghost" id="famAll">Copy all codes</button></div>`:`<p class="hint">Codes appear here once players are in the squad.</p>`}
     <h3>Parents must sign in</h3><p class="hint">${PREQ?"On: only signed-in parents can answer availability and vote.":"Off: anyone with the link can still answer availability and vote, as before. Turn this on once every family has their code."}</p>
@@ -533,8 +632,8 @@ function pickList(roster,a){const lab={yes:"✅ Can make it",maybe:"❔ Maybe",n
   const c={yes:0,maybe:0,no:0,none:0};roster.forEach(p=>c[lab[a[p.name]]?a[p.name]:"none"]++);
   const flag=p=>PICK.set.has(p.name)?(a[p.name]==="no"?` <b class="pkwarn">⚠️ picked</b>`:""):(a[p.name]==="yes"?` <b class="pkwarn">not picked</b>`:"");
   return `<p class="pkcount">${Object.keys(a).length?`✅ ${c.yes} can make it · ❔ ${c.maybe} maybe · ❌ ${c.no} can't · ${c.none} no answer`:"No availability answers yet."}</p>
-  <div class="av">${roster.map(p=>`<label class="row${PICK.set.has(p.name)&&a[p.name]==="no"?" pkbad":""}" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||"No answer"}${flag(p)}</span></label>`).join("")}</div>
-  <p class="hint pkn">${PICK.set.size} picked.</p>`}
+  <div class="av">${roster.map(p=>`<label class="row${PICK.set.has(p.name)&&a[p.name]==="no"?" pkbad":""}" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||"No answer"}${a[p.name]&&(AVBY[PICK.id]||{})[p.name]?" (coach)":""}${flag(p)}</span></label>`).join("")}</div>
+  <p class="hint pkn">${PICK.set.size} picked.${String(PICK.id).startsWith("t:")?"":` A parent told you on WhatsApp? <button class="mini" data-avset="${esc(PICK.id)}">Set answers</button>`}</p>`}
 // answers that came in since the site was opened: reload them when Pick squad opens, or when the coach comes back to it.
 // Before the coach has saved a squad or touched a tick, the starting ticks follow the fresh answers.
 async function pickRefresh(){await loadAvail();if(view!=="pick")return;if(PICK&&!PICK.touched&&!PICK.saved)PICK=null;render()}
@@ -604,7 +703,7 @@ function matchdayView(){const m=matches.find(x=>x.id===mdayMatch)||mdayPick();if
   const facts=[["🕘",d.meet?`Arrive by ${d.meet}`:""],["⏰",m.ko?`${m.ko} kick-off`:"Kick-off TBC"],["📍",[m.venue,d.pitch?`Pitch ${d.pitch}`:""].filter(Boolean).join(" · ")],["👕",d.kit?`Wear the ${kitLabel(d.kit).toLowerCase()}`:""],[(w=>w&&WXI[w.c]||"🌡️")(wxFor(m)),(t=>t?t+" at kick-off":"")(wxText(m,true))]].filter(([,v])=>v);
   const parents=done?"":`<section class="card stack"><h3>For parents</h3><div class="mdinfo" style="display:flex;flex-direction:column;gap:6px;font-weight:600">${facts.map(([i,v])=>`<div><span style="display:inline-block;width:26px">${i}</span>${esc(v)}</div>`).join("")}</div>
     ${m.squad&&m.squad.length?`<p style="margin:0"><b>Squad:</b> ${m.squad.map(esc).join(", ")}</p>`:""}
-    <div class="btns">${live?`<button class="btn gold" data-tl="${id}">Follow live</button>`:`<button class="btn gold" data-mdayav="${id}">Can your ${PRN.kid} make it?</button>`}${mapsUrl(m)?`<a class="btn ghost" href="${mapsUrl(m)}" target="_blank" rel="noopener">🧭 Directions</a>`:""}<button class="btn ghost" data-view="alerts">🔔 Alerts</button></div></section>`;
+    <div class="btns">${live?`<button class="btn gold" data-tl="${id}">Follow live</button>`:`<button class="btn gold" data-mdayav="${id}">Can your ${PRN.kid} make it?</button><button class="btn ghost" data-view="availall">All games</button>`}${mapsUrl(m)?`<a class="btn ghost" href="${mapsUrl(m)}" target="_blank" rel="noopener">🧭 Directions</a>`:""}<button class="btn ghost" data-view="alerts">🔔 Alerts</button></div></section>`;
   const coach=!canWrite?"":done?`<section class="card stack edit-only"><h3>After the game</h3><div class="btns"><button class="btn gold" data-edit="${id}">Result and ${esc(POTM)}</button>${(tn=>tn?`<button class="btn ghost" data-trep="${esc(tn.id)}">${hasTReport(tn)?"Edit the tournament report":"📝 Write the tournament report"}</button>`:`<button class="btn ghost" data-mdayrep="${id}">${m.report&&m.report.trim()?"Edit the report":"✨ Write the report"}</button>`)(tournamentOf(m))}<button class="btn ghost" data-gfx="ft" data-mid="${id}"${r?"":" disabled"}>Result post</button><button class="btn ghost" data-gfx="potm" data-mid="${id}"${m.potm?"":" disabled"}>PotM post</button></div><div class="btns">${galAdd(m.id)}</div></section>`
     :`<section class="card stack edit-only"><h3>For coaches</h3>${m.comp!=="Tournament"?`<div class="avsum" style="margin:0">${avSummary(m.id)}</div>`:""}
       <div class="btns"><button class="btn ghost" data-pick="${id}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="btn gold" data-live="${id}">▶ Line-up and live match</button><button class="btn ghost" data-tbmatch="${id}">📋 Tactics board</button><button class="btn ghost" data-msg="${id}">Parents' message</button><button class="btn ghost" data-medit="${id}">Matchday details</button></div>
@@ -711,7 +810,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when. Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -882,7 +981,9 @@ function attStats(seasonName){const out={},days=Object.keys(ATT||{}).filter(d=>s
 // reminds parents who haven't answered 24 hours before, and tells coaches who asked for it as answers come in.
 let TAV_ON=false,TAV={},tavDay=null;const TAV_MINE={};
 async function loadTav(){if(!sb)return;try{
-  if(canWrite){const {data,error}=await sb.from("training_availability").select("day,player,status").gte("day",todayLocal());if(error){TAV_ON=false;return}TAV_ON=true;TAV={};(data||[]).forEach(r=>{(TAV[r.day]=TAV[r.day]||{})[r.player]=r.status});return}
+  if(canWrite){let {data,error}=await sb.from("training_availability").select("day,player,status,by_coach").gte("day",todayLocal());
+    if(error)({data,error}=await sb.from("training_availability").select("day,player,status").gte("day",todayLocal()));// a database without 22_coach_availability.sql
+    if(error){TAV_ON=false;return}TAV_ON=true;TAV={};TAVBY={};(data||[]).forEach(r=>{(TAV[r.day]=TAV[r.day]||{})[r.player]=r.status;if(r.by_coach)(TAVBY[r.day]=TAVBY[r.day]||{})[r.player]=true});return}
   const {error}=await sb.from("training_availability").select("day").limit(1);TAV_ON=!error;   // no rows for parents: this just checks it's switched on
   if(TAV_ON&&myKids().length){const {data}=await sb.rpc("my_training_availability");(data||[]).forEach(r=>{(TAV_MINE[r.day]=TAV_MINE[r.day]||{})[r.player]=r.status})}}catch(e){}}
 const tavNext=()=>{const n=trUpcoming(6).find(x=>!x.off);return n?n.iso:null};
@@ -900,7 +1001,7 @@ function tavCard(){if(!TAV_ON||!TR)return "";const d=tavNext();if(!d)return "";
     <p style="margin:0">✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}</p>
     ${c.yes.length?`<p class="hint" style="margin:0"><b>Coming:</b> ${c.yes.map(esc).join(", ")}</p>`:""}${c.maybe.length?`<p class="hint" style="margin:0"><b>Maybe:</b> ${c.maybe.map(esc).join(", ")}</p>`:""}${c.no.length?`<p class="hint" style="margin:0"><b>Not coming:</b> ${c.no.map(esc).join(", ")}</p>`:""}${w.length?`<p class="hint" style="margin:0"><b>Not answered yet:</b> ${w.map(esc).join(", ")}</p>`:`<p class="hint" style="margin:0">Everyone has answered.</p>`}
     <p class="hint" style="margin:0">Parents who haven't answered get a reminder on their phone 24 hours before, if they have alerts on and have signed in with their family code. Only coaches see this.</p>
-    <div class="btns"><button class="btn ghost" data-tavcopy="${d}">Copy message for parents</button><button class="mini" data-tavopen="${d}">Answer for a ${esc(PRN.kid)}</button></div></section>`}
+    <div class="btns"><button class="btn ghost" data-tavcopy="${d}">Copy message for parents</button><button class="mini" data-tavopen="${d}">Set answers</button></div></section>`}
 function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answers aren't switched on for this team yet.</div>`;
   const ok=trUpcoming(8).filter(x=>!x.off).map(x=>x.iso);if(!tavDay||!ok.includes(tavDay))tavDay=ok[0]||null;
   if(!tavDay)return `<div class="card empty">There's no training coming up. Check the Training page for when it starts again.</div>`;
@@ -911,8 +1012,8 @@ function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answ
   const mine=canWrite?(TAV[tavDay]||{}):(TAV_MINE[tavDay]||{});
   return `<section class="card stack">${head}
     ${ok.length>1?`<label class="f">Session<select id="tavDay">${ok.map(d=>`<option value="${d}"${d===tavDay?" selected":""}>${esc(shortDay(d))}</option>`).join("")}</select></label>`:""}
-    <p class="hint">${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="tavail">Sign in</button>`:""}</p>
-    <div class="av">${roster.map(p=>{const v=mine[p.name];return `<div class="row"><span>${esc(p.name)}</span><div class="seg" role="group" aria-label="${esc(p.name)}"><button data-tav="yes" data-n="${esc(p.name)}" aria-pressed="${v==="yes"}">Yes</button><button data-tav="maybe" data-n="${esc(p.name)}" aria-pressed="${v==="maybe"}">Maybe</button><button data-tav="no" data-n="${esc(p.name)}" aria-pressed="${v==="no"}">No</button></div></div>`}).join("")}</div>
+    <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="tavail">Sign in</button>`:""}</p>
+    <div class="av">${roster.map(p=>avRow(p.name,mine[p.name],"tav",(TAVBY[tavDay]||{})[p.name])).join("")}</div>
     <div class="btns"><button class="btn ghost" data-view="training">Training details</button></div></section>`}
 function trainingView(){
   if(trEdit&&canWrite)return trFormView();
@@ -1614,7 +1715,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const h2h=m.opp?`<section class="card"><h3>Against ${esc(m.opp)}</h3>${h.length?`<div class="h2h">${h.slice(0,8).map(x=>`<button class="sc-btn" data-md="${esc(x.id)}">${scChip(x)}</button>`).join("")}</div>`:`<p class="hint">${fx?"First time we've played them.":"No other games against them yet."}</p>`}<button class="mini" data-opp="${esc(m.opp)}">All about ${esc(m.opp)}</button></section>`:"";
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
-  const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
+  const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button>${rtMatchBtn(m)}<button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
   return `<div class="live md">${back}${board}${info}${cheerCard(m)}${fx?previewCard(m)+mdReports(m,tn):mdReports(m,tn)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
@@ -1770,12 +1871,13 @@ function bookView(){
     ${chunk.map(m=>{const r=result(m);const tn=m.tournament_id?tournaments.find(x=>x.id===m.tournament_id):null;return `<tr><td>${nice(m.date)}</td><td>${esc(m.opp||"")}${m.stage&&m.stage!=="placeholder"?` <span class="hint">(${esc(m.stage)})</span>`:""}</td><td>${esc(tn?tn.name:m.comp||"")}</td><td class="n">${r?`${m.us}–${m.them}`:""}</td><td>${r?`<span class="wdl ${r}">${r}</span>`:""}</td><td class="hint">${esc(Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>n+(g>1?` ×${g}`:"")).join(", "))}</td></tr>`}).join("")||`<tr><td colspan="6">No results yet.</td></tr>`}</table>`)}
   // honours
   if(troph.length)out+=page("",`<h1 class="ttl">Honours</h1>${troph.map(x=>`<div class="hl" style="font-size:16pt">${trophyIcon(x.ach)} ${esc(x.title)}: ${esc(x.ach)} <span class="hint">${x.when||nice(x.date)}</span></div>`).join("")}
-    ${ts.filter(x=>x.potm).length?`<h3 style="margin-top:8mm">Players of the tournament</h3><table>${ts.filter(x=>x.potm).map(x=>`<tr><td>⭐ ${esc(x.potm)}</td><td>${esc(x.name)}</td></tr>`).join("")}</table>`:""}`);
+    ${ts.filter(x=>x.potm).length?`<h3 style="margin-top:8mm">Players of the tournament</h3><table>${ts.filter(x=>x.potm).map(x=>`<tr><td>⭐ ${esc(x.potm)}</td><td>${esc(x.name)}</td></tr>`).join("")}</table>`:""}
+    ${pomSeason(season).length?`<h3 style="margin-top:8mm">Players of the month</h3><table>${pomSeason(season).slice().reverse().map(x=>`<tr><td>${POM_IC} ${esc(x.player)}</td><td>${esc(pomLabel(x.month))}</td></tr>`).join("")}</table>`:""}`);
   // player pages
   roster.forEach((n,i)=>{const o=st(n);const best=sortMatches(list.filter(m=>(played(m)[n]||0)>0)).sort((a,b)=>played(b)[n]-played(a)[n])[0];
     out+=page("player",`<div class="top"><div class="slot">${BOOK_PH[n]&&BOOK_LAYOUT==="print"?`<img src="${BOOK_PH[n]}" alt="">`:(BOOK_LAYOUT==="stickers"?`<div class="sn">${i+2}</div><div class="sl">Stick ${esc(n)} here</div>`:BOOK_LAYOUT==="print"?`<div class="sl">Add ${esc(n)}'s photo</div>`:`<div class="sn">${esc(numOf(n))||"·"}</div><div class="sl">${esc(n)}</div>`)}</div>
       <div><div class="big">${esc(numOf(n))||"·"}</div><h1 class="pname">${esc(n)}</h1>
-      <div class="stats">${tracked?`<div><b>${o.apps}</b><span>Games</span></div>`:""}<div><b>${o.goals}</b><span>${SP.Goals}</span></div>${RUGBY?`<div><b>${o.pts}</b><span>Points</span></div>`:""}${at?`<div><b>${o.assists}</b><span>Assists</span></div>`:""}<div><b>${o.potm}</b><span>Player of the match</span></div>${pot(n)?`<div><b>${pot(n)}</b><span>Player of the tournament</span></div>`:""}</div>
+      <div class="stats">${tracked?`<div><b>${o.apps}</b><span>Games</span></div>`:""}<div><b>${o.goals}</b><span>${SP.Goals}</span></div>${RUGBY?`<div><b>${o.pts}</b><span>Points</span></div>`:""}${at?`<div><b>${o.assists}</b><span>Assists</span></div>`:""}<div><b>${o.potm}</b><span>Player of the match</span></div>${pot(n)?`<div><b>${pot(n)}</b><span>Player of the tournament</span></div>`:""}${(k=>k?`<div><b>${k}</b><span>Player of the month</span></div>`:"")(pomSeason(season).filter(x=>x.player===n).length)}</div>
       ${best?`<div class="hl">${SP.ball} Best game: ${played(best)[n]} ${played(best)[n]>1?SP.goals:SP.goal} v ${esc(best.opp)} (${nice(best.date)})</div>`:""}</div></div>
       <div class="lines"><h3>My favourite moment this season</h3><i></i><i></i><i></i></div>
       <div class="lines"><h3>My coach says…</h3><i></i><i></i><i></i></div>
@@ -1813,11 +1915,17 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.chase){msgMatch=b.dataset.chase;msgChase=true;setView("msg")}
   if(b.id==="waMsg"){const t=$("#msgText").value;window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank","noopener")}
   if(b.id==="copyMsg"){const ta=$("#msgText");try{navigator.clipboard.writeText(ta.value).then(()=>toast("Copied. Paste it into WhatsApp."),()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select()}}
-  if(b.dataset.av){const n=b.dataset.n,v=b.dataset.av;(AV_MINE[availMatch]=AV_MINE[availMatch]||{})[n]=v;render();
-    const mid=availMatch;sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`Thanks, ${n}: ${v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`);
+  if(b.id==="avAllYes"){avAllYes();return}
+  if(b.dataset.avset){availMatch=b.dataset.avset;setView("avail");if(canWrite)loadAvail().then(()=>{if(view==="avail")render()});return}
+  if(b.dataset.avclr&&canWrite){const n=b.dataset.n,mid=b.dataset.mid||availMatch,was=(AV[mid]||{})[n];if(AV[mid])delete AV[mid][n];if(AVBY[mid])delete AVBY[mid][n];render();
+    sb.from("availability").delete().eq("match_id",mid).eq("player",n).then(({error})=>{if(error){(AV[mid]=AV[mid]||{})[n]=was;render();toast("Couldn't clear that. Try again.")}else toast(`${n}'s answer cleared.`)});return}
+  if(b.dataset.tavclr&&canWrite){const n=b.dataset.n,day=b.dataset.day||tavDay,was=(TAV[day]||{})[n];if(TAV[day])delete TAV[day][n];if(TAVBY[day])delete TAVBY[day][n];render();
+    sb.from("training_availability").delete().eq("day",day).eq("player",n).then(({error})=>{if(error){(TAV[day]=TAV[day]||{})[n]=was;render();toast("Couldn't clear that. Try again.")}else toast(`${n}'s training answer cleared.`)});return}
+  if(b.dataset.av){const n=b.dataset.n,v=b.dataset.av,mid=b.dataset.mid||availMatch;(AV_MINE[mid]=AV_MINE[mid]||{})[n]=v;if(canWrite){(AV[mid]=AV[mid]||{})[n]=v;(AVBY[mid]=AVBY[mid]||{})[n]=true}render();
+sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`${canWrite?"Saved":"Thanks"}, ${n}: ${v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`);
       if(!error&&!canWrite)alSend({avail:{match:mid,player:n}})})}// tells the coaches who asked for availability alerts
-  if(b.dataset.tav){const n=b.dataset.n,v=b.dataset.tav,day=tavDay;(TAV_MINE[day]=TAV_MINE[day]||{})[n]=v;if(canWrite)(TAV[day]=TAV[day]||{})[n]=v;render();
-    sb.rpc("set_training_availability",{p_day:day,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`Thanks, ${n}: ${v==="yes"?"coming to training":v==="no"?"not coming to training":"maybe coming to training"}.`);
+  if(b.dataset.tav){const n=b.dataset.n,v=b.dataset.tav,day=b.dataset.day||tavDay;(TAV_MINE[day]=TAV_MINE[day]||{})[n]=v;if(canWrite){(TAV[day]=TAV[day]||{})[n]=v;(TAVBY[day]=TAVBY[day]||{})[n]=true}render();
+    sb.rpc("set_training_availability",{p_day:day,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`${canWrite?"Saved":"Thanks"}, ${n}: ${v==="yes"?"coming to training":v==="no"?"not coming to training":"maybe coming to training"}.`);
       if(!error&&!canWrite)alSend({tavail:{day,player:n}})})}
   if(b.dataset.tavopen){tavDay=b.dataset.tavopen;setView("tavail");return}
   if(b.dataset.tavcopy){const d=b.dataset.tavcopy;copyOut(tavText(d),"Copied. Paste it into WhatsApp.")}
@@ -1910,6 +2018,7 @@ function honoursView(){
     <div style="min-width:0"><div class="t">${esc(i.title)}</div><div class="meta"><b>${esc(i.ach||"")}</b>${i.when?` · ${esc(i.when)}`:i.date?` · ${(d=>`${d.getDate()} ${LONGM[d.getMonth()]} ${d.getFullYear()}`)(new Date(i.date+"T12:00:00"))}`:""}</div>${i.sub?`<div class="potm">⭐ ${esc(i.sub)}</div>`:""}${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}</div>
     <div class="edit-only">${i.h?`<button class="mini" data-hedit="${esc(i.h)}">Edit</button>`:`<button class="mini" data-tedit="${esc(i.t)}">Edit</button>`}</div></div>`).join("")}</div></section>`).join(""):`<div class="card empty">No trophies yet. They'll appear here as soon as one is won. 🏆</div>`}
   ${awards.length?`<section class="card"><h3>Players of the tournament</h3><table class="lb"><tbody>${awards.map(t=>`<tr class="click" data-player="${esc(t.potm)}"><td>⭐ ${esc(t.potm)}</td><td>${esc(t.name)}</td><td>${esc(tRange(t,true))}</td></tr>`).join("")}</tbody></table></section>`:""}
+  ${POMS.length?`<section class="card"><h3>Players of the month</h3><table class="lb"><tbody>${POMS.map(x=>`<tr class="click" data-player="${esc(x.player)}"><td>${POM_IC} ${esc(x.player)}</td><td>${esc(pomLabel(x.month))}</td></tr>`).join("")}</tbody></table></section>`:""}
   </div>`;
 }
 function tFormView(){
@@ -1982,23 +2091,24 @@ function playersView(){
   const base=career?sortMatches(matches.filter(m=>m.stage!=="placeholder")):seasonMatches();
   const list=byComp(base),ps=playerStats(list),tracked=appsTracked(list),at=SP.assists&&(career||assistsTracked(season));
   const ts=(!compFilter||compFilter==="Tournament")?(career?tournaments:seasonTournaments()):[];const showPott=ts.some(t=>t.potm);
-  const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps).filter(n=>{const o=ps[n];return o.apps||o.goals||o.assists||o.potm}),...ts.map(t=>t.potm).filter(Boolean)])];
-  const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,assists:0,potm:0},pt:pottCount(n,ts)})).sort((a,b)=>(RUGBY?(b.o.pts||0)-(a.o.pts||0):0)||b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
+  const pms=compFilter?[]:career?POMS:pomSeason(season),showPom=pms.length>0;
+  const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps).filter(n=>{const o=ps[n];return o.apps||o.goals||o.assists||o.potm}),...ts.map(t=>t.potm).filter(Boolean),...pms.map(x=>x.player)])];
+  const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,assists:0,potm:0},pt:pottCount(n,ts),pm:pms.filter(x=>x.player===n).length})).sort((a,b)=>(RUGBY?(b.o.pts||0)-(a.o.pts||0):0)||b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
   const what=(compFilter?compFilter.toLowerCase()+" ":"")+(career?"career stats, all seasons":`stats, ${season}`);
   const tot=rows.reduce((a,{o})=>({g:a.g+o.goals,a:a.a+o.assists,p:a.p+(o.pts||0)}),{g:0,a:0,p:0});const showCs=rows.some(r=>r.o.gk);
   if(noScores())return `<div class="btns" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Season or career"><button data-pscope="season" aria-pressed="${!career}">${esc(season)}</button><button data-pscope="career" aria-pressed="${career}">Career (all seasons)</button></div></div>
   ${CKEY()}
   <section class="card"><h2>${what[0].toUpperCase()+what.slice(1)}</h2>
    <p class="hint" style="margin-bottom:10px">${(c=>`${c.length} game${c.length===1?"":"s"}`)(list.filter(counted))}. Scores and scorers aren't shown publicly for this age group.</p>
-   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}${showCs?"<th>Games in goal</th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}</tr></thead><tbody>
-   ${rows.sort((a,b)=>b.o.apps-a.o.apps||a.n.localeCompare(b.n)).map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}${showCs?`<td>${o.gk||""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}</tr>`).join("")}
+   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}${showCs?"<th>Games in goal</th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${showPom?"<th>Player of month</th>":""}</tr></thead><tbody>
+   ${rows.sort((a,b)=>b.o.apps-a.o.apps||a.n.localeCompare(b.n)).map(({n,o,pt,pm})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}${showCs?`<td>${o.gk||""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${showPom?`<td>${pm||""}</td>`:""}</tr>`).join("")}
    </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see ${PRN.p} record.</p></section>`;
   return `<div class="btns" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Season or career"><button data-pscope="season" aria-pressed="${!career}">${esc(season)}</button><button data-pscope="career" aria-pressed="${career}">Career (all seasons)</button></div></div>
   ${CKEY()}
   <section class="card"><h2>${what[0].toUpperCase()+what.slice(1)}</h2>
    <p class="hint" style="margin-bottom:10px">${(c=>`${c.length} game${c.length===1?"":"s"}${career?" across "+new Set(c.map(m=>seasonOf(m.date))).size+" seasons":""}`)(list.filter(counted))} · ${tot.g} ${SP.goals}${RUGBY?` · ${tot.p} points`:""}${at?` · ${tot.a} assists`:""}.${tracked?((k=>k<list.filter(counted).length?` Full team sheets only exist for ${k} of these ${list.filter(counted).length} games (most of 2025-26 only recorded the scorers). In the others, the scorers and player of the match count as playing, so Apps are a minimum, and ${SP.goals} per game only uses the ${k} full team sheets.`:"")(list.filter(m=>counted(m)&&m.apps!==false).length)):` Appearances weren't recorded for these games, so only ${SP.goals} and awards show.`}${career&&at?" Assists are recorded from 2026-27.":""}</p>
-   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>${SP.Goals}</th>${RUGBY?"<th>Kicks</th><th>Points</th>":""}${at?"<th>Assists</th>":""}${showCs?"<th>Clean sheets <span class='hint'>/ in goal</span></th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${tracked?`<th>${SP.Goals} per game</th>`:""}</tr></thead><tbody>
-   ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${RUGBY?`<td>${esc(kickText(o))||"–"}</td><td><b>${o.pts||0}</b></td>`:""}${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.ta?(o.tg/o.ta).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
+   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>${SP.Goals}</th>${RUGBY?"<th>Kicks</th><th>Points</th>":""}${at?"<th>Assists</th>":""}${showCs?"<th>Clean sheets <span class='hint'>/ in goal</span></th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${showPom?"<th>Player of month</th>":""}${tracked?`<th>${SP.Goals} per game</th>`:""}</tr></thead><tbody>
+   ${rows.map(({n,o,pt,pm})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${RUGBY?`<td>${esc(kickText(o))||"–"}</td><td><b>${o.pts||0}</b></td>`:""}${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${showPom?`<td>${pm||""}</td>`:""}${tracked?`<td>${o.ta?(o.tg/o.ta).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
    </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see ${PRN.p} record split by season and competition.</p></section>`;
 }
 function compSplit(n,list,ts){if(noScores())return compSplitNs(n,list,ts);
@@ -2048,15 +2158,221 @@ function playerDetail(n){
   const games=sortMatches(matches.filter(m=>counted(m)&&n in played(m)||m.potm===n||n in assistsOf(m)||n in kicksOf(m))).reverse();
   const tot=playerStats(matches)[n]||{apps:0,goals:0,potm:0};
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
-  <section class="card"><div class="pcard">${PHOTOS[n]?`<div class="pphoto">${pface(n,"")}<span>${esc(numOf(n))||""}</span></div>`:`<div class="big">${esc(numOf(n))||"·"}</div>`}<div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${noScores()?`${tot.apps||0} appearances · `:RUGBY?`${tot.goals} career tries · ${tot.pts||0} points · `:`${tot.goals} career goals · ${tot.assists||0} assists · `}${tot.potm} ${esc(TEAM.potm&&TEAM.potm.sponsor||"player of the match")} awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}</p>${canWrite?`<label class="bup btn ghost">${PHOTOS[n]?"Change photo":"Add photo"}<input type="file" accept="image/*" data-photo="${esc(n)}"></label> <span class="hint">Everyone can see player photos.</span>`:""}</div></div></section>
+  <section class="card"><div class="pcard">${PHOTOS[n]?`<div class="pphoto">${pface(n,"")}<span>${esc(numOf(n))||""}</span></div>`:`<div class="big">${esc(numOf(n))||"·"}</div>`}<div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${noScores()?`${tot.apps||0} appearances · `:RUGBY?`${tot.goals} career tries · ${tot.pts||0} points · `:`${tot.goals} career goals · ${tot.assists||0} assists · `}${tot.potm} ${esc(TEAM.potm&&TEAM.potm.sponsor||"player of the match")} awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}${(k=>k?` · ${k} player of the month`:"")(pomOf(n).length)}</p>${canWrite?`<label class="bup btn ghost">${PHOTOS[n]?"Change photo":"Add photo"}<input type="file" accept="image/*" data-photo="${esc(n)}"></label> <span class="hint">Everyone can see player photos.</span>`:""}</div></div></section>
   <button class="btn gold" data-story="${esc(n)}" style="align-self:flex-start">✨ ${esc(n)}'s ${esc(season)} season story</button>
+  ${(L=>L.length?`<section class="card"><h3>Player of the month</h3>${L.map(x=>`<div class="potm">${POM_IC} ${esc(pomLabel(x.month))}${x.note?` <span class="meta">· ${esc(x.note)}</span>`:""}</div>`).join("")}${canWrite?`<div class="mg edit-only" style="margin-top:8px">${L.map(x=>`<button class="mini" data-pomgfx="${esc(x.month)}">${esc(pomMonthName(x.month))} poster</button>`).join("")}</div>`:""}</section>`:"")(pomOf(n))}
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
-  <div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
+  ${rtPlayerCard(n)}${bdPlayerCard(n)}${kitPlayerCard(n)}<div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
   <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
   ${noScores()?"":`<section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>${SP.Goals}</th>${RUGBY?"<th>Kicks</th><th>Points</th>":"<th>Assists</th><th>Clean sheets</th>"}<th>PotM</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps+(r.partial?"*":""):"–"}</td><td>${r.o.goals}</td>${RUGBY?`<td>${esc(kickText(r.o))||"–"}</td><td>${r.o.pts||0}</td>`:`<td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.gk?r.o.cs:"–"}</td>`}<td>${r.o.potm}</td></tr>`).join("")}</tbody></table>${rows.some(r=>r.partial)?`<p class="hint">* Some of these games only recorded the scorers, so this counts the scorers and player of the match and may be missing other games she played.</p>`:""}</section>`}
   <section class="card"><h3>Matches</h3><div class="list">${games.map(matchRow).join("")||`<p class="hint">No matches logged yet.</p>`}</div></section></div>`;
 }
+
+// ---------- coach ratings: each player scored out of 10 after a game, for the coaches' player of the year ----------
+// public.player_ratings (supabase/18_player_ratings.sql). Only signed-in coaches can read or write it: the database
+// refuses everyone else, parents signed in with a family code included, so nothing here ever reaches a parent's phone.
+let RT=null,rtMatch=null,rtDraft=null,rtSort="avg",rtBusy=false;
+async function loadRatings(){RT=null;if(!sb||!canWrite)return;try{const {data,error}=await sb.from("player_ratings").select("match_id,player,score");if(!error)RT=data||[]}catch(e){}}
+const rtGames=()=>seasonMatches().filter(m=>counted(m)&&!isFixture(m)&&!m.postponed).reverse();
+function rtOf(id){const o={};(RT||[]).forEach(r=>{if(r.match_id===id)o[r.player]=r.score});return o}
+const rtAvg=(t,n)=>n?(Math.round(t/n*10)/10).toFixed(1):"–";
+// season totals for every player with at least one score, in the season picked at the top of the page
+function rtTable(list){const ids=new Set(list.map(m=>m.id)),out={};
+  (RT||[]).forEach(r=>{if(!ids.has(r.match_id))return;const o=out[r.player]||(out[r.player]={n:r.player,g:0,t:0,hi:0});o.g++;o.t+=+r.score;o.hi=Math.max(o.hi,+r.score)});
+  const rows=Object.values(out).map(o=>Object.assign(o,{a:o.t/o.g}));
+  return rows.sort(rtSort==="tot"?(x,y)=>y.t-x.t||y.a-x.a:(x,y)=>y.a-x.a||y.g-x.g||x.n.localeCompare(y.n))}
+// who to score for a game: the team sheet, or the whole squad when it wasn't written down
+function rtNames(m){const pl=Object.keys(played(m));const known=m.apps!==false&&pl.length;
+  const names=known?pl:players.filter(p=>p.current).map(p=>p.name);Object.keys(rtOf(m.id)).forEach(n=>{if(!names.includes(n))names.push(n)});
+  return {known,names:names.sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b))}}
+const rtWho=m=>`${m.ha==="A"?"at":"v"} ${esc(m.opp||"Opponent")}`;
+const rtDate=m=>{const d=new Date(m.date+"T12:00:00");return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})};
+const RT_LOCK=`<p class="hint rt-lock">🔒 Only coaches signed in to this site can see ratings. Parents, families and visitors never see them.</p>`;
+function ratingsView(){
+  if(!canWrite)return `<div class="stack"><section class="card empty">Ratings are for coaches only. Sign in as a coach to see them.</section></div>`;
+  if(RT===null)return `<div class="stack"><section class="card"><h2 style="margin-top:0">Player ratings</h2><p class="hint">Ratings aren't switched on for this team's database yet. Ask Touchline Tales to turn them on.</p></section></div>`;
+  if(rtMatch)return rtForm();
+  const games=rtGames(),tab=rtTable(games),done=games.filter(m=>Object.keys(rtOf(m.id)).length),top=tab[0];
+  const table=tab.length?`<table class="lb rt-tab"><thead><tr><th>#</th><th>Player</th><th>Games</th><th>Total</th><th>Average</th></tr></thead><tbody>
+    ${tab.map((o,i)=>`<tr class="click" data-player="${esc(o.n)}"><td>${i+1}</td><td><span class="num">${esc(numOf(o.n))||"·"}</span>${esc(o.n)}</td><td>${o.g}</td><td>${o.t}</td><td><b>${rtAvg(o.t,o.g)}</b></td></tr>`).join("")}</tbody></table>
+    <p class="hint" style="margin-top:8px">Average is the total divided by the number of games each player was scored in. Someone scored in only a few games can top the averages, so keep an eye on the Games column.</p>`
+    :`<p class="hint">No scores yet this season. Pick a game below and give each ${esc(PL.replace(/s$/,""))} a score out of 10.</p>`;
+  const row=m=>{const n=Object.keys(rtOf(m.id)).length,of=rtNames(m).names.length;
+    return `<button class="rt-game" data-rtm="${esc(m.id)}"><span class="rt-g1">${badge(m.opp)}<span><b>${rtWho(m)}</b><small>${rtDate(m)} · ${esc(compName(m.comp||""))}</small></span></span>${n?`<span class="pill rt-ok">✓ ${n} scored</span>`:`<span class="pill rt-no">Score now</span>`}</button>`};
+  return `<div class="stack">
+  <section class="card"><h2 style="margin-top:0">Player ratings · ${esc(season)}</h2>
+    <p>After each game, give every ${esc(PL.replace(/s$/,""))} who played a score out of 10. The totals and averages build up over the season to help pick the coaches' player of the year.</p>${RT_LOCK}</section>
+  ${top?`<section class="card rt-lead"><div class="rt-trophy">🏆</div><div><div class="kick">Top of the ${rtSort==="tot"?"totals":"averages"}</div><b>${esc(top.n)}</b><span>${rtSort==="tot"?`${top.t} points from ${top.g} game${top.g===1?"":"s"}`:`${rtAvg(top.t,top.g)} average from ${top.g} game${top.g===1?"":"s"}`}</span></div></section>`:""}
+  <section class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px"><h3 style="margin:0">Season table</h3>
+    ${tab.length?`<div class="seg" role="group" aria-label="Sort by"><button data-rtsort="avg" aria-pressed="${rtSort==="avg"}">Average</button><button data-rtsort="tot" aria-pressed="${rtSort==="tot"}">Total</button></div>`:""}</div>${table}</section>
+  <section class="card"><h3>Score a game</h3><p class="hint" style="margin-bottom:8px">${games.length?`${done.length} of ${games.length} game${games.length===1?"":"s"} scored this season.`:"No games played this season yet."}</p>
+    <div class="stack" style="gap:8px">${games.map(row).join("")}</div></section></div>`;
+}
+function rtForm(){const m=matches.find(x=>x.id===rtMatch);const back=`<button class="btn ghost" data-rtback style="align-self:flex-start">← All ratings</button>`;
+  if(!m)return `<div class="stack">${back}<section class="card empty">Game not found.</section></div>`;
+  if(!rtDraft||rtDraft.id!==m.id)rtDraft={id:m.id,s:rtOf(m.id)};const {known,names}=rtNames(m),s=rtDraft.s;
+  const pick=n=>`<div class="rt-p"><div class="rt-n"><span class="num">${esc(numOf(n))||"·"}</span><b>${esc(n)}</b>${m.potm===n?` <span title="${esc(POTM)}">${POTM_IC}</span>`:""}${+played(m)[n]>0?` <span class="hint">${SP.ball} ${played(m)[n]}</span>`:""}<span class="rt-v">${s[n]?`${s[n]}/10`:"–"}</span></div>
+    <div class="rt-btns" role="group" aria-label="Score for ${esc(n)}">${[1,2,3,4,5,6,7,8,9,10].map(v=>`<button data-rtn="${esc(n)}" data-rtv="${v}" aria-pressed="${s[n]===v}">${v}</button>`).join("")}</div></div>`;
+  const n=Object.keys(s).length,tot=Object.values(s).reduce((a,b)=>a+b,0);
+  return `<div class="stack">${back}
+  <section class="card"><h2 style="margin:0">${rtWho(m)}</h2><p class="hint">${longDate(m.date)} · ${esc(compName(m.comp||""))}</p>
+    <p style="margin-top:8px">Tap a score out of 10 for each ${esc(PL.replace(/s$/,""))}. Tap it again to clear it.${known?"":` The team sheet wasn't written down for this game, so the whole squad is listed. Leave anyone who didn't play blank.`}</p>${RT_LOCK}</section>
+  <section class="card rt-list">${names.map(pick).join("")||`<p class="hint">No ${esc(PL)} on the squad yet.</p>`}</section>
+  <div class="btns rt-save"><button class="btn gold" id="rtSave"${rtBusy?" disabled":""}>Save scores</button><span class="hint">${n?`${n} scored · average ${rtAvg(tot,n)}`:"Nothing scored yet"}</span></div></div>`;
+}
+async function rtSave(){const d=rtDraft;if(!d||!canWrite||rtBusy)return;const old=rtOf(d.id);rtBusy=true;render();
+  try{const up=Object.entries(d.s).filter(([n,v])=>old[n]!==v).map(([player,score])=>({match_id:d.id,player,score}));
+    const gone=Object.keys(old).filter(n=>!(n in d.s));
+    if(up.length){const {error}=await sb.from("player_ratings").upsert(up,{onConflict:"match_id,player"});if(error)throw error}
+    if(gone.length){const {error}=await sb.from("player_ratings").delete().eq("match_id",d.id).in("player",gone);if(error)throw error}
+    await loadRatings();rtMatch=null;rtDraft=null;toast("Scores saved. Only coaches can see them.")}
+  catch(e){toast("Couldn't save the scores. Check your connection and try again.")}
+  rtBusy=false;render();window.scrollTo({top:0})}
+// on a player's page and the match page, for coaches only
+function rtPlayerCard(n){if(!canWrite||!RT)return "";const games=rtGames().slice().reverse(),list=games.map(m=>[m,rtOf(m.id)[n]]).filter(([,v])=>v);
+  if(!list.length)return "";const t=list.reduce((a,[,v])=>a+v,0);
+  return `<section class="card edit-only"><h3>Coach ratings · ${esc(season)}</h3><p><b>${rtAvg(t,list.length)}</b> average from ${list.length} game${list.length===1?"":"s"} (${t} in total).</p>
+    <div class="rt-hist">${list.map(([m,v])=>`<button class="rt-chip" data-rtm="${esc(m.id)}" title="${esc(rtDate(m))} ${rtWho(m)}"><b>${v}</b><small>${esc(oppIni(m.opp))}</small></button>`).join("")}</div>${RT_LOCK}</section>`}
+const rtMatchBtn=m=>canWrite&&RT&&!isFixture(m)&&counted(m)?`<button class="mini" data-rtm="${esc(m.id)}">⭐ ${Object.keys(rtOf(m.id)).length?"Player ratings":"Rate players"}</button>`:"";
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.rtm){if(!canWrite)return;e.stopPropagation();rtMatch=b.dataset.rtm;rtDraft=null;const m=matches.find(x=>x.id===rtMatch);if(m&&seasonOf(m.date))season=seasonOf(m.date);setView("ratings");return}
+  if("rtback" in b.dataset){rtMatch=null;rtDraft=null;render();window.scrollTo({top:0});return}
+  if(b.dataset.rtsort){rtSort=b.dataset.rtsort;render();return}
+  if(b.dataset.rtn&&rtDraft){const n=b.dataset.rtn,v=+b.dataset.rtv;if(rtDraft.s[n]===v)delete rtDraft.s[n];else rtDraft.s[n]=v;const y=window.scrollY;render();window.scrollTo({top:y});return}
+  if(b.id==="rtSave"){rtSave();return}
+},true);
+
+// ---------- kit sizes: shirt, shorts and socks for each player, so ordering kit is easy ----------
+// public.player_kit (supabase/21_kit_sizes.sql). Coaches read and write every player's sizes; a parent signed in with a
+// family code only their own child's (the database enforces it). Visitors can't read any of it.
+let KIT=null,kitDraft=null,kitBusy=false;
+const KIT_F=[["shirt","Shirt"],["shorts","Shorts"],["socks","Socks"]];
+const KIT_SIZES={shirt:["3-4","5-6","7-8","9-10","11-12","13","XS","S","M","L","XL","XXL"],shorts:["3-4","5-6","7-8","9-10","11-12","13","XS","S","M","L","XL","XXL"],
+  socks:["Infant 9-12","Junior 12-2","Junior 13-3","Youth 3-6","Adult 7-11","Adult 12+"]};
+// smallest to biggest for the order list: known sizes in the order above, anything else typed after them
+const kitRank=(f,v)=>{const i=KIT_SIZES[f].findIndex(x=>x.toLowerCase()===String(v).toLowerCase());return i<0?99:i};
+async function loadKit(){KIT=null;if(!sb||!(canWrite||myKids().length))return;try{const {data,error}=await sb.from("player_kit").select("player,shirt,shorts,socks,notes");if(!error){KIT={};(data||[]).forEach(r=>KIT[r.player]=r)}}catch(e){}}
+const kitNames=()=>players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)||a.name.localeCompare(b.name)).map(p=>p.name);
+const kitClean=v=>String(v||"").trim().replace(/\s+/g," ");
+const kitHas=r=>r&&(r.shirt||r.shorts||r.socks||r.notes);
+function kitOrder(src){const names=kitNames(),out={};KIT_F.forEach(([f])=>{const c={};names.forEach(n=>{const v=src[n]&&kitClean(src[n][f]);if(v)c[v]=(c[v]||0)+1});
+  out[f]=Object.entries(c).sort((a,b)=>kitRank(f,a[0])-kitRank(f,b[0])||a[0].localeCompare(b[0],undefined,{numeric:true}))});
+  out.missing=names.filter(n=>!KIT_F.every(([f])=>src[n]&&kitClean(src[n][f])));return out}
+function kitText(){const names=kitNames(),o=kitOrder(KIT||{}),k=KIT||{};
+  const lines=[`Kit sizes: ${TEAM.name||""} ${TEAM.ageShort||""}`.trim()+` (${names.length} ${PL})`,""];
+  KIT_F.forEach(([f,l])=>lines.push(`${l}: ${o[f].length?o[f].map(([v,c])=>`${v} x${c}`).join(", "):"none yet"}`));
+  if(o.missing.length)lines.push("",`Still to add sizes for: ${o.missing.join(", ")}`);
+  lines.push("","Player by player:");
+  names.forEach(n=>{const r=k[n]||{},num=numOf(n);lines.push(`${num?num+" ":""}${n}: ${KIT_F.map(([f,l])=>`${l.toLowerCase()} ${kitClean(r[f])||"?"}`).join(", ")}${kitClean(r.notes)?` (${kitClean(r.notes)})`:""}`)});
+  return lines.join("\n")}
+const KIT_LOCK=`<p class="hint rt-lock">🔒 Only the coaches, and each family for their own ${esc(PRN.kid)}, can see kit sizes. Other families and visitors never see them.</p>`;
+function kitInit(names){kitDraft=kitDraft||{};names.forEach(n=>{if(kitDraft[n])return;const r=(KIT||{})[n]||{};kitDraft[n]={shirt:r.shirt||"",shorts:r.shorts||"",socks:r.socks||"",notes:r.notes||""}})}
+const kitDirtyText=()=>{const c=kitChanged().length;return c?`Changes for ${c} ${c===1?PL.replace(/s$/,""):PL} not saved yet`:"All saved"};
+const kitRow=(n,tag)=>{const d=kitDraft[n]||{};return `<div class="kit-p"><div class="rt-n"><span class="num">${esc(numOf(n))||"·"}</span><b>${esc(n)}</b>${tag&&!kitHas(KIT[n])?` <span class="pill rt-no kit-new">To add</span>`:""}</div>
+    <div class="kit-in">${KIT_F.map(([f,l])=>`<label class="f">${l}<input type="text" list="kit-${f}" maxlength="20" autocomplete="off" data-kitn="${esc(n)}" data-kitf="${f}" value="${esc(d[f])}" placeholder="Size"></label>`).join("")}</div>
+    <label class="f kit-note">Notes (optional)<input type="text" maxlength="120" data-kitn="${esc(n)}" data-kitf="notes" value="${esc(d.notes)}" placeholder="e.g. goalkeeper top, gloves size 6, name on shirt"></label></div>`};
+const kitDatalists=()=>KIT_F.map(([f])=>`<datalist id="kit-${f}">${KIT_SIZES[f].map(v=>`<option value="${esc(v)}">`).join("")}</datalist>`).join("");
+function kitView(){
+  if(!canWrite)return `<div class="stack"><section class="card empty">Kit sizes are for coaches only. Sign in as a coach to see them.</section></div>`;
+  if(KIT===null)return `<div class="stack"><section class="card"><h2 style="margin-top:0">Kit sizes</h2><p class="hint">Kit sizes aren't switched on for this team's database yet. Ask ${esc(TEAM.supportName||"Touchline Tales")} via Help and changes to turn them on.</p></section></div>`;
+  const names=kitNames();kitInit(names);
+  const o=kitOrder(KIT),done=names.length-o.missing.length;
+  const sum=`<div class="kit-sum">${KIT_F.map(([f,l])=>`<div><b>${l}</b>${o[f].length?o[f].map(([v,c])=>`<span class="kit-pill">${esc(v)} <i>×${c}</i></span>`).join(""):`<span class="hint">None yet</span>`}</div>`).join("")}</div>`;
+  return `<div class="stack">
+  <section class="card"><h2 style="margin-top:0">Kit sizes</h2>
+    <p>Keep each ${esc(PL.replace(/s$/,""))}'s shirt, shorts and socks size here, so ordering kit is one message to the supplier. Families signed in with their family code can fill in their own ${esc(PRN.kid)}'s sizes too, so you can ask them to do it. Shirt numbers are on the <button class="mini" data-view="squad">Squad</button> page.</p>${KIT_LOCK}</section>
+  <section class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px"><h3 style="margin:0">Order list</h3><span class="hint">${done} of ${names.length} ${esc(PL)} done</span></div>
+    ${sum}${o.missing.length&&done?`<p class="hint" style="margin-top:8px">Still to add: ${o.missing.map(esc).join(", ")}</p>`:""}
+    <div class="btns" style="margin-top:10px"><button class="btn ghost" id="kitCopy"${done?"":" disabled"}>📋 Copy order list</button></div></section>
+  <section class="card stack" style="gap:16px">${names.map(n=>kitRow(n,1)).join("")||`<p class="hint">No ${esc(PL)} on the squad yet. Add them on the Squad page first.</p>`}</section>
+  ${kitDatalists()}
+  <div class="btns rt-save"><button class="btn gold" id="kitSave"${kitBusy?" disabled":""}>Save sizes</button><span class="hint" id="kitDirty">${kitDirtyText()}</span></div></div>`;
+}
+// players whose sizes in the form differ from what's saved
+function kitChanged(){if(!kitDraft||!KIT)return [];return Object.keys(kitDraft).filter(n=>{const d=kitDraft[n],r=KIT[n]||{};return ["shirt","shorts","socks","notes"].some(f=>kitClean(d[f])!==kitClean(r[f]))})}
+async function kitSave(){if(!kitDraft||!(canWrite||myKids().length)||kitBusy)return;const ch=kitChanged();if(!ch.length){toast("Nothing to save.");return}kitBusy=true;render();
+  try{const row=n=>{const d=kitDraft[n],o={player:n,updated:new Date().toISOString()};["shirt","shorts","socks","notes"].forEach(f=>o[f]=kitClean(d[f])||null);return o};
+    const up=ch.map(row).filter(kitHas),gone=ch.filter(n=>!kitHas(row(n))&&KIT[n]);
+    if(up.length){const {error}=await sb.from("player_kit").upsert(up,{onConflict:"player"});if(error)throw error}
+    if(gone.length){const {error}=await sb.from("player_kit").delete().in("player",gone);if(error)throw error}
+    await loadKit();kitDraft=null;toast(canWrite?"Kit sizes saved. Only coaches and each family can see them.":"Kit sizes saved. Only you and the coaches can see them.")}
+  catch(e){toast("Couldn't save the sizes. Check your connection and try again.")}
+  kitBusy=false;render()}
+// on a player's page, for coaches only
+function kitPlayerCard(n){const fam=!canWrite&&myKids().includes(n);if(!KIT||!(canWrite||fam))return "";const r=KIT[n];
+  return `<section class="card"><h3>Kit sizes</h3>${kitHas(r)?`<p>${KIT_F.map(([f,l])=>`${l} <b>${esc(r[f]||"–")}</b>`).join(" · ")}</p>${r.notes?`<p class="hint">${esc(r.notes)}</p>`:""}`:`<p class="hint">No sizes yet.</p>`}
+    <div class="btns"><button class="mini" data-view="${fam?"parents":"kit"}">${kitHas(r)?"Change sizes":"Add sizes"}</button></div>${KIT_LOCK}</section>`}
+// on the Parents page: a signed-in family fills in their own child's sizes
+function kitFamCard(){const kids=myKids();if(!kids.length)return "";
+  if(!KIT)return "";kitInit(kids);
+  return `<section class="card stack" style="gap:14px"><h2 style="margin:0">📏 Kit sizes</h2><p class="hint" style="margin:0">Add ${kids.length>1?"each":"your"} ${esc(PRN.kid)}'s sizes so the coaches can order the right kit. Change them any time they grow.</p>
+    ${kids.map(n=>kitRow(n,0)).join("")}${kitDatalists()}
+    <div class="btns"><button class="btn gold" id="kitSave"${kitBusy?" disabled":""}>Save sizes</button><span class="hint" id="kitDirty">${kitDirtyText()}</span></div>${KIT_LOCK}</section>`}
+document.addEventListener("input",e=>{const t=e.target;if((view!=="kit"&&view!=="parents")||!t.dataset||!t.dataset.kitn||!kitDraft)return;
+  (kitDraft[t.dataset.kitn]||(kitDraft[t.dataset.kitn]={}))[t.dataset.kitf]=t.value;const d=$("#kitDirty");if(d)d.textContent=kitDirtyText()});
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.id==="kitSave"&&(view==="kit"||view==="parents")){kitSave();return}
+  if(view!=="kit"||!canWrite)return;
+  if(b.id==="kitCopy"){if(kitChanged().length)toast("Save your changes first, then copy.");else copyOut(kitText(),"Order list copied. Paste it into an email or WhatsApp.");return}
+});
+// ---------- birthdays: day and month only (never the year, so no ages), for coaches' reminders ----------
+// public.player_birthdays (supabase/19_player_birthdays.sql). Only signed-in coaches can read or write it: the database
+// refuses everyone else, parents signed in with a family code included. Nothing about birthdays is ever shown publicly.
+let BD=null,bdDraft=null,bdBusy=false;
+const BD_MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const BD_DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+async function loadBirthdays(){BD=null;bdDraft=null;if(!sb||!canWrite)return;try{const {data,error}=await sb.from("player_birthdays").select("player,bday");if(!error){BD={};(data||[]).forEach(r=>BD[r.player]=r.bday)}}catch(e){}}
+const bdText=md=>{const [m,d]=md.split("-").map(Number);return `${d} ${BD_MONTHS[m-1]}`};
+// the next time this birthday comes round (29 February counts as 28 February outside leap years)
+function bdNext(md){const [m,d]=md.split("-").map(Number),t=new Date(todayLocal()+"T12:00:00");
+  const on=y=>new Date(y,m-1,m===2&&d===29&&!((y%4===0&&y%100!==0)||y%400===0)?28:d,12);
+  let x=on(t.getFullYear());if(x<t)x=on(t.getFullYear()+1);return {date:x,days:Math.round((x-t)/864e5)}}
+const bdWhen=o=>o.days===0?"today":o.days===1?"tomorrow":o.days<7?`on ${BD_DAYS[o.date.getDay()]}`:`in ${o.days} days`;
+function bdList(){const cur=new Set(players.filter(p=>p.current).map(p=>p.name));
+  return Object.entries(BD||{}).filter(([n])=>cur.has(n)).map(([n,md])=>Object.assign({n,md},bdNext(md))).sort((a,b)=>a.days-b.days||a.n.localeCompare(b.n))}
+const bdMsg=n=>`Happy birthday ${n}! 🎂 Have a brilliant day from everyone at ${TEAM.name}${TEAM.ageShort?" "+TEAM.ageShort:""} ${RUGBY?"🏉":"⚽"}`;
+const BD_LOCK=`<p class="hint rt-lock">🔒 Only coaches signed in to this site can see birthdays. We keep the day and month only, never the year.</p>`;
+const bdRow=o=>`<div class="bd-row"><span class="bd-cake">🎂</span><span class="bd-who"><b>${esc(o.n)}</b><small>${esc(bdText(o.md))} · ${o.days===0?"<b>today!</b>":bdWhen(o)}</small></span><button class="mini" data-bdcopy="${esc(o.n)}">Copy message</button></div>`;
+// top of the home page, coaches only, when someone's birthday is in the next 7 days
+function bdHomeCard(){if(!canWrite||!BD)return "";const up=bdList().filter(o=>o.days<=7);if(!up.length)return "";
+  return `<section class="card bd-home edit-only"><h3>${up.some(o=>o.days===0)?"🎉 Birthday today":"Birthdays this week"}</h3>${up.map(bdRow).join("")}<p class="hint" style="margin-top:6px">Copy a message to post in the team chat. Only coaches see this card.</p></section>`}
+function bdPlayerCard(n){if(!canWrite||!BD)return "";const md=BD[n],o=md&&bdNext(md);
+  return `<section class="card edit-only"><h3>Birthday</h3>${md?`<p>🎂 <b>${esc(bdText(md))}</b> · ${o.days===0?"today!":bdWhen(o)}</p>`:`<p class="hint">No birthday added yet. Add it and the site reminds the coaches the week before.</p>`}
+    <div class="btns" style="margin-top:8px"><button class="mini" data-view="birthdays">${md?"Change birthdays":"Add birthday"}</button>${md?`<button class="mini" data-bdcopy="${esc(n)}">Copy birthday message</button>`:""}</div>${BD_LOCK}</section>`}
+function birthdaysView(){
+  if(!canWrite)return `<div class="stack"><section class="card empty">Birthdays are for coaches only. Sign in as a coach to see them.</section></div>`;
+  if(BD===null)return `<div class="stack"><section class="card"><h2 style="margin-top:0">Birthdays</h2><p class="hint">Birthdays aren't switched on for this team's database yet. Ask Touchline Tales to turn them on.</p></section></div>`;
+  if(!bdDraft){bdDraft={};Object.entries(BD).forEach(([n,md])=>{const [m,d]=md.split("-").map(Number);bdDraft[n]={m,d}})}
+  const names=players.filter(p=>p.current).map(p=>p.name).sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b)),up=bdList().slice(0,4);
+  const row=n=>{const v=bdDraft[n]||{};return `<div class="bd-edit"><span class="bd-n"><span class="num">${esc(numOf(n))||"·"}</span><b>${esc(n)}</b></span>
+    <select data-bdd="${esc(n)}" aria-label="${esc(n)}'s birthday: day"><option value="">Day</option>${Array.from({length:31},(_,i)=>`<option${v.d===i+1?" selected":""}>${i+1}</option>`).join("")}</select>
+    <select data-bdm="${esc(n)}" aria-label="${esc(n)}'s birthday: month"><option value="">Month</option>${BD_MONTHS.map((x,i)=>`<option value="${i+1}"${v.m===i+1?" selected":""}>${x}</option>`).join("")}</select></div>`};
+  return `<div class="stack">
+  <section class="card"><h2 style="margin-top:0">🎂 Birthdays</h2><p>Add each ${esc(PL.replace(/s$/,""))}'s birthday and the site reminds the coaches the week before, with a message ready to post in the team chat.</p>${BD_LOCK}</section>
+  ${up.length?`<section class="card"><h3>Coming up</h3>${up.map(bdRow).join("")}</section>`:""}
+  <section class="card"><h3>Squad</h3><p class="hint" style="margin-bottom:8px">Day and month only. Leave both blank to remove a birthday.</p><div class="bd-list">${names.map(row).join("")||`<p class="hint">No ${esc(PL)} on the squad yet.</p>`}</div></section>
+  <div class="btns rt-save"><button class="btn gold" id="bdSave"${bdBusy?" disabled":""}>Save birthdays</button></div></div>`;
+}
+async function bdSave(){if(!canWrite||bdBusy||!bdDraft)return;const up=[],gone=[];
+  for(const [n,v] of Object.entries(bdDraft)){if(!v.d&&!v.m){if(BD[n])gone.push(n);continue}
+    if(!v.d||!v.m){toast(`Pick both a day and a month for ${n}.`);return}
+    if(v.d>[31,29,31,30,31,30,31,31,30,31,30,31][v.m-1]){toast(`${BD_MONTHS[v.m-1]} doesn't have ${v.d} days. Check ${n}'s birthday.`);return}
+    const md=String(v.m).padStart(2,"0")+"-"+String(v.d).padStart(2,"0");if(BD[n]!==md)up.push({player:n,bday:md})}
+  if(!up.length&&!gone.length){toast("Nothing has changed.");return}
+  bdBusy=true;render();
+  try{if(up.length){const {error}=await sb.from("player_birthdays").upsert(up,{onConflict:"player"});if(error)throw error}
+    if(gone.length){const {error}=await sb.from("player_birthdays").delete().in("player",gone);if(error)throw error}
+    await loadBirthdays();toast("Birthdays saved. Only coaches can see them.")}
+  catch(e){toast("Couldn't save the birthdays. Check your connection and try again.")}
+  bdBusy=false;render()}
+document.addEventListener("change",e=>{const s=e.target;if(!bdDraft||!s.dataset||!(s.dataset.bdd||s.dataset.bdm))return;
+  const n=s.dataset.bdd||s.dataset.bdm,v=bdDraft[n]||(bdDraft[n]={});v[s.dataset.bdd?"d":"m"]=s.value?+s.value:null});
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.view==="birthdays")bdDraft=null;
+  if(b.dataset.bdcopy){e.stopPropagation();copyOut(bdMsg(b.dataset.bdcopy),"Copied. Paste it into the team chat.");return}
+  if(b.id==="bdSave"){bdSave();return}
+},true);
 
 // ---------- season story ("Wrapped"): a few swipeable slides for one player, from the stats already on the site ----------
 let STORY=null;
@@ -2069,6 +2385,7 @@ function storySlides(n,s){const list=sortMatches(matches.filter(m=>!m.practice&&
     out.push(`<div class="k">${SP.Goals}</div><div class="n">${o.goals}</div><p>${RUGBY&&o.pts?`${o.pts} points in all${kickText(o)?`, with ${kickText(o)}`:""}. `:""}${o.assists&&assistsTracked(s)?`Plus ${o.assists} assist${o.assists>1?"s":""}. `:""}${best&&best[1]>1?`Best game: ${best[1]} v ${esc(best[0].opp)}.`:best&&best[1]?`Scored v ${esc(best[0].opp)}.`:""}</p>`)}
   if(o.gk)out.push(`<div class="k">In goal</div><div class="n">🧤 ${o.gk}</div><p>${o.cs?`${o.cs} clean sheet${o.cs>1?"s":""}.`:"Brave in goal every time."}</p>`);
   if(potms.length)out.push(`<div class="k">${esc(POTM)}</div><div class="n">${POTM_IC} ${potms.length}</div><p>${potms.slice(0,3).map(m=>`v ${esc(m.opp)}`).join(", ")}${potms.length>3?" and more":""}.</p>`);
+  {const pm=pomSeason(s).filter(x=>x.player===n).reverse();if(pm.length)out.push(`<div class="k">Player of the month</div><div class="n">${POM_IC} ${pm.length}</div><p>${pm.map(x=>esc(pomMonthName(x.month))).join(", ")}.</p>`)}
   if(ms.length)out.push(`<div class="k">Milestones</div><h2>🎉</h2><p>${ms.slice(0,4).map(x=>esc(x.label)).join("<br>")}</p>`);
   if(!hide){const w=mine.filter(m=>result(m)==="W"),big=w.slice().sort((a,b)=>(b.us-b.them)-(a.us-a.them))[0];
     if(mine.filter(result).length)out.push(`<div class="k">With ${esc(n)} on the pitch</div><div class="n">${w.length}</div><p>win${w.length===1?"":"s"}${big?`, the biggest ${big.us}–${big.them} v ${esc(big.opp)}`:""}.</p>`)}
@@ -2332,7 +2649,7 @@ document.addEventListener("click",e=>{const th=e.target.closest("table.lb thead 
   rows.sort((a,b)=>{const x=cv(a),y=cv(b);if(x===y)return 0;if(x===null)return 1;if(y===null)return -1;const c=typeof x==="number"&&typeof y==="number"?x-y:String(x).localeCompare(String(y));return dir==="asc"?c:-c}).forEach(r=>tb.appendChild(r))});
 // ---------- events ----------
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("button,tr.click,[data-edit],[data-tour],.match");if(!t)return;
+  const t=e.target.closest("button,tr.click,[data-edit],[data-tour],.match,.pom-row[data-player]");if(!t)return;
   if(t.closest("#gfxView"))return;
   if(t.dataset.lb){lbAction(t.dataset.lb);return}
   if(t.dataset.photo){lbOpen(t.dataset.photo);return}
@@ -2490,12 +2807,12 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();
   await loadTav();alSync();
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadKit();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
@@ -2529,17 +2846,17 @@ document.addEventListener("submit",async e=>{
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
-  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors()]);
+  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors(),loadPom()]);
   if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qt=new URLSearchParams(location.search).get("tavail");if(qt!==null){tavDay=qt;view="tavail";render()}
-  const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
+  const qa=new URLSearchParams(location.search).get("avail");if(qa==="all"){view="availall";render()}else if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
 })();
 })();

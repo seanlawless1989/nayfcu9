@@ -104,6 +104,18 @@ const svgLogo=(bg,fg,t1,t2)=>"data:image/svg+xml,"+encodeURIComponent(`<svg xmln
 if(!T.sponsors){T.sponsors=[{id:9001,name:"Riverside Bakery",about:"Home kit",url:null,logo:svgLogo("#F6E7C8","#7A4B1E","Riverside","BAKERY"),sort:0},
   {id:9002,name:"Sample Town Motors",about:"Player of the match",url:null,logo:svgLogo("#13213F","#FFFFFF","ST Motors","SAMPLE TOWN"),sort:1},
   {id:9003,name:"Greenway Garden Centre",about:null,url:null,logo:null,sort:2}];save()}
+// coaches' scores out of 10 for every game played so far but the last one (left for the visitor to score)
+if(!T.player_ratings){const done=T.matches.filter(m=>m.us!=null&&m.date<day(0)&&!m.live).sort((x,y)=>x.date.localeCompare(y.date)).slice(0,-1);
+  T.player_ratings=done.flatMap((m,i)=>Object.keys(m.played||{}).map((player,j)=>{const base=5+((i*3+j*7+player.length)%4),g=+m.played[player]||0;
+    return {match_id:m.id,player,score:Math.min(10,base+(g?1:0)+(m.potm===player?2:0))}}));save()}
+// kit sizes for most of the squad, two left blank so the "still to add" list shows
+if(!T.player_kit){const sz=["9-10","11-12","11-12","13","9-10","XS","11-12","13"],sk=["Junior 12-2","Youth 3-6","Youth 3-6","Junior 12-2"];
+  T.player_kit=T.players.filter(p=>p.current).slice(0,-2).map((p,i)=>({player:p.name,shirt:sz[i%8],shorts:sz[(i+3)%8],socks:sk[i%4],notes:i===0?"Goalkeeper top too":null}));save()}
+// player of the month: last month's star, with a line on why
+if(!T.player_of_month){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);const cur=T.players.filter(p=>p.current);
+  T.player_of_month=cur.length?[{month:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`,player:cur[Math.min(2,cur.length-1)].name,note:"Worked so hard for the team every game this month",updated:new Date().toISOString()}]:[];save()}
+// birthdays (day and month only): one in a couple of days so the coach reminder shows, the rest spread over the year
+if(!T.player_birthdays){T.player_birthdays=T.players.filter(p=>p.current).slice(0,8).map((p,i)=>({player:p.name,bday:day(i?i*41+9:2).slice(5)}));save()}
 function advanceCheers(){const lv=T.matches.find(x=>x.date===day(0)&&x.live&&x.live.status==="live");if(!lv)return;const secs=(Date.now()-DB.start)/1000;DB.cdone=DB.cdone||0;
   while(DB.cdone<CHEER_SCRIPT.length&&CHEER_SCRIPT[DB.cdone][0]<=secs){T.cheers.push(Object.assign({id:++seq+5000,match_id:lv.id,at:new Date().toISOString(),hidden:false},CHEER_SCRIPT[DB.cdone][1]));DB.cdone++}save()}
 function advanceLive(){
@@ -122,7 +134,7 @@ function advanceLive(){
 
 // ---------- a little PostgREST: enough for the queries the site makes ----------
 const KEYS={availability:["match_id","player"],player_photos:["player"],badges:["key"],training_attendance:["day","player"],poll_votes:["poll_id","voter"],
-  coaches:["email"],page_views:["day"]};
+  coaches:["email"],page_views:["day"],player_ratings:["match_id","player"],player_birthdays:["player"],player_of_month:["month"],player_kit:["player"]};
 const keyOf=t=>KEYS[t]||["id"];
 const parse=v=>v==="null"?null:v==="true"?true:v==="false"?false:v;
 function test(r,col,expr){const i=expr.indexOf(".");const op=expr.slice(0,i),raw=expr.slice(i+1),x=r[col];
@@ -178,7 +190,7 @@ function rpc(fn,a){
     case "list_coaches":return json(T.coaches.map(c=>c.email));
     case "add_coach":upsert("coaches",{email:String(a.new_email||"").toLowerCase()},["email"]);save();return json(null);
     case "remove_coach":T.coaches=T.coaches.filter(c=>c.email!==String(a.old_email||"").toLowerCase());save();return json(null);
-    case "set_availability":if(mustSignIn()&&!kidNames().includes(a.p_player))return json({message:"Sign in with your family code first"},400);upsert("availability",{match_id:a.p_match,player:a.p_player,status:a.p_status},["match_id","player"]);save();return json(null);
+    case "set_availability":if(mustSignIn()&&!kidNames().includes(a.p_player))return json({message:"Sign in with your family code first"},400);upsert("availability",{match_id:a.p_match,player:a.p_player,status:a.p_status,by_coach:isCoach()},["match_id","player"]);save();return json(null);
     case "cast_vote":if(mustSignIn()&&!famKey())return json({message:"Sign in with your family code to vote"},400);upsert("poll_votes",{poll_id:a.p_poll,voter:famKey()||a.p_voter,choice:a.p_choice},["poll_id","voter"]);save();return json(null);
     case "poll_totals":{const c={};(T.poll_votes||[]).filter(v=>v.poll_id===a.p_poll).forEach(v=>c[v.choice]=(c[v.choice]||0)+1);return json(Object.entries(c).map(([choice,votes])=>({choice:+choice,votes})))}
     case "cheers_for":advanceCheers();return json(T.cheer_settings[0].muted?[]:T.cheers.filter(c=>c.match_id===a.p_match&&!c.hidden).slice(-50).map(({id,cheer,name,at})=>({id,cheer,name,at})));
