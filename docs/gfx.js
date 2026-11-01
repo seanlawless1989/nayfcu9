@@ -66,7 +66,7 @@ const STYLES={
     display:'"Bowlby One","Archivo Black",sans-serif',body:'"Rubik","Archivo",sans-serif',shirt:'"Big Shoulders Display","Oswald",sans-serif',
     dk:.92,bk:1,sk:1.1,sw:900,bw:800,neck:"crew",raglan:true,num:"shadow"}
 };
-const STYLE=STYLES[(()=>{try{return localStorage.getItem("tt-gfx-style")}catch(e){return""}})()||TEAM.gfxStyle]||STYLES.pro;
+const STYLE=STYLES[(()=>{try{return localStorage.getItem("tt-gfx-style")}catch(e){return""}})()||TEAM.gfxStyle]||STYLES.bold;
 if(STYLE.css&&!document.getElementById("gfxFonts")){const l=document.createElement("link");l.id="gfxFonts";l.rel="stylesheet";l.href=`https://fonts.googleapis.com/css2?family=${STYLE.css}&display=swap`;document.head.appendChild(l)}
 try{document.fonts.addEventListener("loadingdone",()=>{try{render()}catch(e){}})}catch(e){}// redraw once the new fonts arrive
 function font(px,fam,weight){const k=fam===DISPLAY?STYLE.dk:fam===BODY?STYLE.bk:fam===SHIRT?STYLE.sk:1;
