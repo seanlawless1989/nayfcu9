@@ -522,7 +522,17 @@ function avRow(n,v,attr,by,x="",label=""){const k=`data-n="${esc(n)}"${x}`;retur
 // "Leo's away for the next three weekends".
 document.addEventListener("change",e=>{if(e.target.id!=="avAllKid")return;avAllKid=e.target.value||null;try{localStorage.setItem(SK+"-avkid",avAllKid||"")}catch(err){}render()});
 let avAllKid=null;try{avAllKid=localStorage.getItem(SK+"-avkid")}catch(e){}
-const avAllGames=()=>sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&!m.hidden&&m.comp!=="Tournament"&&m.stage!=="placeholder"&&!result(m)&&!(m.live&&m.live.status&&m.live.status!=="pre")&&(m.date||"")>=todayLocal())).slice(0,10);
+const avAllGames=()=>sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&!m.hidden&&m.comp!=="Tournament"&&m.stage!=="placeholder"&&!result(m)&&!(m.live&&m.live.status&&m.live.status!=="pre")&&(m.date||"")>=todayLocal()));
+let avAllCur=null;
+// "Yes to every game": fills in every game on the list that has no answer yet for this child, so a No or Maybe stays put.
+// Coaches who asked for availability alerts get one alert (for the next game), not one per game.
+async function avAllYes(){const n=avAllCur;if(!n)return;const src=canWrite?AV:AV_MINE;
+  const todo=avAllGames().filter(m=>!(src[m.id]||{})[n]);if(!todo.length){toast("Every game already has an answer.");return}
+  todo.forEach(m=>{(AV_MINE[m.id]=AV_MINE[m.id]||{})[n]="yes";if(canWrite){(AV[m.id]=AV[m.id]||{})[n]="yes";(AVBY[m.id]=AVBY[m.id]||{})[n]=true}});render();
+  let bad=0;for(const m of todo){const {error}=await sb.rpc("set_availability",{p_match:m.id,p_player:n,p_status:"yes"});if(error){bad++;delete AV_MINE[m.id][n];if(canWrite&&AV[m.id])delete AV[m.id][n]}}
+  if(bad===todo.length){toast("Couldn't save that. Try again.");render();return}
+  if(!canWrite)alSend({avail:{match:todo[0].id,player:n}});
+  toast(`${n}: yes to ${todo.length-bad} game${todo.length-bad>1?"s":""}.${bad?` ${bad} didn't save, try those again.`:""}`);render()}
 function availAllView(){const kids=canWrite?[]:myKids();
   if(!kids.length&&PREQ&&!canWrite){parentNext="availall";return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>${joinBox(`To answer, type the family code the coach sent you. You only do this once on this phone.`)}</section>`}
   const names=kids.length?kids:players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
@@ -530,11 +540,12 @@ function availAllView(){const kids=canWrite?[]:myKids();
   const games=avAllGames(),sess=TAV_ON&&TR?trUpcoming(8).filter(x=>!x.off).slice(0,4).map(x=>x.iso):[];
   const pick=names.length>1||!kids.length?`<label class="f">${canWrite?`Which ${PRN.kid}?`:`Your ${PRN.kid}`}<select id="avAllKid"><option value="">Choose…</option>${names.map(x=>`<option${x===n?" selected":""}>${esc(x)}</option>`).join("")}</select></label>`:"";
   const gm=m=>`<b>${esc(shortDay(m.date))}</b><br><span class="hint">${esc(m.ha==="A"?"at ":"v ")}${esc(m.opp)}${m.ko?` · ${esc(m.ko)}`:""}</span>`;
+  avAllCur=n;const open=n?games.filter(m=>!((canWrite?AV:AV_MINE)[m.id]||{})[n]).length:0;
   const rows=!n?`<p class="hint">Choose ${canWrite?`a ${PRN.kid}`:`your ${PRN.kid}`} above.</p>`:`
-    <h3>Games</h3>${games.length?`<div class="av">${games.map(m=>avRow(n,((canWrite?AV:AV_MINE)[m.id]||{})[n],"av",(AVBY[m.id]||{})[n],` data-mid="${esc(m.id)}"`,gm(m))).join("")}</div>`:`<p class="hint">No games coming up yet.</p>`}
+    <h3>Games</h3>${open>1?`<div class="btns"><button class="btn gold" id="avAllYes">✅ Yes to every game (${open})</button></div><p class="hint" style="margin:0">Fills in every game below that hasn't got an answer yet. Any No or Maybe stays as it is, and you can change any game after.</p>`:""}${games.length?`<div class="av">${games.map(m=>avRow(n,((canWrite?AV:AV_MINE)[m.id]||{})[n],"av",(AVBY[m.id]||{})[n],` data-mid="${esc(m.id)}"`,gm(m))).join("")}</div>`:`<p class="hint">No games coming up yet.</p>`}
     ${sess.length?`<h3>Training</h3><div class="av">${sess.map(d=>avRow(n,((canWrite?TAV:TAV_MINE)[d]||{})[n],"tav",(TAVBY[d]||{})[n],` data-day="${d}"`,`<b>${esc(shortDay(d))}</b><br><span class="hint">${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span>`)).join("")}</div>`:""}`;
   return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>
-    <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${esc(n||kids[0])}.`:""} Say Yes, Maybe or No for every game coming up. You can change an answer any time. Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="availall">Sign in</button>`:""}</p>
+    <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${esc(n||kids[0])}.`:""} Say Yes, Maybe or No for every game coming up this season, or say yes to them all in one tap. You can change an answer any time. Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="availall">Sign in</button>`:""}</p>
     ${pick}${rows}</section>`}
 const avCoachHint=()=>`You're a coach, so you can set the answer for any ${PRN.kid}, for example when a parent tells you on WhatsApp. It counts just like the parent's own answer, and a parent signed in with their family code sees it too. Tap ✕ to clear an answer.`;
 function avSummary(id){const a=AV[id]||{};const set=`<button class="mini" data-avset="${esc(id)}">Set answers</button>`;if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask. ${set}`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
@@ -1854,6 +1865,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.chase){msgMatch=b.dataset.chase;msgChase=true;setView("msg")}
   if(b.id==="waMsg"){const t=$("#msgText").value;window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank","noopener")}
   if(b.id==="copyMsg"){const ta=$("#msgText");try{navigator.clipboard.writeText(ta.value).then(()=>toast("Copied. Paste it into WhatsApp."),()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select()}}
+  if(b.id==="avAllYes"){avAllYes();return}
   if(b.dataset.avset){availMatch=b.dataset.avset;setView("avail");if(canWrite)loadAvail().then(()=>{if(view==="avail")render()});return}
   if(b.dataset.avclr&&canWrite){const n=b.dataset.n,mid=b.dataset.mid||availMatch,was=(AV[mid]||{})[n];if(AV[mid])delete AV[mid][n];if(AVBY[mid])delete AVBY[mid][n];render();
     sb.from("availability").delete().eq("match_id",mid).eq("player",n).then(({error})=>{if(error){(AV[mid]=AV[mid]||{})[n]=was;render();toast("Couldn't clear that. Try again.")}else toast(`${n}'s answer cleared.`)});return}
