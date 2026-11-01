@@ -150,11 +150,12 @@ function render(){
   if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   if(setupPending()&&!canWrite&&view!=="login"){main.innerHTML=settingUpView();document.body.classList.toggle("ro",true);return}
   renderTicker();
-  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+homeView();
+  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+homeView();
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
   else if(view==="ratings")main.innerHTML=ratingsView();
   else if(view==="kit")main.innerHTML=kitView();
+  else if(view==="birthdays")main.innerHTML=birthdaysView();
   else if(view==="results")main.innerHTML=resultsView();
   else if(view==="fixtures")main.innerHTML=fixturesView();
   else if(view==="honours")main.innerHTML=honoursView();
@@ -213,7 +214,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -712,7 +713,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match reports the coaches write.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when. Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -2003,7 +2004,7 @@ function playerDetail(n){
   <section class="card"><div class="pcard">${PHOTOS[n]?`<div class="pphoto">${pface(n,"")}<span>${esc(numOf(n))||""}</span></div>`:`<div class="big">${esc(numOf(n))||"·"}</div>`}<div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${noScores()?`${tot.apps||0} appearances · `:RUGBY?`${tot.goals} career tries · ${tot.pts||0} points · `:`${tot.goals} career goals · ${tot.assists||0} assists · `}${tot.potm} ${esc(TEAM.potm&&TEAM.potm.sponsor||"player of the match")} awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}</p>${canWrite?`<label class="bup btn ghost">${PHOTOS[n]?"Change photo":"Add photo"}<input type="file" accept="image/*" data-photo="${esc(n)}"></label> <span class="hint">Everyone can see player photos.</span>`:""}</div></div></section>
   <button class="btn gold" data-story="${esc(n)}" style="align-self:flex-start">✨ ${esc(n)}'s ${esc(season)} season story</button>
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
-  ${rtPlayerCard(n)}${kitPlayerCard(n)}<div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
+  ${rtPlayerCard(n)}${bdPlayerCard(n)}${kitPlayerCard(n)}<div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
   <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
   ${noScores()?"":`<section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>${SP.Goals}</th>${RUGBY?"<th>Kicks</th><th>Points</th>":"<th>Assists</th><th>Clean sheets</th>"}<th>PotM</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps+(r.partial?"*":""):"–"}</td><td>${r.o.goals}</td>${RUGBY?`<td>${esc(kickText(r.o))||"–"}</td><td>${r.o.pts||0}</td>`:`<td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.gk?r.o.cs:"–"}</td>`}<td>${r.o.potm}</td></tr>`).join("")}</tbody></table>${rows.some(r=>r.partial)?`<p class="hint">* Some of these games only recorded the scorers, so this counts the scorers and player of the match and may be missing other games she played.</p>`:""}</section>`}
@@ -2085,8 +2086,8 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
 },true);
 
 // ---------- kit sizes: shirt, shorts and socks for each player, so ordering kit is easy ----------
-// public.player_kit (supabase/19_kit_sizes.sql). Only signed-in coaches can read or write it: the database refuses
-// everyone else, parents signed in with a family code included, so sizes never reach a parent's phone.
+// public.player_kit (supabase/21_kit_sizes.sql). Coaches read and write every player's sizes; a parent signed in with a
+// family code only their own child's (the database enforces it). Visitors can't read any of it.
 let KIT=null,kitDraft=null,kitBusy=false;
 const KIT_F=[["shirt","Shirt"],["shorts","Shorts"],["socks","Socks"]];
 const KIT_SIZES={shirt:["3-4","5-6","7-8","9-10","11-12","13","XS","S","M","L","XL","XXL"],shorts:["3-4","5-6","7-8","9-10","11-12","13","XS","S","M","L","XL","XXL"],
@@ -2157,6 +2158,63 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   if(view!=="kit"||!canWrite)return;
   if(b.id==="kitCopy"){if(kitChanged().length)toast("Save your changes first, then copy.");else copyOut(kitText(),"Order list copied. Paste it into an email or WhatsApp.");return}
 });
+// ---------- birthdays: day and month only (never the year, so no ages), for coaches' reminders ----------
+// public.player_birthdays (supabase/19_player_birthdays.sql). Only signed-in coaches can read or write it: the database
+// refuses everyone else, parents signed in with a family code included. Nothing about birthdays is ever shown publicly.
+let BD=null,bdDraft=null,bdBusy=false;
+const BD_MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const BD_DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+async function loadBirthdays(){BD=null;bdDraft=null;if(!sb||!canWrite)return;try{const {data,error}=await sb.from("player_birthdays").select("player,bday");if(!error){BD={};(data||[]).forEach(r=>BD[r.player]=r.bday)}}catch(e){}}
+const bdText=md=>{const [m,d]=md.split("-").map(Number);return `${d} ${BD_MONTHS[m-1]}`};
+// the next time this birthday comes round (29 February counts as 28 February outside leap years)
+function bdNext(md){const [m,d]=md.split("-").map(Number),t=new Date(todayLocal()+"T12:00:00");
+  const on=y=>new Date(y,m-1,m===2&&d===29&&!((y%4===0&&y%100!==0)||y%400===0)?28:d,12);
+  let x=on(t.getFullYear());if(x<t)x=on(t.getFullYear()+1);return {date:x,days:Math.round((x-t)/864e5)}}
+const bdWhen=o=>o.days===0?"today":o.days===1?"tomorrow":o.days<7?`on ${BD_DAYS[o.date.getDay()]}`:`in ${o.days} days`;
+function bdList(){const cur=new Set(players.filter(p=>p.current).map(p=>p.name));
+  return Object.entries(BD||{}).filter(([n])=>cur.has(n)).map(([n,md])=>Object.assign({n,md},bdNext(md))).sort((a,b)=>a.days-b.days||a.n.localeCompare(b.n))}
+const bdMsg=n=>`Happy birthday ${n}! 🎂 Have a brilliant day from everyone at ${TEAM.name}${TEAM.ageShort?" "+TEAM.ageShort:""} ${RUGBY?"🏉":"⚽"}`;
+const BD_LOCK=`<p class="hint rt-lock">🔒 Only coaches signed in to this site can see birthdays. We keep the day and month only, never the year.</p>`;
+const bdRow=o=>`<div class="bd-row"><span class="bd-cake">🎂</span><span class="bd-who"><b>${esc(o.n)}</b><small>${esc(bdText(o.md))} · ${o.days===0?"<b>today!</b>":bdWhen(o)}</small></span><button class="mini" data-bdcopy="${esc(o.n)}">Copy message</button></div>`;
+// top of the home page, coaches only, when someone's birthday is in the next 7 days
+function bdHomeCard(){if(!canWrite||!BD)return "";const up=bdList().filter(o=>o.days<=7);if(!up.length)return "";
+  return `<section class="card bd-home edit-only"><h3>${up.some(o=>o.days===0)?"🎉 Birthday today":"Birthdays this week"}</h3>${up.map(bdRow).join("")}<p class="hint" style="margin-top:6px">Copy a message to post in the team chat. Only coaches see this card.</p></section>`}
+function bdPlayerCard(n){if(!canWrite||!BD)return "";const md=BD[n],o=md&&bdNext(md);
+  return `<section class="card edit-only"><h3>Birthday</h3>${md?`<p>🎂 <b>${esc(bdText(md))}</b> · ${o.days===0?"today!":bdWhen(o)}</p>`:`<p class="hint">No birthday added yet. Add it and the site reminds the coaches the week before.</p>`}
+    <div class="btns" style="margin-top:8px"><button class="mini" data-view="birthdays">${md?"Change birthdays":"Add birthday"}</button>${md?`<button class="mini" data-bdcopy="${esc(n)}">Copy birthday message</button>`:""}</div>${BD_LOCK}</section>`}
+function birthdaysView(){
+  if(!canWrite)return `<div class="stack"><section class="card empty">Birthdays are for coaches only. Sign in as a coach to see them.</section></div>`;
+  if(BD===null)return `<div class="stack"><section class="card"><h2 style="margin-top:0">Birthdays</h2><p class="hint">Birthdays aren't switched on for this team's database yet. Ask Touchline Tales to turn them on.</p></section></div>`;
+  if(!bdDraft){bdDraft={};Object.entries(BD).forEach(([n,md])=>{const [m,d]=md.split("-").map(Number);bdDraft[n]={m,d}})}
+  const names=players.filter(p=>p.current).map(p=>p.name).sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b)),up=bdList().slice(0,4);
+  const row=n=>{const v=bdDraft[n]||{};return `<div class="bd-edit"><span class="bd-n"><span class="num">${esc(numOf(n))||"·"}</span><b>${esc(n)}</b></span>
+    <select data-bdd="${esc(n)}" aria-label="${esc(n)}'s birthday: day"><option value="">Day</option>${Array.from({length:31},(_,i)=>`<option${v.d===i+1?" selected":""}>${i+1}</option>`).join("")}</select>
+    <select data-bdm="${esc(n)}" aria-label="${esc(n)}'s birthday: month"><option value="">Month</option>${BD_MONTHS.map((x,i)=>`<option value="${i+1}"${v.m===i+1?" selected":""}>${x}</option>`).join("")}</select></div>`};
+  return `<div class="stack">
+  <section class="card"><h2 style="margin-top:0">🎂 Birthdays</h2><p>Add each ${esc(PL.replace(/s$/,""))}'s birthday and the site reminds the coaches the week before, with a message ready to post in the team chat.</p>${BD_LOCK}</section>
+  ${up.length?`<section class="card"><h3>Coming up</h3>${up.map(bdRow).join("")}</section>`:""}
+  <section class="card"><h3>Squad</h3><p class="hint" style="margin-bottom:8px">Day and month only. Leave both blank to remove a birthday.</p><div class="bd-list">${names.map(row).join("")||`<p class="hint">No ${esc(PL)} on the squad yet.</p>`}</div></section>
+  <div class="btns rt-save"><button class="btn gold" id="bdSave"${bdBusy?" disabled":""}>Save birthdays</button></div></div>`;
+}
+async function bdSave(){if(!canWrite||bdBusy||!bdDraft)return;const up=[],gone=[];
+  for(const [n,v] of Object.entries(bdDraft)){if(!v.d&&!v.m){if(BD[n])gone.push(n);continue}
+    if(!v.d||!v.m){toast(`Pick both a day and a month for ${n}.`);return}
+    if(v.d>[31,29,31,30,31,30,31,31,30,31,30,31][v.m-1]){toast(`${BD_MONTHS[v.m-1]} doesn't have ${v.d} days. Check ${n}'s birthday.`);return}
+    const md=String(v.m).padStart(2,"0")+"-"+String(v.d).padStart(2,"0");if(BD[n]!==md)up.push({player:n,bday:md})}
+  if(!up.length&&!gone.length){toast("Nothing has changed.");return}
+  bdBusy=true;render();
+  try{if(up.length){const {error}=await sb.from("player_birthdays").upsert(up,{onConflict:"player"});if(error)throw error}
+    if(gone.length){const {error}=await sb.from("player_birthdays").delete().in("player",gone);if(error)throw error}
+    await loadBirthdays();toast("Birthdays saved. Only coaches can see them.")}
+  catch(e){toast("Couldn't save the birthdays. Check your connection and try again.")}
+  bdBusy=false;render()}
+document.addEventListener("change",e=>{const s=e.target;if(!bdDraft||!s.dataset||!(s.dataset.bdd||s.dataset.bdm))return;
+  const n=s.dataset.bdd||s.dataset.bdm,v=bdDraft[n]||(bdDraft[n]={});v[s.dataset.bdd?"d":"m"]=s.value?+s.value:null});
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.view==="birthdays")bdDraft=null;
+  if(b.dataset.bdcopy){e.stopPropagation();copyOut(bdMsg(b.dataset.bdcopy),"Copied. Paste it into the team chat.");return}
+  if(b.id==="bdSave"){bdSave();return}
+},true);
 
 // ---------- season story ("Wrapped"): a few swipeable slides for one player, from the stats already on the site ----------
 let STORY=null;
@@ -2579,12 +2637,12 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","kit"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();
   await loadTav();alSync();
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadKit();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadKit();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
