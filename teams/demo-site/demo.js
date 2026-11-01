@@ -104,6 +104,8 @@ if(!T.player_ratings){const done=T.matches.filter(m=>m.us!=null&&m.date<day(0)&&
 // player of the month: last month's star, with a line on why
 if(!T.player_of_month){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);const cur=T.players.filter(p=>p.current);
   T.player_of_month=cur.length?[{month:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`,player:cur[Math.min(2,cur.length-1)].name,note:"Worked so hard for the team every game this month",updated:new Date().toISOString()}]:[];save()}
+// birthdays (day and month only): one in a couple of days so the coach reminder shows, the rest spread over the year
+if(!T.player_birthdays){T.player_birthdays=T.players.filter(p=>p.current).slice(0,8).map((p,i)=>({player:p.name,bday:day(i?i*41+9:2).slice(5)}));save()}
 function advanceCheers(){const lv=T.matches.find(x=>x.date===day(0)&&x.live&&x.live.status==="live");if(!lv)return;const secs=(Date.now()-DB.start)/1000;DB.cdone=DB.cdone||0;
   while(DB.cdone<CHEER_SCRIPT.length&&CHEER_SCRIPT[DB.cdone][0]<=secs){T.cheers.push(Object.assign({id:++seq+5000,match_id:lv.id,at:new Date().toISOString(),hidden:false},CHEER_SCRIPT[DB.cdone][1]));DB.cdone++}save()}
 function advanceLive(){
@@ -122,7 +124,7 @@ function advanceLive(){
 
 // ---------- a little PostgREST: enough for the queries the site makes ----------
 const KEYS={availability:["match_id","player"],player_photos:["player"],badges:["key"],training_attendance:["day","player"],poll_votes:["poll_id","voter"],
-  coaches:["email"],page_views:["day"],player_ratings:["match_id","player"],player_of_month:["month"]};
+  coaches:["email"],page_views:["day"],player_ratings:["match_id","player"],player_birthdays:["player"],player_of_month:["month"]};
 const keyOf=t=>KEYS[t]||["id"];
 const parse=v=>v==="null"?null:v==="true"?true:v==="false"?false:v;
 function test(r,col,expr){const i=expr.indexOf(".");const op=expr.slice(0,i),raw=expr.slice(i+1),x=r[col];
