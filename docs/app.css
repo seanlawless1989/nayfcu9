@@ -491,3 +491,16 @@ a.sp-item:hover{background:rgba(127,127,127,.08)}
 .sp-ini{display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:var(--club,#2235E8);color:#fff;font:700 20px var(--body)}
 .sp-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .sp-row .sp-logo{width:72px;height:48px;flex:none}.sp-row .sp-logo img{max-height:48px}.sp-row .sp-ini{width:44px;height:44px;font-size:15px}
+
+/* player page: by-competition tables, every column fits its card */
+.csgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:10px}
+table.lb.cs{min-width:0}
+table.lb.cs thead th{white-space:normal;letter-spacing:.04em;line-height:1.25;vertical-align:bottom;padding:6px 6px}
+table.lb.cs td{padding:8px 6px;white-space:nowrap}
+table.lb.cs td:first-child{white-space:normal}
+table.lb.cs th:not(:first-child),table.lb.cs td:not(:first-child){width:1%}
+table.lb.cs .ctag{margin-right:0}
+table.lb.cs .pt{display:block;font-size:11px;white-space:nowrap}
+table.lb.cs .ctag{white-space:normal;line-height:1.3}
+@media (max-width:520px){table.lb.cs thead th{font-size:10px;letter-spacing:.02em;padding:6px 3px}table.lb.cs td{padding:8px 3px}table.lb.cs .ctag{font-size:10px;padding:1px 4px;letter-spacing:.02em}}
+@media (max-width:520px){table.lb.cs th[data-s] span{display:none}table.lb.cs th[data-s]:before{content:attr(data-s)}}
