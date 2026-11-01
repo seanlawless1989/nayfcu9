@@ -1640,7 +1640,7 @@ function reportsView(){
       <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"")}</div><div class="meta">${esc(txt.length>220?txt.slice(0,220).replace(/\s\S*$/,"")+"…":txt)}</div></div>
       <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:""}</div></div>`});
   return `<div class="list">${back}<h2 style="margin:6px 0 0">Match reports</h2><p class="hint">Every report, newest first. A tournament has one report for the whole tournament. Tap one to read it in full.</p>${out}</div>`}
-// ---------- tournament reports (tournaments.report, supabase/18_tournament_report.sql) ----------
+// ---------- tournament reports (tournaments.report, supabase/23_tournament_report.sql) ----------
 // A tournament gets one report for the whole tournament instead of a report for each game. It has its own page
 // (?tour=<id>), the tournament card shows the start of it, and each of its games links to it.
 let trTour=null,trFrom="results",trWrite=false;
