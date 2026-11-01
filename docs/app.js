@@ -360,8 +360,21 @@ let AV={};// {match_id:{player:status}}
 let PHOTOS={};// player photos {name:dataURL}, everyone can see them, only coaches change them
 async function loadPhotos(){if(!sb){PHOTOS={};return}const {data}=await sb.from("player_photos").select("player,img");PHOTOS={};(data||[]).forEach(r=>PHOTOS[r.player]=r.img)}
 // Website visits: counts only (see page_views in supabase/1_schema.sql). Coaches' phones don't count.
-let VIEWS=null;
-async function loadViews(){if(!sb||!canWrite){VIEWS=null;return}const {data}=await sb.from("page_views").select("day,views,visitors").order("day");VIEWS=data||[]}
+let VIEWS=null,ACTIVE=null;
+async function loadViews(){ACTIVE=null;if(!sb||!canWrite){VIEWS=null;return}const {data}=await sb.from("page_views").select("day,views,visitors").order("day");VIEWS=data||[];
+  try{const a=await sb.rpc("active_summary");if(!a.error&&a.data)ACTIVE=a.data}catch(e){}}
+// signed-in coaches and family-code parents: one row per person per day (supabase/25_active_days.sql), once per page load
+let activeLogged=null;
+function logActive(){if(!sb||!me||(!canWrite&&!isParent())||activeLogged===me.id)return;activeLogged=me.id;sb.rpc("log_active").then(()=>{},()=>{})}
+function activeBlock(){const A=ACTIVE;if(!A||!A.since)return "";
+  const today=new Date().toLocaleDateString("en-CA",{timeZone:"Europe/London"}),t=(A.days||[]).find(r=>r.day===today)||{coaches:0,parents:0},n=(x,a,b)=>`${x} ${x===1?a:b}`;
+  return `<h3 style="margin-top:14px">Signed in</h3>
+    <div class="kv" style="margin-top:10px">
+      <div><span>Today</span><b>${t.coaches+t.parents}</b><small>${n(t.coaches,"coach","coaches")}, ${n(t.parents,"parent","parents")}</small></div>
+      <div><span>Last 7 days</span><b>${A.coaches7+A.parents7}</b><small>${n(A.coaches7,"coach","coaches")}, ${n(A.parents7,"parent","parents")}</small></div>
+      <div><span>Since ${esc(A.since)}</span><b>${A.coaches+A.parents}</b><small>${n(A.coaches,"coach","coaches")}, ${n(A.parents,"parent","parents")}</small></div>
+    </div>
+    <p class="hint" style="margin-top:6px">Different people signed in: coaches by email, parents by family code (each phone counts once).</p>`}
 function logView(){try{
   if(canWrite)localStorage.setItem(SK+".coachDevice","1");
   if(localStorage.getItem(SK+".coachDevice"))return;
@@ -369,7 +382,7 @@ function logView(){try{
   localStorage.setItem(SK+".seen",today);sb.rpc("log_view",{p_new:isNew}).then(()=>{},()=>{});
 }catch(e){}}
 function viewsCard(){
-  if(!VIEWS)return "";if(!VIEWS.length)return `<section class="card edit-only"><h3>Website visits</h3><p class="hint">Counting starts now. Check back tomorrow.</p></section>`;
+  if(!VIEWS)return "";if(!VIEWS.length)return `<section class="card edit-only"><h3>Website visits</h3><p class="hint">Counting starts now. Check back tomorrow.</p>${activeBlock()}</section>`;
   const today=new Date().toLocaleDateString("en-CA",{timeZone:"Europe/London"}),ago=n=>new Date(Date.now()-n*864e5).toLocaleDateString("en-CA",{timeZone:"Europe/London"});
   const sum=(from,k)=>VIEWS.filter(r=>r.day>=from).reduce((t,r)=>t+r[k],0),t0=VIEWS.find(r=>r.day===today)||{views:0,visitors:0};
   const last=VIEWS.slice(-14),mx=Math.max(1,...last.map(r=>r.views));
@@ -381,7 +394,7 @@ function viewsCard(){
       <div><span>Since ${esc(VIEWS[0].day)}</span><b>${sum("",'views')}</b></div>
     </div>
     <h3 style="margin-top:14px">Last 14 days</h3><div class="bars">${last.map(r=>`<div title="${r.visitors} people"><b>${r.views}</b><i style="height:${r.views/mx*100}%"></i>${+r.day.slice(8)}</div>`).join("")}</div>
-    <p class="hint" style="margin-top:6px">Times the site was opened. "People" counts each phone or computer once a day. Coaches' phones aren't counted, and nothing about who visited is stored.</p></section>`;
+    <p class="hint" style="margin-top:6px">Times the site was opened. "People" counts each phone or computer once a day. Coaches' phones aren't counted, and nothing about who visited is stored.</p>${activeBlock()}</section>`;
 }
 // ---------- sponsor report (public.post_log, coaches only) ----------
 // The graphics page logs each saved or copied post with the sponsors drawn on it; set beside website visits,
@@ -812,7 +825,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
   ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
-  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when. Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
+  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
   ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts. Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
@@ -2818,7 +2831,7 @@ async function checkCoach(){
   if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
-  FAM=null;await loadParent();
+  FAM=null;await loadParent();logActive();
   await loadTav();alSync();
   await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadKit();
   authBox();render();
