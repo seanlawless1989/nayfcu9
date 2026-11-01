@@ -2826,10 +2826,11 @@ async function checkCoach(){
 document.addEventListener("click",async e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.id==="signOut"){await sb.auth.signOut();return}
-  if(b.id==="signIn"){const m=document.getElementById("main");view="login";
-    m.hidden=false;document.getElementById("gfxView").hidden=true;
-    m.innerHTML=`<form class="card stack" id="loginForm" style="max-width:420px"><h2>Coach sign in</h2><p class="hint">We'll email you a sign-in link and a code. Only coaches on the club's list can add matches.${me&&isParent()?" This phone is signed in with a family code: as a coach you'll see every player, so you won't need it. If you sign out as a coach later, type the family code again.":""}</p><label class="f">Email<input type="text" id="loginEmail" inputmode="email" autocomplete="email"></label><div class="btns"><button class="btn" type="submit">Email me a link</button><button class="btn ghost" type="button" data-view="home">Cancel</button></div></form>`;return}
+  if(b.id==="signIn"){showLogin();return}
 });
+function showLogin(note){const m=document.getElementById("main");view="login";
+    m.hidden=false;document.getElementById("gfxView").hidden=true;
+    m.innerHTML=`<form class="card stack" id="loginForm" style="max-width:420px"><h2>Coach sign in</h2><p class="hint">${note||""}We'll email you a sign-in link and a code. Only coaches on the club's list can add matches.${me&&isParent()?" This phone is signed in with a family code: as a coach you'll see every player, so you won't need it. If you sign out as a coach later, type the family code again.":""}</p><label class="f">Email<input type="text" id="loginEmail" inputmode="email" autocomplete="email"></label><div class="btns"><button class="btn" type="submit">Email me a link</button><button class="btn ghost" type="button" data-view="home">Cancel</button></div></form>`}
 // step 2: the code from the email. On an iPhone the Home Screen app keeps its own sign-in, separate from Safari,
 // so tapping the emailed link signs in Safari, not the app; typing the code signs in the app itself.
 function loginCodeStep(email){const m=document.getElementById("main");view="login";
@@ -2858,6 +2859,16 @@ document.addEventListener("submit",async e=>{
   if(!window.supabase||!CFG.supabaseUrl||!CFG.supabaseAnonKey){document.getElementById("main").innerHTML=`<div class="card empty">This site isn't connected to its database yet. Add the Supabase details to config.js (see the README).</div>`;return}
   // CFG.schema: this team's own section when several teams share one Supabase project (tools/team_schema_sql.py).
   // Its sign-in is kept apart too, so a coach of one team signing in on another team's page can't sign them out of their own.
+  // An old or already-used sign-in link comes back as #error=...&error_code=otp_expired. Left in the address, supabase-js
+  // would treat it as a failed sign-in and sign the coach OUT of the session they already had, then show the visitor view
+  // with no message. So take it out of the address first, keep any existing sign-in, and explain what happened.
+  // (kept for the tab too, because the first visit after a Team setup change reloads the page once)
+  const linkErr=(()=>{const h=new URLSearchParams(location.hash.replace(/^#/,"")),q=new URLSearchParams(location.search);
+    const code=h.get("error_code")||q.get("error_code")||h.get("error")||q.get("error");
+    if(!code){let k=null;try{k=sessionStorage.getItem("linkErr");sessionStorage.removeItem("linkErr")}catch(e){}return k}
+    try{sessionStorage.setItem("linkErr",code)}catch(e){}
+    let qs=location.search;if(q.has("error")||q.has("error_code")){["error","error_code","error_description"].forEach(k=>q.delete(k));qs=q.toString()?"?"+q.toString():""}
+    try{history.replaceState(null,"",location.pathname+qs)}catch(e){}return code})();
   sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey,CFG.schema?{db:{schema:CFG.schema},auth:{storageKey:"sb-"+CFG.schema+"-auth-token"}}:{});
   db=makeDb(sb);canWrite=false;
   if(window.SETUP_WAIT)suRefresh().catch(()=>{window.SETUP_WAIT=false;render()});
@@ -2873,6 +2884,8 @@ document.addEventListener("submit",async e=>{
   await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors(),loadPom()]);
   if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
+  if(linkErr){try{sessionStorage.removeItem("linkErr")}catch(e){}if(canWrite)toast("You're already signed in as a coach. That email link was an old one, so you don't need it.");
+    else showLogin("<b>That sign-in link has already been used or has run out.</b> Each email link works once. Type your email for a new one, then use the newest email (or type its code). Next time, open this page from your bookmark or Home Screen, not the old email. ")}
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
   for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom"])if(new URLSearchParams(location.search).has(v))setView(v);
