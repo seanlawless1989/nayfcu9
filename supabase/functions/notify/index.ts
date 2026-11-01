@@ -32,7 +32,7 @@ const RSCORE: Record<string, string> = { try: "Try", con: "Conversion", pen: "Pe
 // The player of the match sponsor (TEAM.potm.sponsor and .icon in docs/team.js). POTM_SPONSOR=none for a plain "Player of the match".
 const POTM_SPONSOR = (Deno.env.get("POTM_SPONSOR") ?? "Coffey Coffee").trim();
 let POTM = POTM_SPONSOR && POTM_SPONSOR !== "none" ? `${POTM_SPONSOR} Player of the Match` : "Player of the Match";
-let POTM_ICON = Deno.env.get("POTM_ICON") ?? (POTM_SPONSOR === "Coffey Coffee" ? "☕" : "⭐");
+let POTM_ICON = Deno.env.get("POTM_ICON") ?? (POTM_SPONSOR === "Coffey Coffee" ? "☕" : "🏆");
 const URL_ = Deno.env.get("SUPABASE_URL")!, KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const pub = createClient(URL_, KEY, { auth: { persistSession: false } });
 // db is the current team's schema; requests are handled one at a time (see Deno.serve below), so switching it is safe
@@ -55,7 +55,7 @@ async function useTeam(schema: string) {
     const a = data?.settings ?? {};
     const sp = (a.potm?.sponsor ?? "").trim();
     base = { US: a.name ?? "", SCORES: a.publicScores === true, AGE: a.ageGroup ?? "", SPORT: a.sport ?? "football",
-      POTM: sp ? `${sp} Player of the Match` : "Player of the Match", POTM_ICON: a.potm?.icon || "⭐" };
+      POTM: sp ? `${sp} Player of the Match` : "Player of the Match", POTM_ICON: a.potm?.icon || "🏆" };
   }
   ({ US, SCORES, AGE, SPORT, POTM, POTM_ICON } = base);
   const { data, error } = await db.from("team_settings").select("settings").eq("id", 1).maybeSingle();
@@ -68,7 +68,7 @@ async function useTeam(schema: string) {
   if (t.potm) {
     const sp = (t.potm.sponsor ?? "").trim();
     POTM = sp ? `${sp} Player of the Match` : "Player of the Match";
-    POTM_ICON = t.potm.icon || "⭐";
+    POTM_ICON = t.potm.icon || "🏆";
   }
 }
 // One key pair for the whole project, in public.push_keys (service role only): every team's site uses its public half.

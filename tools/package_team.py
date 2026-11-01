@@ -248,7 +248,7 @@ def main():
                  "set poweredBy: false in team.js to hide it.") if team.get("poweredBy", True) is not False else
                 'The "Powered by Touchline Tales" footer link is turned off (poweredBy: false in team.js).',
         scores="true" if team["publicScores"] else "false",
-        potm=(team.get("potm") or {}).get("sponsor") or "none", potm_icon=(team.get("potm") or {}).get("icon") or "⭐", sport=sport,
+        potm=(team.get("potm") or {}).get("sponsor") or "none", potm_icon=(team.get("potm") or {}).get("icon") or "🏆", sport=sport,
         scores_note=("Scores are **public**: visitors see results, scorers and " + ("try" if rugby else "goal") + " alerts."
                      + (" FA rules don't allow this for U7 to U11 teams, so the club has chosen to take that on." if young else ""))
                     if team["publicScores"] else

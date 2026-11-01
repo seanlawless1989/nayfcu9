@@ -43,7 +43,7 @@ function maskScore(m){if(!m)return m;const o=Object.assign({},m,{us:null,them:nu
   if(m.live)o.live=Object.assign({},m.live,{events:(m.live.events||[]).filter(e=>e.k!=="goal"&&e.k!=="them").map(e=>{const x=Object.assign({},e);delete x.s;return x})});
   return o}
 let RAW=[];const pubMatches=()=>noScores()?RAW.map(maskScore):RAW.slice();
-const POTM=((TEAM.potm&&TEAM.potm.sponsor)?TEAM.potm.sponsor+" ":"")+"player of the match",POTM_IC=(TEAM.potm&&TEAM.potm.icon)||"⭐";
+const POTM=((TEAM.potm&&TEAM.potm.sponsor)?TEAM.potm.sponsor+" ":"")+"player of the match",POTM_IC=(TEAM.potm&&TEAM.potm.icon)||"🏆";
 const SITE=(TEAM.siteUrl||location.origin).replace(/\/$/,""),APP=TEAM.appName||document.title,CREST=TEAM.crest||"crest.png";
 const fileTag=APP.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 (function applyTeam(){const t=TEAM;if(!t.name)return;document.title=`${t.name} ${t.ageGroup||""}`.trim();
@@ -263,7 +263,7 @@ function homeView(){if(noScores())return homeNoScores();
     <section class="card"><h3>Top ${RUGBY?"try ":""}scorers, all games</h3>${scorers.length?`<table class="lb"><tbody>${scorers.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/max*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No ${SP.goals} logged yet.</p>`}</section>
     ${RUGBY?(pp=>`<section class="card"><h3>Top points scorers</h3>${pp.length?`<table class="lb"><tbody>${pp.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.pts/pp[0][1].pts*100)}%"></i><b>${o.pts}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No points logged yet.</p>`}</section>`)(Object.entries(ps).filter(([,o])=>o.pts>0).sort((a,b)=>b[1].pts-a[1].pts||a[0].localeCompare(b[0]))):""}
     ${SP.assists&&assistsTracked(season)?`<section class="card"><h3>Top assists</h3>${assisters.length?`<table class="lb"><tbody>${assisters.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.assists/assisters[0][1].assists*100)}%"></i><b>${o.assists}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No assists logged yet.</p>`}</section>`:""}
-    <section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td><span class="potm">${"☕".repeat(Math.min(o.potm,6))}</span> <b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No awards logged yet.</p>`}</section>
+    <section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td><span class="potm">${POTM_IC.repeat(Math.min(o.potm,6))}</span> <b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No awards logged yet.</p>`}</section>
   </div>${sponsorStrip()}</div>`;
 }
 
@@ -288,7 +288,7 @@ function matchRow(m){
     <div class="d">${d?`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
       <div class="meta">${cc?`<span class="ctag">${esc(compName(m.comp))}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":!r&&!m.hidden&&!m.postponed?"KO TBC":""].filter(Boolean).map(esc).join(" · ")}</div>
-      ${sc?`<div class="meta">${SP.ball} ${esc(sc)}</div>`:""}${RUGBY&&kicksLine(m)?`<div class="meta">🎯 ${esc(kicksLine(m))}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">☕ ${esc(m.potm)}</div>`:""}${m.report&&m.report.trim()?`<div class="meta">📝 Match report</div>`:!r&&hasPreview(m)?`<div class="meta">📰 Match preview</div>`:""}
+      ${sc?`<div class="meta">${SP.ball} ${esc(sc)}</div>`:""}${RUGBY&&kicksLine(m)?`<div class="meta">🎯 ${esc(kicksLine(m))}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">${POTM_IC} ${esc(m.potm)}</div>`:""}${m.report&&m.report.trim()?`<div class="meta">📝 Match report</div>`:!r&&hasPreview(m)?`<div class="meta">📰 Match preview</div>`:""}
       ${!r&&!m.hidden&&!m.postponed&&mdBits(m).length?`<div class="meta">🎒 ${mdBits(m).map(esc).join(" · ")}</div>`:""}${!r&&!m.hidden&&!m.postponed&&wxText(m)?`<div class="meta">${esc(wxText(m))} at kick-off</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&!m.hidden&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}</div>
@@ -1875,7 +1875,7 @@ function bookView(){
   out+=page("",`<h1 class="ttl">The season in numbers</h1>
     <div class="rec">${[["P","Played"],["W","Won"],["D","Drawn"],["L","Lost"],["F","Scored"],["A","Conceded"],["GD",RUGBY?"Points diff":"Goal diff"]].map(([k,l])=>`<div><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}</div>
     <div class="two"><div><h3>Top ${RUGBY?"try ":""}scorers</h3><table>${scorers.map((n,i)=>`<tr><td>${i+1}. ${esc(n)}</td><td class="n">${st(n).goals}</td></tr>`).join("")||`<tr><td>No ${SP.goals} logged yet</td></tr>`}</table>${RUGBY?`<h3 style="margin-top:6mm">Points</h3><table>${roster.filter(n=>st(n).pts).sort((a,b)=>st(b).pts-st(a).pts).slice(0,6).map(n=>`<tr><td>🎯 ${esc(n)}</td><td class="n">${st(n).pts}</td></tr>`).join("")||`<tr><td>None yet</td></tr>`}</table>`:""}</div>
-    <div><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3><table>${roster.filter(n=>st(n).potm).sort((a,b)=>st(b).potm-st(a).potm).map(n=>`<tr><td>☕ ${esc(n)}</td><td class="n">${st(n).potm}</td></tr>`).join("")||`<tr><td>None yet</td></tr>`}</table>
+    <div><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3><table>${roster.filter(n=>st(n).potm).sort((a,b)=>st(b).potm-st(a).potm).map(n=>`<tr><td>${POTM_IC} ${esc(n)}</td><td class="n">${st(n).potm}</td></tr>`).join("")||`<tr><td>None yet</td></tr>`}</table>
     ${at?`<h3 style="margin-top:6mm">Assists</h3><table>${roster.filter(n=>st(n).assists).sort((a,b)=>st(b).assists-st(a).assists).slice(0,6).map(n=>`<tr><td>🅰️ ${esc(n)}</td><td class="n">${st(n).assists}</td></tr>`).join("")||`<tr><td>None yet</td></tr>`}</table>`:""}</div></div>
     ${troph.length?`<div class="hl">🏆 ${troph.map(x=>`${esc(x.title)}: ${esc(x.ach)}`).join(" · ")}</div>`:""}`);
   // results (split across pages, 34 rows each)
@@ -2457,7 +2457,7 @@ function suTeam(f){const n=(/\d+/.exec(f.ageGroup)||[])[0],ageShort=n?`U${n}s`:f
     appName:`${abbr} ${ageShort}`,supportName:f.supportName||"the site admin",league:f.league||"League",format:f.format,halfLength:+f.halfLength||20,
     colours:Object.assign({},TEAM.colours||{},{club:f.club,clubDeep:darken(f.club,.3),clubInk:inkFor(f.club),gold:f.second,goldInk:inkFor(f.second)}),crest:f.crest||"crest.png",
     sponsor:f.sponsorName?{name:f.sponsorName,logo:f.sponsorLogo||"",mark:f.sponsorName.split(/\s+/).map(w=>w[0]).join("").toLowerCase().slice(0,3)}:null,
-    potm:{sponsor:f.potmName||"",logo:f.potmName?f.potmLogo||"":"",icon:"⭐",ribbon:`${abbr} ${ageShort}`.toUpperCase()},kitSponsor:null,kits,captain:"",
+    potm:{sponsor:f.potmName||"",logo:f.potmName?f.potmLogo||"":"",icon:"🏆",ribbon:`${abbr} ${ageShort}`.toUpperCase()},kitSponsor:null,kits,captain:"",
     hashtags:tags,shortHashtags:tags.split(/\s+/).slice(0,2).join(" "),publicScores:TEAM.publicScores===true,_setup}}
 function shrinkLogo(file,S){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(S/im.width,S/im.height,1),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/png"))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function suLoad(){if(!sb||!canWrite)return;

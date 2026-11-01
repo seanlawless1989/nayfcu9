@@ -24,7 +24,7 @@ self.TEAM = {
              accent: "#F6CDD0", accentDeep: "#B5121B" },
   crest: "crest.png",
   sponsor: null,
-  potm: { sponsor: "", logo: "", icon: "⭐", ribbon: "STARLC U13s" },
+  potm: { sponsor: "", logo: "", icon: "🏆", ribbon: "STARLC U13s" },
   kitSponsor: null,
   kits: {
     home: { label: "Red and amber", body: "#B5121B", trim: "#F2B705", ink: "#FFFFFF", band: "#F2B705", bandInk: "#111111" },
