@@ -183,7 +183,7 @@ function rpc(fn,a){
     case "list_coaches":return json(T.coaches.map(c=>c.email));
     case "add_coach":upsert("coaches",{email:String(a.new_email||"").toLowerCase()},["email"]);save();return json(null);
     case "remove_coach":T.coaches=T.coaches.filter(c=>c.email!==String(a.old_email||"").toLowerCase());save();return json(null);
-    case "set_availability":if(mustSignIn()&&!kidNames().includes(a.p_player))return json({message:"Sign in with your family code first"},400);upsert("availability",{match_id:a.p_match,player:a.p_player,status:a.p_status},["match_id","player"]);save();return json(null);
+    case "set_availability":if(mustSignIn()&&!kidNames().includes(a.p_player))return json({message:"Sign in with your family code first"},400);upsert("availability",{match_id:a.p_match,player:a.p_player,status:a.p_status,by_coach:isCoach()},["match_id","player"]);save();return json(null);
     case "cast_vote":if(mustSignIn()&&!famKey())return json({message:"Sign in with your family code to vote"},400);upsert("poll_votes",{poll_id:a.p_poll,voter:famKey()||a.p_voter,choice:a.p_choice},["poll_id","voter"]);save();return json(null);
     case "poll_totals":{const c={};(T.poll_votes||[]).filter(v=>v.poll_id===a.p_poll).forEach(v=>c[v.choice]=(c[v.choice]||0)+1);return json(Object.entries(c).map(([choice,votes])=>({choice:+choice,votes})))}
     case "cheers_for":advanceCheers();return json(T.cheer_settings[0].muted?[]:T.cheers.filter(c=>c.match_id===a.p_match&&!c.hidden).slice(-50).map(({id,cheer,name,at})=>({id,cheer,name,at})));
