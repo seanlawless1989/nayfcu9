@@ -978,9 +978,11 @@ function msRow(x){return `<div class="ms"><span>🎉 <b>${esc(x.n)}</b>: ${esc(x
 
 // ---------- playing time ----------
 function halvesOf(m){return m.halves||{}}
-function ptStats(list){const t=list.filter(m=>Object.keys(halvesOf(m)).length);const out={};t.forEach(m=>{Object.keys(played(m)).forEach(n=>{const o=out[n]=out[n]||{q:0,poss:0};o.poss+=2});Object.entries(halvesOf(m)).forEach(([n,q])=>{const o=out[n]=out[n]||{q:0,poss:0};o.q+=+q||0})});
+// the most halves anyone can play in the game on the match form: 1 when it was played straight through
+function hMax(){return F&&F.live&&F.live.noHt?1:2}
+function ptStats(list){const t=list.filter(m=>Object.keys(halvesOf(m)).length);const out={};t.forEach(m=>{Object.keys(played(m)).forEach(n=>{const o=out[n]=out[n]||{q:0,poss:0};o.poss+=m.live&&m.live.noHt?1:2});Object.entries(halvesOf(m)).forEach(([n,q])=>{const o=out[n]=out[n]||{q:0,poss:0};o.q+=+q||0})});
   // minutes come from games run in live match mode: everyone in that day's squad could have played the whole game
-  const lm=list.filter(liveMinsKept);lm.forEach(m=>{const L=m.live,len=(+L.halfLen||20)*2;L.squad.forEach(n=>{const o=out[n]=out[n]||{q:0,poss:0};o.min=(o.min||0)+(+L.mins[n]||0);o.avail=(o.avail||0)+len})});
+  const lm=list.filter(liveMinsKept);lm.forEach(m=>{const L=m.live,len=gameLen(L);L.squad.forEach(n=>{const o=out[n]=out[n]||{q:0,poss:0};o.min=(o.min||0)+(+L.mins[n]||0);o.avail=(o.avail||0)+len})});
   return {games:t.length,mg:lm.length,out}}
 // on the match form: who in this game hasn't been player of the match yet this season (coaches only)
 function potmNudge(names){if(!names.length)return "";const s=seasonOf(F.date),list=matches.filter(m=>!m.practice&&m.id!==F.id&&seasonOf(m.date)===s);if(!list.some(m=>m.potm))return "";
@@ -1096,10 +1098,18 @@ function liveStart(id){const m=matches.find(x=>x.id===id);if(!m)return;let saved
   // another coach's phone may have started the game, or locked the line-up before kick-off
   const srv=m.live&&m.live.status&&(m.live.status!=="pre"||(m.live.events||[]).some(e=>e.k==="lu"))?m.live:null;
   // a game already finished on the server (by another phone, or fixed by hand) wins over this phone's copy
-  LV=saved&&saved.v===3&&!(srv&&srv.status==="ft")?saved:srv?Object.assign({v:3,id,onSince:{},touched:{1:[],2:[]}},JSON.parse(JSON.stringify(srv))):{v:3,id,status:"pre",half:1,halfStart:null,halfLen:+TEAM.halfLength||20,form:FORM0,squad:sq,slots:sq.slice(0,SIDE).concat(Array(SIDE).fill("")).slice(0,SIDE),events:[],mins:{},onSince:{},touched:{1:[],2:[]}};
+  LV=saved&&saved.v===3&&!(srv&&srv.status==="ft")?saved:srv?Object.assign({v:3,id,onSince:{},touched:{1:[],2:[]}},JSON.parse(JSON.stringify(srv))):{v:3,id,status:"pre",half:1,halfStart:null,...liveDefaults(m),form:FORM0,squad:sq,slots:sq.slice(0,SIDE).concat(Array(SIDE).fill("")).slice(0,SIDE),events:[],mins:{},onSince:{},touched:{1:[],2:[]}};
   if(!LV.squad||!LV.squad.length)LV.squad=sq;setView("live")}
+// games played straight through with no half time (LV.noHt): halfLen is then the whole game. Tournament games start that way,
+// and a tournament's later games copy whatever the coach chose for the last one run, so it only needs setting once
+function liveDefaults(m){const len=+TEAM.halfLength||20;if(!m.tournament_id)return {halfLen:len,noHt:false};
+  const prev=matches.filter(x=>x.id!==m.id&&x.tournament_id===m.tournament_id&&x.live&&x.live.status&&x.live.status!=="pre").sort((a,b)=>(+b.live.halfStart||0)-(+a.live.halfStart||0))[0];
+  return prev?{halfLen:+prev.live.halfLen||len,noHt:!!prev.live.noHt}:{halfLen:len,noHt:true}}
+// the whole game in minutes, and the minute half time falls at (-1 when there isn't one)
+function gameLen(L){return (+L.halfLen||20)*(L.noHt?1:2)}
+function htMin(L){return L.noHt?-1:+L.halfLen||20}
 function liveSaveLocal(){try{localStorage.setItem(liveKey(LV.id),JSON.stringify(LV))}catch(e){}}
-function livePublic(){return {locked:!!LV.locked,status:LV.status,half:LV.half,halfStart:LV.halfStart,halfLen:LV.halfLen,form:LV.form,slots:LV.sin?LV.slots.map((n,i)=>n||(Object.entries(LV.sin).find(([,v])=>v.slot===i)||[""])[0]):LV.slots,squad:LV.squad,events:LV.events,mins:LV.mins}}
+function livePublic(){return {locked:!!LV.locked,status:LV.status,half:LV.half,halfStart:LV.halfStart,halfLen:LV.halfLen,noHt:!!LV.noHt,form:LV.form,slots:LV.sin?LV.slots.map((n,i)=>n||(Object.entries(LV.sin).find(([,v])=>v.slot===i)||[""])[0]):LV.slots,squad:LV.squad,events:LV.events,mins:LV.mins}}
 async function livePush(extra){const m=matches.find(x=>x.id===LV.id);if(!m)return;if(m.practice){m.live=livePublic();return}
   const body=Object.assign({played:m.played||{},assists:m.assists||{},us:m.us??0,them:m.them??0,keepers:m.keepers||{},live:livePublic(),check:""},RUGBY?{kicks:m.kicks||{}}:{},extra||{});
   const id=LV.id,last=(LV.events[LV.events.length-1]||{}).k;
@@ -1121,8 +1131,8 @@ function bench(){return LV.squad.filter(n=>!LV.slots.includes(n)&&!(LV.sin&&LV.s
 // ---------- sub plan (coaches only: it stays on the coach's phone and never goes to parents) ----------
 // LV.plan = {mode:"off"|"equal"|"manual", gk2: keeper for the second half, ch:[{m,on,off}] for manual, at: last change point dealt with, due:{m,chs}}
 const PLAN_N={off:"Off",equal:"Equal minutes",manual:"Choose my own"};
-// change points: each quarter of a half (the middle of a short half) plus half time
-function planPoints(len){const q=len>=12?[.25,.5,.75]:[.5],b=[];[0,len].forEach(h0=>{q.forEach(f=>b.push(h0+Math.round(len*f)));if(!h0)b.push(len)});return [...new Set(b)].filter(x=>x>0&&x<len*2).sort((a,c)=>a-c)}
+// change points: each quarter of a half (the middle of a short half) plus half time; with no half time, each quarter of the game
+function planPoints(len,noHt){if(noHt){const q=len>=12?[.25,.5,.75]:[.5];return [...new Set(q.map(f=>Math.round(len*f)))].filter(x=>x>0&&x<len)}const q=len>=12?[.25,.5,.75]:[.5],b=[];[0,len].forEach(h0=>{q.forEach(f=>b.push(h0+Math.round(len*f)));if(!h0)b.push(len)});return [...new Set(b)].filter(x=>x>0&&x<len*2).sort((a,c)=>a-c)}
 function planOf(L){return L.plan||(L.plan={mode:"off",gk2:"",ch:[]})}
 // the changes at minute b; xi is changed in place
 function planStep(xi,mins,b,next,len,pl,sq){const out=[];
@@ -1137,32 +1147,32 @@ function planStep(xi,mins,b,next,len,pl,sq){const out=[];
   for(let i=k0;i<xi.length&&incoming.length;i++){if(xi[i]&&keep.has(xi[i]))continue;const n=incoming.shift();out.push({m:b,on:n,off:xi[i]||"",i});xi[i]=n}
   return out}
 // play the plan through from the starting line-up to project everyone's minutes
-function planSim(L){const len=+L.halfLen||20,end=len*2,pl=planOf(L),xi=L.slots.slice(),sq=L.squad.slice(),mins={},chs=[];sq.forEach(n=>mins[n]=0);
-  const pts=[...planPoints(len),end];let t=0;
-  pts.forEach((b,k)=>{xi.forEach(n=>{if(n in mins)mins[n]+=b-t});t=b;if(b>=end||pl.mode==="off")return;chs.push(...planStep(xi,mins,b,(pts[k+1]||end)-b,len,pl,sq))});
-  return {mins,chs,end,len}}
+function planSim(L){const len=+L.halfLen||20,end=gameLen(L),ht=htMin(L),pl=planOf(L),xi=L.slots.slice(),sq=L.squad.slice(),mins={},chs=[];sq.forEach(n=>mins[n]=0);
+  const pts=[...planPoints(len,L.noHt),end];let t=0;
+  pts.forEach((b,k)=>{xi.forEach(n=>{if(n in mins)mins[n]+=b-t});t=b;if(b>=end||pl.mode==="off")return;chs.push(...planStep(xi,mins,b,(pts[k+1]||end)-b,ht,pl,sq))});
+  return {mins,chs,end,len,ht}}
 function chLine(c){return !SP.keeper?(c.off?`${esc(c.on)} on for ${esc(c.off)}`:`${esc(c.on)} on`):c.sw?`${esc(c.on)} goes in goal, ${esc(c.off)} moves out`:c.i===0&&!c.bad?`${esc(c.on)} on in goal for ${esc(c.off)}`:c.off?`${esc(c.on)} on for ${esc(c.off)}`:`${esc(c.on)} on`}
 // the game clock in whole minutes from kick-off (first half 0 to len, second half len to 2×len)
 function gameMin(L){const len=+L.halfLen||20;if(L.status==="ht")return len;if(L.status!=="live"||!L.halfStart)return 0;const el=Math.floor((Date.now()-L.halfStart)/60000);return L.half===2?len+el:Math.min(el,len-1)}
 // the next planned change once its minute arrives; worked out from the real minutes so far, so changes the coach made themselves are taken into account
 function planDue(){const pl=LV&&LV.plan;if(!pl||pl.mode==="off"||!["live","ht"].includes(LV.status))return null;if(pl.due)return pl.due;
-  const len=+LV.halfLen||20,end=len*2,now=Date.now(),gm=gameMin(LV),pts=planPoints(len);
-  const ready=pts.filter(b=>b>(pl.at||0)&&(b===len?LV.status==="ht"||LV.half===2:b<len?gm>=b&&LV.half===1||LV.half===2:LV.half===2&&gm>=b));if(!ready.length)return null;
+  const len=+LV.halfLen||20,end=gameLen(LV),now=Date.now(),gm=gameMin(LV),pts=planPoints(len,LV.noHt);
+  const ready=pts.filter(b=>b>(pl.at||0)&&(LV.noHt?gm>=b:b===len?LV.status==="ht"||LV.half===2:b<len?gm>=b&&LV.half===1||LV.half===2:LV.half===2&&gm>=b));if(!ready.length)return null;
   const b=ready[ready.length-1],k=pts.indexOf(b),mins={};LV.squad.forEach(n=>mins[n]=(+LV.mins[n]||0)+(LV.onSince[n]?(now-LV.onSince[n])/60000:0));
-  const chs=planStep(LV.slots.slice(),mins,b,(pts[k+1]||end)-b,len,pl,LV.squad).filter(c=>!c.bad);
+  const chs=planStep(LV.slots.slice(),mins,b,(pts[k+1]||end)-b,htMin(LV),pl,LV.squad).filter(c=>!c.bad);
   if(!chs.length){pl.at=b;liveSaveLocal();return null}
   pl.due={m:b,chs};liveSaveLocal();try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}return pl.due}
 function planCard(){const pl=planOf(LV),full=onPitch().length===SIDE,extra=LV.squad.length>SIDE;
   const head=`<section class="card stack" id="planCard"><h3>Sub plan</h3><div class="seg" role="group" aria-label="Sub plan">${Object.keys(PLAN_N).map(k=>`<button data-lvplan="${k}" aria-pressed="${pl.mode===k}">${PLAN_N[k]}</button>`).join("")}</div>`;
-  const what={off:"No planned subs. You make every change yourself during the game.",equal:"Shares the minutes out as evenly as it can, changing at the quarter points of each half and at half time."+(SP.keeper?" The keeper stays in goal unless you pick a different one for the second half.":""),manual:"You choose each change: the minute, who comes on and who comes off."}[pl.mode];
+  const what={off:"No planned subs. You make every change yourself during the game.",equal:LV.noHt?"Shares the minutes out as evenly as it can, changing at the quarter points of the game.":"Shares the minutes out as evenly as it can, changing at the quarter points of each half and at half time."+(SP.keeper?" The keeper stays in goal unless you pick a different one for the second half.":""),manual:"You choose each change: the minute, who comes on and who comes off."}[pl.mode];
   if(pl.mode==="off")return `${head}<p class="hint">${what} Turn on a plan and this phone buzzes when each sub is due.</p></section>`;
   if(!extra)return `${head}<p class="hint">${what}</p><p class="hint">Everyone in the squad is starting, so there's nobody to bring on.</p></section>`;
   if(!full)return `${head}<p class="hint">${what}</p><p class="hint">Fill every position on the pitch above and the plan appears here.</p></section>`;
-  const sim=planSim(LV),pts=planPoints(sim.len),ms=LV.squad.map(n=>sim.mins[n]),lo=Math.min(...ms),hi=Math.max(...ms);
-  const gk=pl.mode==="equal"&&SP.keeper?`<label class="f" style="max-width:320px">Keeper for the second half<select id="lvGk2"><option value="">${esc(LV.slots[0])} stays in goal</option>${LV.squad.filter(n=>n!==LV.slots[0]).map(n=>`<option${n===pl.gk2?" selected":""}>${esc(n)}</option>`).join("")}</select></label>`:"";
-  const add=pl.mode==="manual"?`<div class="btns"><select id="plM" aria-label="Minute">${pts.map(b=>`<option value="${b}">${b===sim.len?"Half time":b+"'"}</option>`).join("")}</select><select id="plOn" aria-label="Coming on"><option value="">Coming on…</option>${LV.squad.map(n=>`<option>${esc(n)}</option>`).join("")}</select><select id="plOff" aria-label="Coming off"><option value="">Coming off…</option>${LV.squad.map(n=>`<option>${esc(n)}</option>`).join("")}</select><button class="btn ghost" id="lvPlanAdd">Add</button></div>
+  const sim=planSim(LV),pts=planPoints(sim.len,LV.noHt),ms=LV.squad.map(n=>sim.mins[n]),lo=Math.min(...ms),hi=Math.max(...ms);
+  const gk=pl.mode==="equal"&&SP.keeper&&!LV.noHt?`<label class="f" style="max-width:320px">Keeper for the second half<select id="lvGk2"><option value="">${esc(LV.slots[0])} stays in goal</option>${LV.squad.filter(n=>n!==LV.slots[0]).map(n=>`<option${n===pl.gk2?" selected":""}>${esc(n)}</option>`).join("")}</select></label>`:"";
+  const add=pl.mode==="manual"?`<div class="btns"><select id="plM" aria-label="Minute">${pts.map(b=>`<option value="${b}">${b===sim.ht?"Half time":b+"'"}</option>`).join("")}</select><select id="plOn" aria-label="Coming on"><option value="">Coming on…</option>${LV.squad.map(n=>`<option>${esc(n)}</option>`).join("")}</select><select id="plOff" aria-label="Coming off"><option value="">Coming off…</option>${LV.squad.map(n=>`<option>${esc(n)}</option>`).join("")}</select><button class="btn ghost" id="lvPlanAdd">Add</button></div>
     <div class="btns"><button class="mini" id="lvPlanEq">Start from equal minutes</button></div>`:"";
-  const list=sim.chs.length?`<ol class="tl">${sim.chs.map((c,k)=>`<li${c.bad?' class="bad"':""}><span class="mn">${c.m===sim.len?"HT":c.m+"'"}</span><span class="ic">🔁</span><span>${chLine(c)}${c.bad?" <b>(won't work: check who's on at that point)</b>":""}${pl.mode==="manual"?` <button class="mini" data-lvplandel="${(pl.ch||[]).findIndex(x=>x.m===c.m&&x.on===c.on&&x.off===c.off)}" aria-label="Remove this change">✕</button>`:""}</span></li>`).join("")}</ol>`:`<p class="hint">No changes planned yet.</p>`;
+  const list=sim.chs.length?`<ol class="tl">${sim.chs.map((c,k)=>`<li${c.bad?' class="bad"':""}><span class="mn">${c.m===sim.ht?"HT":c.m+"'"}</span><span class="ic">🔁</span><span>${chLine(c)}${c.bad?" <b>(won't work: check who's on at that point)</b>":""}${pl.mode==="manual"?` <button class="mini" data-lvplandel="${(pl.ch||[]).findIndex(x=>x.m===c.m&&x.on===c.on&&x.off===c.off)}" aria-label="Remove this change">✕</button>`:""}</span></li>`).join("")}</ol>`:`<p class="hint">No changes planned yet.</p>`;
   const proj=LV.squad.slice().sort((a,b)=>sim.mins[b]-sim.mins[a]).map(n=>`<tr><td>${esc(n)}</td><td style="width:50%"><div class="ptbar"><i style="width:${sim.mins[n]/sim.end*100}%"></i></div></td><td>${sim.mins[n]}'</td></tr>`).join("");
   return `${head}<p class="hint">${what} This phone buzzes when a change is due and you make it with one tap. Parents don't see the plan.</p>${gk}${add}
     <h3 style="margin-top:6px">Planned changes</h3>${list}
@@ -1177,7 +1187,7 @@ function fairNudge(){const list=seasonMatches().filter(m=>m.id!==LV.id),pt=ptSta
   if(SP.keeper&&noGk.length&&noGk.length<sq.length)rows.push(["🧤",`Not had a go in goal yet: ${noGk.map(esc).join(", ")}`]);
   return rows.length?`<section class="card"><h3>Fair play check</h3><div class="pvfacts">${rows.map(([i,v])=>`<div><span>${i}</span>${v}</div>`).join("")}</div><p class="hint">From this season's games. Only coaches see this.</p></section>`:""}
 function planDueHtml(){const d=planDue();if(!d)return "";
-  return `<div class="note plandue"><b>🔁 ${d.m===+LV.halfLen?"Half-time changes":`Subs due (${d.m}')`}</b><ul>${d.chs.map(c=>`<li>${chLine(c)}</li>`).join("")}</ul><div class="btns"><button class="btn gold" id="lvPlanGo">Make ${d.chs.length>1?"these changes":"this change"}</button><button class="btn ghost" id="lvPlanSkip">Skip</button></div></div>`}
+  return `<div class="note plandue"><b>🔁 ${d.m===htMin(LV)?"Half-time changes":`Subs due (${d.m}')`}</b><ul>${d.chs.map(c=>`<li>${chLine(c)}</li>`).join("")}</ul><div class="btns"><button class="btn gold" id="lvPlanGo">Make ${d.chs.length>1?"these changes":"this change"}</button><button class="btn ghost" id="lvPlanSkip">Skip</button></div></div>`}
 function clockOn(n,now){LV.onSince[n]=now;const t=LV.touched[LV.half]=LV.touched[LV.half]||[];if(!t.includes(n))t.push(n)}
 function clockOff(n,now){if(LV.onSince[n]){LV.mins[n]=Math.round(((LV.mins[n]||0)+(now-LV.onSince[n])/60000)*10)/10;delete LV.onSince[n]}}
 function addEv(e){const m=matches.find(x=>x.id===LV.id);e.m=minuteOf(LV);e.h=LV.half;e.s=`${m.us??0}–${m.them??0}`;e.at=Date.now();LV.events.push(e)}
@@ -1239,14 +1249,16 @@ function liveView(){
   if(LV.status==="pre")return `<div class="live">${pr}${liveBoard(m,LV)}
     <section class="card stack"><h3>Starting line-up</h3>
     <div class="btns">${RUGBY&&Object.keys(FORMS).length<2?"":`<span class="hint">Formation</span><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}"${LV.locked?" disabled":""}>${f}</button>`).join("")}</div>`}
-      <label class="f" style="flex-direction:row;align-items:center;gap:8px">Minutes each half<input type="number" id="lvLen" min="5" max="45" value="${LV.halfLen}" style="width:70px"></label></div>
+      <span class="hint">Half time</span><div class="seg" role="group" aria-label="Half time"><button data-lvnoht="0" aria-pressed="${!LV.noHt}">Yes</button><button data-lvnoht="1" aria-pressed="${!!LV.noHt}">No, straight through</button></div>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px">${LV.noHt?"Minutes in the game":"Minutes each half"}<input type="number" id="lvLen" min="5" max="${LV.noHt?90:45}" value="${LV.halfLen}" style="width:70px"></label></div>
+    ${LV.noHt?`<p class="hint">Played straight through: just kick-off and full time, and minutes count as one ${LV.halfLen}-minute game.</p>`:""}
     ${pitchHtml(LV,!LV.locked)}
     <p class="hint">Subs: ${bench().map(esc).join(", ")||"none"}. ${LV.locked?`🔒 Line-up locked${m.practice?"":" and sent to parents"}. Unlock it to make a change; locking it again tells parents what changed.`:`Pick a player for each position.${SP.keeper?" The keeper is the GK spot.":""} Lock the line-up when it's final${m.practice?"":" and parents with alerts on get \"Line-up confirmed\""}.`}</p>
     ${lateAddHtml()}
     <div class="btns">${LV.locked?`<button class="btn gold bigbtn" id="lvKo">Kick off</button><button class="btn ghost" id="lvUnlock">🔓 Unlock line-up</button>`:`<button class="btn gold bigbtn" id="lvLock"${onPitch().length<SIDE?" disabled":""}>🔒 Lock line-up</button><button class="btn ghost" id="lvKo"${onPitch().length<5?" disabled":""}>Kick off</button>`}${m.practice?"":`<button class="btn ghost" data-tbmatch="${esc(m.id)}">📋 Tactics board</button>`}<button class="btn ghost" data-view="fixtures">Back</button></div></section>${planCard()}${fairNudge()}</div>`;
   const pl=played(m),as=assistsOf(m),on=onPitch(),F=FORMS[LV.form];
   return `<div class="live">${pr}${liveBoard(m,LV)}${planDueHtml()}
-  <div class="btns">${LV.status==="live"&&LV.half===1?`<button class="btn" id="lvHt">Half time</button>`:""}${LV.status==="ht"?`<button class="btn gold" id="lv2h">Start 2nd half</button>`:""}
+  <div class="btns">${LV.status==="live"&&LV.half===1&&!LV.noHt?`<button class="btn" id="lvHt">Half time</button>`:""}${LV.status==="ht"?`<button class="btn gold" id="lv2h">Start 2nd half</button>`:""}
     <button class="btn ghost" id="lvOther">${RUGBY?"🏉 Try by someone else":"⚽ Someone else scored"}</button><button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" id="lvUndo">Undo last</button>
     ${RUGBY&&Object.keys(FORMS).length<2?"":`<div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}">${f}</button>`).join("")}</div>`}</div>${RUGBY?rugbyLiveExtras(m):""}
   ${pitchHtml(LV,false)}
@@ -1254,7 +1266,7 @@ function liveView(){
     <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">${RUGBY?`🏉 Try ${pl[n]||0}`:`⚽ ${pl[n]||0}`}</button><button data-lvsub="${i}">🔁 Sub</button>${RUGBY?`<button data-lvsin="${i}" aria-label="Sin bin ${esc(n)}">🟨</button>`:""}</div></div>`:"").join("")}</div>
   <p class="hint"><b>Subs bench:</b> ${bench().map(esc).join(", ")||"none"}. Rolling subs: tap 🔁 on the player coming off.</p>
   ${lateAddHtml()}
-  <div class="btns">${LV.half===2&&LV.status==="live"?`<button class="btn gold bigbtn" id="lvDone">Full time: save and finish</button>`:""}<button class="btn ghost" data-tl="${esc(m.id)}">Parents' view</button><button class="btn ghost" data-view="fixtures">${m.practice?"End practice":"Leave (keeps going)"}</button></div>
+  <div class="btns">${(LV.half===2||LV.noHt)&&LV.status==="live"?`<button class="btn gold bigbtn" id="lvDone">Full time: save and finish</button>`:""}<button class="btn ghost" data-tl="${esc(m.id)}">Parents' view</button><button class="btn ghost" data-view="fixtures">${m.practice?"End practice":"Leave (keeps going)"}</button></div>
   <section class="card"><h3>Timeline</h3>${timelineHtml(LV,m)}</section>
   ${RUGBY?rugbyAsk(m,on):LV.ask?`<div class="ask"><b>Who assisted ${esc(LV.ask)}'s goal?</b><div class="chips">${on.filter(n=>n!==LV.ask).map(n=>`<button data-lvasg="${esc(n)}">${esc(n)}</button>`).join("")}<button data-lvasg="">No assist</button></div></div>`:""}
   ${LV.askOther?`<div class="ask"><b>Who scored${RUGBY?" the try":""}?</b><div class="chips">${bench().map(n=>`<button data-lvother="${esc(n)}">${esc(n)}</button>`).join("")}${notInSquad().map(n=>`<button data-lvother="${esc(n)}">${esc(n)} (not in squad)</button>`).join("")}<button data-lvother="">Cancel</button></div><p class="hint" style="margin:6px 0 0">Players on the pitch have their own ${RUGBY?"🏉":"⚽"} button. Anyone not in the squad is added to it. Not listed at all? Type their name under "Not listed?" below, then come back here.</p></div>`:""}
@@ -1777,6 +1789,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       if(m.practice){m.live=livePublic();toast("Line-up locked. In a real game parents with alerts on would get it now.");return}
       // only the line-up goes to the server here: the score stays blank until kick-off
       try{await db.collection("matches").doc(LV.id).update({live:livePublic()});m.live=livePublic();if(!same)alNotify(LV.id);toast(same?"Line-up locked. It hasn't changed, so no new alert.":"Line-up locked. Parents with alerts on will get it now.")}catch(x){if(!same)LV.events.pop();LV.locked=false;liveSaveLocal();render();toast("Couldn't send the line-up. Check your signal and try again.")}return}
+    if(b.dataset.lvnoht!=null&&LV.status==="pre"){const on=b.dataset.lvnoht==="1";if(on!==!!LV.noHt){LV.noHt=on;const pl=planOf(LV);if(on)pl.gk2="";liveSaveLocal();render()}return}
     if(b.dataset.lvplan&&LV.status==="pre"){planOf(LV).mode=b.dataset.lvplan;liveSaveLocal();render();return}
     if(b.id==="lvPlanAdd"){const pl=planOf(LV),c={m:+$("#plM").value,on:$("#plOn").value,off:$("#plOff").value};if(!c.on||!c.off||c.on===c.off){toast("Pick who's coming on and who's coming off.");return}pl.ch=(pl.ch||[]).concat(c).sort((a,x)=>a.m-x.m);liveSaveLocal();render();return}
     if(b.dataset.lvplandel!=null){const pl=planOf(LV),k=+b.dataset.lvplandel;if(k>=0)pl.ch.splice(k,1);liveSaveLocal();render();return}
@@ -1830,7 +1843,7 @@ document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files
   if(e.target.dataset.pk&&PICK){const n=e.target.dataset.pk;if(e.target.checked)PICK.set.add(n);else PICK.set.delete(n);PICK.touched=true;render();return}
   if(!LV)return;
   if(e.target.dataset.slot!=null){const i=+e.target.dataset.slot,n=e.target.value;const j=LV.slots.indexOf(n);if(n&&j>=0&&j!==i)LV.slots[j]=LV.slots[i];LV.slots[i]=n;liveSaveLocal();render();return}
-  if(e.target.id==="lvLen"){LV.halfLen=Math.max(5,+e.target.value||20);liveSaveLocal();if(planOf(LV).mode!=="off")render();return}
+  if(e.target.id==="lvLen"){LV.halfLen=Math.min(LV.noHt?90:45,Math.max(5,+e.target.value||20));liveSaveLocal();if(planOf(LV).mode!=="off")render();return}
   if(e.target.id==="lvGk2"){planOf(LV).gk2=e.target.value;liveSaveLocal();render();return}
   if(e.target.id==="lvAdd"&&e.target.value){LV.squad.push(e.target.value);liveSaveLocal();render();return}
 });
@@ -2218,9 +2231,9 @@ function formView(){
       <div class="step"><span class="ball" aria-hidden="true">${SP.ball}</span><button type="button" data-goal="-1" data-n="${esc(p.name)}" aria-label="One less ${SP.goal} for ${esc(p.name)}"${g?"":" disabled"}>−</button><output>${g}</output><button type="button" data-goal="1" data-n="${esc(p.name)}" aria-label="One more ${SP.goal} for ${esc(p.name)}">+</button></div>
       ${RUGBY?KINDS.map(t=>{const k=(F.kicks[p.name]||{})[t]||0;return `<div class="step"><span class="ball" aria-hidden="true" title="${KICK[t][0]}s">🎯<small>${KICK[t][1]}</small></span><button type="button" data-kick="${t}" data-d="-1" data-n="${esc(p.name)}" aria-label="One less ${KICK[t][0].toLowerCase()} for ${esc(p.name)}"${k?"":" disabled"}>−</button><output>${k}</output><button type="button" data-kick="${t}" data-d="1" data-n="${esc(p.name)}" aria-label="One more ${KICK[t][0].toLowerCase()} for ${esc(p.name)}">+</button></div>`}).join(""):""}
       ${SP.assists?`<div class="step"><span class="ball" aria-hidden="true">🅰️</span><button type="button" data-assist="-1" data-n="${esc(p.name)}" aria-label="One less assist for ${esc(p.name)}"${(F.assists[p.name]||0)?"":" disabled"}>−</button><output>${F.assists[p.name]||0}</output><button type="button" data-assist="1" data-n="${esc(p.name)}" aria-label="One more assist for ${esc(p.name)}">+</button></div>`:""}
-      <div class="step"><span class="ball" aria-hidden="true" title="Halves played">⏱</span><button type="button" data-qtr="-1" data-n="${esc(p.name)}" aria-label="One less half for ${esc(p.name)}"${(F.halves[p.name]||0)?"":" disabled"}>−</button><output>${F.halves[p.name]||0}</output><button type="button" data-qtr="1" data-n="${esc(p.name)}" aria-label="One more half for ${esc(p.name)}"${(F.halves[p.name]||0)>=2?" disabled":""}>+</button></div>
+      <div class="step"><span class="ball" aria-hidden="true" title="Halves played">⏱</span><button type="button" data-qtr="-1" data-n="${esc(p.name)}" aria-label="One less half for ${esc(p.name)}"${(F.halves[p.name]||0)?"":" disabled"}>−</button><output>${F.halves[p.name]||0}</output><button type="button" data-qtr="1" data-n="${esc(p.name)}" aria-label="One more half for ${esc(p.name)}"${(F.halves[p.name]||0)>=hMax()?" disabled":""}>+</button></div>
       ${SP.keeper?`<div class="kps"><button type="button" class="kp" data-kp="${esc(p.name)}" aria-pressed="${p.name in F.keepers}">🧤 In goal</button>${p.name in F.keepers?`<button type="button" class="kp cs" data-kcs="${esc(p.name)}" aria-pressed="${!!+F.keepers[p.name]}">Clean sheet</button>`:""}</div>`:""}</div>`}).join("")}</div>
-    <p class="hint">⏱ = halves played, 0 to 2 (optional, for fair playing time).</p>
+    <p class="hint">${hMax()===1?"⏱ = played in the game, 0 or 1 (no half time in this one; optional, for fair playing time).":"⏱ = halves played, 0 to 2 (optional, for fair playing time)."}</p>
   </section>
   <section class="card stack" style="gap:12px"><h3>Final score</h3>
     <div class="score"><label class="f">${esc(TEAM.name)}<input type="number" min="0" id="f-us" value="${esc(F.us)}" placeholder="${goalSum}"></label><span>–</span><label class="f">${esc(F.opp||"Them")}<input type="number" min="0" id="f-them" value="${esc(F.them)}"></label></div>
@@ -2358,7 +2371,7 @@ document.addEventListener("click",async e=>{
     if(F.us!==""&&F.us!=null&&!F._usTouched){F.us=formSum()}render();return}
   if(t.dataset.kp&&F){readForm();const n=t.dataset.kp;F.keepers=F.keepers||{};if(n in F.keepers)delete F.keepers[n];else{F.keepers[n]=F.them!==""&&+F.them===0?1:0;if(!(n in F.played))F.played[n]=0}render();return}
   if(t.dataset.kcs&&F){readForm();const n=t.dataset.kcs;F.keepers[n]=+F.keepers[n]?0:1;render();return}
-  if(t.dataset.qtr&&F){readForm();const n=t.dataset.n;F.halves=F.halves||{};const q=Math.min(2,Math.max(0,(F.halves[n]||0)+ +t.dataset.qtr));if(q)F.halves[n]=q;else delete F.halves[n];if(q&&!(n in F.played))F.played[n]=0;render();return}
+  if(t.dataset.qtr&&F){readForm();const n=t.dataset.n;F.halves=F.halves||{};const q=Math.min(hMax(),Math.max(0,(F.halves[n]||0)+ +t.dataset.qtr));if(q)F.halves[n]=q;else delete F.halves[n];if(q&&!(n in F.played))F.played[n]=0;render();return}
   if(t.dataset.assist&&F){readForm();const n=t.dataset.n;F.assists=F.assists||{};const a=Math.max(0,(F.assists[n]||0)+ +t.dataset.assist);if(a)F.assists[n]=a;else delete F.assists[n];
     if(a&&!(n in F.played))F.played[n]=0;render();return}
   if(t.id==="delM"){if(t.dataset.sure){try{await db.collection("matches").doc(F.id).delete();toast("Match deleted.");F=null;setView("results")}catch(err){toast("Couldn't delete it. Try again.")}}
