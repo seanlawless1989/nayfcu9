@@ -157,9 +157,11 @@ function drawCoffey(cx,cy,r){
   X.save();
   X.beginPath();X.arc(cx,cy,r,0,Math.PI*2);X.fillStyle="#141414";X.fill();
   X.lineWidth=r*.04;X.strokeStyle=C.white;X.beginPath();X.arc(cx,cy,r*.93,0,Math.PI*2);X.stroke();
-  X.fillStyle=C.white;X.font=font(Math.round(r*.15),DISPLAY);arcText(S.potmKind==="tournament"?"PLAYER OF THE TOURNAMENT":"PLAYER OF THE MATCH",cx,cy,r*.76,-Math.PI/2,false);
+  X.fillStyle=C.white;X.font=font(Math.round(r*.15),DISPLAY);arcText(S.potmKind==="tournament"?"PLAYER OF THE TOURNAMENT":S.potmKind==="month"?"PLAYER OF THE MONTH":"PLAYER OF THE MATCH",cx,cy,r*.76,-Math.PI/2,false);
   X.textAlign="center";X.textBaseline="middle";
-  if(IMG.coffeyLogo){X.beginPath();X.arc(cx,cy+r*.02,r*.58,0,Math.PI*2);X.fillStyle=C.white;X.fill();X.save();X.clip();contain(IMG.coffeyLogo,cx-r*.56,cy-r*.54,r*1.12,r*1.12);X.restore()}
+  if(S.potmKind==="month"){const mn=pomMonth(),yr=(S.pomMonth||"").slice(0,4);X.beginPath();X.arc(cx,cy+r*.02,r*.58,0,Math.PI*2);X.fillStyle=C.yellow;X.fill();
+    X.fillStyle="#141414";fit(mn,r*1.0,Math.round(r*.26),DISPLAY);X.fillText(mn,cx,cy-r*.06);X.font=font(Math.round(r*.15),DISPLAY);X.fillText(yr,cx,cy+r*.2)}
+  else if(IMG.coffeyLogo){X.beginPath();X.arc(cx,cy+r*.02,r*.58,0,Math.PI*2);X.fillStyle=C.white;X.fill();X.save();X.clip();contain(IMG.coffeyLogo,cx-r*.56,cy-r*.54,r*1.12,r*1.12);X.restore()}
   else{X.fillStyle=C.pink;X.font=font(Math.round(r*.2),DISPLAY);const w2=String((TEAM.potm&&TEAM.potm.sponsor)||"⭐").toUpperCase().split(/\s+/);X.fillText(w2[0],cx,cy-(w2[1]?r*.12:0));if(w2[1])X.fillText(w2.slice(1).join(" "),cx,cy+r*.12)}
   // ribbon
   const rw=r*1.7,rh=r*.26,ry=cy+r*.62;X.fillStyle=C.pink;X.strokeStyle="#141414";X.lineWidth=r*.03;
@@ -245,6 +247,7 @@ function drawFT(){
     X.fillStyle=C.pink;X.beginPath();X.roundRect(540-tw/2,968,tw,46,23);X.fill();X.fillStyle=C.ink;fit(t,440,22,DISPLAY);X.fillText(t,540,999)}
 }
 
+const pomMonth=()=>S.pomMonth?new Date(S.pomMonth+"-01T12:00:00").toLocaleDateString("en-GB",{month:"long"}).toUpperCase():"";
 function drawPotm(){
   X.fillStyle=C.pink;X.fillRect(0,0,W,W);
   X.fillStyle=C.yellow;X.beginPath();X.moveTo(0,90);X.lineTo(330,0);X.lineTo(420,0);X.lineTo(0,160);X.closePath();X.fill();
@@ -318,7 +321,7 @@ function caption(){
   } else if(S.mode==="ms"){
     t=`🎉 MILESTONE 🎉\n\nHuge congratulations to ${S.msPlayer||"…"}: ${S.msLabel||""}! ⭐\n\nWe're so proud of you.${sp}\n\n${TEAM.shortHashtags||""}`;
   } else if(S.mode==="potm"){
-    t=S.potmKind==="tournament"?`⭐ PLAYER OF THE TOURNAMENT ⭐\n\nCongratulations to ${S.potm||"…"}, our player of the tournament${S.tname?` at the ${S.tname}`:""}! 🌟`:`${(TEAM.potm&&TEAM.potm.icon)||"⭐"} ${POTM_UP} ${(TEAM.potm&&TEAM.potm.icon)||"⭐"}\n\nCongratulations to ${S.potm||"…"}, our player of the match${S.opp?` against ${S.opp}`:""}! 🌟${TEAM.potm&&TEAM.potm.sponsor?`\n\nThanks to ${TEAM.potm.sponsor} for supporting the ${TEAM.ageGroup||"team"}.`:""}${sp}\n\n${TEAM.hashtags||""}`;
+    t=S.potmKind==="month"?`🏅 PLAYER OF THE MONTH 🏅\n\nCongratulations to ${S.potm||"…"}, our ${pomMonth().charAt(0)+pomMonth().slice(1).toLowerCase()} player of the month! 🌟${S.pomNote?`\n\n${S.pomNote}`:""}${sp}\n\n${TEAM.hashtags||""}`:S.potmKind==="tournament"?`⭐ PLAYER OF THE TOURNAMENT ⭐\n\nCongratulations to ${S.potm||"…"}, our player of the tournament${S.tname?` at the ${S.tname}`:""}! 🌟`:`${(TEAM.potm&&TEAM.potm.icon)||"⭐"} ${POTM_UP} ${(TEAM.potm&&TEAM.potm.icon)||"⭐"}\n\nCongratulations to ${S.potm||"…"}, our player of the match${S.opp?` against ${S.opp}`:""}! 🌟${TEAM.potm&&TEAM.potm.sponsor?`\n\nThanks to ${TEAM.potm.sponsor} for supporting the ${TEAM.ageGroup||"team"}.`:""}${sp}\n\n${TEAM.hashtags||""}`;
   }
   $("caption").value=t;
 }
@@ -388,7 +391,7 @@ onUpload("squadPhoto","squadPhoto");onUpload("ftPhoto","ftPhoto");onUpload("potm
 $("clearLogos").addEventListener("click",async()=>{const BUILTIN={crest:TEAM.crest||"crest.png",sponsor:TEAM.sponsor&&TEAM.sponsor.logo,octopus:TEAM.kitSponsor&&TEAM.kitSponsor.logo};for(const k of["crest","sponsor","coffey","octopus"]){delete logos[k];IMG[k]=BUILTIN[k]?await loadImg(BUILTIN[k]):null}store.set(SK+".logos",logos);thumbs();render();toast("Back to the club's standard logos.")});
 
 function toast(t){$("gtoast").textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>$("gtoast").textContent="",5000)}
-function fileName(){const opp=(S.mode==="month"?S.month:S.mode==="ms"?S.msPlayer:(S.opp||"match")||"post").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"");const kind={squad:"Squad",ft:"FullTime",potm:"PotM",month:"Fixtures",ms:"Milestone"}[S.mode]||"Post";return `${S.date||"date"}_${TEAM.ageShort||"team"}_${kind}_${opp}.png`}
+function fileName(){const opp=(S.mode==="potm"&&S.potmKind==="month"?(S.pomMonth||"")+"-"+(S.potm||""):S.mode==="month"?S.month:S.mode==="ms"?S.msPlayer:(S.opp||"match")||"post").replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"");const kind=S.mode==="potm"&&S.potmKind==="month"?"PlayerOfTheMonth":{squad:"Squad",ft:"FullTime",potm:"PotM",month:"Fixtures",ms:"Milestone"}[S.mode]||"Post";return `${S.date||"date"}_${TEAM.ageShort||"team"}_${kind}_${opp}.png`}
 let downloads=null;
 // which sponsors this post shows, for the sponsor report
 const LOGGED=new Set();// one log per post, however often it's saved or its caption copied
@@ -422,6 +425,7 @@ window.GFX={
   async loadTSquad(t){Object.assign(S,{tour:true,opp:t.name||"Tournament",date:t.date||S.date,ko:"",venue:t.venue||"",comp:"Tournament",ha:"N",picked:(t.squad||[]).slice(),goals:{},us:null,them:null,usManual:false,assists:{}});
     S.picked.sort((a,b)=>squad.findIndex(p=>p.name===a)-squad.findIndex(p=>p.name===b));IMG.opp=null;buildPickers();syncInputs();save();setMode("squad")},
   async loadTournament(t){Object.assign(S,{potm:t.potm,potmKind:"tournament",tname:t.name,date:t.date||S.date,venue:t.venue||"",opp:""});buildPickers();syncInputs();save();setMode("potm")},
+  loadPom(x){Object.assign(S,{potm:x.player,potmKind:"month",pomMonth:x.month,pomNote:x.note||"",tname:"",opp:"",date:x.month+"-01"});buildPickers();syncInputs();save();setMode("potm")},
   loadMilestone(n,label){Object.assign(S,{msPlayer:n,msLabel:label});buildPickers();save();setMode("ms")},
   loadMonth(ym){S.month=ym;MONTH_LIST=window.monthFixtures?window.monthFixtures(ym):[];buildPickers();save();setMode("month")},
   refresh(){if(S.mode==="month")MONTH_LIST=window.monthFixtures?window.monthFixtures(S.month):[];render()}

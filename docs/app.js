@@ -154,6 +154,7 @@ function render(){
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
   else if(view==="ratings")main.innerHTML=ratingsView();
+  else if(view==="pom")main.innerHTML=pomView();
   else if(view==="results")main.innerHTML=resultsView();
   else if(view==="fixtures")main.innerHTML=fixturesView();
   else if(view==="honours")main.innerHTML=honoursView();
@@ -212,7 +213,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -235,7 +236,7 @@ function homeView(){if(noScores())return homeNoScores();
   return `<div class="stack">
   ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
   ${homeLive()||heroHtml()}
-  ${homeMenu()}
+  ${homeMenu()}${pomHome()}
   <h2 class="sect"><span class="ctag c-league">${LEAGUE_NAME}</span> ${season}</h2>
   <section class="card"><h3>${LEAGUE_NAME} record</h3>${REC(lt)}
       ${ldone.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${ldone.slice(-6).map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}</section>
@@ -265,7 +266,7 @@ function homeView(){if(noScores())return homeNoScores();
 function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
   const done=list.filter(m=>!isFixture(m)&&!m.postponed),upcoming=list.filter(isFixture).filter(m=>!m.postponed&&!isLive(m))[0];
   const potms=Object.entries(ps).filter(([,o])=>o.potm>0).sort((a,b)=>b[1].potm-a[1].potm||a[0].localeCompare(b[0]));
-  return `<div class="stack">${homeLive()||heroHtml()}${homeMenu()}
+  return `<div class="stack">${homeLive()||heroHtml()}${homeMenu()}${pomHome()}
   <h2 class="sect">${esc(season)} season</h2>
   <div class="cols">
     <section class="card"><h3>Recent games</h3>${done.length?done.slice(-3).reverse().map(matchRow).join(""):`<p class="hint">No games played yet this season.</p>`}
@@ -447,6 +448,62 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     const q=f.id?sb.from("sponsors").update(row).eq("id",f.id):sb.from("sponsors").insert(Object.assign({sort:SPON.reduce((m,s)=>Math.max(m,s.sort+1),0)},row));
     const {error}=await q;spBusy=false;if(error){toast(/logo/i.test(error.message||"")?"That logo is too big. Try a smaller picture.":"Couldn't save that. Try again.");render();return}
     spEdit=null;await loadSponsors();toast(f.id?"Sponsor updated.":`${name} added. They're on the home page now.`);render();return}
+});
+// ---------- player of the month (public.player_of_month, supabase/19_player_of_month.sql) ----------
+// Coaches pick one player each month on the Player of the month page (optional line on why). Everyone sees the latest
+// on the home page, every award on the honours board and on the player's page; coaches make the poster from here.
+let POMS=[],POM_ON=false,pomEdit=null,pomBusy=false;
+const POM_IC="🏅";
+async function loadPom(){if(!sb)return;try{const {data,error}=await sb.from("player_of_month").select("month,player,note").order("month",{ascending:false});if(error)return;POM_ON=true;POMS=data||[]}catch(e){}}
+const ymNow=(k=0)=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+k);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`};
+const pomMonthName=ym=>LONGM[+ym.slice(5,7)-1]||"";
+const pomLabel=ym=>`${pomMonthName(ym)} ${ym.slice(0,4)}`;
+const pomOf=n=>POMS.filter(x=>x.player===n);
+const pomSeason=s=>POMS.filter(x=>seasonOf(x.month+"-01")===s);
+const pomFace=n=>PHOTOS[n]?pface(n,"pom-face"):`<span class="pom-face pom-num">${esc(numOf(n))||POM_IC}</span>`;
+// home page: the latest award while it's still fresh (this month or the last two)
+function pomHome(){const x=POMS[0];
+  if(!x||x.month<ymNow(-2))return canWrite&&POM_ON?`<section class="card edit-only"><h3>${POM_IC} Player of the month</h3><p class="hint">Pick a player of the month and it shows here for everyone, with a poster ready for Facebook.</p><div class="btns" style="margin-top:8px"><button class="btn ghost" data-view="pom">${POM_IC} Choose player of the month</button></div></section>`:"";
+  return `<section class="card pom-home"><div class="kick">${POM_IC} ${esc(pomMonthName(x.month))} player of the month</div>
+    <div class="pom-row click" data-player="${esc(x.player)}">${pomFace(x.player)}<div style="min-width:0"><b class="pom-name">${esc(x.player)}</b>${x.note?`<p class="pom-note">${esc(x.note)}</p>`:""}</div></div>
+    <div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="pom">All players of the month</button>${canWrite?`<button class="btn ghost edit-only" data-pomgfx="${esc(x.month)}">Poster</button>`:""}</div></section>`}
+// honours board and the list on the page
+function pomList(L,coach){return `<div class="stack" style="gap:8px">${L.map(x=>`<div class="pom-item"><div class="pom-row click" data-player="${esc(x.player)}">${pomFace(x.player)}<div style="min-width:0"><div class="meta">${esc(pomLabel(x.month))}</div><b>${esc(x.player)}</b>${x.note?`<div class="meta">${esc(x.note)}</div>`:""}</div></div>
+  ${coach?`<div class="mg edit-only"><button class="mini" data-pomgfx="${esc(x.month)}">Poster</button><button class="mini" data-pomedit="${esc(x.month)}">Edit</button><button class="mini" data-pomdel="${esc(x.month)}">Remove</button></div>`:""}</div>`).join("")}</div>`}
+function pomView(){
+  const bySeason={};POMS.forEach(x=>{const s=seasonOf(x.month+"-01");(bySeason[s]=bySeason[s]||[]).push(x)});
+  const lists=Object.keys(bySeason).length?Object.entries(bySeason).map(([s,L])=>`<section class="card"><h3>${esc(s)}</h3>${pomList(L,canWrite)}</section>`).join(""):`<div class="card empty">No player of the month yet. ${POM_IC}</div>`;
+  if(!canWrite)return `<div class="stack"><section class="card"><h2 style="margin-top:0">${POM_IC} Player of the month</h2><p class="hint">Each month the coaches pick one ${esc(PL.replace(/s$/,""))} who has really stood out.</p></section>${lists}</div>`;
+  if(!POM_ON)return `<div class="stack"><section class="card"><h2 style="margin-top:0">${POM_IC} Player of the month</h2><p class="hint">Player of the month isn't switched on for this team's database yet. Ask Touchline Tales to turn it on.</p></section></div>`;
+  if(!pomEdit){const def=new Date().getDate()<=15?ymNow(-1):ymNow(0),had=POMS.find(x=>x.month===def);pomEdit={month:def,player:had?had.player:"",note:had?had.note||"":""}}
+  const months=[1,0,-1,-2,-3,-4,-5,-6,-7,-8,-9,-10,-11].map(ymNow);if(!months.includes(pomEdit.month))months.push(pomEdit.month);
+  const cur=players.filter(p=>p.current).map(p=>p.name),pool=[...new Set([...cur,...(pomEdit.player?[pomEdit.player]:[])])];
+  const had=POMS.find(x=>x.month===pomEdit.month);
+  const s=seasonOf(pomEdit.month+"-01"),won=new Set(pomSeason(s).filter(x=>x.month!==pomEdit.month).map(x=>x.player)),none=won.size?cur.filter(n=>!won.has(n)):[];
+  return `<div class="stack"><section class="card stack"><h2 style="margin-top:0">${POM_IC} Player of the month</h2>
+    <p class="hint">Pick one ${esc(PL.replace(/s$/,""))} each month. Everyone sees it on the home page, the honours board and ${PRN.p} own page, and you get a poster for Facebook and WhatsApp.</p>
+    <label class="f">Month<select id="pom-month">${months.sort().reverse().map(m=>`<option value="${m}"${m===pomEdit.month?" selected":""}>${esc(pomLabel(m))}${POMS.some(x=>x.month===m)?" ✓":""}</option>`).join("")}</select></label>
+    <label class="f">${esc(PL.replace(/s$/,"").replace(/^./,c=>c.toUpperCase()))}<select id="pom-player"><option value="">Choose…</option>${pool.map(n=>`<option${n===pomEdit.player?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
+    ${none.length?`<p class="hint" style="margin-top:-6px">Not been player of the month yet this season: ${none.map(esc).join(", ")}.</p>`:""}
+    <label class="f">Why, in a few words <span class="hint">(optional, everyone can see it)</span><input type="text" id="pom-note" maxlength="160" value="${esc(pomEdit.note||"")}" placeholder="e.g. Brilliant in goal all month"></label>
+    <div class="btns"><button class="btn gold" id="pomSave"${pomBusy?" disabled":""}>${had?"Save changes":"Save"}</button>${had?`<button class="btn ghost" data-pomgfx="${esc(had.month)}">Make the poster</button>`:""}</div></section>
+  ${lists}</div>`}
+function pomRead(){if(!pomEdit)return;const v=id=>(document.getElementById(id)||{}).value;pomEdit.player=v("pom-player")||"";pomEdit.note=v("pom-note")||""}
+document.addEventListener("change",e=>{if(view!=="pom"||!pomEdit)return;
+  if(e.target.id==="pom-month"){const m=e.target.value,had=POMS.find(x=>x.month===m);pomEdit=had?{month:m,player:had.player,note:had.note||""}:{month:m,player:"",note:""};render();return}
+  if(e.target.id==="pom-player"||e.target.id==="pom-note")pomRead()});
+document.addEventListener("input",e=>{if(view==="pom"&&e.target.id==="pom-note")pomRead()});
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  if(d.pomgfx){if(!canWrite)return;e.stopPropagation();const x=POMS.find(y=>y.month===d.pomgfx);if(!x)return;F=null;setView("gfx");await (await gfxReady()).loadPom(x);return}
+  if(view!=="pom"||!canWrite||!sb)return;
+  if(d.pomedit){const x=POMS.find(y=>y.month===d.pomedit);if(x){pomEdit={month:x.month,player:x.player,note:x.note||""};render();window.scrollTo({top:0})}return}
+  if(d.pomdel){const x=POMS.find(y=>y.month===d.pomdel);if(!x||!confirm(`Remove ${x.player} as ${pomLabel(x.month)} player of the month?`))return;
+    const {error}=await sb.from("player_of_month").delete().eq("month",x.month);if(error){toast("Couldn't remove that. Try again.");return}
+    await loadPom();if(pomEdit&&pomEdit.month===x.month)pomEdit={month:x.month,player:"",note:""};toast("Removed.");render();return}
+  if(b.id==="pomSave"&&!pomBusy){pomRead();const f=pomEdit;if(!f.player){toast(`Choose the ${PL.replace(/s$/,"")}.`);return}
+    pomBusy=true;render();const {error}=await sb.from("player_of_month").upsert({month:f.month,player:f.player,note:String(f.note||"").trim().slice(0,160)||null,updated:new Date().toISOString()},{onConflict:"month"});pomBusy=false;
+    if(error){toast("Couldn't save that. Try again.");render();return}
+    await loadPom();toast(`${f.player} is ${pomMonthName(f.month)} player of the month. Make the poster below.`);render();return}
 });
 function pface(n,cls){return PHOTOS[n]?`<img class="${cls}" src="${PHOTOS[n]}" alt="">`:""}
 function shrinkPhoto(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=300,c=document.createElement("canvas"),k=Math.min(im.width,im.height);c.width=c.height=S;c.getContext("2d").drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,0,0,S,S);ok(c.toDataURL("image/jpeg",.82))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
@@ -1721,12 +1778,13 @@ function bookView(){
     ${chunk.map(m=>{const r=result(m);const tn=m.tournament_id?tournaments.find(x=>x.id===m.tournament_id):null;return `<tr><td>${nice(m.date)}</td><td>${esc(m.opp||"")}${m.stage&&m.stage!=="placeholder"?` <span class="hint">(${esc(m.stage)})</span>`:""}</td><td>${esc(tn?tn.name:m.comp||"")}</td><td class="n">${r?`${m.us}–${m.them}`:""}</td><td>${r?`<span class="wdl ${r}">${r}</span>`:""}</td><td class="hint">${esc(Object.entries(played(m)).filter(([,g])=>g>0).map(([n,g])=>n+(g>1?` ×${g}`:"")).join(", "))}</td></tr>`}).join("")||`<tr><td colspan="6">No results yet.</td></tr>`}</table>`)}
   // honours
   if(troph.length)out+=page("",`<h1 class="ttl">Honours</h1>${troph.map(x=>`<div class="hl" style="font-size:16pt">${trophyIcon(x.ach)} ${esc(x.title)}: ${esc(x.ach)} <span class="hint">${x.when||nice(x.date)}</span></div>`).join("")}
-    ${ts.filter(x=>x.potm).length?`<h3 style="margin-top:8mm">Players of the tournament</h3><table>${ts.filter(x=>x.potm).map(x=>`<tr><td>⭐ ${esc(x.potm)}</td><td>${esc(x.name)}</td></tr>`).join("")}</table>`:""}`);
+    ${ts.filter(x=>x.potm).length?`<h3 style="margin-top:8mm">Players of the tournament</h3><table>${ts.filter(x=>x.potm).map(x=>`<tr><td>⭐ ${esc(x.potm)}</td><td>${esc(x.name)}</td></tr>`).join("")}</table>`:""}
+    ${pomSeason(season).length?`<h3 style="margin-top:8mm">Players of the month</h3><table>${pomSeason(season).slice().reverse().map(x=>`<tr><td>${POM_IC} ${esc(x.player)}</td><td>${esc(pomLabel(x.month))}</td></tr>`).join("")}</table>`:""}`);
   // player pages
   roster.forEach((n,i)=>{const o=st(n);const best=sortMatches(list.filter(m=>(played(m)[n]||0)>0)).sort((a,b)=>played(b)[n]-played(a)[n])[0];
     out+=page("player",`<div class="top"><div class="slot">${BOOK_PH[n]&&BOOK_LAYOUT==="print"?`<img src="${BOOK_PH[n]}" alt="">`:(BOOK_LAYOUT==="stickers"?`<div class="sn">${i+2}</div><div class="sl">Stick ${esc(n)} here</div>`:BOOK_LAYOUT==="print"?`<div class="sl">Add ${esc(n)}'s photo</div>`:`<div class="sn">${esc(numOf(n))||"·"}</div><div class="sl">${esc(n)}</div>`)}</div>
       <div><div class="big">${esc(numOf(n))||"·"}</div><h1 class="pname">${esc(n)}</h1>
-      <div class="stats">${tracked?`<div><b>${o.apps}</b><span>Games</span></div>`:""}<div><b>${o.goals}</b><span>${SP.Goals}</span></div>${RUGBY?`<div><b>${o.pts}</b><span>Points</span></div>`:""}${at?`<div><b>${o.assists}</b><span>Assists</span></div>`:""}<div><b>${o.potm}</b><span>Player of the match</span></div>${pot(n)?`<div><b>${pot(n)}</b><span>Player of the tournament</span></div>`:""}</div>
+      <div class="stats">${tracked?`<div><b>${o.apps}</b><span>Games</span></div>`:""}<div><b>${o.goals}</b><span>${SP.Goals}</span></div>${RUGBY?`<div><b>${o.pts}</b><span>Points</span></div>`:""}${at?`<div><b>${o.assists}</b><span>Assists</span></div>`:""}<div><b>${o.potm}</b><span>Player of the match</span></div>${pot(n)?`<div><b>${pot(n)}</b><span>Player of the tournament</span></div>`:""}${(k=>k?`<div><b>${k}</b><span>Player of the month</span></div>`:"")(pomSeason(season).filter(x=>x.player===n).length)}</div>
       ${best?`<div class="hl">${SP.ball} Best game: ${played(best)[n]} ${played(best)[n]>1?SP.goals:SP.goal} v ${esc(best.opp)} (${nice(best.date)})</div>`:""}</div></div>
       <div class="lines"><h3>My favourite moment this season</h3><i></i><i></i><i></i></div>
       <div class="lines"><h3>My coach says…</h3><i></i><i></i><i></i></div>
@@ -1861,6 +1919,7 @@ function honoursView(){
     <div style="min-width:0"><div class="t">${esc(i.title)}</div><div class="meta"><b>${esc(i.ach||"")}</b>${i.when?` · ${esc(i.when)}`:i.date?` · ${(d=>`${d.getDate()} ${LONGM[d.getMonth()]} ${d.getFullYear()}`)(new Date(i.date+"T12:00:00"))}`:""}</div>${i.sub?`<div class="potm">⭐ ${esc(i.sub)}</div>`:""}${i.notes?`<div class="meta">${esc(i.notes)}</div>`:""}</div>
     <div class="edit-only">${i.h?`<button class="mini" data-hedit="${esc(i.h)}">Edit</button>`:`<button class="mini" data-tedit="${esc(i.t)}">Edit</button>`}</div></div>`).join("")}</div></section>`).join(""):`<div class="card empty">No trophies yet. They'll appear here as soon as one is won. 🏆</div>`}
   ${awards.length?`<section class="card"><h3>Players of the tournament</h3><table class="lb"><tbody>${awards.map(t=>`<tr class="click" data-player="${esc(t.potm)}"><td>⭐ ${esc(t.potm)}</td><td>${esc(t.name)}</td><td>${esc(tRange(t,true))}</td></tr>`).join("")}</tbody></table></section>`:""}
+  ${POMS.length?`<section class="card"><h3>Players of the month</h3><table class="lb"><tbody>${POMS.map(x=>`<tr class="click" data-player="${esc(x.player)}"><td>${POM_IC} ${esc(x.player)}</td><td>${esc(pomLabel(x.month))}</td></tr>`).join("")}</tbody></table></section>`:""}
   </div>`;
 }
 function tFormView(){
@@ -1933,23 +1992,24 @@ function playersView(){
   const base=career?sortMatches(matches.filter(m=>m.stage!=="placeholder")):seasonMatches();
   const list=byComp(base),ps=playerStats(list),tracked=appsTracked(list),at=SP.assists&&(career||assistsTracked(season));
   const ts=(!compFilter||compFilter==="Tournament")?(career?tournaments:seasonTournaments()):[];const showPott=ts.some(t=>t.potm);
-  const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps).filter(n=>{const o=ps[n];return o.apps||o.goals||o.assists||o.potm}),...ts.map(t=>t.potm).filter(Boolean)])];
-  const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,assists:0,potm:0},pt:pottCount(n,ts)})).sort((a,b)=>(RUGBY?(b.o.pts||0)-(a.o.pts||0):0)||b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
+  const pms=compFilter?[]:career?POMS:pomSeason(season),showPom=pms.length>0;
+  const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps).filter(n=>{const o=ps[n];return o.apps||o.goals||o.assists||o.potm}),...ts.map(t=>t.potm).filter(Boolean),...pms.map(x=>x.player)])];
+  const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,assists:0,potm:0},pt:pottCount(n,ts),pm:pms.filter(x=>x.player===n).length})).sort((a,b)=>(RUGBY?(b.o.pts||0)-(a.o.pts||0):0)||b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
   const what=(compFilter?compFilter.toLowerCase()+" ":"")+(career?"career stats, all seasons":`stats, ${season}`);
   const tot=rows.reduce((a,{o})=>({g:a.g+o.goals,a:a.a+o.assists,p:a.p+(o.pts||0)}),{g:0,a:0,p:0});const showCs=rows.some(r=>r.o.gk);
   if(noScores())return `<div class="btns" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Season or career"><button data-pscope="season" aria-pressed="${!career}">${esc(season)}</button><button data-pscope="career" aria-pressed="${career}">Career (all seasons)</button></div></div>
   ${CKEY()}
   <section class="card"><h2>${what[0].toUpperCase()+what.slice(1)}</h2>
    <p class="hint" style="margin-bottom:10px">${(c=>`${c.length} game${c.length===1?"":"s"}`)(list.filter(counted))}. Scores and scorers aren't shown publicly for this age group.</p>
-   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}${showCs?"<th>Games in goal</th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}</tr></thead><tbody>
-   ${rows.sort((a,b)=>b.o.apps-a.o.apps||a.n.localeCompare(b.n)).map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}${showCs?`<td>${o.gk||""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}</tr>`).join("")}
+   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}${showCs?"<th>Games in goal</th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${showPom?"<th>Player of month</th>":""}</tr></thead><tbody>
+   ${rows.sort((a,b)=>b.o.apps-a.o.apps||a.n.localeCompare(b.n)).map(({n,o,pt,pm})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}${showCs?`<td>${o.gk||""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${showPom?`<td>${pm||""}</td>`:""}</tr>`).join("")}
    </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see ${PRN.p} record.</p></section>`;
   return `<div class="btns" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Season or career"><button data-pscope="season" aria-pressed="${!career}">${esc(season)}</button><button data-pscope="career" aria-pressed="${career}">Career (all seasons)</button></div></div>
   ${CKEY()}
   <section class="card"><h2>${what[0].toUpperCase()+what.slice(1)}</h2>
    <p class="hint" style="margin-bottom:10px">${(c=>`${c.length} game${c.length===1?"":"s"}${career?" across "+new Set(c.map(m=>seasonOf(m.date))).size+" seasons":""}`)(list.filter(counted))} · ${tot.g} ${SP.goals}${RUGBY?` · ${tot.p} points`:""}${at?` · ${tot.a} assists`:""}.${tracked?((k=>k<list.filter(counted).length?` Full team sheets only exist for ${k} of these ${list.filter(counted).length} games (most of 2025-26 only recorded the scorers). In the others, the scorers and player of the match count as playing, so Apps are a minimum, and ${SP.goals} per game only uses the ${k} full team sheets.`:"")(list.filter(m=>counted(m)&&m.apps!==false).length)):` Appearances weren't recorded for these games, so only ${SP.goals} and awards show.`}${career&&at?" Assists are recorded from 2026-27.":""}</p>
-   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>${SP.Goals}</th>${RUGBY?"<th>Kicks</th><th>Points</th>":""}${at?"<th>Assists</th>":""}${showCs?"<th>Clean sheets <span class='hint'>/ in goal</span></th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${tracked?`<th>${SP.Goals} per game</th>`:""}</tr></thead><tbody>
-   ${rows.map(({n,o,pt})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${RUGBY?`<td>${esc(kickText(o))||"–"}</td><td><b>${o.pts||0}</b></td>`:""}${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${tracked?`<td>${o.ta?(o.tg/o.ta).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
+   <div class="scroll"><table class="lb"><thead><tr><th>Player</th>${tracked?"<th>Apps</th>":""}<th>${SP.Goals}</th>${RUGBY?"<th>Kicks</th><th>Points</th>":""}${at?"<th>Assists</th>":""}${showCs?"<th>Clean sheets <span class='hint'>/ in goal</span></th>":""}<th>PotM</th>${showPott?"<th>Player of tournament</th>":""}${showPom?"<th>Player of month</th>":""}${tracked?`<th>${SP.Goals} per game</th>`:""}</tr></thead><tbody>
+   ${rows.map(({n,o,pt,pm})=>`<tr class="click" data-player="${esc(n)}"><td>${PHOTOS[n]?pface(n,"pthumb"):`<span class="num">${esc(numOf(n))||"·"}</span>`}${esc(n)}</td>${tracked?`<td>${o.apps}</td>`:""}<td><b>${o.goals}</b></td>${RUGBY?`<td>${esc(kickText(o))||"–"}</td><td><b>${o.pts||0}</b></td>`:""}${at?`<td>${o.assists}</td>`:""}${showCs?`<td>${o.cs||(o.gk?0:"")}${o.gk?` <span class="hint">/${o.gk}</span>`:""}</td>`:""}<td>${o.potm}</td>${showPott?`<td>${pt||""}</td>`:""}${showPom?`<td>${pm||""}</td>`:""}${tracked?`<td>${o.ta?(o.tg/o.ta).toFixed(2):"–"}</td>`:""}</tr>`).join("")}
    </tbody></table></div><p class="hint" style="margin-top:10px">Tap a player to see ${PRN.p} record split by season and competition.</p></section>`;
 }
 function compSplit(n,list,ts){if(noScores())return compSplitNs(n,list,ts);
@@ -1999,8 +2059,9 @@ function playerDetail(n){
   const games=sortMatches(matches.filter(m=>counted(m)&&n in played(m)||m.potm===n||n in assistsOf(m)||n in kicksOf(m))).reverse();
   const tot=playerStats(matches)[n]||{apps:0,goals:0,potm:0};
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
-  <section class="card"><div class="pcard">${PHOTOS[n]?`<div class="pphoto">${pface(n,"")}<span>${esc(numOf(n))||""}</span></div>`:`<div class="big">${esc(numOf(n))||"·"}</div>`}<div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${noScores()?`${tot.apps||0} appearances · `:RUGBY?`${tot.goals} career tries · ${tot.pts||0} points · `:`${tot.goals} career goals · ${tot.assists||0} assists · `}${tot.potm} ${esc(TEAM.potm&&TEAM.potm.sponsor||"player of the match")} awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}</p>${canWrite?`<label class="bup btn ghost">${PHOTOS[n]?"Change photo":"Add photo"}<input type="file" accept="image/*" data-photo="${esc(n)}"></label> <span class="hint">Everyone can see player photos.</span>`:""}</div></div></section>
+  <section class="card"><div class="pcard">${PHOTOS[n]?`<div class="pphoto">${pface(n,"")}<span>${esc(numOf(n))||""}</span></div>`:`<div class="big">${esc(numOf(n))||"·"}</div>`}<div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${noScores()?`${tot.apps||0} appearances · `:RUGBY?`${tot.goals} career tries · ${tot.pts||0} points · `:`${tot.goals} career goals · ${tot.assists||0} assists · `}${tot.potm} ${esc(TEAM.potm&&TEAM.potm.sponsor||"player of the match")} awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}${(k=>k?` · ${k} player of the month`:"")(pomOf(n).length)}</p>${canWrite?`<label class="bup btn ghost">${PHOTOS[n]?"Change photo":"Add photo"}<input type="file" accept="image/*" data-photo="${esc(n)}"></label> <span class="hint">Everyone can see player photos.</span>`:""}</div></div></section>
   <button class="btn gold" data-story="${esc(n)}" style="align-self:flex-start">✨ ${esc(n)}'s ${esc(season)} season story</button>
+  ${(L=>L.length?`<section class="card"><h3>Player of the month</h3>${L.map(x=>`<div class="potm">${POM_IC} ${esc(pomLabel(x.month))}${x.note?` <span class="meta">· ${esc(x.note)}</span>`:""}</div>`).join("")}${canWrite?`<div class="mg edit-only" style="margin-top:8px">${L.map(x=>`<button class="mini" data-pomgfx="${esc(x.month)}">${esc(pomMonthName(x.month))} poster</button>`).join("")}</div>`:""}</section>`:"")(pomOf(n))}
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
   ${rtPlayerCard(n)}<div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
   <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
@@ -2094,6 +2155,7 @@ function storySlides(n,s){const list=sortMatches(matches.filter(m=>!m.practice&&
     out.push(`<div class="k">${SP.Goals}</div><div class="n">${o.goals}</div><p>${RUGBY&&o.pts?`${o.pts} points in all${kickText(o)?`, with ${kickText(o)}`:""}. `:""}${o.assists&&assistsTracked(s)?`Plus ${o.assists} assist${o.assists>1?"s":""}. `:""}${best&&best[1]>1?`Best game: ${best[1]} v ${esc(best[0].opp)}.`:best&&best[1]?`Scored v ${esc(best[0].opp)}.`:""}</p>`)}
   if(o.gk)out.push(`<div class="k">In goal</div><div class="n">🧤 ${o.gk}</div><p>${o.cs?`${o.cs} clean sheet${o.cs>1?"s":""}.`:"Brave in goal every time."}</p>`);
   if(potms.length)out.push(`<div class="k">${esc(POTM)}</div><div class="n">${POTM_IC} ${potms.length}</div><p>${potms.slice(0,3).map(m=>`v ${esc(m.opp)}`).join(", ")}${potms.length>3?" and more":""}.</p>`);
+  {const pm=pomSeason(s).filter(x=>x.player===n).reverse();if(pm.length)out.push(`<div class="k">Player of the month</div><div class="n">${POM_IC} ${pm.length}</div><p>${pm.map(x=>esc(pomMonthName(x.month))).join(", ")}.</p>`)}
   if(ms.length)out.push(`<div class="k">Milestones</div><h2>🎉</h2><p>${ms.slice(0,4).map(x=>esc(x.label)).join("<br>")}</p>`);
   if(!hide){const w=mine.filter(m=>result(m)==="W"),big=w.slice().sort((a,b)=>(b.us-b.them)-(a.us-a.them))[0];
     if(mine.filter(result).length)out.push(`<div class="k">With ${esc(n)} on the pitch</div><div class="n">${w.length}</div><p>win${w.length===1?"":"s"}${big?`, the biggest ${big.us}–${big.them} v ${esc(big.opp)}`:""}.</p>`)}
@@ -2357,7 +2419,7 @@ document.addEventListener("click",e=>{const th=e.target.closest("table.lb thead 
   rows.sort((a,b)=>{const x=cv(a),y=cv(b);if(x===y)return 0;if(x===null)return 1;if(y===null)return -1;const c=typeof x==="number"&&typeof y==="number"?x-y:String(x).localeCompare(String(y));return dir==="asc"?c:-c}).forEach(r=>tb.appendChild(r))});
 // ---------- events ----------
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("button,tr.click,[data-edit],.match");if(!t)return;
+  const t=e.target.closest("button,tr.click,[data-edit],.match,.pom-row[data-player]");if(!t)return;
   if(t.closest("#gfxView"))return;
   if(t.dataset.lb){lbAction(t.dataset.lb);return}
   if(t.dataset.photo){lbOpen(t.dataset.photo);return}
@@ -2543,12 +2605,12 @@ document.addEventListener("submit",async e=>{
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
-  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors()]);
+  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors(),loadPom()]);
   if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
