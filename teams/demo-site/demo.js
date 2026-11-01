@@ -101,6 +101,9 @@ if(!T.sponsors){T.sponsors=[{id:9001,name:"Riverside Bakery",about:"Home kit",ur
 if(!T.player_ratings){const done=T.matches.filter(m=>m.us!=null&&m.date<day(0)&&!m.live).sort((x,y)=>x.date.localeCompare(y.date)).slice(0,-1);
   T.player_ratings=done.flatMap((m,i)=>Object.keys(m.played||{}).map((player,j)=>{const base=5+((i*3+j*7+player.length)%4),g=+m.played[player]||0;
     return {match_id:m.id,player,score:Math.min(10,base+(g?1:0)+(m.potm===player?2:0))}}));save()}
+// kit sizes for most of the squad, two left blank so the "still to add" list shows
+if(!T.player_kit){const sz=["9-10","11-12","11-12","13","9-10","XS","11-12","13"],sk=["Junior 12-2","Youth 3-6","Youth 3-6","Junior 12-2"];
+  T.player_kit=T.players.filter(p=>p.current).slice(0,-2).map((p,i)=>({player:p.name,shirt:sz[i%8],shorts:sz[(i+3)%8],socks:sk[i%4],notes:i===0?"Goalkeeper top too":null}));save()}
 // player of the month: last month's star, with a line on why
 if(!T.player_of_month){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);const cur=T.players.filter(p=>p.current);
   T.player_of_month=cur.length?[{month:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`,player:cur[Math.min(2,cur.length-1)].name,note:"Worked so hard for the team every game this month",updated:new Date().toISOString()}]:[];save()}
@@ -124,7 +127,7 @@ function advanceLive(){
 
 // ---------- a little PostgREST: enough for the queries the site makes ----------
 const KEYS={availability:["match_id","player"],player_photos:["player"],badges:["key"],training_attendance:["day","player"],poll_votes:["poll_id","voter"],
-  coaches:["email"],page_views:["day"],player_ratings:["match_id","player"],player_birthdays:["player"],player_of_month:["month"]};
+  coaches:["email"],page_views:["day"],player_ratings:["match_id","player"],player_birthdays:["player"],player_of_month:["month"],player_kit:["player"]};
 const keyOf=t=>KEYS[t]||["id"];
 const parse=v=>v==="null"?null:v==="true"?true:v==="false"?false:v;
 function test(r,col,expr){const i=expr.indexOf(".");const op=expr.slice(0,i),raw=expr.slice(i+1),x=r[col];

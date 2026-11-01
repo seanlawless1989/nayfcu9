@@ -154,6 +154,7 @@ function render(){
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
   else if(view==="ratings")main.innerHTML=ratingsView();
+  else if(view==="kit")main.innerHTML=kitView();
   else if(view==="pom")main.innerHTML=pomView();
   else if(view==="birthdays")main.innerHTML=birthdaysView();
   else if(view==="results")main.innerHTML=resultsView();
@@ -214,7 +215,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -550,29 +551,29 @@ async function parentJoin(){const el=$("#pCode"),code=(el&&el.value||"").replace
   const {data,error}=await sb.rpc("link_family",{p_code:code});
   if(error){toast(/too many/i.test(error.message)?"Too many tries. Wait an hour, or ask the coach to check the code.":"Couldn't check that code. Try again.");return}
   if(!data){toast("That code isn't right. Check it with the coach.");return}
-  await loadParent();await loadTav();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
+  await loadParent();await loadKit();kitDraft=null;await loadTav();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
   const nx=parentNext;parentNext=null;if(nx)setView(nx);else render()}
 async function parentLeave(n){
-  if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();authBox();render();toast(`${n} is no longer linked to this phone.`);return}
+  if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();await loadKit();kitDraft=null;authBox();render();toast(`${n} is no longer linked to this phone.`);return}
   if(!confirm("Sign this phone out? You'll need the family code to sign in again."))return;
   await sb.rpc("unlink_family",{p_player:null});KIDS=[];FAMV={};await sb.auth.signOut();toast("This phone is signed out.")}
 function parentsView(){const kid=PRN.kid,kids=myKids();
-  const what=`<ul style="margin:0;padding-left:20px"><li>Tell the coaches whether your ${kid} can make each game</li><li>Vote in team votes, one vote per family</li></ul>`;
+  const what=`<ul style="margin:0;padding-left:20px"><li>Tell the coaches whether your ${kid} can make each game</li><li>Vote in team votes, one vote per family</li><li>Add your ${kid}'s kit sizes for the coaches</li></ul>`;
   if(!PL_ON)return `<section class="card stack"><h2>👪 Parents</h2><p>Parent sign-in isn't switched on for this team yet.</p></section>`;
   if(canWrite)return `<section class="card stack"><h2>👪 Parents</h2><p>You're signed in as a coach. Each family's code is on the Squad page.</p><div class="btns"><button class="btn gold" data-view="squad">Family codes</button></div></section>`;
   if(kids.length)return `<section class="card stack"><h2>👪 Parents</h2><p>This phone is signed in for <b>${kids.map(esc).join(" and ")}</b>. You can:</p>${what}
     <div class="av">${kids.map(n=>`<div class="row"><span>${esc(n)}</span><button class="mini" data-punlink="${esc(n)}">Remove</button></div>`).join("")}</div>
     <h3>Another ${kid} in the squad?</h3>${joinBox("Type their family code as well.")}
-    <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div></section>`;
+    <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div></section>${kitFamCard()}`;
   return `<section class="card stack"><h2>👪 Parents</h2><p>Sign in with the family code the coach sent you. You only do this once on each phone. Then you can:</p>${what}${joinBox("")}
     <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p></section>`}
 // coaches: every player's code, how many phones use it, and the "parents must sign in" switch (on the Squad page)
 async function loadFam(){if(!sb||!canWrite)return;const {data,error}=await sb.rpc("family_overview");FAM=error?[]:(data||[]);if(view==="squad")render()}
-const famText=f=>`Hi! Here's ${f.player}'s family code for the ${TEAM.name||""} ${TEAM.ageGroup||""} website:\n\n${fmtCode(f.code)}\n\nOpen ${siteUrl()}?parents on your phone and type it in once. Then you can tell us whether ${f.player} can make each game, and vote in team votes.\n\nPlease keep it to your family. Thank you! ${TEAM.cheer||SP.ball}`;
+const famText=f=>`Hi! Here's ${f.player}'s family code for the ${TEAM.name||""} ${TEAM.ageGroup||""} website:\n\n${fmtCode(f.code)}\n\nOpen ${siteUrl()}?parents on your phone and type it in once. Then you can tell us whether ${f.player} can make each game, add ${f.player}'s kit sizes, and vote in team votes.\n\nPlease keep it to your family. Thank you! ${TEAM.cheer||SP.ball}`;
 function famCard(){if(!canWrite||!PL_ON)return "";const kid=PRN.kid;
   if(!FAM){loadFam();return `<section class="card edit-only"><h2>👪 Family codes</h2><p class="hint">Loading…</p></section>`}
   return `<section class="card stack edit-only"><h2>👪 Family codes</h2>
-    <p class="hint">Send each family their ${kid}'s code privately, not in the group chat. They type it once on the Parents page, then they can answer availability for their own ${kid} and vote, one vote per family. "New code" stops the old one working and signs out every phone that used it.</p>
+    <p class="hint">Send each family their ${kid}'s code privately, not in the group chat. They type it once on the Parents page, then they can answer availability for their own ${kid}, add their kit sizes, and vote, one vote per family. "New code" stops the old one working and signs out every phone that used it.</p>
     ${FAM.length?`<div class="av">${FAM.map(f=>`<div class="row" style="flex-wrap:wrap;gap:6px"><span style="flex:1 1 140px"><b>${esc(f.player)}</b> <code>${esc(fmtCode(f.code))}</code></span><span class="hint">${f.phones?`${f.phones} phone${f.phones>1?"s":""}`:"No phones yet"}</span><button class="mini" data-famcopy="${esc(f.player_id)}">Copy message</button><button class="mini" data-famnew="${esc(f.player_id)}">New code</button></div>`).join("")}</div>
     <div class="btns"><button class="btn ghost" id="famAll">Copy all codes</button></div>`:`<p class="hint">Codes appear here once players are in the squad.</p>`}
     <h3>Parents must sign in</h3><p class="hint">${PREQ?"On: only signed-in parents can answer availability and vote.":"Off: anyone with the link can still answer availability and vote, as before. Turn this on once every family has their code."}</p>
@@ -769,7 +770,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when. Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -2064,7 +2065,7 @@ function playerDetail(n){
   <button class="btn gold" data-story="${esc(n)}" style="align-self:flex-start">✨ ${esc(n)}'s ${esc(season)} season story</button>
   ${(L=>L.length?`<section class="card"><h3>Player of the month</h3>${L.map(x=>`<div class="potm">${POM_IC} ${esc(pomLabel(x.month))}${x.note?` <span class="meta">· ${esc(x.note)}</span>`:""}</div>`).join("")}${canWrite?`<div class="mg edit-only" style="margin-top:8px">${L.map(x=>`<button class="mini" data-pomgfx="${esc(x.month)}">${esc(pomMonthName(x.month))} poster</button>`).join("")}</div>`:""}</section>`:"")(pomOf(n))}
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
-  ${rtPlayerCard(n)}${bdPlayerCard(n)}<div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
+  ${rtPlayerCard(n)}${bdPlayerCard(n)}${kitPlayerCard(n)}<div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
   <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
   ${noScores()?"":`<section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>${SP.Goals}</th>${RUGBY?"<th>Kicks</th><th>Points</th>":"<th>Assists</th><th>Clean sheets</th>"}<th>PotM</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps+(r.partial?"*":""):"–"}</td><td>${r.o.goals}</td>${RUGBY?`<td>${esc(kickText(r.o))||"–"}</td><td>${r.o.pts||0}</td>`:`<td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.gk?r.o.cs:"–"}</td>`}<td>${r.o.potm}</td></tr>`).join("")}</tbody></table>${rows.some(r=>r.partial)?`<p class="hint">* Some of these games only recorded the scorers, so this counts the scorers and player of the match and may be missing other games she played.</p>`:""}</section>`}
@@ -2145,6 +2146,79 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   if(b.id==="rtSave"){rtSave();return}
 },true);
 
+// ---------- kit sizes: shirt, shorts and socks for each player, so ordering kit is easy ----------
+// public.player_kit (supabase/21_kit_sizes.sql). Coaches read and write every player's sizes; a parent signed in with a
+// family code only their own child's (the database enforces it). Visitors can't read any of it.
+let KIT=null,kitDraft=null,kitBusy=false;
+const KIT_F=[["shirt","Shirt"],["shorts","Shorts"],["socks","Socks"]];
+const KIT_SIZES={shirt:["3-4","5-6","7-8","9-10","11-12","13","XS","S","M","L","XL","XXL"],shorts:["3-4","5-6","7-8","9-10","11-12","13","XS","S","M","L","XL","XXL"],
+  socks:["Infant 9-12","Junior 12-2","Junior 13-3","Youth 3-6","Adult 7-11","Adult 12+"]};
+// smallest to biggest for the order list: known sizes in the order above, anything else typed after them
+const kitRank=(f,v)=>{const i=KIT_SIZES[f].findIndex(x=>x.toLowerCase()===String(v).toLowerCase());return i<0?99:i};
+async function loadKit(){KIT=null;if(!sb||!(canWrite||myKids().length))return;try{const {data,error}=await sb.from("player_kit").select("player,shirt,shorts,socks,notes");if(!error){KIT={};(data||[]).forEach(r=>KIT[r.player]=r)}}catch(e){}}
+const kitNames=()=>players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)||a.name.localeCompare(b.name)).map(p=>p.name);
+const kitClean=v=>String(v||"").trim().replace(/\s+/g," ");
+const kitHas=r=>r&&(r.shirt||r.shorts||r.socks||r.notes);
+function kitOrder(src){const names=kitNames(),out={};KIT_F.forEach(([f])=>{const c={};names.forEach(n=>{const v=src[n]&&kitClean(src[n][f]);if(v)c[v]=(c[v]||0)+1});
+  out[f]=Object.entries(c).sort((a,b)=>kitRank(f,a[0])-kitRank(f,b[0])||a[0].localeCompare(b[0],undefined,{numeric:true}))});
+  out.missing=names.filter(n=>!KIT_F.every(([f])=>src[n]&&kitClean(src[n][f])));return out}
+function kitText(){const names=kitNames(),o=kitOrder(KIT||{}),k=KIT||{};
+  const lines=[`Kit sizes: ${TEAM.name||""} ${TEAM.ageShort||""}`.trim()+` (${names.length} ${PL})`,""];
+  KIT_F.forEach(([f,l])=>lines.push(`${l}: ${o[f].length?o[f].map(([v,c])=>`${v} x${c}`).join(", "):"none yet"}`));
+  if(o.missing.length)lines.push("",`Still to add sizes for: ${o.missing.join(", ")}`);
+  lines.push("","Player by player:");
+  names.forEach(n=>{const r=k[n]||{},num=numOf(n);lines.push(`${num?num+" ":""}${n}: ${KIT_F.map(([f,l])=>`${l.toLowerCase()} ${kitClean(r[f])||"?"}`).join(", ")}${kitClean(r.notes)?` (${kitClean(r.notes)})`:""}`)});
+  return lines.join("\n")}
+const KIT_LOCK=`<p class="hint rt-lock">🔒 Only the coaches, and each family for their own ${esc(PRN.kid)}, can see kit sizes. Other families and visitors never see them.</p>`;
+function kitInit(names){kitDraft=kitDraft||{};names.forEach(n=>{if(kitDraft[n])return;const r=(KIT||{})[n]||{};kitDraft[n]={shirt:r.shirt||"",shorts:r.shorts||"",socks:r.socks||"",notes:r.notes||""}})}
+const kitDirtyText=()=>{const c=kitChanged().length;return c?`Changes for ${c} ${c===1?PL.replace(/s$/,""):PL} not saved yet`:"All saved"};
+const kitRow=(n,tag)=>{const d=kitDraft[n]||{};return `<div class="kit-p"><div class="rt-n"><span class="num">${esc(numOf(n))||"·"}</span><b>${esc(n)}</b>${tag&&!kitHas(KIT[n])?` <span class="pill rt-no kit-new">To add</span>`:""}</div>
+    <div class="kit-in">${KIT_F.map(([f,l])=>`<label class="f">${l}<input type="text" list="kit-${f}" maxlength="20" autocomplete="off" data-kitn="${esc(n)}" data-kitf="${f}" value="${esc(d[f])}" placeholder="Size"></label>`).join("")}</div>
+    <label class="f kit-note">Notes (optional)<input type="text" maxlength="120" data-kitn="${esc(n)}" data-kitf="notes" value="${esc(d.notes)}" placeholder="e.g. goalkeeper top, gloves size 6, name on shirt"></label></div>`};
+const kitDatalists=()=>KIT_F.map(([f])=>`<datalist id="kit-${f}">${KIT_SIZES[f].map(v=>`<option value="${esc(v)}">`).join("")}</datalist>`).join("");
+function kitView(){
+  if(!canWrite)return `<div class="stack"><section class="card empty">Kit sizes are for coaches only. Sign in as a coach to see them.</section></div>`;
+  if(KIT===null)return `<div class="stack"><section class="card"><h2 style="margin-top:0">Kit sizes</h2><p class="hint">Kit sizes aren't switched on for this team's database yet. Ask ${esc(TEAM.supportName||"Touchline Tales")} via Help and changes to turn them on.</p></section></div>`;
+  const names=kitNames();kitInit(names);
+  const o=kitOrder(KIT),done=names.length-o.missing.length;
+  const sum=`<div class="kit-sum">${KIT_F.map(([f,l])=>`<div><b>${l}</b>${o[f].length?o[f].map(([v,c])=>`<span class="kit-pill">${esc(v)} <i>×${c}</i></span>`).join(""):`<span class="hint">None yet</span>`}</div>`).join("")}</div>`;
+  return `<div class="stack">
+  <section class="card"><h2 style="margin-top:0">Kit sizes</h2>
+    <p>Keep each ${esc(PL.replace(/s$/,""))}'s shirt, shorts and socks size here, so ordering kit is one message to the supplier. Families signed in with their family code can fill in their own ${esc(PRN.kid)}'s sizes too, so you can ask them to do it. Shirt numbers are on the <button class="mini" data-view="squad">Squad</button> page.</p>${KIT_LOCK}</section>
+  <section class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px"><h3 style="margin:0">Order list</h3><span class="hint">${done} of ${names.length} ${esc(PL)} done</span></div>
+    ${sum}${o.missing.length&&done?`<p class="hint" style="margin-top:8px">Still to add: ${o.missing.map(esc).join(", ")}</p>`:""}
+    <div class="btns" style="margin-top:10px"><button class="btn ghost" id="kitCopy"${done?"":" disabled"}>📋 Copy order list</button></div></section>
+  <section class="card stack" style="gap:16px">${names.map(n=>kitRow(n,1)).join("")||`<p class="hint">No ${esc(PL)} on the squad yet. Add them on the Squad page first.</p>`}</section>
+  ${kitDatalists()}
+  <div class="btns rt-save"><button class="btn gold" id="kitSave"${kitBusy?" disabled":""}>Save sizes</button><span class="hint" id="kitDirty">${kitDirtyText()}</span></div></div>`;
+}
+// players whose sizes in the form differ from what's saved
+function kitChanged(){if(!kitDraft||!KIT)return [];return Object.keys(kitDraft).filter(n=>{const d=kitDraft[n],r=KIT[n]||{};return ["shirt","shorts","socks","notes"].some(f=>kitClean(d[f])!==kitClean(r[f]))})}
+async function kitSave(){if(!kitDraft||!(canWrite||myKids().length)||kitBusy)return;const ch=kitChanged();if(!ch.length){toast("Nothing to save.");return}kitBusy=true;render();
+  try{const row=n=>{const d=kitDraft[n],o={player:n,updated:new Date().toISOString()};["shirt","shorts","socks","notes"].forEach(f=>o[f]=kitClean(d[f])||null);return o};
+    const up=ch.map(row).filter(kitHas),gone=ch.filter(n=>!kitHas(row(n))&&KIT[n]);
+    if(up.length){const {error}=await sb.from("player_kit").upsert(up,{onConflict:"player"});if(error)throw error}
+    if(gone.length){const {error}=await sb.from("player_kit").delete().in("player",gone);if(error)throw error}
+    await loadKit();kitDraft=null;toast(canWrite?"Kit sizes saved. Only coaches and each family can see them.":"Kit sizes saved. Only you and the coaches can see them.")}
+  catch(e){toast("Couldn't save the sizes. Check your connection and try again.")}
+  kitBusy=false;render()}
+// on a player's page, for coaches only
+function kitPlayerCard(n){const fam=!canWrite&&myKids().includes(n);if(!KIT||!(canWrite||fam))return "";const r=KIT[n];
+  return `<section class="card"><h3>Kit sizes</h3>${kitHas(r)?`<p>${KIT_F.map(([f,l])=>`${l} <b>${esc(r[f]||"–")}</b>`).join(" · ")}</p>${r.notes?`<p class="hint">${esc(r.notes)}</p>`:""}`:`<p class="hint">No sizes yet.</p>`}
+    <div class="btns"><button class="mini" data-view="${fam?"parents":"kit"}">${kitHas(r)?"Change sizes":"Add sizes"}</button></div>${KIT_LOCK}</section>`}
+// on the Parents page: a signed-in family fills in their own child's sizes
+function kitFamCard(){const kids=myKids();if(!kids.length)return "";
+  if(!KIT)return "";kitInit(kids);
+  return `<section class="card stack" style="gap:14px"><h2 style="margin:0">📏 Kit sizes</h2><p class="hint" style="margin:0">Add ${kids.length>1?"each":"your"} ${esc(PRN.kid)}'s sizes so the coaches can order the right kit. Change them any time they grow.</p>
+    ${kids.map(n=>kitRow(n,0)).join("")}${kitDatalists()}
+    <div class="btns"><button class="btn gold" id="kitSave"${kitBusy?" disabled":""}>Save sizes</button><span class="hint" id="kitDirty">${kitDirtyText()}</span></div>${KIT_LOCK}</section>`}
+document.addEventListener("input",e=>{const t=e.target;if((view!=="kit"&&view!=="parents")||!t.dataset||!t.dataset.kitn||!kitDraft)return;
+  (kitDraft[t.dataset.kitn]||(kitDraft[t.dataset.kitn]={}))[t.dataset.kitf]=t.value;const d=$("#kitDirty");if(d)d.textContent=kitDirtyText()});
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.id==="kitSave"&&(view==="kit"||view==="parents")){kitSave();return}
+  if(view!=="kit"||!canWrite)return;
+  if(b.id==="kitCopy"){if(kitChanged().length)toast("Save your changes first, then copy.");else copyOut(kitText(),"Order list copied. Paste it into an email or WhatsApp.");return}
+});
 // ---------- birthdays: day and month only (never the year, so no ages), for coaches' reminders ----------
 // public.player_birthdays (supabase/19_player_birthdays.sql). Only signed-in coaches can read or write it: the database
 // refuses everyone else, parents signed in with a family code included. Nothing about birthdays is ever shown publicly.
@@ -2625,12 +2699,12 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();
   await loadTav();alSync();
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadKit();
   authBox();render();
 }
 document.addEventListener("click",async e=>{

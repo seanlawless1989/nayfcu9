@@ -523,6 +523,14 @@ table.lb.cs .ctag{white-space:normal;line-height:1.3}
 .rt-hist{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .rt-chip{display:inline-flex;flex-direction:column;align-items:center;min-width:42px;padding:6px 4px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink);cursor:pointer;font:inherit}
 .rt-chip b{font-size:16px}.rt-chip small{font-size:10px;color:var(--muted)}
+/* kit sizes (coaches, and each family for their own child) */
+.kit-sum{display:flex;flex-direction:column;gap:8px}.kit-sum>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.kit-sum>div>b{min-width:58px}
+.kit-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:rgb(var(--clubRGB)/.12);color:var(--club);font-weight:700;font-size:14px}.kit-pill i{font-style:normal;font-weight:800}
+.kit-p{display:flex;flex-direction:column;gap:6px}.kit-p+.kit-p{padding-top:14px;border-top:1px solid var(--line)}
+.kit-in{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:8px}.kit-in input{min-width:0;width:100%;padding-left:10px;padding-right:8px}
+.kit-p .rt-n{display:flex;align-items:center;gap:8px}
+.kit-new{font-size:11px;padding:2px 8px;border-radius:999px;margin-left:auto}
+.kit-p .num{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 4px;border-radius:6px;background:var(--gold);color:var(--goldInk);font:400 13px var(--display)}
 /* player of the month */
 .pom-home{border-left:6px solid var(--gold)}
 .pom-home .kick{font:800 12px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
