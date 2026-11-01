@@ -526,13 +526,23 @@ let pickMatch=null,PICK=null;
 const pickTourn=()=>pickMatch&&String(pickMatch).startsWith("t:")?tournaments.find(t=>t.id===pickMatch.slice(2)):null;
 const tSquad=t=>(t&&Array.isArray(t.squad)?t.squad:[]).filter(Boolean);
 const tSquadOpen=t=>!!t&&tEnd(t)>=todayLocal();
+// the squad list with each player's availability answer (refreshed every time Pick squad opens), a count of the answers,
+// and a flag where the ticks and the answer disagree: picked but can't make it, or not picked but can
+function pickList(roster,a){const lab={yes:"✅ Can make it",maybe:"❔ Maybe",no:"❌ Can't make it"};
+  const c={yes:0,maybe:0,no:0,none:0};roster.forEach(p=>c[lab[a[p.name]]?a[p.name]:"none"]++);
+  const flag=p=>PICK.set.has(p.name)?(a[p.name]==="no"?` <b class="pkwarn">⚠️ picked</b>`:""):(a[p.name]==="yes"?` <b class="pkwarn">not picked</b>`:"");
+  return `<p class="pkcount">${Object.keys(a).length?`✅ ${c.yes} can make it · ❔ ${c.maybe} maybe · ❌ ${c.no} can't · ${c.none} no answer`:"No availability answers yet."}</p>
+  <div class="av">${roster.map(p=>`<label class="row${PICK.set.has(p.name)&&a[p.name]==="no"?" pkbad":""}" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||"No answer"}${flag(p)}</span></label>`).join("")}</div>
+  <p class="hint pkn">${PICK.set.size} picked.</p>`}
+// answers that came in since the site was opened: reload them when Pick squad opens, or when the coach comes back to it.
+// Before the coach has saved a squad or touched a tick, the starting ticks follow the fresh answers.
+async function pickRefresh(){await loadAvail();if(view!=="pick")return;if(PICK&&!PICK.touched&&!PICK.saved)PICK=null;render()}
 function pickTView(t){const a=AV[pickMatch]||{};const roster=players.filter(p=>p.current).sort((x,y)=>(+x.num||99)-(+y.num||99));
-  if(!PICK||PICK.id!==pickMatch)PICK={id:pickMatch,set:new Set(tSquad(t).length?tSquad(t):roster.filter(p=>a[p.name]!=="no").map(p=>p.name))};
-  const lab={yes:"✅ Can make it",maybe:"❔ Maybe",no:"❌ Can't make it"};const d=new Date(t.date+"T12:00:00");
+  if(!PICK||PICK.id!==pickMatch)PICK={id:pickMatch,saved:tSquad(t).length>0,set:new Set(tSquad(t).length?tSquad(t):roster.filter(p=>a[p.name]!=="no").map(p=>p.name))};
+  const d=new Date(t.date+"T12:00:00");
   return `<section class="card stack"><h2>Pick the tournament squad</h2><p><b>🏆 ${esc(t.name||"Tournament")}</b>, ${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}${t.venue?` · ${esc(t.venue)}`:""}</p>
   <p class="hint">Tick who's going. Parents see the squad on the tournament card, every game you add to the tournament starts with these players, and Live match uses them on the day.</p>
-  <div class="av">${roster.map(p=>`<label class="row" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||""}</span></label>`).join("")}</div>
-  <p class="hint">${PICK.set.size} picked.</p>
+${pickList(roster,a)}
   ${tSquadOpen(t)?`<label class="row" style="cursor:pointer"><span><input type="checkbox" id="pickAlert" checked style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">📣 Send a squad alert to parents' phones</span></label><p class="hint">Only sent when the squad is new or has changed since the last alert.</p>`:""}
   <div class="btns"><button class="btn gold" id="pickSave">Save squad</button><button class="btn" id="pickSavePost">Save and make the squad post</button><button class="btn ghost" data-view="fixtures">Cancel</button></div></section>`}
 async function pickTSave(t){const sq=[...PICK.set].sort((a,b)=>(+(players.find(p=>p.name===a)||{}).num||99)-(+(players.find(p=>p.name===b)||{}).num||99));
@@ -546,12 +556,11 @@ function pickView(){const pt=pickTourn();if(pt)return pickTView(pt);if(String(pi
   const m=matches.find(x=>x.id===pickMatch);if(!m)return `<div class="card empty">Fixture not found.</div>`;
   const a=AV[m.id]||{};const roster=players.filter(p=>p.current).sort((x,y)=>(+x.num||99)-(+y.num||99));
   const ts=m.tournament_id?tSquad(tournaments.find(t=>t.id===m.tournament_id)):[];
-  if(!PICK||PICK.id!==m.id)PICK={id:m.id,set:new Set(m.squad&&m.squad.length?m.squad:ts.length?ts:roster.filter(p=>a[p.name]!=="no").map(p=>p.name))};
-  const lab={yes:"✅ Can make it",maybe:"❔ Maybe",no:"❌ Can't make it"};const d=new Date(m.date+"T12:00:00");
+  if(!PICK||PICK.id!==m.id)PICK={id:m.id,saved:!!(m.squad&&m.squad.length||ts.length),set:new Set(m.squad&&m.squad.length?m.squad:ts.length?ts:roster.filter(p=>a[p.name]!=="no").map(p=>p.name))};
+  const d=new Date(m.date+"T12:00:00");
   return `<section class="card stack"><h2>Pick the squad</h2><p><b>${m.ha==="A"?"at ":"v "}${esc(m.opp)}</b>, ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}${m.ko?` · ${esc(m.ko)} KO`:""}</p>
   <p class="hint">Tick who's in the squad. Live match will use exactly these players on the day, and the squad post will use them too. Parents' answers are shown where they've replied.</p>
-  <div class="av">${roster.map(p=>`<label class="row" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||"No answer"}</span></label>`).join("")}</div>
-  <p class="hint">${PICK.set.size} picked.</p>
+${pickList(roster,a)}
   ${pickAlertable(m)?`<label class="row" style="cursor:pointer"><span><input type="checkbox" id="pickAlert" checked style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">📣 Send a squad alert to parents' phones</span></label><p class="hint">Only sent when the squad is new or has changed since the last alert.</p>`:""}
   <div class="btns"><button class="btn gold" id="pickSave">Save squad</button><button class="btn" id="pickSavePost">Save and make the squad post</button><button class="btn ghost" data-view="fixtures">Cancel</button></div></section>`}
 function pickAlertable(m){return !m.practice&&!m.postponed&&!result(m)&&(m.date||"")>=todayLocal()&&!(m.live&&m.live.status&&m.live.status!=="pre")}
@@ -1422,6 +1431,7 @@ function tbFsOff(){tbFs=false;tbSel=null;document.body.classList.remove("tbfs-on
 ["fullscreenchange","webkitfullscreenchange"].forEach(ev=>document.addEventListener(ev,()=>{if(tbFs&&tbFsNative&&!(document.fullscreenElement||document.webkitFullscreenElement)){tbFsNative=false;tbFsOff()}}));
 document.addEventListener("keydown",e=>{if(tbFs&&e.key==="Escape"&&!tbFsNative)tbFsOff()});
 document.addEventListener("visibilitychange",()=>{if(tbFs&&document.visibilityState==="visible")tbWake()});
+document.addEventListener("visibilitychange",()=>{if(view==="pick"&&document.visibilityState==="visible")pickRefresh()});
 // turning the iPad round turns the pitch with it
 addEventListener("resize",()=>{if(!tbFs||view!=="tactics")return;clearTimeout(tbFsOn.t);tbFsOn.t=setTimeout(()=>{if(tbFs&&!tbDrag&&tbWide()!==tbRot)render()},150)});
 // the picture: a heading in club colours above the board, for the team chat
@@ -1728,7 +1738,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.id==="bookPrint")window.print();
   if(b.dataset.cf!=null&&b.closest(".ckey")){compFilter=b.dataset.cf||null;render()}
   if(b.dataset.pscope){pScope=b.dataset.pscope;render()}
-  if(b.dataset.pick){pickMatch=b.dataset.pick;PICK=null;setView("pick")}
+  if(b.dataset.pick){pickMatch=b.dataset.pick;PICK=null;setView("pick");pickRefresh()}
   if(b.id==="pickSave"){if(await pickSave())setView("fixtures")}
   if(b.id==="pickSavePost"){const pt=pickTourn(),m=await pickSave();if(m){setView("gfx");const g=await gfxReady();if(pt&&g.loadTSquad)await g.loadTSquad(pt);else await g.loadMatch(pt?{opp:pt.name,date:pt.date,venue:pt.venue,comp:"Tournament",squad:tSquad(pt)}:m,"squad")}}
   if(b.dataset.live){liveStart(b.dataset.live)}
@@ -1817,7 +1827,7 @@ document.addEventListener("change",e=>{const al={"al-rem":"reminders","al-goals"
   try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(x){}
   if(AL.sub)alSave(AL.sub).then(()=>toast("Saved."),()=>toast("Couldn't save that. Try again."))});
 document.addEventListener("change",e=>{if(e.target.dataset.badge&&e.target.files[0]){saveBadge(e.target.dataset.badge,e.target.files[0]);return}if(e.target.dataset.tlogo&&e.target.files[0]){saveTLogo(e.target.dataset.tlogo,e.target.files[0]);return}if(e.target.dataset.photo&&e.target.files[0]){savePhoto(e.target.dataset.photo,e.target.files[0]);return}
-  if(e.target.dataset.pk&&PICK){const n=e.target.dataset.pk;if(e.target.checked)PICK.set.add(n);else PICK.set.delete(n);const h=e.target.closest(".card").querySelector(".av + .hint");if(h)h.textContent=`${PICK.set.size} picked.`;return}
+  if(e.target.dataset.pk&&PICK){const n=e.target.dataset.pk;if(e.target.checked)PICK.set.add(n);else PICK.set.delete(n);PICK.touched=true;render();return}
   if(!LV)return;
   if(e.target.dataset.slot!=null){const i=+e.target.dataset.slot,n=e.target.value;const j=LV.slots.indexOf(n);if(n&&j>=0&&j!==i)LV.slots[j]=LV.slots[i];LV.slots[i]=n;liveSaveLocal();render();return}
   if(e.target.id==="lvLen"){LV.halfLen=Math.max(5,+e.target.value||20);liveSaveLocal();if(planOf(LV).mode!=="off")render();return}
