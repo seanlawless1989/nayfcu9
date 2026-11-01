@@ -162,7 +162,7 @@ function drawCoffey(cx,cy,r){
   if(S.potmKind==="month"){const mn=pomMonth(),yr=(S.pomMonth||"").slice(0,4);X.beginPath();X.arc(cx,cy+r*.02,r*.58,0,Math.PI*2);X.fillStyle=C.yellow;X.fill();
     X.fillStyle="#141414";fit(mn,r*1.0,Math.round(r*.26),DISPLAY);X.fillText(mn,cx,cy-r*.06);X.font=font(Math.round(r*.15),DISPLAY);X.fillText(yr,cx,cy+r*.2)}
   else if(IMG.coffeyLogo){X.beginPath();X.arc(cx,cy+r*.02,r*.58,0,Math.PI*2);X.fillStyle=C.white;X.fill();X.save();X.clip();contain(IMG.coffeyLogo,cx-r*.56,cy-r*.54,r*1.12,r*1.12);X.restore()}
-  else{X.fillStyle=C.pink;X.font=font(Math.round(r*.2),DISPLAY);const w2=String((TEAM.potm&&TEAM.potm.sponsor)||"⭐").toUpperCase().split(/\s+/);X.fillText(w2[0],cx,cy-(w2[1]?r*.12:0));if(w2[1])X.fillText(w2.slice(1).join(" "),cx,cy+r*.12)}
+  else{X.fillStyle=C.pink;X.font=font(Math.round(r*.2),DISPLAY);const w2=String((TEAM.potm&&TEAM.potm.sponsor)||(TEAM.potm&&TEAM.potm.icon)||"🏆").toUpperCase().split(/\s+/);X.fillText(w2[0],cx,cy-(w2[1]?r*.12:0));if(w2[1])X.fillText(w2.slice(1).join(" "),cx,cy+r*.12)}
   // ribbon
   const rw=r*1.7,rh=r*.26,ry=cy+r*.62;X.fillStyle=C.pink;X.strokeStyle="#141414";X.lineWidth=r*.03;
   X.beginPath();X.moveTo(cx-rw/2,ry);X.lineTo(cx+rw/2,ry);X.lineTo(cx+rw/2-rh*.4,ry+rh/2);X.lineTo(cx+rw/2,ry+rh);X.lineTo(cx-rw/2,ry+rh);X.lineTo(cx-rw/2+rh*.4,ry+rh/2);X.closePath();X.fill();X.stroke();
@@ -314,14 +314,14 @@ function caption(){
     const opener=res==="WIN"?"What a performance! 🎉":(res==="DRAW"?"Honours even today.":"Not our day, but so proud of the effort. 💪");
     const asl=RG?"":Object.entries(S.assists||{}).filter(([n,a])=>a>0).map(([n,a])=>`🅰️ ${n}${a>1?` x${a}`:""}`).join("\n");
     const kl=RG?Object.entries(S.kicks||{}).filter(([,k])=>kickStr(k)).map(([n,k])=>`🎯 ${n} (${kickStr(k)})`).join("\n"):"";
-    t=`FULL TIME: ${TEAM.name} ${us} - ${them} ${opp}\n\n${opener}\n\n${sc?`${RG?"Our try scorers":"Our scorers"}:\n${sc}\n\n`:""}${kl?`Kicks:\n${kl}\n\n`:""}${asl?`Assists:\n${asl}\n\n`:""}${S.ftPotm?`${(TEAM.potm&&TEAM.potm.icon)||"⭐"} ${(TEAM.potm&&TEAM.potm.sponsor?TEAM.potm.sponsor+" ":"")}Player of the Match: ${S.ftPotm}\n\n`:""}${sp.trim()}\n\n${TEAM.hashtags||""}`;
+    t=`FULL TIME: ${TEAM.name} ${us} - ${them} ${opp}\n\n${opener}\n\n${sc?`${RG?"Our try scorers":"Our scorers"}:\n${sc}\n\n`:""}${kl?`Kicks:\n${kl}\n\n`:""}${asl?`Assists:\n${asl}\n\n`:""}${S.ftPotm?`${(TEAM.potm&&TEAM.potm.icon)||"🏆"} ${(TEAM.potm&&TEAM.potm.sponsor?TEAM.potm.sponsor+" ":"")}Player of the Match: ${S.ftPotm}\n\n`:""}${sp.trim()}\n\n${TEAM.hashtags||""}`;
   } else if(S.mode==="month"){
     const mn=S.month?new Date(S.month+"-01T12:00:00").toLocaleDateString("en-GB",{month:"long"}):"";
     t=`📅 ${mn.toUpperCase()} FIXTURES 📅\n\n${MONTH_LIST.map(m=>`${new Date(m.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}: ${m.ha==="A"?"away at":"v"} ${m.opp}${m.ko?`, ${m.ko} KO`:""}${m.venue?` (${m.venue})`:""}`).join("\n")||"No fixtures this month."}\n\nCome and support the ${TEAM.players||"team"}! ${TEAM.cheer||""}${sp}\n\n${TEAM.shortHashtags||""}`;
   } else if(S.mode==="ms"){
     t=`🎉 MILESTONE 🎉\n\nHuge congratulations to ${S.msPlayer||"…"}: ${S.msLabel||""}! ⭐\n\nWe're so proud of you.${sp}\n\n${TEAM.shortHashtags||""}`;
   } else if(S.mode==="potm"){
-    t=S.potmKind==="month"?`🏅 PLAYER OF THE MONTH 🏅\n\nCongratulations to ${S.potm||"…"}, our ${pomMonth().charAt(0)+pomMonth().slice(1).toLowerCase()} player of the month! 🌟${S.pomNote?`\n\n${S.pomNote}`:""}${sp}\n\n${TEAM.hashtags||""}`:S.potmKind==="tournament"?`⭐ PLAYER OF THE TOURNAMENT ⭐\n\nCongratulations to ${S.potm||"…"}, our player of the tournament${S.tname?` at the ${S.tname}`:""}! 🌟`:`${(TEAM.potm&&TEAM.potm.icon)||"⭐"} ${POTM_UP} ${(TEAM.potm&&TEAM.potm.icon)||"⭐"}\n\nCongratulations to ${S.potm||"…"}, our player of the match${S.opp?` against ${S.opp}`:""}! 🌟${TEAM.potm&&TEAM.potm.sponsor?`\n\nThanks to ${TEAM.potm.sponsor} for supporting the ${TEAM.ageGroup||"team"}.`:""}${sp}\n\n${TEAM.hashtags||""}`;
+    t=S.potmKind==="month"?`🏅 PLAYER OF THE MONTH 🏅\n\nCongratulations to ${S.potm||"…"}, our ${pomMonth().charAt(0)+pomMonth().slice(1).toLowerCase()} player of the month! 🌟${S.pomNote?`\n\n${S.pomNote}`:""}${sp}\n\n${TEAM.hashtags||""}`:S.potmKind==="tournament"?`⭐ PLAYER OF THE TOURNAMENT ⭐\n\nCongratulations to ${S.potm||"…"}, our player of the tournament${S.tname?` at the ${S.tname}`:""}! 🌟`:`${(TEAM.potm&&TEAM.potm.icon)||"🏆"} ${POTM_UP} ${(TEAM.potm&&TEAM.potm.icon)||"🏆"}\n\nCongratulations to ${S.potm||"…"}, our player of the match${S.opp?` against ${S.opp}`:""}! 🌟${TEAM.potm&&TEAM.potm.sponsor?`\n\nThanks to ${TEAM.potm.sponsor} for supporting the ${TEAM.ageGroup||"team"}.`:""}${sp}\n\n${TEAM.hashtags||""}`;
   }
   $("caption").value=t;
 }

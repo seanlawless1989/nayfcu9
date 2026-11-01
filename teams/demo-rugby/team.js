@@ -24,7 +24,7 @@ self.TEAM = {
              accent: "#C9D4F2", accentDeep: "#1D3A8A" },
   crest: "crest.png",
   sponsor: null,
-  potm: { sponsor: "", logo: "", icon: "⭐", ribbon: "STRFC U14s" },
+  potm: { sponsor: "", logo: "", icon: "🏆", ribbon: "STRFC U14s" },
   kitSponsor: null,
   kits: {
     home: { label: "Navy and red hoops", body: "#1D3A8A", trim: "#D62839", ink: "#FFFFFF", band: "#D62839", bandInk: "#FFFFFF" },

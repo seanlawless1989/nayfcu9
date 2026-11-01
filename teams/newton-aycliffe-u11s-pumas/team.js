@@ -25,7 +25,7 @@ self.TEAM = {
              accent: "#F7A3D3", accentDeep: "#E5559F" },
   crest: "crest.png",
   sponsor: null,
-  potm: { sponsor: "", logo: "", icon: "⭐", ribbon: "NAYFC U11 PUMAS" },
+  potm: { sponsor: "", logo: "", icon: "🏆", ribbon: "NAYFC U11 PUMAS" },
   kitSponsor: null,
   kits: {
     yellow: { label: "Yellow", body: "#FFD200", trim: "#2235E8", ink: "#111111", band: "#2235E8", bandInk: "#FFFFFF" },

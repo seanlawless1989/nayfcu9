@@ -1029,7 +1029,7 @@ revoke all on function na_u11_pumas.avail_reminder_targets(text, date) from publ
 
 -- The team's name and alert settings for the notify function, for a team that shares this project in its own schema
 -- (the project's own team uses the notify function's secrets). Same shape as TEAM in team.js:
--- {"name": "...", "ageGroup": "...", "publicScores": false, "sport": "football", "potm": {"sponsor": "", "icon": "⭐"}}
+-- {"name": "...", "ageGroup": "...", "publicScores": false, "sport": "football", "potm": {"sponsor": "", "icon": "🏆"}}
 create table if not exists na_u11_pumas.alert_team(
   id       int primary key default 1 check (id = 1),
   settings jsonb not null default '{}'::jsonb
