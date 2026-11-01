@@ -596,6 +596,7 @@ async function parentLeave(n){
   if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();await loadKit();kitDraft=null;authBox();render();toast(`${n} is no longer linked to this phone.`);return}
   if(!confirm("Sign this phone out? You'll need the family code to sign in again."))return;
   await sb.rpc("unlink_family",{p_player:null});KIDS=[];FAMV={};await sb.auth.signOut();toast("This phone is signed out.")}
+const coachToo=()=>`<p class="hint" style="margin:0">Are you one of the coaches? <button class="mini" id="signIn">Coach sign in</button> You'll see the coach view, and can answer for every ${esc(PL.replace(/s$/,""))}, your own included.</p>`;
 function parentsView(){const kid=PRN.kid,kids=myKids();
   const what=`<ul style="margin:0;padding-left:20px"><li>Tell the coaches whether your ${kid} can make each game</li><li>Vote in team votes, one vote per family</li><li>Add your ${kid}'s kit sizes for the coaches</li></ul>`;
   if(!PL_ON)return `<section class="card stack"><h2>👪 Parents</h2><p>Parent sign-in isn't switched on for this team yet.</p></section>`;
@@ -604,9 +605,9 @@ function parentsView(){const kid=PRN.kid,kids=myKids();
     <div class="av">${kids.map(n=>`<div class="row"><span>${esc(n)}</span><button class="mini" data-punlink="${esc(n)}">Remove</button></div>`).join("")}</div>
     <div class="btns"><button class="btn gold" data-view="availall">Answer for the games coming up</button></div>
     <h3>Another ${kid} in the squad?</h3>${joinBox("Type their family code as well.")}
-    <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div></section>${kitFamCard()}`;
+    <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div>${coachToo()}</section>${kitFamCard()}`;
   return `<section class="card stack"><h2>👪 Parents</h2><p>Sign in with the family code the coach sent you. You only do this once on each phone. Then you can:</p>${what}${joinBox("")}
-    <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p></section>`}
+    <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p>${coachToo()}</section>`}
 // coaches: every player's code, how many phones use it, and the "parents must sign in" switch (on the Squad page)
 async function loadFam(){if(!sb||!canWrite)return;const {data,error}=await sb.rpc("family_overview");FAM=error?[]:(data||[]);if(view==="squad")render()}
 const famText=f=>`Hi! Here's ${f.player}'s family code for the ${TEAM.name||""} ${TEAM.ageGroup||""} website:\n\n${fmtCode(f.code)}\n\nOpen ${siteUrl()}?parents on your phone and type it in once. Then you can tell us whether ${f.player} can make each game, add ${f.player}'s kit sizes, and vote in team votes.\n\nPlease keep it to your family. Thank you! ${TEAM.cheer||SP.ball}`;
@@ -2420,7 +2421,7 @@ function squadView(){
 // Only shown when the database has a team_settings row (new teams); Newton Aycliffe has none and keeps using team.js.
 const SETUP_KEY=SK+".setup";let SETUP_ROW=window.TEAM_SETUP||null;
 const hasSetup=()=>!!(SETUP_ROW&&!SETUP_ROW.none),setupPending=()=>hasSetup()&&SETUP_ROW.ready===false;
-let SU=null,SU_COACHES=null,SU_SIGN=null,SU_FIX=[],suBusy=false;
+let SU=null,SU_COACHES=null,SU_SHARE=0,SU_SIGN=null,SU_FIX=[],suBusy=false;
 const SU_AGES=["Under 6s","Under 7s","Under 8s","Under 9s","Under 10s","Under 11s","Under 12s","Under 13s","Under 14s","Under 15s","Under 16s","Under 17s","Under 18s","Open age"];
 // scores hidden by default: football follows the FA (Under 7s to Under 11s); rugby suggests hiding them for mini rugby (Under 7s to Under 12s)
 const youngAge=(a,sp)=>{const n=+(/\d+/.exec(a||"")||[0])[0];return n>=7&&n<=((SPORTS[sp]||SP).rugby?12:11)};
@@ -2448,6 +2449,7 @@ function suTeam(f){const n=(/\d+/.exec(f.ageGroup)||[])[0],ageShort=n?`U${n}s`:f
 function shrinkLogo(file,S){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(S/im.width,S/im.height,1),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/png"))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function suLoad(){if(!sb||!canWrite)return;
   try{const {data}=await sb.rpc("list_coaches");SU_COACHES=data||[]}catch(e){SU_COACHES=[]}
+  try{const {data,error}=await sb.rpc("coach_share_count");SU_SHARE=error?0:+data||0}catch(e){SU_SHARE=0}// sister sites sharing this coach list (22_shared_coaches.sql)
   try{const {data}=await sb.from("team_signoff").select("*").eq("id",1).maybeSingle();SU_SIGN=data||null}catch(e){SU_SIGN=null}
   if(view==="setup")render()}
 function suRemember(row){SETUP_ROW=row;try{localStorage.setItem(SETUP_KEY,JSON.stringify(row))}catch(e){}}
@@ -2489,9 +2491,10 @@ function setupView(){
     ${SU_FIX.map((r,i)=>`<div class="grid2" data-sufix="${i}"><label class="f">Date<input type="date" data-fx="date" value="${esc(r.date)}"></label><label class="f">Opponent<input type="text" data-fx="opp" value="${esc(r.opp)}"></label><label class="f">Home or away<select data-fx="ha">${[["H","Home"],["A","Away"],["N","Neutral"]].map(([v,t])=>`<option value="${v}"${r.ha===v?" selected":""}>${t}</option>`).join("")}</select></label><label class="f">Kick-off<input type="time" data-fx="ko" value="${esc(r.ko)}"></label><label class="f">Competition<select data-fx="comp">${["League","Cup","Friendly"].map(c=>`<option${r.comp===c?" selected":""}>${c}</option>`).join("")}</select></label></div>`).join("")}
     <div class="btns"><button class="btn ghost" id="suFixAdd">+ Add a fixture row</button>${SU_FIX.length?`<button class="btn" id="suFixSave">Save these fixtures</button>`:""}</div></section>
   <section class="card stack" style="gap:10px"><h3 style="margin:0">5. Your coaches</h3>
-    <p class="hint">Only these people can sign in and change the site. They sign in with a link sent to their email.</p>
+    <p class="hint">Only these people can sign in and change the site. Anyone you add can sign in straight away with a link sent to their email: send them the coach sign-in link below.${SU_SHARE&&(TEAM.sisterTeams||[]).length?` This list is shared with ${(TEAM.sisterTeams||[]).map(x=>esc(x.name)).join(" and ")}, so adding or removing a coach here does the same there.`:""} Coaches who are also parents sign in here as a coach and can then answer for every ${esc(PL.replace(/s$/,""))}, their own included.</p>
     ${SU_COACHES===null?`<p class="hint">Loading…</p>`:`<div class="stack" style="gap:6px">${SU_COACHES.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${esc(e)}</span>${me&&e===String(me.email||"").toLowerCase()?`<span class="hint">You</span>`:`<button class="mini" data-sucoachdel="${esc(e)}">Remove</button>`}</div>`).join("")}</div>`}
-    <div class="btns"><input type="text" id="su-coach" inputmode="email" placeholder="New coach's email" style="max-width:280px"><button class="btn" id="suCoachAdd">Add coach</button></div></section>
+    <div class="btns"><input type="text" id="su-coach" inputmode="email" placeholder="New coach's email" style="max-width:280px"><button class="btn" id="suCoachAdd">Add coach</button></div>
+    <p class="hint" style="margin:0">Coach sign-in link: <b>${esc(location.origin+location.pathname)}?coach</b> <button class="mini" id="suCoachLink">Copy</button></p></section>
   <section class="card stack" style="gap:10px;border-left:6px solid var(--gold)"><h3 style="margin:0">6. ${fs.rugby?"Safeguarding":"Welfare"} sign-off${live?"":" and go live"}</h3>
     <p class="hint">Please go through this with your club ${wo}. How we keep the children safe: first names only; the site is kept out of Google and parents get the link from the club; only the coaches above can change anything; your data sits in its own database in London, kept only for your club; sticker book photos stay on the coach's phone.</p>
     <div class="grid2"><label class="f">${Wo}'s name<input type="text" id="su-wname" value="${esc(S.welfare_name||"")}"></label><label class="f">${Wo}'s email<input type="text" id="su-wemail" inputmode="email" value="${esc(S.welfare_email||"")}"></label></div>
@@ -2529,7 +2532,8 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
       try{await db.collection("matches").doc(id).set({date:r.date,opp:r.opp.trim(),ha:r.ha,venue:"",comp:r.comp,ko:r.ko||"",us:null,them:null,potm:null,played:{},assists:{},postponed:false,tournament_id:null,stage:"",halves:{},keepers:{},gk:null,saves:null,notes:"",apps:true,check:"",updated:new Date().toISOString()});n++}catch(er){}}
     SU_FIX=[];toast(`${n} fixture${n===1?"":"s"} saved.`);render();return}
   if(b.id==="suCoachAdd"){const em=($("#su-coach").value||"").trim().toLowerCase();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){toast("Type the coach's email address.");return}
-    const {error}=await sb.rpc("add_coach",{new_email:em});if(error){toast("Couldn't add that coach. Try again.");return}toast(`${em} can now sign in.`);SU_COACHES=null;suLoad();return}
+    const {error}=await sb.rpc("add_coach",{new_email:em});if(error){toast("Couldn't add that coach. Try again.");return}toast(`${em} can now sign in${SU_SHARE?" (on the shared sites too)":""}.`);$("#su-coach").value="";SU_COACHES=null;suLoad();return}
+  if(b.id==="suCoachLink"){const u=location.origin+location.pathname+"?coach";try{await navigator.clipboard.writeText(u);toast("Link copied.")}catch(e){prompt("Copy this link:",u)}return}
   if(b.dataset.sucoachdel){const em=b.dataset.sucoachdel;if(!confirm(`Remove ${em}? They won't be able to sign in any more.`))return;
     const {error}=await sb.rpc("remove_coach",{old_email:em});if(error){toast("Couldn't remove that coach.");return}toast(`${em} removed.`);SU_COACHES=null;suLoad();return}
   if(b.id==="suLive"){const S=SU_SIGN||{},scores=suScores!=null?suScores:(S.id?S.public_scores:TEAM.publicScores===true&&!youngAge(SU.ageGroup,SU.sport));
@@ -2795,7 +2799,8 @@ function makeDb(sb){
 }
 function authBox(){
   const el=document.getElementById("auth");if(!el)return;
-  if(me&&isParent()){el.innerHTML=KIDS.length?`<button class="mini" data-view="parents">👪 ${esc(KIDS.join(", "))}</button>`:""}
+  // a coach who is also a parent may have this phone signed in with a family code: they can still sign in as a coach
+  if(me&&isParent()){el.innerHTML=(KIDS.length?`<button class="mini" data-view="parents">👪 ${esc(KIDS.join(", "))}</button>`:"")+(/[?&]coach\b/.test(location.search)?`<button class="mini" id="signIn">Coach sign in</button>`:"")}
   else if(me){el.innerHTML=`<span class="who">${canWrite?"Coach":"Signed in"}: ${esc(me.email)}</span><button class="mini" id="signOut">Sign out</button>`}
   else if(/[?&]coach\b/.test(location.search)){el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
   else{el.innerHTML=""}
@@ -2820,7 +2825,7 @@ document.addEventListener("click",async e=>{
   if(b.id==="signOut"){await sb.auth.signOut();return}
   if(b.id==="signIn"){const m=document.getElementById("main");view="login";
     m.hidden=false;document.getElementById("gfxView").hidden=true;
-    m.innerHTML=`<form class="card stack" id="loginForm" style="max-width:420px"><h2>Coach sign in</h2><p class="hint">We'll email you a sign-in link. Only coaches on the club's list can add matches.</p><label class="f">Email<input type="text" id="loginEmail" inputmode="email" autocomplete="email"></label><div class="btns"><button class="btn" type="submit">Email me a link</button><button class="btn ghost" type="button" data-view="home">Cancel</button></div></form>`;return}
+    m.innerHTML=`<form class="card stack" id="loginForm" style="max-width:420px"><h2>Coach sign in</h2><p class="hint">We'll email you a sign-in link. Only coaches on the club's list can add matches.${me&&isParent()?" This phone is signed in with a family code: as a coach you'll see every player, so you won't need it. If you sign out as a coach later, type the family code again.":""}</p><label class="f">Email<input type="text" id="loginEmail" inputmode="email" autocomplete="email"></label><div class="btns"><button class="btn" type="submit">Email me a link</button><button class="btn ghost" type="button" data-view="home">Cancel</button></div></form>`;return}
 });
 document.addEventListener("submit",async e=>{
   if(e.target.id!=="loginForm")return;e.preventDefault();

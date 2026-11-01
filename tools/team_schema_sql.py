@@ -31,7 +31,7 @@ SQL = ROOT / "supabase"
 FILES = ("1_schema.sql", "3_notifications.sql", "4_gallery_training.sql", "5_help_requests.sql", "6_match_updated.sql",
          "7_team_setup.sql", "8_multi_day_tournaments.sql", "9_matchday_and_more.sql", "10_parent_login.sql", "11_rugby.sql",
          "12_preview_alert.sql", "13_cheers.sql", "14_tournament_teams.sql", "15_tournament_squad.sql",
-         "16_availability_alerts.sql", "17_sponsors.sql", "18_player_ratings.sql", "19_player_birthdays.sql", "20_player_of_month.sql", "21_kit_sizes.sql", "22_coach_availability.sql", "23_tournament_report.sql")
+         "16_availability_alerts.sql", "17_sponsors.sql", "18_player_ratings.sql", "19_player_birthdays.sql", "20_player_of_month.sql", "21_kit_sizes.sql", "22_coach_availability.sql", "23_tournament_report.sql", "24_shared_coaches.sql")
 PROJECT_ONLY = re.compile(r"-- \[project only\].*?-- \[end project only\]\n", re.S)
 SIGN_UP_CHECK = re.compile(r"create or replace function public\.only_coaches_can_sign_up\(\).*?end \$\$;\n"
                            r"revoke execute on function public\.only_coaches_can_sign_up\(\) from public, anon, authenticated;\n", re.S)
