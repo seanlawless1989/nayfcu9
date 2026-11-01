@@ -37,6 +37,11 @@ function season(){
     res(3,"Hillcrest United","A","Hillcrest Fields","League",2,1,{Isla:1,Zara:1},{Ruby:1,Poppy:1},"Isla"),
     res(2,"Meadow Park","H",HOME,"League",5,1,{Ava:3,Ella:1,Millie:1},{Mia:3,Ruby:1,Rosie:1},"Ava"),
     res(1,"Riverside Rovers","A","Riverside Park","League",0,0,{},{},"Rosie")];
+  // a one-day tournament that's been played, with one report for the whole day instead of a report for each game
+  const fest=day(-17)+"-autumn-festival",tg=(stage,opp,us,them,scorers,potm,ko)=>Object.assign(res(0,opp,"N","Castle Vale Sports Village","Tournament",us,them,scorers,{},potm),
+    {id:id(day(-17),opp),date:day(-17),ko,tournament_id:fest,stage,halves:Object.fromEntries(names.map(n=>[n,1])),keepers:{Grace:them===0?1:0}});
+  matches.push(tg("Group stage","Castle Vale",2,0,{Ava:1,Poppy:1},null,"09:30"),tg("Group stage","Hillcrest United",1,1,{Mia:1},null,"10:15"),tg("Final","Ashford Town",0,1,{},null,"11:30"));
+  matches.sort((x,y)=>x.date.localeCompare(y.date));
   const [meadow,last]=matches.slice(-2);
   last.report="A hard-earned point away at Riverside on a heavy pitch.\n\nWe started brightly and Ava hit the post inside ten minutes. Riverside pushed hard after the break, but Rosie and Isla were brilliant at the back and Grace made two great saves to keep the clean sheet.\n\nThe girls never stopped running. Well done all, and thanks to the parents for the support on a wet morning!";
   meadow.report="Our best performance of the season so far. Ava's hat-trick will get the headlines, but the passing in midfield was brilliant from start to finish.\n\nMillie scored her first goal for the club off the bench. Great to see everyone getting minutes.";
@@ -63,7 +68,9 @@ function season(){
   const back=((new Date().getDay()+4)%7)||7,wed=[0,1,2,3].map(i=>day(-back-7*i));   // the last four Wednesday sessions
   return {players,matches,
     // a tournament we've entered where the groups haven't been drawn yet
-    tournaments:[{id:day(10)+"-winter-cup",name:"Sample Town Winter Cup",date:day(10),end_date:null,venue:HOME,potm:null,trophy:"",notes:"",
+    tournaments:[{id:fest,name:"Castle Vale Autumn Festival",date:day(-17),end_date:null,venue:"Castle Vale Sports Village",potm:"Poppy",trophy:"Runners-up",notes:"",teams:[],
+      report:"What a morning at Castle Vale! Three games, a place in the final and a runners-up trophy to bring home. We couldn't be prouder of the girls.\n\n**Game 1 v Castle Vale**\nA brilliant start. Ava opened the scoring after a lovely run from Mia, and Poppy finished off a corner to seal it. Grace hardly had a save to make.\n\n**Game 2 v Hillcrest United**\nA much tougher game against a strong side. Mia's goal earned us a draw, and that was enough to top the group.\n\n**The final v Ashford Town**\nEven for most of the game, and the girls gave everything. Ashford scored late on, but the girls held their heads high and collected a medal each.\n\nPoppy is our player of the tournament. She ran all morning, scored in the first game and never stopped encouraging her team-mates.\n\nThanks to all the parents for your support. 💛"},
+      {id:day(10)+"-winter-cup",name:"Sample Town Winter Cup",date:day(10),end_date:null,venue:HOME,potm:null,trophy:"",notes:"",
       teams:["Sample Town","Ashford Town","Northfield Lions","Meadow Park","Oakwood Rangers","Riverside Juniors","Hillcrest","Castle Vale"].map(name=>({name,group:""}))}],
     honours:[{id:"h1",date:day(-150),title:"Under 11s Spring Cup",achievement:"Winners",notes:"Beat Meadow Park 2-1 in the final"},
       {id:"h2",date:day(-120),title:"Fair Play Award",achievement:"County Youth League",notes:"Voted for by the referees"}],

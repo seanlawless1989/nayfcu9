@@ -140,7 +140,7 @@ function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boo
 function appsTracked(list){return list.length>0}// scorers and PotM count as apps even without a team sheet
 
 // ---------- views ----------
-function setView(v){if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if(v!=="md"&&/[?&]match=/.test(location.search))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));render();window.scrollTo({top:0})}
+function setView(v){if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));render();window.scrollTo({top:0})}
 function render(){
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
@@ -161,6 +161,7 @@ function render(){
   else if(view==="tl")main.innerHTML=tlView();
   else if(view==="md")main.innerHTML=mdView();
   else if(view==="reports")main.innerHTML=reportsView();
+  else if(view==="tr")main.innerHTML=trView();
   else if(view==="pick")main.innerHTML=pickView();
   else if(view==="avail")main.innerHTML=availView();
   else if(view==="tavail")main.innerHTML=tavView();
@@ -339,9 +340,9 @@ function tCard(t){
     <div style="min-width:0"><div class="o">${tLogo(t)?`<img class="badge sm" src="${tLogo(t)}" alt="">`:""}${esc(t.name||"Tournament")}${t.trophy?`<span class="trophy">${trophyIcon(t.trophy)} ${esc(t.trophy)}</span>`:""}</div>
       <div class="meta"><span class="ctag">Tournament</span>${multi?`${days.length} days${t.venue?" · ":""}`:""}${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
       ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}</div>
-    <div></div></div>${tTeamsHtml(t)}${tSquad(t).length&&tSquadOpen(t)?`<div class="tteams"><div class="tday">👕 Squad (${tSquad(t).length})</div><div class="tchips">${tSquad(t).map(n=>`<span class="tteam">${esc(n)}</span>`).join("")}</div></div>`:""}
+    <div></div></div>${hasTReport(t)?`<div class="trep" role="button" tabindex="0" data-tour="${esc(t.id)}"><b>📝 Tournament report</b><span>${esc(clip(t.report,150))}</span><em>Read the report →</em></div>`:""}${tTeamsHtml(t)}${tSquad(t).length&&tSquadOpen(t)?`<div class="tteams"><div class="tday">👕 Squad (${tSquad(t).length})</div><div class="tchips">${tSquad(t).map(n=>`<span class="tteam">${esc(n)}</span>`).join("")}</div></div>`:""}
     ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">${tEnd(t)>=new Date().toISOString().slice(0,10)?tTeams(t).length&&!tDrawn(t)?"Fixtures to follow once the groups are drawn.":"Tournament entered. Fixtures to follow.":"No games added yet."}</p>`}
-    <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button>${tSquadOpen(t)?`<button class="mini" data-pick="t:${esc(t.id)}">${tSquad(t).length?`Squad picked (${tSquad(t).length})`:"Pick squad"}</button>`:""}<label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button>${(window.TEAM_CONFIG||window.NAYFC_CONFIG||{}).vapidPublicKey&&tEnd(t)>=todayLocal()?`<button class="mini" data-ttell="${esc(t.id)}">📣 Tell parents: groups and games confirmed</button>`:""}</div>
+    <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button>${tSquadOpen(t)?`<button class="mini" data-pick="t:${esc(t.id)}">${tSquad(t).length?`Squad picked (${tSquad(t).length})`:"Pick squad"}</button>`:""}<label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label>${g.some(m=>result(m)||isLive(m))?`<button class="mini" data-trep="${esc(t.id)}">${hasTReport(t)?"Edit tournament report":"📝 Write tournament report"}</button>`:""}<button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button>${(window.TEAM_CONFIG||window.NAYFC_CONFIG||{}).vapidPublicKey&&tEnd(t)>=todayLocal()?`<button class="mini" data-ttell="${esc(t.id)}">📣 Tell parents: groups and games confirmed</button>`:""}</div>
   </div>`;
 }
 // one list of cards: plain matches plus one card per tournament
@@ -604,12 +605,12 @@ function matchdayView(){const m=matches.find(x=>x.id===mdayMatch)||mdayPick();if
   const parents=done?"":`<section class="card stack"><h3>For parents</h3><div class="mdinfo" style="display:flex;flex-direction:column;gap:6px;font-weight:600">${facts.map(([i,v])=>`<div><span style="display:inline-block;width:26px">${i}</span>${esc(v)}</div>`).join("")}</div>
     ${m.squad&&m.squad.length?`<p style="margin:0"><b>Squad:</b> ${m.squad.map(esc).join(", ")}</p>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${id}">Follow live</button>`:`<button class="btn gold" data-mdayav="${id}">Can your ${PRN.kid} make it?</button>`}${mapsUrl(m)?`<a class="btn ghost" href="${mapsUrl(m)}" target="_blank" rel="noopener">🧭 Directions</a>`:""}<button class="btn ghost" data-view="alerts">🔔 Alerts</button></div></section>`;
-  const coach=!canWrite?"":done?`<section class="card stack edit-only"><h3>After the game</h3><div class="btns"><button class="btn gold" data-edit="${id}">Result and ${esc(POTM)}</button><button class="btn ghost" data-mdayrep="${id}">${m.report&&m.report.trim()?"Edit the report":"✨ Write the report"}</button><button class="btn ghost" data-gfx="ft" data-mid="${id}"${r?"":" disabled"}>Result post</button><button class="btn ghost" data-gfx="potm" data-mid="${id}"${m.potm?"":" disabled"}>PotM post</button></div><div class="btns">${galAdd(m.id)}</div></section>`
+  const coach=!canWrite?"":done?`<section class="card stack edit-only"><h3>After the game</h3><div class="btns"><button class="btn gold" data-edit="${id}">Result and ${esc(POTM)}</button>${(tn=>tn?`<button class="btn ghost" data-trep="${esc(tn.id)}">${hasTReport(tn)?"Edit the tournament report":"📝 Write the tournament report"}</button>`:`<button class="btn ghost" data-mdayrep="${id}">${m.report&&m.report.trim()?"Edit the report":"✨ Write the report"}</button>`)(tournamentOf(m))}<button class="btn ghost" data-gfx="ft" data-mid="${id}"${r?"":" disabled"}>Result post</button><button class="btn ghost" data-gfx="potm" data-mid="${id}"${m.potm?"":" disabled"}>PotM post</button></div><div class="btns">${galAdd(m.id)}</div></section>`
     :`<section class="card stack edit-only"><h3>For coaches</h3>${m.comp!=="Tournament"?`<div class="avsum" style="margin:0">${avSummary(m.id)}</div>`:""}
       <div class="btns"><button class="btn ghost" data-pick="${id}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="btn gold" data-live="${id}">▶ Line-up and live match</button><button class="btn ghost" data-tbmatch="${id}">📋 Tactics board</button><button class="btn ghost" data-msg="${id}">Parents' message</button><button class="btn ghost" data-medit="${id}">Matchday details</button></div>
       <p class="hint" style="margin:0">Live match has the line-up, the match timer, substitutions and ${SP.goals}; parents follow along and get alerts.</p></section>`;
   const after=!done?"":`${m.potm?`<section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3><p style="font:800 22px var(--body);margin:0">${POTM_IC} ${esc(m.potm)}</p></section>`:""}
-    ${m.report&&m.report.trim()?`<section class="card"><h3>Match report</h3><p style="margin:0">${esc(clip(m.report,320))}</p><div class="btns" style="margin-top:8px"><button class="btn ghost" data-md="${id}">Read it all</button></div></section>`:""}
+    ${(tn=>tn&&hasTReport(tn)?`<section class="card"><h3>Tournament report</h3><p style="margin:0">${esc(clip(tn.report,320))}</p><div class="btns" style="margin-top:8px"><button class="btn ghost" data-tour="${esc(tn.id)}">Read it all</button></div></section>`:"")(tournamentOf(m))}${m.report&&m.report.trim()?`<section class="card"><h3>Match report</h3><p style="margin:0">${esc(clip(m.report,320))}</p><div class="btns" style="margin-top:8px"><button class="btn ghost" data-md="${id}">Read it all</button></div></section>`:""}
     ${(ps=>ps.length?`<section class="card"><h3>Photos (${ps.length})</h3>${galGrid(ps)}</section>`:"")(galOf(m.id))}
     <div class="btns"><button class="btn ghost" data-md="${id}">Full match page</button>${m.live&&m.live.events&&m.live.events.length?`<button class="btn ghost" data-tl="${id}">Match timeline</button>`:""}</div>`;
   return `<div class="stack">${head}${parents}${coach}${after}</div>`}
@@ -710,7 +711,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match reports the coaches write.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when. Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -1473,7 +1474,8 @@ let tlMatch=null;
 // ---------- match details (tap any game) ----------
 let mdMatch=null,mdFrom="results",mdWrite=false,mdPrevWrite=false;
 // match reports: written by coaches on the match page, public once saved
-function reportHtml(t){return String(t||"").trim().split(/\n\s*\n/).map(p=>`<p>${esc(p.trim()).replace(/\n/g,"<br>")}</p>`).join("")}
+// **words** show in bold (handy for a heading per game in a tournament report)
+function reportHtml(t){return String(t||"").trim().split(/\n\s*\n/).map(p=>`<p>${esc(p.trim()).replace(/\*\*(\S(?:.*?\S)?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>")}</p>`).join("")}
 function reportCard(m){const has=!!(m.report&&m.report.trim());
   if(canWrite&&mdWrite)return `<section class="card report"><h3>Match report</h3><textarea id="mdReport" rows="10" placeholder="How did the game go? Everyone can read this once it's saved.">${esc(m.report||"")}</textarea>
     <div class="btns"><button class="btn ghost" id="mdReportAi">✨ Suggest a report</button></div><p class="hint">The suggestion is written by AI from the result, the awards and the match timeline. Read it and change anything before you save. Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="mdReportSave">Save report</button><button class="btn ghost" id="mdReportCancel">Cancel</button></div></section>`;
@@ -1481,7 +1483,7 @@ function reportCard(m){const has=!!(m.report&&m.report.trim());
   return canWrite&&(result(m)||isLive(m))?`<section class="card report edit-only"><h3>Match report</h3><p class="hint">No report yet.</p><button class="btn gold" id="mdReportEdit">Write match report</button></section>`:""}
 // match previews: written by coaches before the game, public once saved, with a few facts worked out from past games
 function hasPreview(m){return !!(m&&m.preview&&m.preview.trim())}
-function clip(t,n){t=String(t||"").trim().replace(/\s+/g," ");return t.length>n?t.slice(0,n).replace(/\s+\S*$/,"")+"…":t}
+function clip(t,n){t=String(t||"").trim().replace(/\*\*/g,"").replace(/\s+/g," ");return t.length>n?t.slice(0,n).replace(/\s+\S*$/,"")+"…":t}
 function previewFacts(m){if(m.hidden||noScores())return "";const rows=[];
   if(m.opp){const h=meetings(m.opp,m.date),t=teamStats(h);
     rows.push(h.length?["🆚",`Against ${esc(m.opp)}: played ${t.P}, won ${t.W}, drew ${t.D}, lost ${t.L}. Last time ${scChip(h[0])}`]:["🆕",`First time we've played ${esc(m.opp)}.`])}
@@ -1521,14 +1523,62 @@ function previewCard(m){const has=hasPreview(m),before=isFixture(m)&&!isLive(m)&
   const facts=before?previewFacts(m):"";
   if(!has&&!facts&&!canWrite)return "";
   return `<section class="card report${has||facts?"":" edit-only"}"><h3>Match preview</h3>${has?reportHtml(m.preview):canWrite?`<p class="hint edit-only">No preview written yet.</p>`:""}${facts}${has?`<button class="btn ghost" data-share="preview" style="margin-top:10px">📤 Share preview</button> `:""}${canWrite?`<button class="${has?"mini":"btn gold"} edit-only" id="mdPreviewEdit" style="margin-top:10px">${has?"Edit preview":"Write match preview"}</button>`:""}</section>`}
-function reportsView(){const list=sortMatches(matches.filter(m=>m.report&&m.report.trim()&&!m.practice)).reverse();
+function reportsView(){
+  // a tournament has one report for the whole tournament; its games' own reports only show when it has none (older games)
+  const ms=matches.filter(m=>m.report&&m.report.trim()&&!m.practice&&!(tournamentOf(m)&&hasTReport(tournamentOf(m))));
+  const list=[...ms.map(m=>({date:m.date||"",m})),...tournaments.filter(hasTReport).map(t=>({date:t.date||"",t}))].sort((a,b)=>b.date.localeCompare(a.date)||(a.t?-1:1));
   const back=`<button class="btn ghost" data-view="results" style="align-self:flex-start">← Results</button>`;
-  if(!list.length)return `<div class="stack">${back}<div class="card empty">No match reports yet.${canWrite?" Open a result and tap <b>Write match report</b>.":""}</div></div>`;
-  let cur="",out="";list.forEach(m=>{const s=seasonOf(m.date);if(s!==cur){out+=`<div class="month">${s} season</div>`;cur=s}const r=result(m);const txt=m.report.trim().replace(/\s+/g," ");
-    out+=`<div class="match rep" role="button" tabindex="0" data-edit="${esc(m.id)}"><div class="d">${(d=>isNaN(d)?"?":`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`)(new Date(m.date+"T12:00:00"))}</div>
+  if(!list.length)return `<div class="stack">${back}<div class="card empty">No match reports yet.${canWrite?" Open a result and tap <b>Write match report</b>. For a tournament, tap <b>Write tournament report</b> on its card.":""}</div></div>`;
+  const day=iso=>(d=>isNaN(d)?"?":`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`)(new Date(iso+"T12:00:00"));
+  let cur="",out="";list.forEach(({m,t})=>{const s=seasonOf((m||t).date);if(s!==cur){out+=`<div class="month">${s} season</div>`;cur=s}
+    if(t){const g=tGames(t),st=teamStats(g.filter(result));out+=`<div class="match rep" role="button" tabindex="0" data-tour="${esc(t.id)}"><div class="d">${day(t.date)}</div>
+      <div style="min-width:0"><div class="o">${tLogo(t)?`<img class="badge sm" src="${tLogo(t)}" alt="">`:""}${esc(t.name||"Tournament")}</div><div class="meta">${[`🏆 Tournament report`,g.length?`${g.length} game${g.length>1?"s":""}`:"",t.trophy?`${trophyIcon(t.trophy)} ${esc(t.trophy)}`:""].filter(Boolean).join(" · ")}</div><div class="meta">${esc(clip(t.report,220))}</div></div>
+      <div class="sc">${st.P&&!noScores()?`<span class="hint">W${st.W} D${st.D} L${st.L}</span>`:""}</div></div>`;return}
+    const r=result(m);const txt=m.report.trim().replace(/\*\*/g,"").replace(/\s+/g," ");
+    out+=`<div class="match rep" role="button" tabindex="0" data-edit="${esc(m.id)}"><div class="d">${day(m.date)}</div>
       <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"")}</div><div class="meta">${esc(txt.length>220?txt.slice(0,220).replace(/\s\S*$/,"")+"…":txt)}</div></div>
       <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:""}</div></div>`});
-  return `<div class="list">${back}<h2 style="margin:6px 0 0">Match reports</h2><p class="hint">Every report, newest first. Tap one to read it with the rest of the match.</p>${out}</div>`}
+  return `<div class="list">${back}<h2 style="margin:6px 0 0">Match reports</h2><p class="hint">Every report, newest first. A tournament has one report for the whole tournament. Tap one to read it in full.</p>${out}</div>`}
+// ---------- tournament reports (tournaments.report, supabase/18_tournament_report.sql) ----------
+// A tournament gets one report for the whole tournament instead of a report for each game. It has its own page
+// (?tour=<id>), the tournament card shows the start of it, and each of its games links to it.
+let trTour=null,trFrom="results",trWrite=false;
+const tournamentOf=m=>m&&m.tournament_id?tournaments.find(t=>t.id===m.tournament_id)||null:null;
+const hasTReport=t=>!!(t&&t.report&&String(t.report).trim());
+function openTour(id,write){trWrite=!!write&&canWrite;trFrom=view==="tr"?trFrom:view;trTour=id;setView("tr");try{history.replaceState(null,"",location.pathname+"?tour="+encodeURIComponent(id))}catch(e){}
+  if(trWrite){const ta=$("#trReport");if(ta){ta.focus();ta.scrollIntoView({block:"center"})}}}
+// the report part of a match page: a tournament game shows the tournament's report (and its own, if an older game has one)
+function mdReports(m,tn){if(!tn)return reportCard(m);const own=m.report&&m.report.trim()||mdWrite?reportCard(m):"";
+  if(hasTReport(tn))return `<section class="card report"><h3>Tournament report</h3><p style="margin:0">${esc(clip(tn.report,320))}</p><div class="btns" style="margin-top:8px"><button class="btn ghost" data-tour="${esc(tn.id)}">Read the tournament report</button></div></section>${own}`;
+  return (canWrite&&(result(m)||isLive(m))?`<section class="card report edit-only"><h3>Tournament report</h3><p class="hint">This game is part of ${esc(tn.name||"a tournament")}, so it gets one report for the whole tournament.</p><button class="btn gold" data-trep="${esc(tn.id)}">Write tournament report</button></section>`:"")+own}
+// a plain starting point from the games, the awards and the player of the tournament
+function draftTReport(t){const g=tGames(t).filter(m=>m.stage!=="placeholder"&&(result(m)||Object.keys(played(m)).length)),hide=faHide({})||g.some(faHide);
+  const when=new Date((t.date||"")+"T12:00:00"),day=isNaN(when)?"":when.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+  const out=[`🏆 Tournament report: ${t.name||"the tournament"}${day?`, ${day}`:""}`];
+  out.push(`What a day${t.venue?` at ${t.venue}`:""}! ${g.length?`${g.length} game${g.length>1?"s":""} and`:"A full day of football and"} we couldn't be prouder of the ${PL}. 💪${t.trophy?` ${trophyIcon(t.trophy)} ${t.trophy}!`:""}`);
+  g.forEach((m,i)=>{const r=result(m),line=[`**${m.stage&&m.stage!=="Group stage"?m.stage:`Game ${i+1}`} v ${m.opp||"opponent to add"}${!hide&&r?` (${m.us}-${m.them})`:""}**`];
+    if(!hide){const sc=Object.entries(played(m)).filter(([,n])=>+n>0).map(([n,c])=>+c>1?`${n} (${c})`:n);if(sc.length)line.push(`${SP.ball} ${SP.Goals} from ${sc.join(", ")}.`)}
+    const ks=Object.keys(keepersOf(m));if(ks.length)line.push(`🧤 ${ks.join(" and ")} in goal.`);
+    if(m.potm)line.push(`${POTM_IC} ${POTM.charAt(0).toUpperCase()+POTM.slice(1)}: ${m.potm}.`);
+    line.push("(Add a line or two about the game.)");out.push(line.join("\n"))});
+  if(t.potm)out.push(`⭐ Player of the tournament: ${t.potm}. Well deserved! 👏`);
+  const all=[...new Set(g.flatMap(m=>Object.keys(played(m))))];if(all.length)out.push(`Well done to everyone who played: ${all.join(", ")}.`);
+  out.push(`Thanks to all the parents for your support. 💛`);return out.join("\n\n")}
+function trView(){const t=tournaments.find(x=>x.id===trTour);
+  const back=`<button class="btn ghost" data-trback style="align-self:flex-start">← Back</button>`;
+  if(!t)return `<div class="stack">${back}<div class="card empty">Tournament not found.</div></div>`;
+  const g=tGames(t),st=teamStats(g.filter(result)),has=hasTReport(t);
+  const head=`<section class="card"><div class="o" style="display:flex;align-items:center;gap:10px;font:400 24px var(--display)">${tLogo(t)?`<img class="badge" src="${tLogo(t)}" alt="">`:""}${esc(t.name||"Tournament")}</div>
+    <div class="mdinfo" style="margin-top:8px">${[["📅",tRange(t,true)],["📍",t.venue||""],[t.trophy?trophyIcon(t.trophy):"",t.trophy||""],["⭐",t.potm?`Player of the tournament: ${t.potm}`:""],["⚽",st.P&&!noScores()?`Played ${st.P}, won ${st.W}, drew ${st.D}, lost ${st.L}`:g.length?`${g.length} game${g.length>1?"s":""}`:""]].filter(([,v])=>v).map(([i,v])=>`<div><span>${i}</span>${esc(v)}</div>`).join("")}</div></section>`;
+  const rep=canWrite&&trWrite?`<section class="card report"><h3>Tournament report</h3><textarea id="trReport" rows="14" placeholder="How did the tournament go? One report for every game. Everyone can read this once it's saved.">${esc(t.report||"")}</textarea>
+    <div class="btns"><button class="btn ghost" id="trReportDraft">✨ Start from the games</button></div><p class="hint">The starting point is built from the games, the awards and the player of the tournament. Change anything before you save. Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="trReportSave">Save report</button><button class="btn ghost" id="trReportCancel">Cancel</button></div></section>`
+    :has?`<section class="card report"><h3>Tournament report</h3>${reportHtml(t.report)}<div class="btns"><button class="btn ghost" data-tshare="${esc(t.id)}">📤 Share report</button>${canWrite?`<button class="mini edit-only" data-trep="${esc(t.id)}">Edit report</button>`:""}</div></section>`
+    :canWrite?`<section class="card report edit-only"><h3>Tournament report</h3><p class="hint">No report yet. A tournament gets one report for all of its games.</p><button class="btn gold" data-trep="${esc(t.id)}">Write tournament report</button></section>`:`<div class="card empty">No report for this tournament yet.</div>`;
+  const games=g.length?`<section class="card"><h3>The games</h3><div class="tgames" style="border:0;margin:0;padding:0">${g.map(tGameRow).join("")}</div><p class="hint" style="margin-top:8px">Tap a game for the team, the awards and how it went.</p></section>`:"";
+  const ph=g.flatMap(m=>galOf(m.id));
+  const photos=ph.length?`<section class="card"><h3>Photos (${ph.length})</h3>${galGrid(ph)}</section>`:"";
+  const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3><div class="mg"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div></section>`:"";
+  return `<div class="live md">${back}${head}${rep}${games}${photos}${coach}</div>`}
 function longDate(iso){const d=new Date((iso||"")+"T12:00:00");return isNaN(d)?"Date to add":`${["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()]} ${d.getDate()} ${LONGM[d.getMonth()]} ${d.getFullYear()}`}
 function openMatch(id){mdWrite=false;mdPrevWrite=false;mdFrom=view==="md"?mdFrom:view;mdMatch=id;setView("md");try{history.replaceState(null,"",location.pathname+"?match="+encodeURIComponent(id))}catch(e){}}
 // a full team sheet exists when someone is down as playing without scoring, or halves/live data were kept
@@ -1565,7 +1615,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
   const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
-  return `<div class="live md">${back}${board}${info}${cheerCard(m)}${fx?previewCard(m)+reportCard(m):reportCard(m)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
+  return `<div class="live md">${back}${board}${info}${cheerCard(m)}${fx?previewCard(m)+mdReports(m,tn):mdReports(m,tn)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
@@ -1685,7 +1735,7 @@ function fixturesView(){
 function resultsView(){
   const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
   if(!items.length)return `${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
-  return `<div class="list">${matches.some(m=>m.report&&m.report.trim())?`<div class="btns" style="margin-bottom:8px"><button class="btn ghost" data-view="reports">📝 Match reports</button></div>`:""}${CKEY()}${monthList(items)}</div>`;
+  return `<div class="list">${matches.some(m=>m.report&&m.report.trim())||tournaments.some(hasTReport)?`<div class="btns" style="margin-bottom:8px"><button class="btn ghost" data-view="reports">📝 Match reports</button></div>`:""}${CKEY()}${monthList(items)}</div>`;
 }
 
 
@@ -2282,7 +2332,7 @@ document.addEventListener("click",e=>{const th=e.target.closest("table.lb thead 
   rows.sort((a,b)=>{const x=cv(a),y=cv(b);if(x===y)return 0;if(x===null)return 1;if(y===null)return -1;const c=typeof x==="number"&&typeof y==="number"?x-y:String(x).localeCompare(String(y));return dir==="asc"?c:-c}).forEach(r=>tb.appendChild(r))});
 // ---------- events ----------
 document.addEventListener("click",async e=>{
-  const t=e.target.closest("button,tr.click,[data-edit],.match");if(!t)return;
+  const t=e.target.closest("button,tr.click,[data-edit],[data-tour],.match");if(!t)return;
   if(t.closest("#gfxView"))return;
   if(t.dataset.lb){lbAction(t.dataset.lb);return}
   if(t.dataset.photo){lbOpen(t.dataset.photo);return}
@@ -2345,6 +2395,17 @@ document.addEventListener("click",async e=>{
       toast(txt?`Match preview saved.${r==null?"":r>=0?" Parents with alerts on have been told.":" An alert was already sent for this game, so no new one."}`:"Match preview removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the preview. Check your connection and try again.")}return}
   if(t.id==="mdReportSave"){const m=matches.find(x=>x.id===mdMatch);if(!m||!canWrite)return;const txt=$("#mdReport").value.trim();t.disabled=true;
     try{await db.collection("matches").doc(m.id).update({report:txt||null});m.report=txt||null;mdWrite=false;toast(txt?"Match report saved.":"Match report removed.");render()}catch(e){t.disabled=false;toast("Couldn't save the report. Check your connection and try again.")}return}
+  if(t.dataset.tour){if(tournaments.some(x=>x.id===t.dataset.tour))openTour(t.dataset.tour);return}
+  if(t.dataset.trep){if(canWrite&&tournaments.some(x=>x.id===t.dataset.trep))openTour(t.dataset.trep,true);return}
+  if("trback" in t.dataset){setView(trFrom||"results");return}
+  if(t.id==="trReportCancel"){trWrite=false;render();return}
+  if(t.id==="trReportDraft"){const x=tournaments.find(y=>y.id===trTour),ta=$("#trReport");if(!x||!ta)return;if(ta.value.trim()&&!confirm("Replace what's in the box with a starting point from the games?"))return;ta.value=draftTReport(x);ta.focus();return}
+  if(t.id==="trReportSave"){const x=tournaments.find(y=>y.id===trTour);if(!x||!canWrite)return;const txt=$("#trReport").value.trim();t.disabled=true;
+    try{await db.collection("tournaments").doc(x.id).update({report:txt||null});x.report=txt||null;trWrite=false;toast(txt?"Tournament report saved.":"Tournament report removed.");render()}
+    catch(e){t.disabled=false;toast(/report/.test(e&&e.message||"")?"The site's database needs a quick update before it can save a tournament report. Ask Touchline Tales.":"Couldn't save the report. Check your connection and try again.")}return}
+  if(t.dataset.tshare){const x=tournaments.find(y=>y.id===t.dataset.tshare);if(!x)return;const text=`${String(x.report||"").trim()}\n\n${SITE}/?tour=${encodeURIComponent(x.id)}`;
+    if(navigator.share){try{await navigator.share({text});return}catch(e){if(e&&e.name==="AbortError")return}}
+    try{await navigator.clipboard.writeText(text);toast("Copied. Paste it into WhatsApp.")}catch(e){prompt("Copy this",text)}return}
   if("mdback" in t.dataset){setView(mdFrom||"results");return}
   if(t.dataset.medit){const m=matches.find(x=>x.id===t.dataset.medit);if(!m||!canWrite)return;
     F=JSON.parse(JSON.stringify(m));F.played=F.played||{};F.assists=F.assists||{};F.halves=F.halves||{};F.keepers=Object.assign({},keepersOf(F));F.us=F.us??"";F.them=F.them??"";F.potm=F.potm||"";setView("edit");return}
@@ -2381,7 +2442,7 @@ document.addEventListener("click",async e=>{
     const num=$("#newNum").value;try{await db.collection("players").doc(slug(name)).set({name,num:num===""?null:+num,current:true});toast(`${name} added.`)}catch(err){toast(`Couldn't add ${PRN.o}. Try again.`)}return}
 });
 document.addEventListener("click",e=>{if(LB&&e.target.classList&&e.target.classList.contains("lb-img"))lbClose()});
-document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList&&(e.target.classList.contains("match")||e.target.classList.contains("tgame"))){e.preventDefault();e.target.click()}});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList&&(e.target.classList.contains("match")||e.target.classList.contains("tgame")||e.target.classList.contains("trep"))){e.preventDefault();e.target.click()}});
 document.addEventListener("change",async e=>{
   const t=e.target;if(t.closest&&t.closest("#gfxView"))return;
   if(t.id==="season"){season=t.value;playerView=null;render();return}
@@ -2462,7 +2523,7 @@ document.addEventListener("submit",async e=>{
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="training"&&!!trEdit);
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit);
   db.collection("matches").onSnapshot(s=>{RAW=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");matches=pubMatches();if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
@@ -2475,6 +2536,7 @@ document.addEventListener("submit",async e=>{
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
   for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
+  const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qt=new URLSearchParams(location.search).get("tavail");if(qt!==null){tavDay=qt;view="tavail";render()}
