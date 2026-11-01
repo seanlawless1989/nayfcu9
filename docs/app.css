@@ -504,3 +504,22 @@ table.lb.cs .pt{display:block;font-size:11px;white-space:nowrap}
 table.lb.cs .ctag{white-space:normal;line-height:1.3}
 @media (max-width:520px){table.lb.cs thead th{font-size:10px;letter-spacing:.02em;padding:6px 3px}table.lb.cs td{padding:8px 3px}table.lb.cs .ctag{font-size:10px;padding:1px 4px;letter-spacing:.02em}}
 @media (max-width:520px){table.lb.cs th[data-s] span{display:none}table.lb.cs th[data-s]:before{content:attr(data-s)}}
+/* coach ratings (coaches only) */
+.rt-lock{margin-top:8px}
+.rt-lead{display:flex;align-items:center;gap:14px}.rt-lead .rt-trophy{font-size:34px;line-height:1}.rt-lead b{display:block;font:700 22px var(--head,inherit)}.rt-lead span{color:var(--muted);font-size:14px}
+.rt-lead .kick{font:700 11px var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.rt-tab td:nth-child(1){text-align:left;color:var(--muted);width:28px}.rt-tab th:nth-child(2),.rt-tab td:nth-child(2){text-align:left}
+.rt-game{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--field);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.rt-game .rt-g1{display:flex;align-items:center;gap:10px;min-width:0}.rt-game .badge{width:32px;height:32px;flex:none}
+.rt-game b{display:block}.rt-game small{color:var(--muted)}
+.rt-game .pill{flex:none;white-space:nowrap;font-size:12px;padding:4px 10px;border-radius:999px}
+.rt-ok{background:rgb(var(--clubRGB)/.12);color:var(--club)}.rt-no{background:var(--gold);color:var(--goldInk)}
+.rt-list{display:flex;flex-direction:column;gap:14px}
+.rt-p .rt-n{display:flex;align-items:center;gap:6px;margin-bottom:6px}.rt-p .rt-v{margin-left:auto;font:800 16px var(--body);font-variant-numeric:tabular-nums}
+.rt-btns{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.rt-btns button{min-height:40px;padding:0;border:1.5px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font:700 15px var(--body);cursor:pointer}
+.rt-btns button[aria-pressed="true"]{background:var(--club);border-color:var(--club);color:var(--clubInk)}
+.rt-save{position:sticky;bottom:10px;align-items:center;gap:12px;padding:10px 12px;background:var(--card);border:1.5px solid var(--line);border-radius:14px;box-shadow:0 6px 20px rgb(var(--shadowRGB)/.18)}
+.rt-hist{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.rt-chip{display:inline-flex;flex-direction:column;align-items:center;min-width:42px;padding:6px 4px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink);cursor:pointer;font:inherit}
+.rt-chip b{font-size:16px}.rt-chip small{font-size:10px;color:var(--muted)}
