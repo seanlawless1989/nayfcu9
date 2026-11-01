@@ -67,7 +67,7 @@ const fileTag=APP.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 (function poweredBy(){const f=document.getElementById("siteFoot");if(!f)return;
   const slug=String(TEAM.slug||`${TEAM.name||""} ${TEAM.ageShort||""}`).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"team";
   const priv=`<button type="button" data-view="privacy" style="background:none;border:0;padding:0;font:inherit;color:var(--muted);opacity:.85;cursor:pointer">Privacy</button>`;
-  f.innerHTML=TEAM.poweredBy===false?priv:`${priv} · <a href="https://touchlinetales.club/?ref=powered-${slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>`;f.hidden=false})();
+  f.innerHTML=`<span id="footCoach"></span>`+(TEAM.poweredBy===false?priv:`${priv} · <a href="https://touchlinetales.club/?ref=powered-${slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>`);f.hidden=false})();
 let tournaments=[], honours=[], T=null, H=null;
 let matches=[], players=[], view="home", season=null, editing=null, playerView=null, oppView=null;
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -2804,6 +2804,9 @@ function authBox(){
   else if(me){el.innerHTML=`<span class="who">${canWrite?"Coach":"Signed in"}: ${esc(me.email)}</span><button class="mini" id="signOut">Sign out</button>`}
   else if(/[?&]coach\b/.test(location.search)){el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
   else{el.innerHTML=""}
+  // the Home Screen app always opens at the plain address (no ?coach), so coaches get a sign-in link in the footer there
+  const fc=document.getElementById("footCoach");
+  if(fc)fc.innerHTML=!canWrite&&(alStandalone()||/[?&]coach\b/.test(location.search))?`<button type="button" id="signIn" style="background:none;border:0;padding:0;font:inherit;color:var(--muted);opacity:.85;cursor:pointer">Coach sign in</button> · `:"";
 }
 // the graphics maker (gfx.js) is only for coaches, so it's fetched once one signs in
 function loadGfx(){if(window.GFX||document.getElementById("gfxjs"))return;const el=document.createElement("script");el.id="gfxjs";el.src="gfx.js";
@@ -2825,13 +2828,29 @@ document.addEventListener("click",async e=>{
   if(b.id==="signOut"){await sb.auth.signOut();return}
   if(b.id==="signIn"){const m=document.getElementById("main");view="login";
     m.hidden=false;document.getElementById("gfxView").hidden=true;
-    m.innerHTML=`<form class="card stack" id="loginForm" style="max-width:420px"><h2>Coach sign in</h2><p class="hint">We'll email you a sign-in link. Only coaches on the club's list can add matches.${me&&isParent()?" This phone is signed in with a family code: as a coach you'll see every player, so you won't need it. If you sign out as a coach later, type the family code again.":""}</p><label class="f">Email<input type="text" id="loginEmail" inputmode="email" autocomplete="email"></label><div class="btns"><button class="btn" type="submit">Email me a link</button><button class="btn ghost" type="button" data-view="home">Cancel</button></div></form>`;return}
+    m.innerHTML=`<form class="card stack" id="loginForm" style="max-width:420px"><h2>Coach sign in</h2><p class="hint">We'll email you a sign-in link and a code. Only coaches on the club's list can add matches.${me&&isParent()?" This phone is signed in with a family code: as a coach you'll see every player, so you won't need it. If you sign out as a coach later, type the family code again.":""}</p><label class="f">Email<input type="text" id="loginEmail" inputmode="email" autocomplete="email"></label><div class="btns"><button class="btn" type="submit">Email me a link</button><button class="btn ghost" type="button" data-view="home">Cancel</button></div></form>`;return}
+});
+// step 2: the code from the email. On an iPhone the Home Screen app keeps its own sign-in, separate from Safari,
+// so tapping the emailed link signs in Safari, not the app; typing the code signs in the app itself.
+function loginCodeStep(email){const m=document.getElementById("main");view="login";
+  m.innerHTML=`<form class="card stack" id="codeForm" style="max-width:420px"><h2>Check your email</h2><p class="hint">We've sent a sign-in email to <b>${esc(email)}</b> (it can land in junk). Either tap the link in it, or type the code from it here.${alStandalone()?" You're using the Home Screen app, so <b>type the code</b>: the link would open in your browser instead.":""}</p>
+    <label class="f">Code<input type="text" id="loginCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10" style="font-size:1.4em;letter-spacing:.2em"></label>
+    <div class="btns"><button class="btn" type="submit">Sign in</button><button class="btn ghost" type="button" id="signIn">Use a different email</button></div></form>`;
+  m.dataset.email=email;setTimeout(()=>{const i=document.getElementById("loginCode");i&&i.focus()},50)}
+document.addEventListener("submit",async e=>{
+  if(e.target.id!=="codeForm")return;e.preventDefault();
+  const email=document.getElementById("main").dataset.email||"",token=(document.getElementById("loginCode").value||"").replace(/\D/g,"");
+  if(token.length<6){toast("Type the code from the email.");return}
+  const {error}=await sb.auth.verifyOtp({email,token,type:"email"});
+  if(error){toast(error.status===429?"Too many tries. Wait a few minutes and try again.":"That code didn't work. Check it, or use the newest email if you asked for more than one.");return}
+  view="home";toast("You're signed in as a coach.");// onAuthStateChange runs checkCoach
 });
 document.addEventListener("submit",async e=>{
   if(e.target.id!=="loginForm")return;e.preventDefault();
   const email=document.getElementById("loginEmail").value.trim();if(!email){toast("Type your email.");return}
   const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
   // a refused sign-up (only_coaches_can_sign_up) comes back as a database error; Supabase's own email limit as 429
+  if(!error){loginCodeStep(email);return}
   toast(!error?"Check your email for the sign-in link (it can land in junk).":error.status===429||/rate limit/i.test(error.message||"")?"Too many sign-in emails in the last hour. Use the last link we sent, or try again in an hour.":/database error|coach/i.test(error.message||"")?"That email isn't on the club's coach list.":"Couldn't send the sign-in email just now. Try again in a few minutes.");
 });
 (async function(){
