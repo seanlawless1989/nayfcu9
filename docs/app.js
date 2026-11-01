@@ -167,6 +167,7 @@ function render(){
   else if(view==="reports")main.innerHTML=reportsView();
   else if(view==="pick")main.innerHTML=pickView();
   else if(view==="avail")main.innerHTML=availView();
+  else if(view==="availall")main.innerHTML=availAllView();
   else if(view==="tavail")main.innerHTML=tavView();
   else if(view==="msg")main.innerHTML=msgChase?chaseView():msgView();
   else if(view==="alerts")main.innerHTML=alertsView();
@@ -510,9 +511,34 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
 function pface(n,cls){return PHOTOS[n]?`<img class="${cls}" src="${PHOTOS[n]}" alt="">`:""}
 function shrinkPhoto(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=300,c=document.createElement("canvas"),k=Math.min(im.width,im.height);c.width=c.height=S;c.getContext("2d").drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,0,0,S,S);ok(c.toDataURL("image/jpeg",.82))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function savePhoto(n,file){try{const img=await shrinkPhoto(file);const {error}=await sb.from("player_photos").upsert({player:n,img});if(error)throw error;PHOTOS[n]=img;toast(`Photo saved for ${n}.`);render()}catch(e){toast("Couldn't save that photo. Try a JPG or PNG.")}}
-async function loadAvail(){if(!sb||!canWrite){AV={};return}const {data}=await sb.from("availability").select("*");AV={};(data||[]).forEach(r=>{(AV[r.match_id]=AV[r.match_id]||{})[r.player]=r.status})}
-function avSummary(id){const a=AV[id]||{};if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask.`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
-  return `Availability: ✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}${c.no.length?` (can't make it: ${c.no.map(esc).join(", ")})`:""}${w.length?`<br>Not answered yet: ${w.map(esc).join(", ")} <button class="mini" data-chase="${esc(id)}">Chase replies</button>`:" · Everyone has answered."}`}
+async function loadAvail(){if(!sb||!canWrite){AV={};AVBY={};return}const {data}=await sb.from("availability").select("*");AV={};AVBY={};(data||[]).forEach(r=>{(AV[r.match_id]=AV[r.match_id]||{})[r.player]=r.status;if(r.by_coach)(AVBY[r.match_id]=AVBY[r.match_id]||{})[r.player]=true})}
+// Coaches answer for any player too (supabase/22_coach_availability.sql), e.g. when a parent tells them on WhatsApp.
+// AVBY / TAVBY mark the answers a coach set, so the coaches can tell them apart from the parents' own.
+let AVBY={},TAVBY={};
+// one player's row on the answer page: coaches see who set it and can clear it
+function avRow(n,v,attr,by,x="",label=""){const k=`data-n="${esc(n)}"${x}`;return `<div class="row"><span>${label||esc(n)}${canWrite&&v?`${label?"<br>":" "}<span class="hint avby">${by?"set by coach":"parent said"}</span>`:""}</span><div class="seg" role="group" aria-label="${esc(n)}"><button data-${attr}="yes" ${k} aria-pressed="${v==="yes"}">Yes</button><button data-${attr}="maybe" ${k} aria-pressed="${v==="maybe"}">Maybe</button><button data-${attr}="no" ${k} aria-pressed="${v==="no"}">No</button>${canWrite&&v?`<button data-${attr}clr="1" ${k} aria-label="Clear ${esc(n)}'s answer" title="Clear the answer">✕</button>`:""}</div></div>`}
+// ---------- every upcoming game (and training) on one page, for one player at a time (?avail=all) ----------
+// A parent answers for all the coming games in one go instead of one link per game; a coach picks any player, e.g.
+// "Leo's away for the next three weekends".
+document.addEventListener("change",e=>{if(e.target.id!=="avAllKid")return;avAllKid=e.target.value||null;try{localStorage.setItem(SK+"-avkid",avAllKid||"")}catch(err){}render()});
+let avAllKid=null;try{avAllKid=localStorage.getItem(SK+"-avkid")}catch(e){}
+const avAllGames=()=>sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&!m.hidden&&m.comp!=="Tournament"&&m.stage!=="placeholder"&&!result(m)&&!(m.live&&m.live.status&&m.live.status!=="pre")&&(m.date||"")>=todayLocal())).slice(0,10);
+function availAllView(){const kids=canWrite?[]:myKids();
+  if(!kids.length&&PREQ&&!canWrite){parentNext="availall";return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>${joinBox(`To answer, type the family code the coach sent you. You only do this once on this phone.`)}</section>`}
+  const names=kids.length?kids:players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
+  const n=names.includes(avAllKid)?avAllKid:(kids.length?kids[0]:null);
+  const games=avAllGames(),sess=TAV_ON&&TR?trUpcoming(8).filter(x=>!x.off).slice(0,4).map(x=>x.iso):[];
+  const pick=names.length>1||!kids.length?`<label class="f">${canWrite?`Which ${PRN.kid}?`:`Your ${PRN.kid}`}<select id="avAllKid"><option value="">Choose…</option>${names.map(x=>`<option${x===n?" selected":""}>${esc(x)}</option>`).join("")}</select></label>`:"";
+  const gm=m=>`<b>${esc(shortDay(m.date))}</b><br><span class="hint">${esc(m.ha==="A"?"at ":"v ")}${esc(m.opp)}${m.ko?` · ${esc(m.ko)}`:""}</span>`;
+  const rows=!n?`<p class="hint">Choose ${canWrite?`a ${PRN.kid}`:`your ${PRN.kid}`} above.</p>`:`
+    <h3>Games</h3>${games.length?`<div class="av">${games.map(m=>avRow(n,((canWrite?AV:AV_MINE)[m.id]||{})[n],"av",(AVBY[m.id]||{})[n],` data-mid="${esc(m.id)}"`,gm(m))).join("")}</div>`:`<p class="hint">No games coming up yet.</p>`}
+    ${sess.length?`<h3>Training</h3><div class="av">${sess.map(d=>avRow(n,((canWrite?TAV:TAV_MINE)[d]||{})[n],"tav",(TAVBY[d]||{})[n],` data-day="${d}"`,`<b>${esc(shortDay(d))}</b><br><span class="hint">${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span>`)).join("")}</div>`:""}`;
+  return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>
+    <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${esc(n||kids[0])}.`:""} Say Yes, Maybe or No for every game coming up. You can change an answer any time. Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="availall">Sign in</button>`:""}</p>
+    ${pick}${rows}</section>`}
+const avCoachHint=()=>`You're a coach, so you can set the answer for any ${PRN.kid}, for example when a parent tells you on WhatsApp. It counts just like the parent's own answer, and a parent signed in with their family code sees it too. Tap ✕ to clear an answer.`;
+function avSummary(id){const a=AV[id]||{};const set=`<button class="mini" data-avset="${esc(id)}">Set answers</button>`;if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask. ${set}`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
+  return `Availability: ✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}${c.no.length?` (can't make it: ${c.no.map(esc).join(", ")})`:""}${w.length?`<br>Not answered yet: ${w.map(esc).join(", ")} <button class="mini" data-chase="${esc(id)}">Chase replies</button> ${set}`:` · Everyone has answered. ${set}`}`}
 // current players with no answer yet for this fixture, in shirt-number order
 function avWaiting(id){const a=AV[id]||{};return players.filter(p=>p.current&&!a[p.name]).sort((x,y)=>(+x.num||99)-(+y.num||99)).map(p=>p.name)}
 function siteUrl(){return location.origin+location.pathname}
@@ -524,8 +550,9 @@ function availView(){
   if(kids.length)roster=roster.filter(p=>kids.includes(p.name));
   else if(PREQ&&!canWrite){parentNext="avail";return `<section class="card stack">${head}${joinBox(`To answer, type the family code the coach sent you. You only do this once on this phone.`)}</section>`}
   return `<section class="card stack">${head}
-    <p class="hint">${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="avail">Sign in</button>`:""}</p>
-    <div class="av">${roster.map(p=>{const v=(AV_MINE[m.id]||{})[p.name];return `<div class="row"><span>${esc(p.name)}</span><div class="seg" role="group" aria-label="${esc(p.name)}"><button data-av="yes" data-n="${esc(p.name)}" aria-pressed="${v==="yes"}">Yes</button><button data-av="maybe" data-n="${esc(p.name)}" aria-pressed="${v==="maybe"}">Maybe</button><button data-av="no" data-n="${esc(p.name)}" aria-pressed="${v==="no"}">No</button></div></div>`}).join("")}</div></section>`;
+    <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="avail">Sign in</button>`:""}</p>
+    <div class="av">${roster.map(p=>avRow(p.name,(canWrite?AV:AV_MINE)[m.id]&&(canWrite?AV:AV_MINE)[m.id][p.name],"av",(AVBY[m.id]||{})[p.name])).join("")}</div>
+    ${canWrite?`<div class="btns"><button class="btn gold" data-pick="${esc(m.id)}">${m.squad&&m.squad.length?"Back to the squad":"Pick squad"}</button><button class="btn ghost" data-view="availall">One ${esc(PRN.kid)}, every game</button><button class="btn ghost" data-view="fixtures">Fixtures</button></div>`:`<div class="btns"><button class="btn ghost" data-view="availall">Answer for every game coming up</button></div>`}</section>`;
 }
 let availMatch=null;const AV_MINE={};
 // ---------- parent login (family codes, supabase/10_parent_login.sql) ----------
@@ -563,6 +590,7 @@ function parentsView(){const kid=PRN.kid,kids=myKids();
   if(canWrite)return `<section class="card stack"><h2>👪 Parents</h2><p>You're signed in as a coach. Each family's code is on the Squad page.</p><div class="btns"><button class="btn gold" data-view="squad">Family codes</button></div></section>`;
   if(kids.length)return `<section class="card stack"><h2>👪 Parents</h2><p>This phone is signed in for <b>${kids.map(esc).join(" and ")}</b>. You can:</p>${what}
     <div class="av">${kids.map(n=>`<div class="row"><span>${esc(n)}</span><button class="mini" data-punlink="${esc(n)}">Remove</button></div>`).join("")}</div>
+    <div class="btns"><button class="btn gold" data-view="availall">Answer for the games coming up</button></div>
     <h3>Another ${kid} in the squad?</h3>${joinBox("Type their family code as well.")}
     <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div></section>${kitFamCard()}`;
   return `<section class="card stack"><h2>👪 Parents</h2><p>Sign in with the family code the coach sent you. You only do this once on each phone. Then you can:</p>${what}${joinBox("")}
@@ -592,8 +620,8 @@ function pickList(roster,a){const lab={yes:"✅ Can make it",maybe:"❔ Maybe",n
   const c={yes:0,maybe:0,no:0,none:0};roster.forEach(p=>c[lab[a[p.name]]?a[p.name]:"none"]++);
   const flag=p=>PICK.set.has(p.name)?(a[p.name]==="no"?` <b class="pkwarn">⚠️ picked</b>`:""):(a[p.name]==="yes"?` <b class="pkwarn">not picked</b>`:"");
   return `<p class="pkcount">${Object.keys(a).length?`✅ ${c.yes} can make it · ❔ ${c.maybe} maybe · ❌ ${c.no} can't · ${c.none} no answer`:"No availability answers yet."}</p>
-  <div class="av">${roster.map(p=>`<label class="row${PICK.set.has(p.name)&&a[p.name]==="no"?" pkbad":""}" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||"No answer"}${flag(p)}</span></label>`).join("")}</div>
-  <p class="hint pkn">${PICK.set.size} picked.</p>`}
+  <div class="av">${roster.map(p=>`<label class="row${PICK.set.has(p.name)&&a[p.name]==="no"?" pkbad":""}" for="pk-${esc(p.id)}" style="cursor:pointer"><span><input type="checkbox" id="pk-${esc(p.id)}" data-pk="${esc(p.name)}"${PICK.set.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(p.num??"")}</b> ${esc(p.name)}</span><span class="hint">${lab[a[p.name]]||"No answer"}${a[p.name]&&(AVBY[PICK.id]||{})[p.name]?" (coach)":""}${flag(p)}</span></label>`).join("")}</div>
+  <p class="hint pkn">${PICK.set.size} picked.${String(PICK.id).startsWith("t:")?"":` A parent told you on WhatsApp? <button class="mini" data-avset="${esc(PICK.id)}">Set answers</button>`}</p>`}
 // answers that came in since the site was opened: reload them when Pick squad opens, or when the coach comes back to it.
 // Before the coach has saved a squad or touched a tick, the starting ticks follow the fresh answers.
 async function pickRefresh(){await loadAvail();if(view!=="pick")return;if(PICK&&!PICK.touched&&!PICK.saved)PICK=null;render()}
@@ -663,7 +691,7 @@ function matchdayView(){const m=matches.find(x=>x.id===mdayMatch)||mdayPick();if
   const facts=[["🕘",d.meet?`Arrive by ${d.meet}`:""],["⏰",m.ko?`${m.ko} kick-off`:"Kick-off TBC"],["📍",[m.venue,d.pitch?`Pitch ${d.pitch}`:""].filter(Boolean).join(" · ")],["👕",d.kit?`Wear the ${kitLabel(d.kit).toLowerCase()}`:""],[(w=>w&&WXI[w.c]||"🌡️")(wxFor(m)),(t=>t?t+" at kick-off":"")(wxText(m,true))]].filter(([,v])=>v);
   const parents=done?"":`<section class="card stack"><h3>For parents</h3><div class="mdinfo" style="display:flex;flex-direction:column;gap:6px;font-weight:600">${facts.map(([i,v])=>`<div><span style="display:inline-block;width:26px">${i}</span>${esc(v)}</div>`).join("")}</div>
     ${m.squad&&m.squad.length?`<p style="margin:0"><b>Squad:</b> ${m.squad.map(esc).join(", ")}</p>`:""}
-    <div class="btns">${live?`<button class="btn gold" data-tl="${id}">Follow live</button>`:`<button class="btn gold" data-mdayav="${id}">Can your ${PRN.kid} make it?</button>`}${mapsUrl(m)?`<a class="btn ghost" href="${mapsUrl(m)}" target="_blank" rel="noopener">🧭 Directions</a>`:""}<button class="btn ghost" data-view="alerts">🔔 Alerts</button></div></section>`;
+    <div class="btns">${live?`<button class="btn gold" data-tl="${id}">Follow live</button>`:`<button class="btn gold" data-mdayav="${id}">Can your ${PRN.kid} make it?</button><button class="btn ghost" data-view="availall">All games</button>`}${mapsUrl(m)?`<a class="btn ghost" href="${mapsUrl(m)}" target="_blank" rel="noopener">🧭 Directions</a>`:""}<button class="btn ghost" data-view="alerts">🔔 Alerts</button></div></section>`;
   const coach=!canWrite?"":done?`<section class="card stack edit-only"><h3>After the game</h3><div class="btns"><button class="btn gold" data-edit="${id}">Result and ${esc(POTM)}</button><button class="btn ghost" data-mdayrep="${id}">${m.report&&m.report.trim()?"Edit the report":"✨ Write the report"}</button><button class="btn ghost" data-gfx="ft" data-mid="${id}"${r?"":" disabled"}>Result post</button><button class="btn ghost" data-gfx="potm" data-mid="${id}"${m.potm?"":" disabled"}>PotM post</button></div><div class="btns">${galAdd(m.id)}</div></section>`
     :`<section class="card stack edit-only"><h3>For coaches</h3>${m.comp!=="Tournament"?`<div class="avsum" style="margin:0">${avSummary(m.id)}</div>`:""}
       <div class="btns"><button class="btn ghost" data-pick="${id}">${m.squad&&m.squad.length?`Squad picked (${m.squad.length})`:"Pick squad"}</button><button class="btn gold" data-live="${id}">▶ Line-up and live match</button><button class="btn ghost" data-tbmatch="${id}">📋 Tactics board</button><button class="btn ghost" data-msg="${id}">Parents' message</button><button class="btn ghost" data-medit="${id}">Matchday details</button></div>
@@ -941,7 +969,9 @@ function attStats(seasonName){const out={},days=Object.keys(ATT||{}).filter(d=>s
 // reminds parents who haven't answered 24 hours before, and tells coaches who asked for it as answers come in.
 let TAV_ON=false,TAV={},tavDay=null;const TAV_MINE={};
 async function loadTav(){if(!sb)return;try{
-  if(canWrite){const {data,error}=await sb.from("training_availability").select("day,player,status").gte("day",todayLocal());if(error){TAV_ON=false;return}TAV_ON=true;TAV={};(data||[]).forEach(r=>{(TAV[r.day]=TAV[r.day]||{})[r.player]=r.status});return}
+  if(canWrite){let {data,error}=await sb.from("training_availability").select("day,player,status,by_coach").gte("day",todayLocal());
+    if(error)({data,error}=await sb.from("training_availability").select("day,player,status").gte("day",todayLocal()));// a database without 22_coach_availability.sql
+    if(error){TAV_ON=false;return}TAV_ON=true;TAV={};TAVBY={};(data||[]).forEach(r=>{(TAV[r.day]=TAV[r.day]||{})[r.player]=r.status;if(r.by_coach)(TAVBY[r.day]=TAVBY[r.day]||{})[r.player]=true});return}
   const {error}=await sb.from("training_availability").select("day").limit(1);TAV_ON=!error;   // no rows for parents: this just checks it's switched on
   if(TAV_ON&&myKids().length){const {data}=await sb.rpc("my_training_availability");(data||[]).forEach(r=>{(TAV_MINE[r.day]=TAV_MINE[r.day]||{})[r.player]=r.status})}}catch(e){}}
 const tavNext=()=>{const n=trUpcoming(6).find(x=>!x.off);return n?n.iso:null};
@@ -959,7 +989,7 @@ function tavCard(){if(!TAV_ON||!TR)return "";const d=tavNext();if(!d)return "";
     <p style="margin:0">✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}</p>
     ${c.yes.length?`<p class="hint" style="margin:0"><b>Coming:</b> ${c.yes.map(esc).join(", ")}</p>`:""}${c.maybe.length?`<p class="hint" style="margin:0"><b>Maybe:</b> ${c.maybe.map(esc).join(", ")}</p>`:""}${c.no.length?`<p class="hint" style="margin:0"><b>Not coming:</b> ${c.no.map(esc).join(", ")}</p>`:""}${w.length?`<p class="hint" style="margin:0"><b>Not answered yet:</b> ${w.map(esc).join(", ")}</p>`:`<p class="hint" style="margin:0">Everyone has answered.</p>`}
     <p class="hint" style="margin:0">Parents who haven't answered get a reminder on their phone 24 hours before, if they have alerts on and have signed in with their family code. Only coaches see this.</p>
-    <div class="btns"><button class="btn ghost" data-tavcopy="${d}">Copy message for parents</button><button class="mini" data-tavopen="${d}">Answer for a ${esc(PRN.kid)}</button></div></section>`}
+    <div class="btns"><button class="btn ghost" data-tavcopy="${d}">Copy message for parents</button><button class="mini" data-tavopen="${d}">Set answers</button></div></section>`}
 function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answers aren't switched on for this team yet.</div>`;
   const ok=trUpcoming(8).filter(x=>!x.off).map(x=>x.iso);if(!tavDay||!ok.includes(tavDay))tavDay=ok[0]||null;
   if(!tavDay)return `<div class="card empty">There's no training coming up. Check the Training page for when it starts again.</div>`;
@@ -970,8 +1000,8 @@ function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answ
   const mine=canWrite?(TAV[tavDay]||{}):(TAV_MINE[tavDay]||{});
   return `<section class="card stack">${head}
     ${ok.length>1?`<label class="f">Session<select id="tavDay">${ok.map(d=>`<option value="${d}"${d===tavDay?" selected":""}>${esc(shortDay(d))}</option>`).join("")}</select></label>`:""}
-    <p class="hint">${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="tavail">Sign in</button>`:""}</p>
-    <div class="av">${roster.map(p=>{const v=mine[p.name];return `<div class="row"><span>${esc(p.name)}</span><div class="seg" role="group" aria-label="${esc(p.name)}"><button data-tav="yes" data-n="${esc(p.name)}" aria-pressed="${v==="yes"}">Yes</button><button data-tav="maybe" data-n="${esc(p.name)}" aria-pressed="${v==="maybe"}">Maybe</button><button data-tav="no" data-n="${esc(p.name)}" aria-pressed="${v==="no"}">No</button></div></div>`}).join("")}</div>
+    <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="tavail">Sign in</button>`:""}</p>
+    <div class="av">${roster.map(p=>avRow(p.name,mine[p.name],"tav",(TAVBY[tavDay]||{})[p.name])).join("")}</div>
     <div class="btns"><button class="btn ghost" data-view="training">Training details</button></div></section>`}
 function trainingView(){
   if(trEdit&&canWrite)return trFormView();
@@ -1824,11 +1854,16 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.chase){msgMatch=b.dataset.chase;msgChase=true;setView("msg")}
   if(b.id==="waMsg"){const t=$("#msgText").value;window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank","noopener")}
   if(b.id==="copyMsg"){const ta=$("#msgText");try{navigator.clipboard.writeText(ta.value).then(()=>toast("Copied. Paste it into WhatsApp."),()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select()}}
-  if(b.dataset.av){const n=b.dataset.n,v=b.dataset.av;(AV_MINE[availMatch]=AV_MINE[availMatch]||{})[n]=v;render();
-    const mid=availMatch;sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`Thanks, ${n}: ${v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`);
+  if(b.dataset.avset){availMatch=b.dataset.avset;setView("avail");if(canWrite)loadAvail().then(()=>{if(view==="avail")render()});return}
+  if(b.dataset.avclr&&canWrite){const n=b.dataset.n,mid=b.dataset.mid||availMatch,was=(AV[mid]||{})[n];if(AV[mid])delete AV[mid][n];if(AVBY[mid])delete AVBY[mid][n];render();
+    sb.from("availability").delete().eq("match_id",mid).eq("player",n).then(({error})=>{if(error){(AV[mid]=AV[mid]||{})[n]=was;render();toast("Couldn't clear that. Try again.")}else toast(`${n}'s answer cleared.`)});return}
+  if(b.dataset.tavclr&&canWrite){const n=b.dataset.n,day=b.dataset.day||tavDay,was=(TAV[day]||{})[n];if(TAV[day])delete TAV[day][n];if(TAVBY[day])delete TAVBY[day][n];render();
+    sb.from("training_availability").delete().eq("day",day).eq("player",n).then(({error})=>{if(error){(TAV[day]=TAV[day]||{})[n]=was;render();toast("Couldn't clear that. Try again.")}else toast(`${n}'s training answer cleared.`)});return}
+  if(b.dataset.av){const n=b.dataset.n,v=b.dataset.av,mid=b.dataset.mid||availMatch;(AV_MINE[mid]=AV_MINE[mid]||{})[n]=v;if(canWrite){(AV[mid]=AV[mid]||{})[n]=v;(AVBY[mid]=AVBY[mid]||{})[n]=true}render();
+sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`${canWrite?"Saved":"Thanks"}, ${n}: ${v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`);
       if(!error&&!canWrite)alSend({avail:{match:mid,player:n}})})}// tells the coaches who asked for availability alerts
-  if(b.dataset.tav){const n=b.dataset.n,v=b.dataset.tav,day=tavDay;(TAV_MINE[day]=TAV_MINE[day]||{})[n]=v;if(canWrite)(TAV[day]=TAV[day]||{})[n]=v;render();
-    sb.rpc("set_training_availability",{p_day:day,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`Thanks, ${n}: ${v==="yes"?"coming to training":v==="no"?"not coming to training":"maybe coming to training"}.`);
+  if(b.dataset.tav){const n=b.dataset.n,v=b.dataset.tav,day=b.dataset.day||tavDay;(TAV_MINE[day]=TAV_MINE[day]||{})[n]=v;if(canWrite){(TAV[day]=TAV[day]||{})[n]=v;(TAVBY[day]=TAVBY[day]||{})[n]=true}render();
+    sb.rpc("set_training_availability",{p_day:day,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`${canWrite?"Saved":"Thanks"}, ${n}: ${v==="yes"?"coming to training":v==="no"?"not coming to training":"maybe coming to training"}.`);
       if(!error&&!canWrite)alSend({tavail:{day,player:n}})})}
   if(b.dataset.tavopen){tavDay=b.dataset.tavopen;setView("tavail");return}
   if(b.dataset.tavcopy){const d=b.dataset.tavcopy;copyOut(tavText(d),"Copied. Paste it into WhatsApp.")}
@@ -2748,6 +2783,6 @@ document.addEventListener("submit",async e=>{
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}
   const qt=new URLSearchParams(location.search).get("tavail");if(qt!==null){tavDay=qt;view="tavail";render()}
-  const qa=new URLSearchParams(location.search).get("avail");if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
+  const qa=new URLSearchParams(location.search).get("avail");if(qa==="all"){view="availall";render()}else if(qa){availMatch=qa;try{const {data}=await sb.from("matches").select("id").eq("id",qa);}catch(e){}view="avail";render()}
 })();
 })();
