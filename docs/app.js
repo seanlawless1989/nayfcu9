@@ -153,6 +153,7 @@ function render(){
   if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+homeView();
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
+  else if(view==="ratings")main.innerHTML=ratingsView();
   else if(view==="results")main.innerHTML=resultsView();
   else if(view==="fixtures")main.innerHTML=fixturesView();
   else if(view==="honours")main.innerHTML=honoursView();
@@ -211,7 +212,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -710,7 +711,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match reports the coaches write.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, birthdays, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match reports the coaches write.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when. Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -1564,7 +1565,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const h2h=m.opp?`<section class="card"><h3>Against ${esc(m.opp)}</h3>${h.length?`<div class="h2h">${h.slice(0,8).map(x=>`<button class="sc-btn" data-md="${esc(x.id)}">${scChip(x)}</button>`).join("")}</div>`:`<p class="hint">${fx?"First time we've played them.":"No other games against them yet."}</p>`}<button class="mini" data-opp="${esc(m.opp)}">All about ${esc(m.opp)}</button></section>`:"";
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
-  const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button><button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
+  const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button>${rtMatchBtn(m)}<button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed?`<div class="avsum">${avSummary(m.id)}</div>`:""}</section>`:"";
   return `<div class="live md">${back}${board}${info}${cheerCard(m)}${fx?previewCard(m)+reportCard(m):reportCard(m)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
@@ -2001,12 +2002,86 @@ function playerDetail(n){
   <section class="card"><div class="pcard">${PHOTOS[n]?`<div class="pphoto">${pface(n,"")}<span>${esc(numOf(n))||""}</span></div>`:`<div class="big">${esc(numOf(n))||"·"}</div>`}<div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${noScores()?`${tot.apps||0} appearances · `:RUGBY?`${tot.goals} career tries · ${tot.pts||0} points · `:`${tot.goals} career goals · ${tot.assists||0} assists · `}${tot.potm} ${esc(TEAM.potm&&TEAM.potm.sponsor||"player of the match")} awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}</p>${canWrite?`<label class="bup btn ghost">${PHOTOS[n]?"Change photo":"Add photo"}<input type="file" accept="image/*" data-photo="${esc(n)}"></label> <span class="hint">Everyone can see player photos.</span>`:""}</div></div></section>
   <button class="btn gold" data-story="${esc(n)}" style="align-self:flex-start">✨ ${esc(n)}'s ${esc(season)} season story</button>
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
-  <div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
+  ${rtPlayerCard(n)}<div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
   <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
   ${noScores()?"":`<section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>${SP.Goals}</th>${RUGBY?"<th>Kicks</th><th>Points</th>":"<th>Assists</th><th>Clean sheets</th>"}<th>PotM</th></tr></thead><tbody>
   ${rows.map(r=>`<tr><td>${r.s}</td><td>${r.tracked?r.o.apps+(r.partial?"*":""):"–"}</td><td>${r.o.goals}</td>${RUGBY?`<td>${esc(kickText(r.o))||"–"}</td><td>${r.o.pts||0}</td>`:`<td>${assistsTracked(r.s)?r.o.assists:"–"}</td><td>${r.o.gk?r.o.cs:"–"}</td>`}<td>${r.o.potm}</td></tr>`).join("")}</tbody></table>${rows.some(r=>r.partial)?`<p class="hint">* Some of these games only recorded the scorers, so this counts the scorers and player of the match and may be missing other games she played.</p>`:""}</section>`}
   <section class="card"><h3>Matches</h3><div class="list">${games.map(matchRow).join("")||`<p class="hint">No matches logged yet.</p>`}</div></section></div>`;
 }
+
+// ---------- coach ratings: each player scored out of 10 after a game, for the coaches' player of the year ----------
+// public.player_ratings (supabase/18_player_ratings.sql). Only signed-in coaches can read or write it: the database
+// refuses everyone else, parents signed in with a family code included, so nothing here ever reaches a parent's phone.
+let RT=null,rtMatch=null,rtDraft=null,rtSort="avg",rtBusy=false;
+async function loadRatings(){RT=null;if(!sb||!canWrite)return;try{const {data,error}=await sb.from("player_ratings").select("match_id,player,score");if(!error)RT=data||[]}catch(e){}}
+const rtGames=()=>seasonMatches().filter(m=>counted(m)&&!isFixture(m)&&!m.postponed).reverse();
+function rtOf(id){const o={};(RT||[]).forEach(r=>{if(r.match_id===id)o[r.player]=r.score});return o}
+const rtAvg=(t,n)=>n?(Math.round(t/n*10)/10).toFixed(1):"–";
+// season totals for every player with at least one score, in the season picked at the top of the page
+function rtTable(list){const ids=new Set(list.map(m=>m.id)),out={};
+  (RT||[]).forEach(r=>{if(!ids.has(r.match_id))return;const o=out[r.player]||(out[r.player]={n:r.player,g:0,t:0,hi:0});o.g++;o.t+=+r.score;o.hi=Math.max(o.hi,+r.score)});
+  const rows=Object.values(out).map(o=>Object.assign(o,{a:o.t/o.g}));
+  return rows.sort(rtSort==="tot"?(x,y)=>y.t-x.t||y.a-x.a:(x,y)=>y.a-x.a||y.g-x.g||x.n.localeCompare(y.n))}
+// who to score for a game: the team sheet, or the whole squad when it wasn't written down
+function rtNames(m){const pl=Object.keys(played(m));const known=m.apps!==false&&pl.length;
+  const names=known?pl:players.filter(p=>p.current).map(p=>p.name);Object.keys(rtOf(m.id)).forEach(n=>{if(!names.includes(n))names.push(n)});
+  return {known,names:names.sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b))}}
+const rtWho=m=>`${m.ha==="A"?"at":"v"} ${esc(m.opp||"Opponent")}`;
+const rtDate=m=>{const d=new Date(m.date+"T12:00:00");return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})};
+const RT_LOCK=`<p class="hint rt-lock">🔒 Only coaches signed in to this site can see ratings. Parents, families and visitors never see them.</p>`;
+function ratingsView(){
+  if(!canWrite)return `<div class="stack"><section class="card empty">Ratings are for coaches only. Sign in as a coach to see them.</section></div>`;
+  if(RT===null)return `<div class="stack"><section class="card"><h2 style="margin-top:0">Player ratings</h2><p class="hint">Ratings aren't switched on for this team's database yet. Ask Touchline Tales to turn them on.</p></section></div>`;
+  if(rtMatch)return rtForm();
+  const games=rtGames(),tab=rtTable(games),done=games.filter(m=>Object.keys(rtOf(m.id)).length),top=tab[0];
+  const table=tab.length?`<table class="lb rt-tab"><thead><tr><th>#</th><th>Player</th><th>Games</th><th>Total</th><th>Average</th></tr></thead><tbody>
+    ${tab.map((o,i)=>`<tr class="click" data-player="${esc(o.n)}"><td>${i+1}</td><td><span class="num">${esc(numOf(o.n))||"·"}</span>${esc(o.n)}</td><td>${o.g}</td><td>${o.t}</td><td><b>${rtAvg(o.t,o.g)}</b></td></tr>`).join("")}</tbody></table>
+    <p class="hint" style="margin-top:8px">Average is the total divided by the number of games each player was scored in. Someone scored in only a few games can top the averages, so keep an eye on the Games column.</p>`
+    :`<p class="hint">No scores yet this season. Pick a game below and give each ${esc(PL.replace(/s$/,""))} a score out of 10.</p>`;
+  const row=m=>{const n=Object.keys(rtOf(m.id)).length,of=rtNames(m).names.length;
+    return `<button class="rt-game" data-rtm="${esc(m.id)}"><span class="rt-g1">${badge(m.opp)}<span><b>${rtWho(m)}</b><small>${rtDate(m)} · ${esc(compName(m.comp||""))}</small></span></span>${n?`<span class="pill rt-ok">✓ ${n} scored</span>`:`<span class="pill rt-no">Score now</span>`}</button>`};
+  return `<div class="stack">
+  <section class="card"><h2 style="margin-top:0">Player ratings · ${esc(season)}</h2>
+    <p>After each game, give every ${esc(PL.replace(/s$/,""))} who played a score out of 10. The totals and averages build up over the season to help pick the coaches' player of the year.</p>${RT_LOCK}</section>
+  ${top?`<section class="card rt-lead"><div class="rt-trophy">🏆</div><div><div class="kick">Top of the ${rtSort==="tot"?"totals":"averages"}</div><b>${esc(top.n)}</b><span>${rtSort==="tot"?`${top.t} points from ${top.g} game${top.g===1?"":"s"}`:`${rtAvg(top.t,top.g)} average from ${top.g} game${top.g===1?"":"s"}`}</span></div></section>`:""}
+  <section class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px"><h3 style="margin:0">Season table</h3>
+    ${tab.length?`<div class="seg" role="group" aria-label="Sort by"><button data-rtsort="avg" aria-pressed="${rtSort==="avg"}">Average</button><button data-rtsort="tot" aria-pressed="${rtSort==="tot"}">Total</button></div>`:""}</div>${table}</section>
+  <section class="card"><h3>Score a game</h3><p class="hint" style="margin-bottom:8px">${games.length?`${done.length} of ${games.length} game${games.length===1?"":"s"} scored this season.`:"No games played this season yet."}</p>
+    <div class="stack" style="gap:8px">${games.map(row).join("")}</div></section></div>`;
+}
+function rtForm(){const m=matches.find(x=>x.id===rtMatch);const back=`<button class="btn ghost" data-rtback style="align-self:flex-start">← All ratings</button>`;
+  if(!m)return `<div class="stack">${back}<section class="card empty">Game not found.</section></div>`;
+  if(!rtDraft||rtDraft.id!==m.id)rtDraft={id:m.id,s:rtOf(m.id)};const {known,names}=rtNames(m),s=rtDraft.s;
+  const pick=n=>`<div class="rt-p"><div class="rt-n"><span class="num">${esc(numOf(n))||"·"}</span><b>${esc(n)}</b>${m.potm===n?` <span title="${esc(POTM)}">${POTM_IC}</span>`:""}${+played(m)[n]>0?` <span class="hint">${SP.ball} ${played(m)[n]}</span>`:""}<span class="rt-v">${s[n]?`${s[n]}/10`:"–"}</span></div>
+    <div class="rt-btns" role="group" aria-label="Score for ${esc(n)}">${[1,2,3,4,5,6,7,8,9,10].map(v=>`<button data-rtn="${esc(n)}" data-rtv="${v}" aria-pressed="${s[n]===v}">${v}</button>`).join("")}</div></div>`;
+  const n=Object.keys(s).length,tot=Object.values(s).reduce((a,b)=>a+b,0);
+  return `<div class="stack">${back}
+  <section class="card"><h2 style="margin:0">${rtWho(m)}</h2><p class="hint">${longDate(m.date)} · ${esc(compName(m.comp||""))}</p>
+    <p style="margin-top:8px">Tap a score out of 10 for each ${esc(PL.replace(/s$/,""))}. Tap it again to clear it.${known?"":` The team sheet wasn't written down for this game, so the whole squad is listed. Leave anyone who didn't play blank.`}</p>${RT_LOCK}</section>
+  <section class="card rt-list">${names.map(pick).join("")||`<p class="hint">No ${esc(PL)} on the squad yet.</p>`}</section>
+  <div class="btns rt-save"><button class="btn gold" id="rtSave"${rtBusy?" disabled":""}>Save scores</button><span class="hint">${n?`${n} scored · average ${rtAvg(tot,n)}`:"Nothing scored yet"}</span></div></div>`;
+}
+async function rtSave(){const d=rtDraft;if(!d||!canWrite||rtBusy)return;const old=rtOf(d.id);rtBusy=true;render();
+  try{const up=Object.entries(d.s).filter(([n,v])=>old[n]!==v).map(([player,score])=>({match_id:d.id,player,score}));
+    const gone=Object.keys(old).filter(n=>!(n in d.s));
+    if(up.length){const {error}=await sb.from("player_ratings").upsert(up,{onConflict:"match_id,player"});if(error)throw error}
+    if(gone.length){const {error}=await sb.from("player_ratings").delete().eq("match_id",d.id).in("player",gone);if(error)throw error}
+    await loadRatings();rtMatch=null;rtDraft=null;toast("Scores saved. Only coaches can see them.")}
+  catch(e){toast("Couldn't save the scores. Check your connection and try again.")}
+  rtBusy=false;render();window.scrollTo({top:0})}
+// on a player's page and the match page, for coaches only
+function rtPlayerCard(n){if(!canWrite||!RT)return "";const games=rtGames().slice().reverse(),list=games.map(m=>[m,rtOf(m.id)[n]]).filter(([,v])=>v);
+  if(!list.length)return "";const t=list.reduce((a,[,v])=>a+v,0);
+  return `<section class="card edit-only"><h3>Coach ratings · ${esc(season)}</h3><p><b>${rtAvg(t,list.length)}</b> average from ${list.length} game${list.length===1?"":"s"} (${t} in total).</p>
+    <div class="rt-hist">${list.map(([m,v])=>`<button class="rt-chip" data-rtm="${esc(m.id)}" title="${esc(rtDate(m))} ${rtWho(m)}"><b>${v}</b><small>${esc(oppIni(m.opp))}</small></button>`).join("")}</div>${RT_LOCK}</section>`}
+const rtMatchBtn=m=>canWrite&&RT&&!isFixture(m)&&counted(m)?`<button class="mini" data-rtm="${esc(m.id)}">⭐ ${Object.keys(rtOf(m.id)).length?"Player ratings":"Rate players"}</button>`:"";
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.rtm){if(!canWrite)return;e.stopPropagation();rtMatch=b.dataset.rtm;rtDraft=null;const m=matches.find(x=>x.id===rtMatch);if(m&&seasonOf(m.date))season=seasonOf(m.date);setView("ratings");return}
+  if("rtback" in b.dataset){rtMatch=null;rtDraft=null;render();window.scrollTo({top:0});return}
+  if(b.dataset.rtsort){rtSort=b.dataset.rtsort;render();return}
+  if(b.dataset.rtn&&rtDraft){const n=b.dataset.rtn,v=+b.dataset.rtv;if(rtDraft.s[n]===v)delete rtDraft.s[n];else rtDraft.s[n]=v;const y=window.scrollY;render();window.scrollTo({top:y});return}
+  if(b.id==="rtSave"){rtSave();return}
+},true);
 
 // ---------- season story ("Wrapped"): a few swipeable slides for one player, from the stats already on the site ----------
 let STORY=null;
@@ -2429,12 +2504,12 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();
   await loadTav();alSync();
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
