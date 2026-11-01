@@ -676,6 +676,30 @@ function alertsView(){if(!AL.checked)alCheck();
     <p><b>Nothing arriving?</b> Tap <b>Send a test alert</b>. If it doesn't come, check notifications are allowed for ${esc(APP)} (or your browser) in your phone's settings, and that Do Not Disturb or Focus is off.</p></details>`;
   return `<section class="card stack">${head}${bodyHtml}${help}<p class="hint">Each phone is set up on its own. We don't ask for your name, number or email, and alerts only use first names already on this site.</p></section>`}
 
+// While a game is live, phones without alerts see a "never miss a goal" card on the live page (and a button on the GOAL! screen).
+// Android and computers turn alerts on in one tap; an iPhone first needs the home-screen app, so the card shows those steps.
+// "Not now" hides it on this phone for the rest of that game. Coaches don't see it.
+const ctaHidKey=id=>SK+".alcta."+id;
+function alCtaShow(m){if(!CFG.vapidPublicKey||canWrite||!m||!m.live||(m.live.status!=="live"&&m.live.status!=="ht")||m.practice)return false;
+  if(!AL.checked){if(!AL.checking){AL.checking=true;alCheck().then(()=>{if(view==="tl"||view==="home")render()})}return false}if(AL.sub&&!AL.ctaDone)return false;try{if(localStorage.getItem(ctaHidKey(m.id)))return false}catch(e){}return true}
+function alCtaWhat(){return TEAM.publicScores===false?"kick-off, half time and full time":`every ${SP.goal} the moment it goes in, plus kick-off, half time and full time`}
+function alCtaCard(m){if(!alCtaShow(m))return "";const id=esc(m.id),nm=esc(TEAM.shortName||TEAM.name||"the team");
+  const goal=TEAM.publicScores===false?"a moment":`a ${SP.goal}`;
+  if(AL.sub)return `<section class="card alcta on"><div class="alcta-ic">✅</div><div><h3>Alerts are on</h3><p class="hint">This phone will buzz for ${alCtaWhat()}. Change what you get any time in <button class="mini" data-view="alerts">🔔 Match alerts</button></p></div></section>`;
+  let body,btn;
+  if(alIos()&&!alStandalone()){
+    body=AL.ctaOpen===m.id?`<ol class="steps"><li>Tap the Share button <b>⬆︎</b> at the bottom of Safari (on newer iPhones tap <b>⋯</b> first, then <b>Share</b>).</li><li>Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open <b>${esc(APP)}</b> from your home screen and tap the gold <b>Turn on ${SP.goal} alerts</b> button, then <b>Allow</b>.</li></ol><p class="hint">On an iPhone, alerts only work from the home-screen app. It takes about 30 seconds and the game keeps going while you do it.</p>`:"";
+    btn=AL.ctaOpen===m.id?"":`<button class="btn gold" data-alcta="${id}">🔔 Get ${SP.goal} alerts</button>`}
+  else if(!alSupported()){body=`<p class="hint">This browser can't show alerts. On Android open the site in Chrome; on an iPhone use Safari and add it to your home screen.</p>`;btn=""}
+  else if(Notification.permission==="denied"){body=`<p class="hint">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</p>`;btn=""}
+  else{body="";btn=`<button class="btn gold" data-alcta="${id}"${AL.busy?" disabled":""}>${AL.busy?"Turning on…":`🔔 Turn on ${SP.goal} alerts`}</button>`}
+  return `<section class="card alcta"><div class="alcta-ic">🔔</div><div><h3>Never miss ${goal}</h3><p>Get a buzz on your phone for ${alCtaWhat()}. Free, and we don't ask for your name, number or email.</p>${body}<div class="btns">${btn}<button class="mini" data-alctano="${id}">Not now</button></div></div></section>`}
+document.addEventListener("click",async e=>{const b=e.target.closest("[data-alcta],[data-alctano],[data-gfalert]");if(!b)return;const d=b.dataset;
+  if(d.alctano){try{localStorage.setItem(ctaHidKey(d.alctano),"1")}catch(x){}render();return}
+  if(d.gfalert){e.stopPropagation();document.querySelectorAll(".gflash").forEach(x=>x.remove());const c=document.querySelector(".alcta");if(c){c.scrollIntoView({behavior:"smooth",block:"center"});return}setView("alerts");return}
+  if(alIos()&&!alStandalone()){AL.ctaOpen=d.alcta;render();return}
+  AL.prefs.live=true;AL.prefs.reminders=true;AL.ctaDone=true;await alOn()});
+
 // ---------- get the app: install the site on the home screen ----------
 // Chrome and Edge offer a one-tap install (beforeinstallprompt); iPhones need Safari's Share > Add to Home Screen.
 let INSTALL=null;
@@ -1443,10 +1467,10 @@ function refreshHomeLive(){if(view!=="home"||!db)return;const el=document.getEle
   if(!!el!==!!h){render();return}if(el&&h!==prev)el.outerHTML=h}
 function tlBody(m,home){const L=m.live||{};
   const mins=L.status==="ft"&&L.mins&&Object.keys(L.mins).length?`<section class="card"><h3>Minutes played</h3><table class="lb"><tbody>${Object.entries(L.mins).sort((a,b)=>b[1]-a[1]).map(([n,v])=>`<tr><td>${esc(n)}</td><td>${Math.round(v)} min</td></tr>`).join("")}</tbody></table></section>`:"";
-  return `${liveBoard(m,L)}${home?"":cheerCard(m)}
+  return `${liveBoard(m,L)}${alCtaCard(m)}${home?"":cheerCard(m)}
     ${L.slots?`<section class="card"><h3>On the pitch${L.form?` (${esc(L.form)})`:""}</h3>${pitchHtml(L,false)}${(b=>b.length?`<p class="hint">Subs: ${b.map(esc).join(", ")}</p>`:"")((L.squad||[]).filter(n=>!L.slots.includes(n)))}</section>`:""}
     <section class="card"><h3>Live commentary</h3>${timelineHtml(L,m)}</section>${mins}
-    ${L.status==="live"||L.status==="ht"?`<p class="hint">This page updates by itself every few seconds. ${home?`<button class="mini" data-tl="${esc(m.id)}">Follow live</button> `:""}<button class="mini" data-view="alerts">🔔 Get ${SP.goal} alerts</button></p>`:""}`}
+    ${L.status==="live"||L.status==="ht"?`<p class="hint">This page updates by itself every few seconds. ${home?`<button class="mini" data-tl="${esc(m.id)}">Follow live</button> `:""}${alCtaShow(m)?"":`<button class="mini" data-view="alerts">🔔 Get ${SP.goal} alerts</button>`}</p>`:""}`}
 let tlMatch=null;
 // ---------- match details (tap any game) ----------
 let mdMatch=null,mdFrom="results",mdWrite=false,mdPrevWrite=false;
@@ -1551,7 +1575,7 @@ function renderTicker(){const el=document.getElementById("ticker");if(!el)return
   const items=L.map(m=>{const g=(m.live.events||[]).filter(e=>e.k==="goal"&&(!RUGBY||e.t==="try")).map(e=>`${e.n} ${e.m}`).join(", ");const st=m.live.status==="live"?`🔴 LIVE ${minuteOf(m.live)}`:m.live.status==="ht"?"⏸ HALF TIME":"🏁 FULL TIME";
     return `<button class="tk" data-tl="${esc(m.id)}">${m.practice?"PRACTICE · ":""}${st} · ${esc(TEAM.name)} ${m.hidden?"v":`${m.us??0}–${m.them??0}`} ${esc(m.opp)}${g?` · ${SP.ball} ${esc(g)}`:""} · Tap to follow</button>`}).join("");
   const h=`<div class="tkin">${items}${items}</div>`;el.hidden=false;if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
-window.goalFlash=goalFlash;function goalFlash(n,score,t){document.querySelectorAll(".gflash").forEach(x=>x.remove());const d=document.createElement("div");d.className="gflash";d.innerHTML=`<div class="gf-in"><b>${RUGBY?({pen:"PENALTY!",drop:"DROP GOAL!",pt:"PENALTY TRY!",con:"CONVERTED!"})[t]||"TRY!":"GOAL!"}</b>${n?`<span>${esc(n)}</span>`:""}${score?`<em>${esc(score)}</em>`:""}</div>`;d.onclick=()=>d.remove();document.body.appendChild(d);try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}setTimeout(()=>d.remove(),3600)}
+window.goalFlash=goalFlash;function goalFlash(n,score,t){document.querySelectorAll(".gflash").forEach(x=>x.remove());const d=document.createElement("div");d.className="gflash";d.innerHTML=`<div class="gf-in"><b>${RUGBY?({pen:"PENALTY!",drop:"DROP GOAL!",pt:"PENALTY TRY!",con:"CONVERTED!"})[t]||"TRY!":"GOAL!"}</b>${n?`<span>${esc(n)}</span>`:""}${score?`<em>${esc(score)}</em>`:""}${CFG.vapidPublicKey&&!canWrite&&AL.checked&&!AL.sub?`<button class="btn gold gf-al" data-gfalert="1">🔔 Get the next one on your phone</button>`:""}</div>`;d.onclick=()=>d.remove();document.body.appendChild(d);try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}setTimeout(()=>d.remove(),3600)}
 async function pollLive(){if(!sb||!matches.length)return;const t=todayLocal();if(!matches.some(m=>m.date===t||(m.live&&(m.live.status==="live"||m.live.status==="ht"))))return;
   try{const {data}=await sb.from("matches").select("id,us,them,live,played,assists,keepers,date"+(RUGBY?",kicks":"")).eq("date",t);
     (data||[]).forEach(r=>{if(LV&&LV.id===r.id&&view==="live")return;const raw=RAW.find(x=>x.id===r.id);if(raw)Object.assign(raw,r);if(noScores())r=maskScore(r);const m=matches.find(x=>x.id===r.id);if(m){if(m.us!=null&&+r.us>+m.us&&r.live&&r.live.status!=="ft"){const g=((r.live.events||[]).filter(e=>e.k==="goal").pop()||{});goalFlash(g.n,`${TEAM.shortName||TEAM.name} ${r.us}-${r.them} ${m.opp}`,g.t)}Object.assign(m,r)}});}catch(e){}
