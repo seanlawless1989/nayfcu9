@@ -194,6 +194,7 @@ ol.tl li.ft,ol.tl li.ht{font-weight:700}
 .av .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-weight:700}
 .av .row .seg button{min-width:52px}
 .avsum{grid-column:1/-1;font:700 12px var(--body);color:var(--muted);margin-top:4px}
+.pkcount{font:700 14px var(--body);margin:0}.av .row.pkbad{border-color:var(--loss);background:var(--warn)}.pkwarn{color:var(--loss);white-space:nowrap}
 .ms{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--field);margin-bottom:6px}
 .bars{display:flex;align-items:flex-end;gap:6px;height:140px;padding-top:10px}
 .bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;font:700 11px var(--body);color:var(--muted);height:100%}
@@ -480,3 +481,70 @@ body.tbfs-on .toast{z-index:1001}
 .cheerpop{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);transform:translateX(-50%);z-index:9000;max-width:calc(100% - 32px);padding:12px 18px;border-radius:999px;background:var(--gold);color:var(--goldInk);font:700 16px var(--body);box-shadow:0 8px 24px rgb(var(--shadowRGB) / .35);cursor:pointer;animation:cpop .4s ease-out}
 @keyframes cpop{from{transform:translate(-50%,40px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 @media (prefers-reduced-motion:reduce){.cheerpop{animation:none}}
+/* team sponsors: strip on the home page, list on the Sponsors page */
+.sp-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.sp-item{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:10px 6px;border-radius:12px;color:var(--ink);text-decoration:none;min-width:0}
+a.sp-item:hover{background:rgba(127,127,127,.08)}
+.sp-item b{font:700 14px var(--body);overflow-wrap:anywhere}.sp-item span:not(.sp-logo):not(.sp-ini){font-size:12px;color:var(--muted)}
+.sp-logo{display:flex;align-items:center;justify-content:center;width:100%;height:72px}
+.sp-logo img{max-width:100%;max-height:72px;object-fit:contain;background:#fff;border-radius:8px;padding:4px;box-sizing:border-box}
+.sp-ini{display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:var(--club,#2235E8);color:#fff;font:700 20px var(--body)}
+.sp-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.sp-row .sp-logo{width:72px;height:48px;flex:none}.sp-row .sp-logo img{max-height:48px}.sp-row .sp-ini{width:44px;height:44px;font-size:15px}
+
+/* player page: by-competition tables, every column fits its card */
+.csgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:10px}
+table.lb.cs{min-width:0}
+table.lb.cs thead th{white-space:normal;letter-spacing:.04em;line-height:1.25;vertical-align:bottom;padding:6px 6px}
+table.lb.cs td{padding:8px 6px;white-space:nowrap}
+table.lb.cs td:first-child{white-space:normal}
+table.lb.cs th:not(:first-child),table.lb.cs td:not(:first-child){width:1%}
+table.lb.cs .ctag{margin-right:0}
+table.lb.cs .pt{display:block;font-size:11px;white-space:nowrap}
+table.lb.cs .ctag{white-space:normal;line-height:1.3}
+@media (max-width:520px){table.lb.cs thead th{font-size:10px;letter-spacing:.02em;padding:6px 3px}table.lb.cs td{padding:8px 3px}table.lb.cs .ctag{font-size:10px;padding:1px 4px;letter-spacing:.02em}}
+@media (max-width:520px){table.lb.cs th[data-s] span{display:none}table.lb.cs th[data-s]:before{content:attr(data-s)}}
+/* coach ratings (coaches only) */
+.rt-lock{margin-top:8px}
+.rt-lead{display:flex;align-items:center;gap:14px}.rt-lead .rt-trophy{font-size:34px;line-height:1}.rt-lead b{display:block;font:700 22px var(--head,inherit)}.rt-lead span{color:var(--muted);font-size:14px}
+.rt-lead .kick{font:700 11px var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.rt-tab td:nth-child(1){text-align:left;color:var(--muted);width:28px}.rt-tab th:nth-child(2),.rt-tab td:nth-child(2){text-align:left}
+.rt-game{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--field);color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.rt-game .rt-g1{display:flex;align-items:center;gap:10px;min-width:0}.rt-game .badge{width:32px;height:32px;flex:none}
+.rt-game b{display:block}.rt-game small{color:var(--muted)}
+.rt-game .pill{flex:none;white-space:nowrap;font-size:12px;padding:4px 10px;border-radius:999px}
+.rt-ok{background:rgb(var(--clubRGB)/.12);color:var(--club)}.rt-no{background:var(--gold);color:var(--goldInk)}
+.rt-list{display:flex;flex-direction:column;gap:14px}
+.rt-p .rt-n{display:flex;align-items:center;gap:6px;margin-bottom:6px}.rt-p .rt-v{margin-left:auto;font:800 16px var(--body);font-variant-numeric:tabular-nums}
+.rt-btns{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.rt-btns button{min-height:40px;padding:0;border:1.5px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font:700 15px var(--body);cursor:pointer}
+.rt-btns button[aria-pressed="true"]{background:var(--club);border-color:var(--club);color:var(--clubInk)}
+.rt-save{position:sticky;bottom:10px;align-items:center;gap:12px;padding:10px 12px;background:var(--card);border:1.5px solid var(--line);border-radius:14px;box-shadow:0 6px 20px rgb(var(--shadowRGB)/.18)}
+.rt-hist{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.rt-chip{display:inline-flex;flex-direction:column;align-items:center;min-width:42px;padding:6px 4px;border:1.5px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink);cursor:pointer;font:inherit}
+.rt-chip b{font-size:16px}.rt-chip small{font-size:10px;color:var(--muted)}
+/* kit sizes (coaches, and each family for their own child) */
+.kit-sum{display:flex;flex-direction:column;gap:8px}.kit-sum>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.kit-sum>div>b{min-width:58px}
+.kit-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:rgb(var(--clubRGB)/.12);color:var(--club);font-weight:700;font-size:14px}.kit-pill i{font-style:normal;font-weight:800}
+.kit-p{display:flex;flex-direction:column;gap:6px}.kit-p+.kit-p{padding-top:14px;border-top:1px solid var(--line)}
+.kit-in{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:8px}.kit-in input{min-width:0;width:100%;padding-left:10px;padding-right:8px}
+.kit-p .rt-n{display:flex;align-items:center;gap:8px}
+.kit-new{font-size:11px;padding:2px 8px;border-radius:999px;margin-left:auto}
+.kit-p .num{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 4px;border-radius:6px;background:var(--gold);color:var(--goldInk);font:400 13px var(--display)}
+/* player of the month */
+.pom-home{border-left:6px solid var(--gold)}
+.pom-home .kick{font:800 12px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.pom-row{display:flex;gap:12px;align-items:center;min-width:0}
+.pom-face{width:56px;height:56px;flex:none;border-radius:50%;object-fit:cover;border:3px solid var(--gold)}
+.pom-num{display:grid;place-items:center;background:var(--gold);color:var(--goldInk);font:400 22px var(--display)}
+.pom-name{display:block;font:400 26px var(--display);line-height:1.1}
+.pom-note{margin:4px 0 0;color:var(--muted)}
+.pom-item{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.pom-row[data-player]{cursor:pointer}
+.bd-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.bd-row:first-of-type{border-top:0}
+.bd-cake{font-size:24px;line-height:1}.bd-who{flex:1;min-width:0}.bd-who b{display:block}.bd-who small{color:var(--muted)}
+.bd-home{border:2px solid var(--gold)}
+.bd-list{display:flex;flex-direction:column;gap:8px}
+.bd-edit{display:grid;grid-template-columns:1fr 76px 132px;gap:6px;align-items:center}
+.bd-edit .bd-n{display:flex;align-items:center;gap:6px;min-width:0}.bd-edit .bd-n b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bd-edit select{width:100%;min-height:40px;padding:6px;border:1.5px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font:inherit}

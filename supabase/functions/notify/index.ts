@@ -8,11 +8,20 @@
 //   POST {preview: "<id>"} from a coach's phone after saving a match preview (once per game)
 //   POST {tsquad: "<id>"}  from a coach's phone after picking a tournament's squad (again only if it changed)
 //   POST {tournament: "<id>"} from a coach's phone when a tournament's groups and games are confirmed (once per tournament)
+//   POST {avail: {match, player}} from a parent's phone after answering availability: tells coaches who asked for it
+//   POST {tavail: {day, player}}  the same for a training session
+// The every-minute call also sends the reminders to answer availability: the Wednesday evening before a game, and
+// 24 hours before training (supabase/16_availability_alerts.sql).
+// Add schema: "<schema>" to any of these for a team that shares this project in its own schema (tools/team_schema_sql.py).
+// The every-minute call covers every team schema that's exposed in the Data API.
 // Only names already shown on the site go in an alert. See supabase/3_notifications.sql.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
-const SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
+// The project's own team (schema public) is set up by these secrets. A team in its own schema uses its alert_team row.
+const ENV_SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
+// where a tap on an alert opens. Teams in their own schema: "./" opens the site the phone turned alerts on from.
+let SITE = ENV_SITE;
 let US = Deno.env.get("TEAM_NAME") ?? "Newton Aycliffe";
 // PUBLIC_SCORES=false: no goal alerts and no scores in alerts (FA rules for U7-U11). Matches the site's TEAM.publicScores.
 let SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";
@@ -24,28 +33,50 @@ const RSCORE: Record<string, string> = { try: "Try", con: "Conversion", pen: "Pe
 const POTM_SPONSOR = (Deno.env.get("POTM_SPONSOR") ?? "Coffey Coffee").trim();
 let POTM = POTM_SPONSOR && POTM_SPONSOR !== "none" ? `${POTM_SPONSOR} Player of the Match` : "Player of the Match";
 let POTM_ICON = Deno.env.get("POTM_ICON") ?? (POTM_SPONSOR === "Coffey Coffee" ? "☕" : "⭐");
-const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+const URL_ = Deno.env.get("SUPABASE_URL")!, KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const pub = createClient(URL_, KEY, { auth: { persistSession: false } });
+// db is the current team's schema; requests are handled one at a time (see Deno.serve below), so switching it is safe
+// deno-lint-ignore no-explicit-any
+type Client = ReturnType<typeof createClient<any, any, any>>;
+let db: Client = pub, SCHEMA = "public";
+const clients: Record<string, Client> = { public: pub };
+const ENV = { US, SCORES, AGE, SPORT, POTM, POTM_ICON };
 // A coach's answers on the site's Team setup page (supabase/7_team_setup.sql) win over the secrets above.
 // Scores stay hidden if either the secret or the setup page says so.
-const ENV_SCORES = SCORES;
-async function loadTeam() {
+async function useTeam(schema: string) {
+  SCHEMA = schema;
+  db = clients[schema] ??= createClient(URL_, KEY, { auth: { persistSession: false }, db: { schema } });
+  let base = ENV;
+  SITE = ENV_SITE;
+  if (schema !== "public") {
+    // a team sharing the project: nothing from the secrets above (they're the project's own team); scores off unless it says so
+    SITE = "./";
+    const { data } = await db.from("alert_team").select("settings").eq("id", 1).maybeSingle();
+    const a = data?.settings ?? {};
+    const sp = (a.potm?.sponsor ?? "").trim();
+    base = { US: a.name ?? "", SCORES: a.publicScores === true, AGE: a.ageGroup ?? "", SPORT: a.sport ?? "football",
+      POTM: sp ? `${sp} Player of the Match` : "Player of the Match", POTM_ICON: a.potm?.icon || "⭐" };
+  }
+  ({ US, SCORES, AGE, SPORT, POTM, POTM_ICON } = base);
   const { data, error } = await db.from("team_settings").select("settings").eq("id", 1).maybeSingle();
   const t = error ? null : data?.settings;
   if (!t) return;
   if (t.name) US = t.name;
   if (t.ageGroup) AGE = t.ageGroup;
   if (t.sport) SPORT = t.sport;
-  SCORES = ENV_SCORES && t.publicScores !== false;
-  const sp = (t.potm?.sponsor ?? "").trim();
-  POTM = sp ? `${sp} Player of the Match` : "Player of the Match";
-  POTM_ICON = t.potm?.icon || "⭐";
+  SCORES = base.SCORES && t.publicScores !== false;
+  if (t.potm) {
+    const sp = (t.potm.sponsor ?? "").trim();
+    POTM = sp ? `${sp} Player of the Match` : "Player of the Match";
+    POTM_ICON = t.potm.icon || "⭐";
+  }
 }
-// the key pair lives in public.push_keys (service role only)
-let keysReady: Promise<void> | null = null;
+// One key pair for the whole project, in public.push_keys (service role only): every team's site uses its public half.
+let keysReady: PromiseLike<void> | null = null;
 function loadKeys() {
-  return keysReady ??= db.from("push_keys").select("public_key,private_key").eq("id", 1).single().then(({ data, error }) => {
+  return keysReady ??= pub.from("push_keys").select("public_key,private_key").eq("id", 1).single().then(({ data, error }) => {
     if (error || !data) { keysReady = null; throw new Error("Match-alert keys are missing from push_keys"); }
-    webpush.setVapidDetails(SITE.replace(/\/$/, ""), data.public_key, data.private_key);
+    webpush.setVapidDetails(ENV_SITE.replace(/\/$/, ""), data.public_key, data.private_key);
   });
 }
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
@@ -67,13 +98,18 @@ function kickOff(date: string, ko: string) {
 // ---- sending ----
 // kind picks the phones: "live" phones get everything on match day; "goals" and "results" also go to phones that chose just those
 type Kind = "reminders" | "live" | "goals" | "results";
-async function send(kind: Kind | null, alert: Alert, only?: string) {
-  let q = db.from("push_subs").select("endpoint,p256dh,auth");
-  if (only) q = q.eq("endpoint", only);
-  else if (kind === "goals" || kind === "results") q = q.or(`live.eq.true,${kind}.eq.true`);
-  else q = q.eq(kind!, true);
-  const { data, error } = await q; if (error) throw error;
-  const subs = (data ?? []) as Sub[]; let ok = 0;
+async function send(kind: Kind | null, alert: Alert, only?: string, list?: Sub[]) {
+  let subs: Sub[];
+  if (list) subs = list;
+  else {
+    let q = db.from("push_subs").select("endpoint,p256dh,auth");
+    if (only) q = q.eq("endpoint", only);
+    else if (kind === "goals" || kind === "results") q = q.or(`live.eq.true,${kind}.eq.true`);
+    else q = q.eq(kind!, true);
+    const { data, error } = await q; if (error) throw error;
+    subs = (data ?? []) as Sub[];
+  }
+  let ok = 0;
   for (let i = 0; i < subs.length; i += 25) {
     await Promise.all(subs.slice(i, i + 25).map(async (s) => {
       try {
@@ -223,18 +259,102 @@ async function tournamentAlert(t: Tournament) {
   return await send("reminders", { title: `🏆 ${t.name || "Tournament"}: groups and games are out`, body, url: `${SITE}?fixtures`, tag: `t-${t.id}` });
 }
 
+// ---- availability ----
+// "Ava, Mia and Ella"
+const names = (a: string[]) => a.length > 1 ? `${a.slice(0, -1).join(", ")} and ${a[a.length - 1]}` : a[0] ?? "";
+const clock = (t: string) => { const m = /^(\d{1,2})[:.](\d{2})/.exec(t || ""); if (!m) return t || ""; const h = +m[1]; return `${h % 12 || 12}${m[2] !== "00" ? ":" + m[2] : ""}${h < 12 ? "am" : "pm"}`; };
+const SAID: Record<string, [string, string]> = { yes: ["✅", "can make it"], no: ["❌", "can't make it"], maybe: ["❔", "might make it"] };
+type Training = { day: string; start: string; finish: string; venue: string; until: string | null; off: string[] | null };
+
+// a parent answered: tell the coaches who asked for it, once per change of answer
+async function availAlert(kind: "avail" | "tavail", ref: string, player: string) {
+  if (typeof ref !== "string" || typeof player !== "string") return -1;
+  const q = kind === "avail" ? db.from("availability").select("status").eq("match_id", ref) : db.from("training_availability").select("status").eq("day", ref);
+  const { data: row } = await q.eq("player", player).maybeSingle();
+  const said = SAID[row?.status ?? ""]; if (!said) return -1;
+  let where: string, url: string;
+  if (kind === "avail") {
+    const { data: m } = await db.from("matches").select("date,opp,ha,ko").eq("id", ref).maybeSingle(); if (!m) return -1;
+    where = `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"}, ${dayName(m.date)}${/\d[:.]\d\d/.test(m.ko || "") ? `, ${m.ko.trim()} KO` : ""}.`;
+    url = `${SITE}?fixtures`;
+  } else { where = `Training, ${dayName(ref)}.`; url = `${SITE}?training`; }
+  const { data: claimed } = await db.rpc("push_claim_note", { p_key: `${kind === "avail" ? "av" : "tav"}:${ref}|${player}`, p_value: row!.status });
+  if (!claimed) return -1; // already told the coaches this answer
+  const { data: subs } = await db.rpc("avail_coach_targets");
+  if (!subs?.length) return 0;
+  return await send(null, { title: `${said[0]} ${player} ${said[1]}`, body: where, url, tag: `av-${ref}-${player}` }, undefined, subs as Sub[]);
+}
+
+// remind the phones whose child hasn't answered; each phone's alert names its own children when it's signed in
+async function remindAnswer(key: string, p: { p_match: string | null; p_day: string | null }, make: (kids: string[]) => Alert) {
+  const { data: claimed } = await db.rpc("push_claim_note", { p_key: key, p_value: "sent" }); if (!claimed) return 0;
+  const { data, error } = await db.rpc("avail_reminder_targets", p); if (error) throw error;
+  const groups = new Map<string, Sub[]>();
+  for (const r of (data ?? []) as (Sub & { kids: string[] })[]) {
+    const k = JSON.stringify(r.kids ?? []); if (!groups.has(k)) groups.set(k, []);
+    groups.get(k)!.push({ endpoint: r.endpoint, p256dh: r.p256dh, auth: r.auth });
+  }
+  let sent = 0;
+  for (const [k, subs] of groups) sent += await send(null, make(JSON.parse(k)), undefined, subs);
+  return sent;
+}
+
+// every minute: is it time for a reminder to answer?
+const GAME_REMIND = { day: 3, from: 19 * 60 + 30, to: 21 * 60 };   // Wednesday, from 7.30pm (after training), for the next 7 days' games
+async function availReminders(now: number) {
+  let sent = 0;
+  const wall = new Date(londonWall(now)), mins = wall.getUTCHours() * 60 + wall.getUTCMinutes();
+  if (wall.getUTCDay() === GAME_REMIND.day && mins >= GAME_REMIND.from && mins < GAME_REMIND.to) {
+    const { data } = await db.from("matches").select("id,date,opp,ko,venue,ha,us,postponed,stage,comp")
+      .gte("date", londonDate(now + 864e5)).lte("date", londonDate(now + 7 * 864e5));
+    for (const m of (data ?? []) as Match[]) {
+      if (m.comp === "Tournament" || m.postponed || m.us != null || m.stage === "placeholder") continue;
+      const day = new Date(m.date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
+      const body = `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"}, ${dayName(m.date)}${/\d[:.]\d\d/.test(m.ko || "") ? `, ${m.ko.trim()} KO` : ""}. Tap to answer yes, maybe or no.`;
+      sent += await remindAnswer(`avr:${m.id}`, { p_match: m.id, p_day: null }, (kids) =>
+        ({ title: `🗓️ Can ${kids.length ? names(kids) : "your child"} make ${day}'s game?`, body, url: `${SITE}?avail=${encodeURIComponent(m.id)}`, tag: `avr-${m.id}` }));
+    }
+  }
+  // training: 24 hours before (up to two hours late, if the job was down). Only once a coach has set training up (a venue).
+  const { data: tr } = await db.from("training").select("day,start,finish,venue,until,off").eq("id", 1).maybeSingle();
+  const t = tr as Training | null;
+  if (t?.venue) for (const date of [londonDate(now), londonDate(now + 864e5), londonDate(now + 2 * 864e5)]) {
+    const wd = new Date(date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
+    if (wd !== t.day || (t.off ?? []).includes(date) || (t.until && date > t.until)) continue;
+    const start = kickOff(date, t.start); if (start == null) continue;
+    const ahead = (start - now) / 36e5; if (ahead > 24 || ahead < 22) continue;
+    const body = `${wd} ${clock(t.start)} to ${clock(t.finish)}, ${t.venue.split(",")[0]}. Tap to answer yes, maybe or no.`;
+    sent += await remindAnswer(`trr:${date}`, { p_match: null, p_day: date }, (kids) =>
+      ({ title: `🏃 Training tomorrow: can ${kids.length ? names(kids) : "your child"} come?`, body, url: `${SITE}?tavail=${date}`, tag: `trr-${date}` }));
+  }
+  return sent;
+}
+
 const COLS = "id,date,opp,ko,venue,ha,us,them,postponed,stage,comp,squad,potm,preview,live";
-Deno.serve(async (req) => {
+// the every-minute job: kick-off reminders, live updates nobody passed on, and reminders to answer availability
+async function everyMinute(out: Record<string, number>) {
+  const now = Date.now(), today = londonDate(now), tomorrow = londonDate(now + 864e5);
+  const { data, error } = await db.from("matches").select(COLS).gte("date", today).lte("date", tomorrow); if (error) throw error;
+  const list = (data ?? []) as Match[];
+  out.reminders = (out.reminders ?? 0) + await reminders(list);
+  out.live = out.live ?? 0; for (const m of list.filter((x) => x.date === today && x.live?.events?.length)) out.live += await flushLive(m);
+  // a database without supabase/16_availability_alerts.sql yet: skip just this part
+  try { out.availReminders = (out.availReminders ?? 0) + await availReminders(now); } catch (e) { console.error(SCHEMA, "availability reminders", (e as Error).message); }
+}
+
+async function handle(req: Request) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     const body = await req.json().catch(() => ({}));
-    // A team sharing this project (its own schema, tools/team_schema_sql.py) has no match alerts yet: never send
-    // this team's alerts for it.
-    if (body.schema && body.schema !== "public") return new Response("{}", { headers: { ...CORS, "Content-Type": "application/json" } });
+    const schema = typeof body.schema === "string" && /^[a-z][a-z0-9_]{0,40}$/.test(body.schema) ? body.schema : "public";
     await loadKeys();
-    await loadTeam();
+    await useTeam(schema);
     const out: Record<string, number> = {};
-    if (typeof body.test === "string") {
+    if (typeof body.avail === "object" && body.avail) {
+      out.avail = await availAlert("avail", body.avail.match, body.avail.player);
+    } else if (typeof body.tavail === "object" && body.tavail) {
+      out.avail = await availAlert("tavail", body.tavail.day, body.tavail.player);
+    } else if (typeof body.test === "string") {
       out.test = await send(null, { title: "🔔 Match alerts are on", body: `You'll get kick-off reminders and ${SCORES ? "live scores" : "live updates"} for the ${AGE}.`, url: SITE, tag: "welcome" }, body.test);
     } else if (typeof body.postponed === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.postponed).maybeSingle();
@@ -256,16 +376,23 @@ Deno.serve(async (req) => {
     } else if (typeof body.match === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.match).maybeSingle();
       out.live = data ? await flushLive(data as Match) : 0;
+    } else if (schema !== "public") {
+      await everyMinute(out);
     } else {
-      const now = Date.now(), today = londonDate(now), tomorrow = londonDate(now + 864e5);
-      const { data, error } = await db.from("matches").select(COLS).gte("date", today).lte("date", tomorrow); if (error) throw error;
-      const list = (data ?? []) as Match[];
-      out.reminders = await reminders(list);
-      out.live = 0; for (const m of list.filter((x) => x.date === today && x.live?.events?.length)) out.live += await flushLive(m);
+      // the cron job (no schema): this project's own team, then every team sharing the project
+      await everyMinute(out);
+      const { data: more } = await pub.rpc("alert_schemas");   // none before supabase/16_availability_alerts.sql
+      for (const s of (more ?? []) as string[]) {
+        try { await useTeam(s); await everyMinute(out); }
+        catch (e) { console.error(s, (e as Error).message); }   // e.g. a schema not exposed in the Data API yet
+      }
     }
     return new Response(JSON.stringify(out), { headers: { ...CORS, "Content-Type": "application/json" } });
   } catch (e) {
     console.error(e);
     return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers: { ...CORS, "Content-Type": "application/json" } });
   }
-});
+}
+// One request at a time: the team's details above are shared, so two teams' requests mustn't overlap.
+let queue: Promise<unknown> = Promise.resolve();
+Deno.serve((req) => { const r = queue.then(() => handle(req)); queue = r.catch(() => {}); return r; });
