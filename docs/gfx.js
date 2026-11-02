@@ -51,11 +51,28 @@ function readFile(file){return new Promise(res=>{const r=new FileReader();r.onlo
 
 // ---------- canvas helpers ----------
 const cv=$("cv"),X=cv.getContext("2d");
-const W=1080;
+const W=1080,DPR=2;cv.width=cv.height=W*DPR;// drawn at double size so downloads are crisp
 function cover(img,x,y,w,h){const s=Math.max(w/img.width,h/img.height);const sw=w/s,sh=h/s;X.drawImage(img,(img.width-sw)/2,(img.height-sh)/2*0.6,sw,sh,x,y,w,h)}
 function contain(img,x,y,w,h){const s=Math.min(w/img.width,h/img.height);const dw=img.width*s,dh=img.height*s;X.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh)}
-function font(px,fam,weight){return `${weight||""} ${px}px ${fam}`.trim()}
-const DISPLAY='"Archivo Black","Arial Black",sans-serif', SHIRT='"Oswald","Arial Narrow",sans-serif', BODY='"Archivo",Arial,sans-serif';
+// Looks: fonts and the shirt drawing. TEAM.gfxStyle picks one; the default is used otherwise.
+const STYLES={
+  pro:{label:"Pro",css:"Anton&family=Barlow+Condensed:wght@600;700;800&family=Teko:wght@600",
+    display:'"Anton","Archivo Black",sans-serif',body:'"Barlow Condensed","Archivo",sans-serif',shirt:'"Teko","Oswald",sans-serif',
+    dk:1.12,bk:1.2,sk:1.15,sw:600,bw:700,neck:"v",panels:true,num:"outline"},
+  classic:{label:"Classic",css:"Bebas+Neue&family=Montserrat:wght@600;700;800&family=Graduate",
+    display:'"Bebas Neue","Archivo Black",sans-serif',body:'"Montserrat","Archivo",sans-serif',shirt:'"Graduate","Oswald",serif',
+    dk:1.2,bk:.95,sk:.92,sw:400,bw:800,neck:"polo",stripes:true,num:"plain"},
+  bold:{label:"Bold",css:"Bowlby+One&family=Rubik:wght@500;700;800&family=Big+Shoulders+Display:wght@800;900",
+    display:'"Bowlby One","Archivo Black",sans-serif',body:'"Rubik","Archivo",sans-serif',shirt:'"Big Shoulders Display","Oswald",sans-serif',
+    dk:.92,bk:1,sk:1.1,sw:900,bw:800,neck:"crew",raglan:true,num:"shadow"}
+};
+const STYLE=STYLES[(()=>{try{return localStorage.getItem("tt-gfx-style")}catch(e){return""}})()||TEAM.gfxStyle]||STYLES.bold;
+if(STYLE.css&&!document.getElementById("gfxFonts")){const l=document.createElement("link");l.id="gfxFonts";l.rel="stylesheet";l.href=`https://fonts.googleapis.com/css2?family=${STYLE.css}&display=swap`;document.head.appendChild(l)}
+try{document.fonts.addEventListener("loadingdone",()=>{try{render()}catch(e){}})}catch(e){}// redraw once the new fonts arrive
+function font(px,fam,weight){const k=fam===DISPLAY?STYLE.dk:fam===BODY?STYLE.bk:fam===SHIRT?STYLE.sk:1;
+  if(fam===SHIRT)weight=STYLE.sw;else if(fam===BODY)weight=(+weight||400)>=700?STYLE.bw:600;else if(fam===DISPLAY)weight="";
+  return `${weight||""} ${Math.round(px*k)}px ${fam}`.trim()}
+const DISPLAY=STYLE.display, SHIRT=STYLE.shirt, BODY=STYLE.body;
 function fit(text,maxW,start,fam,weight){let px=start;X.font=font(px,fam,weight);while(px>10&&X.measureText(text).width>maxW){px-=2;X.font=font(px,fam,weight)}return px}
 function arcText(text,cx,cy,r,mid,inside){// mid = centre angle (radians), text along arc; inside=true reads along bottom
   const chars=[...text];const widths=chars.map(c=>X.measureText(c).width);const total=widths.reduce((a,b)=>a+b,0);
@@ -93,34 +110,106 @@ function octopusBadge(cx,cy,w){
   {const KW=(TEAM.kitSponsor&&TEAM.kitSponsor.word)||"";fit(KW,w,Math.round(w*.26),BODY,800);X.fillText(KW,cx,cy-w*.04)}
   X.font=font(Math.round(w*.11),BODY,600);X.fillText("energy",cx,cy+w*.13);X.restore();
 }
+function shade(hex,amt){// lighten (amt>0) or darken (amt<0) a #rrggbb colour
+  const h=String(hex||"#888888").replace("#","");const n=h.length===3?h.split("").map(c=>c+c).join(""):h;
+  const c=[0,2,4].map(i=>parseInt(n.slice(i,i+2),16)||0).map(v=>Math.round(amt<0?v*(1+amt):v+(255-v)*amt));
+  return "#"+c.map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,"0")).join("")}
+function lum(hex){const h=String(hex||"").replace("#","");if(h.length<6)return .5;return (parseInt(h.slice(0,2),16)*.299+parseInt(h.slice(2,4),16)*.587+parseInt(h.slice(4,6),16)*.114)/255}
 function shirt(cx,top,w,kit,name,num,captain){
-  const h=w*1.02,x=cx-w/2,y=top,P=(px,py)=>[x+px*w/100,y+py*h/100];
-  const K=KITS[kit]||KITS[Object.keys(KITS)[0]], body=K.body, trim=K.trim;
-  X.save();X.shadowColor="rgba(0,0,0,.18)";X.shadowBlur=w*.06;X.shadowOffsetY=w*.03;
-  X.beginPath();
-  X.moveTo(...P(36,2));X.quadraticCurveTo(...P(50,11),...P(64,2));
-  X.lineTo(...P(84,7));X.lineTo(...P(100,32));X.lineTo(...P(88,42));X.lineTo(...P(80,34));
-  X.lineTo(...P(81,100));X.lineTo(...P(19,100));X.lineTo(...P(20,34));X.lineTo(...P(12,42));X.lineTo(...P(0,32));X.lineTo(...P(16,7));X.closePath();
-  X.fillStyle=body;X.fill();X.restore();
-  // trims
-  X.save();X.strokeStyle=trim;X.lineCap="round";X.lineWidth=w*.045;
-  X.beginPath();X.moveTo(...P(36,2.5));X.quadraticCurveTo(...P(50,11),...P(64,2.5));X.stroke();
-  X.beginPath();X.moveTo(...P(97,35));X.lineTo(...P(89,41));X.stroke();
-  X.beginPath();X.moveTo(...P(3,35));X.lineTo(...P(11,41));X.stroke();
+  const h=w*1.04,x=cx-w/2,y=top,P=(px,py)=>[x+px*w/100,y+py*h/100];
+  const K=KITS[kit]||KITS[Object.keys(KITS)[0]], body=K.body, trim=K.trim, st=STYLE;
+  const light=lum(body)>.8;// white/pale kits need an edge so they don't vanish on white backgrounds
+  const outline=()=>{X.beginPath();
+    X.moveTo(...P(37,3));X.quadraticCurveTo(...P(50,6),...P(63,3));
+    X.bezierCurveTo(...P(70,4.5),...P(78,6),...P(84,8));// shoulder
+    X.bezierCurveTo(...P(90,12),...P(96,22),...P(100,31));// sleeve top
+    X.lineTo(...P(88.5,40.5));// cuff
+    X.quadraticCurveTo(...P(84,36),...P(80,33.5));// under-sleeve to armpit
+    X.bezierCurveTo(...P(79,55),...P(80,80),...P(81.5,97));// side
+    X.quadraticCurveTo(...P(50,100.5),...P(18.5,97));// hem
+    X.bezierCurveTo(...P(20,80),...P(21,55),...P(20,33.5));
+    X.quadraticCurveTo(...P(16,36),...P(11.5,40.5));
+    X.lineTo(...P(0,31));
+    X.bezierCurveTo(...P(4,22),...P(10,12),...P(16,8));
+    X.bezierCurveTo(...P(22,6),...P(30,4.5),...P(37,3));X.closePath()};
+  // body with a soft shadow underneath
+  X.save();X.shadowColor="rgba(0,0,0,.22)";X.shadowBlur=w*.07;X.shadowOffsetY=w*.035;outline();X.fillStyle=body;X.fill();X.restore();
+  X.save();outline();X.clip();
+  if(st.raglan){// contrast raglan sleeves, seam from the collar to the armpit
+    X.fillStyle=trim;[[1,0],[-1,100]].forEach(([d,o])=>{const Q=(px,py)=>P(o+d*px,py);X.beginPath();X.moveTo(...Q(61,2));X.lineTo(...Q(105,20));X.lineTo(...Q(105,45));X.lineTo(...Q(80,34));X.quadraticCurveTo(...Q(70,22),...Q(61,2));X.closePath();X.fill()});
+    X.fillStyle=body;X.beginPath();X.moveTo(...P(37,3));X.quadraticCurveTo(...P(50,6),...P(63,3));X.lineTo(...P(61,2));X.lineTo(...P(39,2));X.fill()}
+  if(st.panels){// side panels in the trim colour
+    X.fillStyle=trim;X.globalAlpha=.95;
+    X.beginPath();X.moveTo(...P(80,33.5));X.bezierCurveTo(...P(79,55),...P(80,80),...P(81.5,97));X.lineTo(...P(74,99));X.bezierCurveTo(...P(74,75),...P(74,50),...P(80,33.5));X.fill();
+    X.beginPath();X.moveTo(...P(20,33.5));X.bezierCurveTo(...P(21,55),...P(20,80),...P(18.5,97));X.lineTo(...P(26,99));X.bezierCurveTo(...P(26,75),...P(26,50),...P(20,33.5));X.fill();
+    X.globalAlpha=1;
+    // thin piping over the shoulders
+    X.strokeStyle=trim;X.lineWidth=w*.014;[[63,3,84,8,99,30],[37,3,16,8,1,30]].forEach(a=>{X.beginPath();X.moveTo(...P(a[0],a[1]+2.2));X.quadraticCurveTo(...P(a[2],a[3]+2.4),...P(a[4]-(a[4]>50?1.6:-1.6),a[5]+1.5));X.stroke()})}
+  if(st.stripes){// classic pinstripes
+    X.strokeStyle=trim;X.globalAlpha=.55;X.lineWidth=w*.009;for(let i=8;i<100;i+=7.5){X.beginPath();X.moveTo(...P(i,0));X.lineTo(...P(i,102));X.stroke()}X.globalAlpha=1}
+  // cloth shading: darker at the sides, a highlight down the chest, a few soft folds
+  let g=X.createLinearGradient(x,0,x+w,0);
+  g.addColorStop(0,"rgba(0,0,0,.28)");g.addColorStop(.2,"rgba(0,0,0,.06)");g.addColorStop(.38,"rgba(255,255,255,.14)");g.addColorStop(.55,"rgba(255,255,255,0)");g.addColorStop(.82,"rgba(0,0,0,.08)");g.addColorStop(1,"rgba(0,0,0,.3)");
+  X.fillStyle=g;X.fillRect(x-2,y-2,w+4,h+4);
+  g=X.createLinearGradient(0,y,0,y+h);g.addColorStop(0,"rgba(255,255,255,.08)");g.addColorStop(.8,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,.14)");X.fillStyle=g;X.fillRect(x-2,y-2,w+4,h+4);
+  X.strokeStyle="rgba(0,0,0,.09)";X.lineWidth=w*.012;X.lineCap="round";
+  [[30,60,27,75,31,92],[70,58,73,74,69,90],[22,40,26,46,24,54]].forEach(a=>{X.beginPath();X.moveTo(...P(a[0],a[1]));X.quadraticCurveTo(...P(a[2],a[3]),...P(a[4],a[5]));X.stroke()});
+  // sleeve seams and hem stitching
+  X.strokeStyle="rgba(0,0,0,.16)";X.lineWidth=w*.008;
+  if(!st.raglan){X.beginPath();X.moveTo(...P(84,8));X.quadraticCurveTo(...P(80.5,20),...P(80,33.5));X.stroke();X.beginPath();X.moveTo(...P(16,8));X.quadraticCurveTo(...P(19.5,20),...P(20,33.5));X.stroke()}
+  X.setLineDash([w*.012,w*.012]);X.beginPath();X.moveTo(...P(19,94.5));X.quadraticCurveTo(...P(50,98),...P(81,94.5));X.stroke();X.setLineDash([]);
+  X.restore();
+  if(light){X.save();outline();X.strokeStyle="rgba(0,0,0,.18)";X.lineWidth=w*.008;X.stroke();X.restore()}
+  // cuffs
+  X.save();X.strokeStyle=trim;X.lineCap="butt";X.lineWidth=w*.05;
+  X.beginPath();X.moveTo(...P(98.2,33.6));X.lineTo(...P(89.6,40.4));X.stroke();
+  X.beginPath();X.moveTo(...P(1.8,33.6));X.lineTo(...P(10.4,40.4));X.stroke();
+  if(st.raglan||st.panels){X.strokeStyle=st.raglan?body:shade(trim,lum(trim)>.5?-.35:.4);X.lineWidth=w*.012;X.beginPath();X.moveTo(...P(97.4,32.4));X.lineTo(...P(89,39.2));X.stroke();X.beginPath();X.moveTo(...P(2.6,32.4));X.lineTo(...P(11,39.2));X.stroke()}
+  X.restore();
+  // collar
+  X.save();X.lineJoin="round";X.lineCap="round";
+  const inside=shade(body,lum(body)>.5?-.25:-.45);
+  if(st.neck==="v"){
+    X.fillStyle=inside;X.beginPath();X.moveTo(...P(37,3));X.quadraticCurveTo(...P(50,7),...P(63,3));X.lineTo(...P(50,17));X.closePath();X.fill();
+    X.strokeStyle=trim;X.lineWidth=w*.04;X.beginPath();X.moveTo(...P(36.5,3.2));X.lineTo(...P(50,17.5));X.lineTo(...P(63.5,3.2));X.stroke();
+    X.strokeStyle=body;X.lineWidth=w*.01;X.beginPath();X.moveTo(...P(36.5,3.2));X.lineTo(...P(50,17.5));X.lineTo(...P(63.5,3.2));X.stroke();
+  }else if(st.neck==="polo"){
+    X.fillStyle=inside;X.beginPath();X.moveTo(...P(38,3));X.quadraticCurveTo(...P(50,7),...P(62,3));X.lineTo(...P(50,12));X.closePath();X.fill();
+    // placket and buttons
+    X.fillStyle=shade(body,-.08);X.fillRect(...P(46.5,9),w*.07,h*.17);X.strokeStyle="rgba(0,0,0,.18)";X.lineWidth=w*.006;X.strokeRect(...P(46.5,9),w*.07,h*.17);
+    X.fillStyle=trim;[15,21].forEach(by=>{X.beginPath();X.arc(...P(50,by),w*.012,0,Math.PI*2);X.fill()});
+    // collar flaps
+    X.fillStyle=trim;X.shadowColor="rgba(0,0,0,.25)";X.shadowBlur=w*.02;X.shadowOffsetY=w*.008;
+    X.beginPath();X.moveTo(...P(35,1.5));X.quadraticCurveTo(...P(42,3),...P(50,10));X.lineTo(...P(41,17));X.quadraticCurveTo(...P(37,9),...P(33,4.5));X.closePath();X.fill();
+    X.beginPath();X.moveTo(...P(65,1.5));X.quadraticCurveTo(...P(58,3),...P(50,10));X.lineTo(...P(59,17));X.quadraticCurveTo(...P(63,9),...P(67,4.5));X.closePath();X.fill();
+    X.shadowColor="transparent";X.strokeStyle=shade(trim,-.3);X.lineWidth=w*.006;
+    X.beginPath();X.moveTo(...P(35.5,3));X.quadraticCurveTo(...P(39,9),...P(42,15.5));X.stroke();X.beginPath();X.moveTo(...P(64.5,3));X.quadraticCurveTo(...P(61,9),...P(58,15.5));X.stroke();
+  }else{
+    X.fillStyle=inside;X.beginPath();X.moveTo(...P(37,3));X.quadraticCurveTo(...P(50,6.5),...P(63,3));X.quadraticCurveTo(...P(50,13),...P(37,3));X.fill();
+    X.strokeStyle=trim;X.lineWidth=w*.05;X.beginPath();X.moveTo(...P(36.5,3));X.quadraticCurveTo(...P(50,14),...P(63.5,3));X.stroke();
+  }
   X.restore();
   if(captain){// armband on the left sleeve
-    X.save();X.fillStyle=K.band;X.beginPath();X.moveTo(...P(3.4,26.5));X.lineTo(...P(7.4,20.3));X.lineTo(...P(15.8,37.6));X.lineTo(...P(13.4,40.2));X.closePath();X.fill();
-    const [bx,by]=P(10,31.2);X.translate(bx,by);X.rotate(Math.atan2(-(25*h/100),16*w/100)+Math.PI/2);
-    X.fillStyle=K.bandInk;X.textAlign="center";X.textBaseline="middle";X.font=font(Math.round(w*.085),SHIRT,700);X.fillText("C",0,w*.005);X.restore();
+    X.save();X.fillStyle=K.band;X.shadowColor="rgba(0,0,0,.25)";X.shadowBlur=w*.015;
+    X.beginPath();X.moveTo(...P(3.4,25.5));X.lineTo(...P(8.4,18.3));X.lineTo(...P(17.5,34.5));X.lineTo(...P(13.6,39.5));X.closePath();X.fill();X.shadowColor="transparent";
+    const [bx,by]=P(10.7,29.5);X.translate(bx,by);X.rotate(Math.atan2(-(25*h/100),16*w/100)+Math.PI/2);
+    X.fillStyle=K.bandInk;X.textAlign="center";X.textBaseline="middle";X.font=`800 ${Math.round(w*.085)}px ${BODY}`;X.fillText("C",0,w*.005);X.restore();
   }
-  if(K.octopus)octopusBadge(cx,y+h*.15,w*.34);
-  // name on a gentle arc + number
+  if(K.octopus)octopusBadge(cx,y+h*(st.neck==="v"||st.neck==="polo"?.25:.17),w*.32);
+  // name on a gentle arc, then the number
+  const edge=lum(K.ink)>.6?shade(body,-.45):(lum(trim)>.6?trim:"#ffffff");
   X.fillStyle=K.ink;
   const nm=(name||"").toUpperCase();
-  let px=fit(nm,w*.62,w*.17,SHIRT,700);X.font=font(px,SHIRT,700);
-  arcText(nm,cx,y+h*.36+w*2.4,w*2.4,-Math.PI/2,false);
+  const top2=K.octopus?.42:.37;
+  fit(nm,w*.6,w*.15,SHIRT);
+  arcText(nm,cx,y+h*top2+w*2.4,w*2.4,-Math.PI/2,false);
   X.textAlign="center";X.textBaseline="alphabetic";
-  const n=String(num??"");fit(n,w*.6,Math.round(w*.5),SHIRT,700);X.fillText(n,cx,y+h*.86);
+  const n=String(num??"");fit(n,w*.56,Math.round(w*.46),SHIRT);const ny=y+h*.87;
+  X.save();X.lineJoin="round";
+  if(st.num==="outline"){X.strokeStyle=trim;X.lineWidth=w*.024;X.strokeText(n,cx,ny)}
+  else if(st.num==="shadow"){X.fillStyle=trim;X.fillText(n,cx+w*.018,ny+w*.018);X.fillStyle=K.ink}
+  else{X.strokeStyle=edge;X.globalAlpha=.6;X.lineWidth=w*.01;X.strokeText(n,cx,ny);X.globalAlpha=1}
+  X.fillText(n,cx,ny);X.restore();
 }
 
 function drawCrest(x,y,w,h){
@@ -296,7 +385,7 @@ function drawMilestone(){
   X.fillStyle=C.blue;X.fillRect(0,900,W,180);X.fillStyle=C.white;X.textAlign="left";X.font=font(28,BODY,800);if(HAS_SP())X.fillText("Proudly sponsored by",60,1000);drawSponsor(960,990,62);
 }
 function render(){
-  X.save();X.clearRect(0,0,W,W);
+  X.save();X.setTransform(DPR,0,0,DPR,0,0);X.imageSmoothingQuality="high";X.clearRect(0,0,W,W);
   if(S.mode==="ft")drawFT();else if(S.mode==="potm")drawPotm();else if(S.mode==="month")drawMonth();else if(S.mode==="ms")drawMilestone();else drawSquad();
   X.restore();caption();
 }
@@ -381,10 +470,10 @@ $("gMonth").addEventListener("change",()=>{S.month=$("gMonth").value;MONTH_LIST=
 $("sponsorName").addEventListener("input",()=>{S.sponsorName=$("sponsorName").value;save();render()});
 
 function onUpload(id,key,persist){$(id).addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;const raw=await readFile(f);let img=await loadImg(raw);if(!img)return;
-  if(persist){const small=shrink(img,700);img=await loadImg(small);
+  if(persist){const small=shrink(img,1000);img=await loadImg(small);
     if(persist==="logo"){logos[key]=small;if(!store.set(SK+".logos",logos))toast("Couldn't remember that logo in this browser, it'll work until you close the page.")}
     if(persist==="opp"&&S.opp){oppCrests[S.opp.trim().toLowerCase()]=small;store.set(SK+".oppCrests",oppCrests);window.saveBadgeFile&&window.saveBadgeFile(S.opp,f)}}
-  else{img=await loadImg(shrink(img,1600))}
+  else{img=await loadImg(shrink(img,2400))}
   IMG[key]=img;thumbs();render()})}
 onUpload("crestUp","crest","logo");onUpload("sponsorUp","sponsor","logo");onUpload("coffeyUp","coffey","logo");onUpload("octopusUp","octopus","logo");onUpload("oppCrest","opp","opp");
 onUpload("squadPhoto","squadPhoto");onUpload("ftPhoto","ftPhoto");onUpload("potmPhoto","potmPhoto");
@@ -437,7 +526,7 @@ window.GFX={
   IMG.coffeyLogo=TEAM.potm&&TEAM.potm.logo?await loadImg(TEAM.potm.logo):null;
   if(S.opp){const src=oppCrests[S.opp.trim().toLowerCase()];if(src)IMG.opp=await loadImg(src)}
   buildPickers();syncInputs();setMode(S.mode==="setup"?"squad":S.mode);thumbs();
-  try{await Promise.all([document.fonts.load('40px "Archivo Black"'),document.fonts.load('40px "Luckiest Guy"'),document.fonts.load('700 40px "Oswald"'),document.fonts.load('800 20px "Archivo"')])}catch(e){}
+  try{await Promise.race([Promise.all([font(40,DISPLAY),font(40,BODY,800),font(40,BODY,600),font(40,SHIRT)].map(f=>document.fonts.load(f))),new Promise(r=>setTimeout(r,4000))])}catch(e){}
   render();
   
   $("saveBtn").textContent="Download image";
