@@ -119,11 +119,12 @@ def build_admin(club, adm, out, crest, colours):
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-<header><a href="../"><img src="../{esc(crest)}" alt=""></a><div><h1>{esc(cfg['short'])} club admin</h1><div id="who"></div></div></header>
+<header><a href="../" title="Back to the club page"><img src="../{esc(crest)}" alt="{esc(cfg['short'])} club page"></a><div><h1><a href="../">{esc(cfg['short'])}</a> club admin</h1><div id="who"></div></div></header>
+<nav id="clubnav" aria-label="Club and team sites"><a href="../">🏠 Club home</a></nav>
 <main id="main"><div class="card">Loading…</div></main>
 <div id="toast" hidden role="status"></div>
 <footer>Only the club lead, club admins and the club's coaches can sign in here. <a href="https://touchlinetales.club/?ref=powered-club-admin" target="_blank" rel="noopener">Touchline Tales</a></footer>
-<script src="admin.js?v=1"></script>
+<script src="admin.js?v=2"></script>
 </body>
 </html>
 """)

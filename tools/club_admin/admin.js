@@ -49,7 +49,9 @@ function weekend(){// the most recent Saturday and Sunday with reports, as one r
 async function copy(t){try{await navigator.clipboard.writeText(t);toast("Copied. Paste it into your post.")}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");toast("Copied.")}catch(x){toast("Couldn't copy. Select the text and copy it.")}a.remove()}}
 
 // ---------- views ----------
-function render(){const m=$("#main");if(!sb){m.innerHTML=`<div class="card">This page isn't connected to its database yet.</div>`;return}
+// links back to the club page and every team's site, shown to everyone (club.teams is public)
+function topNav(){const el=$("#clubnav");if(!el)return;el.innerHTML=`<a href="../">🏠 Club home</a>${TEAMS.map(t=>/^https:\/\//.test(t.url||"")?`<a href="${esc(t.url)}">${esc(t.name)}</a>`:"").join("")}`}
+function render(){topNav();const m=$("#main");if(!sb){m.innerHTML=`<div class="card">This page isn't connected to its database yet.</div>`;return}
   $("#who").innerHTML=me?`<span>${esc(me.email)}${role?` · ${role==="lead"?"Club lead":role==="admin"?"Club admin":"Coach"}`:""}</span><button class="mini" id="out">Sign out</button>`:"";
   if(!me){m.innerHTML=loginView();return}
   if(!role){m.innerHTML=`<div class="card">Checking…</div>`;return}
@@ -134,6 +136,7 @@ async function whoAmI(){role=null;render();if(!me)return;
   sb=window.supabase.createClient(C.supabaseUrl,C.supabaseAnonKey,{auth:{storageKey:"sb-club-"+C.id+"-auth-token"}});
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_e,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;whoAmI()}});
+  try{await loadTeams()}catch(e){}
   if(me)await whoAmI();else render();
 })();
 })();
