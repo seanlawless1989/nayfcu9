@@ -140,7 +140,6 @@
           <div class="seg" role="group" aria-label="Shirt colour" id="pkitSeg">
           </div>
         </div>
-        <div class="file"><span class="thumb" id="potmPhotoThumb"></span><label class="f"><span id="potmPhotoLabel">Her photo with the award</span><input type="file" id="potmPhoto" accept="image/*"></label></div>
       </section>
 
       <section class="panel" data-for="setup" hidden>
@@ -162,6 +161,26 @@
         <button class="btn" id="saveBtn">Save image</button>
         <span class="hint" id="saveHint">On a phone you can also press and hold the image to save it.</span>
       </div>
+      <section class="panel" id="posterPanel" data-for="potm" hidden>
+        <h2>Poster photo</h2>
+        <div class="seg" role="group" aria-label="Photo on the poster">
+          <button data-pph="site" aria-pressed="false">Site photo</button><button data-pph="up" aria-pressed="false">Uploaded</button><button data-pph="none" aria-pressed="false">No photo</button>
+        </div>
+        <div class="file"><span class="thumb" id="potmPhotoThumb"></span><label class="f"><span id="potmPhotoLabel">Upload her photo with the award</span><input type="file" id="potmPhoto" accept="image/*"></label></div>
+        <p class="hint" id="posterPhotoHint"></p>
+        <p class="hint">Only post a child's photo on social media if their parent has said yes.</p>
+        <h2>Layout</h2>
+        <div class="seg" role="group" aria-label="Poster layout">
+          <button data-play="split" aria-pressed="false">Big photo</button><button data-play="frame" aria-pressed="false">Round photo</button><button data-play="shirt" aria-pressed="false">Shirt only</button>
+        </div>
+        <h2>Colours</h2>
+        <div class="swatches" id="posterThemes" role="group" aria-label="Poster colours"></div>
+        <div class="grow">
+          <label class="f">Background<input type="color" id="pcBg"></label>
+          <label class="f">Stripes<input type="color" id="pcS1"></label>
+        </div>
+        <label class="f">Extra words on the poster (optional)<input type="text" id="posterLine" maxlength="50" placeholder="e.g. Brilliant saves all month"></label>
+      </section>
       <div class="gtoast" id="gtoast" role="status"></div>
       <section class="panel">
         <h2>Facebook caption</h2>

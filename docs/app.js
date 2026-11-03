@@ -358,6 +358,7 @@ function isFixture(m){if(isLive(m))return true;if(m.hidden&&m.live&&m.live.statu
 // ---------- availability (parents answer; only coaches can read) ----------
 let AV={};// {match_id:{player:status}}
 let PHOTOS={};// player photos {name:dataURL}, everyone can see them, only coaches change them
+window.playerPhoto=n=>PHOTOS[n]||null;// the poster maker (gfx.js) uses it
 async function loadPhotos(){if(!sb){PHOTOS={};return}const {data}=await sb.from("player_photos").select("player,img");PHOTOS={};(data||[]).forEach(r=>PHOTOS[r.player]=r.img)}
 // Website visits: counts only (see page_views in supabase/1_schema.sql). Coaches' phones don't count.
 let VIEWS=null,ACTIVE=null;

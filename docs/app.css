@@ -361,6 +361,11 @@ textarea{min-height:150px;resize:vertical;line-height:1.4}
 .btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .hint{font-size:12.5px;color:var(--muted);margin:0}
 .file{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.swatches button{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);padding:0;cursor:pointer}
+.swatches button[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:2px}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+input[type="color"]{width:100%;height:44px;padding:2px;border:1.5px solid var(--line);border-radius:9px;background:var(--field)}
 .file input{font-size:13px;max-width:100%}
 .thumb{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);background:var(--field) center/contain no-repeat}
 .preview{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
