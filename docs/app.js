@@ -2466,7 +2466,7 @@ async function suLoad(){if(!sb||!canWrite)return;
   try{const {data}=await sb.from("team_signoff").select("*").eq("id",1).maybeSingle();SU_SIGN=data||null}catch(e){SU_SIGN=null}
   if(view==="setup")render()}
 function suRemember(row){SETUP_ROW=row;try{localStorage.setItem(SETUP_KEY,JSON.stringify(row))}catch(e){}}
-function settingUpView(){return `<section class="card empty"><h2>${esc(TEAM.name||"This team")}'s site is being set up</h2><p class="hint">It'll be ready soon. The club will share the link when it's live.</p></section>`}
+function settingUpView(){return `<section class="card empty"><h2>${esc(TEAM.name||"This team")}'s site is being set up</h2><p class="hint">It'll be ready soon. The club will share the link when it's live.</p><p class="hint" style="margin-top:12px">Are you one of the coaches? <button class="mini" id="signIn">Coach sign in</button> to finish setting it up.</p></section>`}
 function setupBanner(){return `<section class="card" style="border-left:6px solid var(--gold);margin-bottom:12px"><h2 style="margin-top:0">Finish setting up your team</h2><p class="hint">Only coaches can see the site until you've added your team's details and your ${WELFARE} has signed it off. It takes about 20 minutes.</p><div class="btns" style="margin-top:10px"><button class="btn gold" data-view="setup">Set up your team</button></div></section>`}
 function setupView(){
   if(!canWrite)return `<section class="card empty">Sign in as a coach to set up the team.</section>`;
