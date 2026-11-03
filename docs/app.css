@@ -563,5 +563,11 @@ table.lb.cs .ctag{white-space:normal;line-height:1.3}
 .drchips button[aria-pressed="true"]{background:var(--club);border-color:var(--club);color:var(--clubInk)}
 .drlist{display:grid;gap:10px}.drrow{display:flex;gap:12px;align-items:center;text-align:left;width:100%;border:0;cursor:pointer;font:inherit;color:inherit}
 .drrow>span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}.drrow b{font-size:16px}
-.drthumb{width:56px;height:84px;flex:none;border-radius:8px;object-fit:cover;background:#33963F}.drnone{display:flex;align-items:center;justify-content:center;font-size:26px}
+.drthumb{width:84px;height:56px;flex:none;border-radius:8px;object-fit:contain;background:#33963F}.drnone{display:flex;align-items:center;justify-content:center;font-size:26px}
 .drpic{width:100%;max-width:360px;align-self:center;border-radius:12px;display:block}.dr h3{margin:4px 0}.dr p{margin:0 0 6px}
+
+/* drill designer */
+.ddtools{display:flex;flex-wrap:wrap;gap:6px}.ddtools button{min-height:40px;padding:0 11px;border-radius:999px;border:1.5px solid var(--line);background:var(--field);font:700 13.5px var(--body);color:var(--ink);cursor:pointer}
+.ddtools button[aria-pressed="true"]{background:var(--club);color:var(--clubInk);border-color:var(--club)}
+.ddwrap{width:100%;border-radius:12px;overflow:hidden;background:#33963F}.ddpitch{display:block;width:100%;height:auto;aspect-ratio:3/2;touch-action:none;user-select:none;-webkit-user-select:none}
+.ddpitch .tbt{cursor:grab}

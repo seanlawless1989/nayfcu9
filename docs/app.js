@@ -179,6 +179,7 @@ function render(){
   else if(view==="training")main.innerHTML=trainingView();
   else if(view==="tactics")main.innerHTML=tacticsView();
   else if(view==="drills")main.innerHTML=drillsView();
+  else if(view==="design")main.innerHTML=ddD?designerView():(view="drills",drillsView());
   else if(view==="votes")main.innerHTML=votesView();
   else if(view==="parents")main.innerHTML=parentsView();
   else if(view==="matchday")main.innerHTML=matchdayView();
@@ -1108,7 +1109,7 @@ function drDetail(d){const fav=drFavs().includes(d.id),yt=/^https:\/\//.test(d.v
     ${d.points?`<div><h3>Coaching points</h3>${reportHtml(d.points)}</div>`:""}
     ${yt?`<p style="margin:0"><a href="${esc(d.video)}" target="_blank" rel="noopener">▶ Watch the video</a></p>`:""}
     <p class="hint" style="margin:0">Added by ${esc(d.author_name||"a coach")}${d.author_team?` (${esc(d.author_team)})`:""}.</p>
-    <div class="btns"><button class="btn ${fav?"ghost":"gold"}" data-drfav="${esc(d.id)}">${fav?"★ In your favourites":"☆ Add to favourites"}</button>${d.diagram&&d.diagram.board?`<button class="btn ghost" data-drboard="${esc(d.id)}">Open on the tactics board</button>`:""}
+    <div class="btns"><button class="btn ${fav?"ghost":"gold"}" data-drfav="${esc(d.id)}">${fav?"★ In your favourites":"☆ Add to favourites"}</button><button class="btn ghost" data-drshare="${esc(d.id)}">📤 Share</button>${d.diagram&&d.diagram.board?`<button class="btn ghost" data-drboard="${esc(d.id)}">Open on the tactics board</button>`:""}${drMine(d)?"":`<button class="btn ghost" data-drcopy="${esc(d.id)}">Make my own version</button>`}
       ${drMine(d)?`<button class="btn ghost" data-dredit="${esc(d.id)}">Edit</button><button class="btn ghost" data-drdel="${esc(d.id)}">Remove</button>`:""}</div></section></div>`}
 function drBlank(){const n=+((String(TEAM.ageGroup||"").match(/\d+/)||[])[0]||0);let name="";try{name=localStorage.getItem(SK+".coachname")||""}catch(e){}
   return {id:"",title:"",age_from:n||null,age_to:n||null,players:"",minutes:null,equipment:"",focus:[],setup:"",points:"",video:"",diagram:null,pick:"",author_name:name}}
@@ -1123,9 +1124,11 @@ function drFormView(){const F2=drEdit,s=tbStore(),boards=[["",F2.diagram?"Keep t
     <label class="f">Equipment<input type="text" id="dr-eq" maxlength="200" value="${esc(F2.equipment)}" placeholder="e.g. 8 cones, 4 bibs, 1 ball"></label>
     <label class="f">Set-up<textarea id="dr-setup" rows="4" maxlength="4000" placeholder="How to lay it out and how it runs">${esc(F2.setup)}</textarea></label>
     <label class="f">Coaching points<textarea id="dr-points" rows="4" maxlength="4000" placeholder="What to look for, and how to make it easier or harder">${esc(F2.points)}</textarea></label>
-    <label class="f">Diagram<select id="dr-pick">${boards.map(([v,l])=>`<option value="${esc(v)}"${F2.pick===v?" selected":""}>${esc(l)}</option>`).join("")}</select></label>
-    <p class="hint" style="margin:0">Draw it on the <button type="button" class="mini" id="drToBoard">tactics board</button> first, then pick it here. Players' names are taken off, so the picture only shows numbers.</p>
-    <label class="f">Video link (optional)<input type="url" id="dr-video" value="${esc(F2.video)}" placeholder="https://youtube.com/..."></label>
+    <div class="stack" style="gap:8px"><b>Diagram</b>${F2.diagram&&F2.pick!=="none"?drPic(F2):""}
+      <div class="btns"><button type="button" class="btn gold" id="ddOpenBtn">✏️ ${F2.diagram&&F2.diagram.d?"Change the diagram":"Draw the diagram"}</button></div>
+      <label class="f">Or use a tactics board<select id="dr-pick">${boards.map(([v,l])=>`<option value="${esc(v)}"${F2.pick===v?" selected":""}>${esc(l)}</option>`).join("")}</select></label>
+      <p class="hint" style="margin:0">Draw cones, goals, players and arrows here, or pick a board from the <button type="button" class="mini" id="drToBoard">tactics board</button>. Players' names are taken off a tactics board, so it only shows numbers.</p></div>
+    <label class="f">Video link (optional)<input type="text" inputmode="url" id="dr-video" value="${esc(F2.video)}" placeholder="https://youtube.com/..."></label>
     <label class="f">Your first name (shown to other coaches)<input type="text" id="dr-name" maxlength="40" value="${esc(F2.author_name)}"></label>
     <div class="btns"><button class="btn gold" id="drSave"${drBusy?" disabled":""}>${drBusy?"Saving…":"Save drill"}</button><button class="btn ghost" id="drCancel">Cancel</button></div></section>`}
 function drRead(){if(!drEdit)return;const v=id=>{const el=$("#"+id);return el?el.value:""};
@@ -1144,6 +1147,89 @@ async function drSave(){drRead();const F2=drEdit,c=drClub();if(!F2||!c)return;
     if(r.error)throw r.error;await loadDrills();drOpen=(r.data&&r.data[0]&&r.data[0].id)||F2.id||null;drEdit=null;toast(F2.id?"Drill saved.":"Drill added. Every coach at the club can see it now.")}
   catch(e){toast("Couldn't save the drill. Check your connection and try again.")}
   drBusy=false;render()}
+// ---------- drill designer (coaches only): draw a drill on a grid, half pitch or full pitch ----------
+// A design = {bg:"grid"|"half"|"full", items:[{t,x,y,r}], arrows:[{t,x1,y1,x2,y2}]} on a 150 by 100 board (landscape).
+// Item kinds: a (our players), b (bibs), gk (keeper), cone, pole, mini (small goal), goal, ball. Saved with the drill as
+// diagram.d (so it can be changed later) and diagram.svg (the picture everyone sees).
+const DD_KINDS={a:"Player",b:"Bibs",gk:"Keeper",cone:"Cone",pole:"Pole",mini:"Mini goal",goal:"Goal",ball:"Ball"};
+const DD_ICON={a:"🔵",b:"🟠",gk:"🧤",cone:"🔺",pole:"📍",mini:"🥅",goal:"🥅",ball:"⚽"};
+const DD_BG={grid:"Grid",half:"Half pitch",full:"Full pitch"};
+let ddD=null,ddTool="a",ddSel=null,ddUndo=[],ddDrag=null;
+function ddBlank(){return {bg:"grid",items:[],arrows:[]}}
+function ddCol(){const c=TEAM.colours||{};return [c.club||"#2235E8",c.clubInk||"#fff"]}
+function ddBgSvg(bg){const L='stroke="rgba(255,255,255,.9)" stroke-width=".5" fill="none"',stripes=Array.from({length:10},(_,i)=>`<rect x="${i*15}" y="0" width="15" height="100" fill="${i%2?"#2E8B3E":"#33963F"}"/>`).join("");
+  if(bg==="grid")return stripes+`<rect x="15" y="10" width="120" height="80" ${L} stroke-dasharray="2 1.6"/>`+[[15,10],[135,10],[15,90],[135,90]].map(([x,y])=>`<path d="M${x-1.6} ${y+1.4}L${x} ${y-1.4}L${x+1.6} ${y+1.4}Z" fill="#FFB300"/>`).join("");
+  const end=(x0,dir)=>{const bx=x0+dir*0,s=v=>x0+dir*v;return `<rect x="${Math.min(s(0),s(22))}" y="22" width="22" height="56" ${L}/><rect x="${Math.min(s(0),s(8))}" y="37" width="8" height="26" ${L}/><circle cx="${s(15)}" cy="50" r=".6" fill="#fff"/><path d="M${s(22)} 41A10 10 0 0 ${dir>0?1:0} ${s(22)} 59" ${L}/><rect x="${Math.min(s(0),s(-2))}" y="45" width="2" height="10" ${L}/>`};
+  if(bg==="half")return stripes+`<rect x="3" y="3" width="144" height="94" ${L}/>${end(147,-1)}<path d="M3 38A12 12 0 0 1 3 62" ${L}/>`;
+  return stripes+`<rect x="3" y="3" width="144" height="94" ${L}/><line x1="75" y1="3" x2="75" y2="97" ${L}/><circle cx="75" cy="50" r="10" ${L}/><circle cx="75" cy="50" r=".6" fill="#fff"/>${end(3,1)}${end(147,-1)}`}
+function ddItemSvg(it,i,live){const sel=live&&ddSel===i,[cb,ci]=ddCol(),at=live?` data-dd="${i}"`:"",ring=sel?`<circle r="5.2" fill="none" stroke="#FF4FA3" stroke-width=".8"/>`:"";
+  let g="";
+  if(it.t==="a"||it.t==="b"||it.t==="gk"){const f=it.t==="a"?cb:it.t==="b"?"#FF8F1F":"#1AA8A0",k=it.t==="a"?ci:"#fff";g=`<circle r="3.3" fill="${f}" stroke="#fff" stroke-width=".55"/>${it.n?`<text y="1.25" text-anchor="middle" font-size="3.2" font-weight="800" fill="${k}" font-family="Arial,sans-serif">${esc(String(it.n).slice(0,2))}</text>`:""}`}
+  else if(it.t==="cone")g=`<path d="M-1.9 1.6L0 -2L1.9 1.6Z" fill="#FFB300" stroke="#7A4E00" stroke-width=".25"/>`;
+  else if(it.t==="pole")g=`<rect x="-.5" y="-3.4" width="1" height="6.8" fill="#E53935"/><rect x="-.5" y="-1" width="1" height="1.4" fill="#fff"/><circle cy="3.4" r=".9" fill="#333"/>`;
+  else if(it.t==="mini")g=`<g transform="rotate(${it.r||0})"><rect x="-1.2" y="-4" width="2.4" height="8" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width=".6"/></g>`;
+  else if(it.t==="goal")g=`<g transform="rotate(${it.r||0})"><rect x="-1.6" y="-7.5" width="3.2" height="15" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width=".8"/></g>`;
+  else if(it.t==="ball")g=`<g transform="scale(.75)">${RUGBY?TB_OVAL:TB_BALL}</g>`;
+  return `<g class="tbt" transform="translate(${it.x} ${it.y})"${at}>${live?`<circle r="5" fill="transparent"/>`:""}${ring}${g}</g>`}
+function ddSvg(d,live){const heads=Object.keys(TB_ARROW).map(t=>`<marker id="ddh-${t}" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M0 0L10 5L0 10z" fill="${TB_ARROW[t][1]}"/></marker>`).join("");
+  const arrows=(d.arrows||[]).map((a,i)=>{const [,c,dash]=TB_ARROW[a.t]||TB_ARROW.run,p=tbPath(a),sel=live&&ddSel==="a"+i;
+    return `<g${live?` data-ddarrow="${i}"`:""}>${live?`<path d="${p}" stroke="transparent" stroke-width="5" fill="none"/>`:""}<path d="${p}" stroke="${sel?"#FF4FA3":c}" stroke-width="1" fill="none" stroke-linecap="round"${dash?` stroke-dasharray="${dash}"`:""} marker-end="url(#ddh-${a.t})"/></g>`}).join("");
+  const drawing=ddDrag&&ddDrag.arrow&&live?(()=>{const a=ddDrag.arrow,[,c,dash]=TB_ARROW[a.t];return `<path d="${tbPath(a)}" stroke="${c}" stroke-width="1" fill="none" opacity=".7"${dash?` stroke-dasharray="${dash}"`:""} marker-end="url(#ddh-${a.t})"/>`})():"";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 100"${live?' class="ddpitch" id="ddPitch" role="img" aria-label="Drill diagram"':' width="1500" height="1000"'}><defs>${heads}<clipPath id="tbBallClip"><circle r="3"/></clipPath></defs>${ddBgSvg(d.bg)}${(d.items||[]).filter(it=>it.t==="goal"||it.t==="mini").map((it)=>ddItemSvg(it,d.items.indexOf(it),live)).join("")}<g>${arrows}${drawing}</g>${(d.items||[]).filter(it=>it.t!=="goal"&&it.t!=="mini").map(it=>ddItemSvg(it,d.items.indexOf(it),live)).join("")}</svg>`}
+function ddPt(e){const sv=$("#ddPitch");if(!sv)return null;const p=sv.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(sv.getScreenCTM().inverse());return {x:Math.max(1,Math.min(149,Math.round(q.x*10)/10)),y:Math.max(1,Math.min(99,Math.round(q.y*10)/10))}}
+function ddPush(){ddUndo.push(JSON.stringify(ddD));if(ddUndo.length>50)ddUndo.shift()}
+function ddDraw(){const w=$("#ddWrap");if(w)w.innerHTML=ddSvg(ddD,true);const c=$("#ddCount");if(c)c.textContent=ddSummary()}
+function ddSummary(){const n=k=>ddD.items.filter(i=>i.t===k).length,pl=n("a")+n("b")+n("gk");return [pl&&`${pl} player${pl===1?"":"s"}`,n("cone")&&`${n("cone")} cone${n("cone")===1?"":"s"}`,ddD.arrows.length&&`${ddD.arrows.length} arrow${ddD.arrows.length===1?"":"s"}`].filter(Boolean).join(", ")||"Empty so far"}
+function designerView(){const d=ddD,sel=typeof ddSel==="number"?d.items[ddSel]:null;
+  const tool=(k,l)=>`<button data-ddtool="${k}" aria-pressed="${ddTool===k}">${l}</button>`;
+  const hint=ddTool==="move"?"Drag things to move them. Tap one to select it, then delete or turn it.":TB_ARROW[ddTool]?`Drag on the pitch to draw a ${TB_ARROW[ddTool][0].toLowerCase()}.`:`Tap the pitch to put down a ${DD_KINDS[ddTool].toLowerCase()}. Keep tapping to add more.`;
+  return `<div class="stack tb dd"><section class="card stack">
+    <div class="tbhead"><h2>✏️ Draw the drill</h2><span class="hint" id="ddCount">${esc(ddSummary())}</span></div>
+    <div class="ddwrap" id="ddWrap">${ddSvg(d,true)}</div>
+    <div class="ddtools" role="group" aria-label="What a tap does">${tool("move","✋ Move")}${Object.keys(DD_KINDS).map(k=>tool(k,`${DD_ICON[k]} ${DD_KINDS[k]}`)).join("")}${Object.entries(TB_ARROW).map(([k,[l]])=>tool(k,`${k==="run"?"➜":k==="pass"?"⇢":k==="kick"?"⤴":"〰"} ${l}`)).join("")}</div>
+    <div class="btns"><span class="hint">Area</span><div class="seg" role="group" aria-label="Area">${Object.entries(DD_BG).map(([k,l])=>`<button data-ddbg="${k}" aria-pressed="${d.bg===k}">${l}</button>`).join("")}</div></div>
+    <p class="hint" style="margin:0">${hint}</p>
+    ${sel?`<div class="note"><b>${esc(DD_KINDS[sel.t])}</b><div class="btns" style="margin-top:6px">${["a","b","gk"].includes(sel.t)?`<label class="hint">Label <input type="text" id="ddLabel" maxlength="2" value="${esc(sel.n||"")}" style="width:56px"></label>`:""}${sel.t==="goal"||sel.t==="mini"?`<button class="mini" id="ddRot">↻ Turn</button>`:""}<button class="mini" id="ddCopy">Copy</button><button class="mini" id="ddDel">Delete</button><button class="mini" id="ddDesel">Done</button></div></div>`
+      :typeof ddSel==="string"?`<div class="note"><b>Arrow</b><div class="btns" style="margin-top:6px"><button class="mini" id="ddDel">Delete arrow</button><button class="mini" id="ddDesel">Done</button></div></div>`:""}
+    <div class="btns"><button class="btn ghost" id="ddUndoBtn"${ddUndo.length?"":" disabled"}>↶ Undo</button><button class="btn ghost" id="ddClear"${d.items.length||d.arrows.length?"":" disabled"}>Clear</button></div>
+    <div class="btns"><button class="btn gold" id="ddDone">Use this diagram</button><button class="btn ghost" id="ddCancel">Cancel</button></div></section>
+    <p class="hint">Use first names or numbers on players only if you like; the picture is shared with coaches across the club.</p></div>`}
+function ddHit(p){let best=-1,bd=99;ddD.items.forEach((it,i)=>{const r=it.t==="goal"?8:5,d=Math.hypot(it.x-p.x,it.y-p.y);if(d<r&&d<bd){bd=d;best=i}});return best}
+function ddArrowHit(p){let best=-1,bd=2.2;ddD.arrows.forEach((a,i)=>{const dx=a.x2-a.x1,dy=a.y2-a.y1,L2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((p.x-a.x1)*dx+(p.y-a.y1)*dy)/L2)),d=Math.hypot(a.x1+t*dx-p.x,a.y1+t*dy-p.y);if(d<bd){bd=d;best=i}});return best}
+document.addEventListener("pointerdown",e=>{if(view!=="design"||!e.target.closest||!e.target.closest("#ddPitch"))return;e.preventDefault();const p=ddPt(e);if(!p)return;
+  if(TB_ARROW[ddTool]){ddDrag={arrow:{t:ddTool,x1:p.x,y1:p.y,x2:p.x,y2:p.y}};return}
+  if(ddTool!=="move"){if(ddD.items.length>=80){toast("That's plenty of things on one drill.");return}ddPush();const it={t:ddTool,x:p.x,y:p.y};if(ddTool==="goal"||ddTool==="mini")it.r=p.x<40||p.x>110?0:90;ddD.items.push(it);ddSel=null;render();return}
+  const i=ddHit(p);if(i>=0){ddPush();ddDrag={i,dx:ddD.items[i].x-p.x,dy:ddD.items[i].y-p.y,moved:false};if(ddSel!==i){ddSel=i;render()}return}
+  const a=ddArrowHit(p);ddSel=a>=0?"a"+a:null;render()});
+document.addEventListener("pointermove",e=>{if(!ddDrag||view!=="design")return;const p=ddPt(e);if(!p)return;
+  if(ddDrag.arrow){ddDrag.arrow.x2=p.x;ddDrag.arrow.y2=p.y}else{const it=ddD.items[ddDrag.i];it.x=Math.round((p.x+ddDrag.dx)*10)/10;it.y=Math.round((p.y+ddDrag.dy)*10)/10;ddDrag.moved=true}ddDraw()});
+function ddUp(){if(!ddDrag||view!=="design")return;const d=ddDrag;ddDrag=null;
+  if(d.arrow){const a=d.arrow;if(Math.hypot(a.x2-a.x1,a.y2-a.y1)>4&&ddD.arrows.length<60){ddPush();ddD.arrows.push(a)}ddDraw();render();return}
+  if(!d.moved){ddUndo.pop();ddDraw()}else render()}
+document.addEventListener("pointerup",ddUp);document.addEventListener("pointercancel",ddUp);
+document.addEventListener("input",e=>{if(view!=="design"||e.target.id!=="ddLabel"||typeof ddSel!=="number")return;ddD.items[ddSel].n=e.target.value.trim().slice(0,2);ddDraw()});
+document.addEventListener("click",e=>{if(view!=="design")return;const t=e.target.closest("button");if(!t)return;const d=t.dataset;
+  if(d.ddtool){ddTool=d.ddtool;ddSel=null;render();return}
+  if(d.ddbg){ddPush();ddD.bg=d.ddbg;render();return}
+  if(t.id==="ddUndoBtn"&&ddUndo.length){ddD=JSON.parse(ddUndo.pop());ddSel=null;render();return}
+  if(t.id==="ddClear"){if(!confirm("Clear everything off this drill?"))return;ddPush();ddD.items=[];ddD.arrows=[];ddSel=null;render();return}
+  if(t.id==="ddDesel"){ddSel=null;render();return}
+  if(t.id==="ddDel"){ddPush();if(typeof ddSel==="number")ddD.items.splice(ddSel,1);else if(typeof ddSel==="string")ddD.arrows.splice(+ddSel.slice(1),1);ddSel=null;render();return}
+  if(t.id==="ddRot"&&typeof ddSel==="number"){ddPush();const it=ddD.items[ddSel];it.r=((it.r||0)+45)%180;render();return}
+  if(t.id==="ddCopy"&&typeof ddSel==="number"){ddPush();const it=Object.assign({},ddD.items[ddSel]);it.x=Math.min(149,it.x+6);it.y=Math.min(99,it.y+4);ddD.items.push(it);ddSel=ddD.items.length-1;render();return}
+  if(t.id==="ddDone"){if(JSON.stringify({d:ddD,svg:ddSvg(ddD,false)}).length>55000){toast("That diagram is too big to save. Take a few things off.");return}if(drEdit){drEdit.diagram=ddD.items.length||ddD.arrows.length?{d:JSON.parse(JSON.stringify(ddD)),svg:ddSvg(ddD,false)}:null;drEdit.pick=""}ddD=null;view="drills";render();window.scrollTo({top:0});return}
+  if(t.id==="ddCancel"){ddD=null;view="drills";render();return}
+});
+function ddOpen(){drRead();const d=drEdit&&drEdit.diagram&&drEdit.diagram.d;ddD=d?JSON.parse(JSON.stringify(d)):ddBlank();ddTool=ddD.items.length?"move":"a";ddSel=null;ddUndo=[];setView("design")}
+// share a drill with other coaches (WhatsApp, email...): the picture plus the words
+async function drShare(d){const text=[`${d.title}`,drMeta(d),d.equipment?`You'll need: ${d.equipment}`:"",d.setup?`Set-up:\n${d.setup}`:"",d.points?`Coaching points:\n${d.points}`:"",/^https:\/\//.test(d.video||"")?`Video: ${d.video}`:""].filter(Boolean).join("\n\n").replace(/\*\*/g,"");
+  let file=null;const s=d.diagram&&d.diagram.svg;
+  if(typeof s==="string"&&/^<svg[\s>]/.test(s)){try{const land=/viewBox="0 0 150 100"/.test(s),W=land?1500:1000,H=land?1000:1500,c=document.createElement("canvas");c.width=W;c.height=H;
+    const url=URL.createObjectURL(new Blob([s],{type:"image/svg+xml"}));const im=await new Promise((ok,bad)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=bad;i.src=url});c.getContext("2d").drawImage(im,0,0,W,H);URL.revokeObjectURL(url);
+    const blob=await new Promise(r=>c.toBlob(r,"image/png"));file=new File([blob],`drill-${d.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"diagram"}.png`,{type:"image/png"})}catch(e){}}
+  try{if(file&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text,title:d.title});return}if(navigator.share){await navigator.share({text,title:d.title});return}}catch(e){if(e&&e.name==="AbortError")return}
+  try{await navigator.clipboard.writeText(text);toast("Drill copied. Paste it into WhatsApp or an email.")}catch(e){toast("Couldn't share from this phone.")}
+  if(file){const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}}
 document.addEventListener("click",async e=>{if(view!=="drills"&&view!=="training")return;const t=e.target.closest("button");if(!t)return;const d=t.dataset;
   if(t.id==="drNew"){drEdit=drBlank();drOpen=null;if(view!=="drills")setView("drills");else render();return}
   if(view!=="drills")return;
@@ -1159,6 +1245,9 @@ document.addEventListener("click",async e=>{if(view!=="drills"&&view!=="training
     s.boards[k]=Object.assign(tbNew(""),JSON.parse(JSON.stringify(x.diagram.board)),{title:x.title,squad:players.filter(p=>p.current).map(p=>p.name),at:Date.now()});s.cur=k;tbSel=null;tbUndo=[];tbMode="move";tbSave();setView("tactics");return}
   if(t.id==="drToBoard"){drRead();setView("tactics");toast("Draw the drill, then come back to the Training page and tap Add a drill.");drEdit=null;return}
   if(t.id==="drSave"){drSave();return}
+  if(t.id==="ddOpenBtn"){ddOpen();return}
+  if(d.drshare){const x=DRILLS.find(y=>y.id===d.drshare);if(x)drShare(x);return}
+  if(d.drcopy){const x=DRILLS.find(y=>y.id===d.drcopy);if(x){const b=drBlank();drEdit=Object.assign({},b,JSON.parse(JSON.stringify(x)),{id:"",title:(x.title+" (my version)").slice(0,80),author_name:b.author_name,pick:""});drOpen=null;render();window.scrollTo({top:0})}return}
   if(t.id==="drCancel"){drEdit=null;render();return}
 });
 document.addEventListener("input",e=>{if(view!=="drills")return;if(e.target.id==="drQ"){drQ=e.target.value;clearTimeout(drQT);const pos=e.target.selectionStart;drQT=setTimeout(()=>{render();const i=$("#drQ");if(i){i.focus();try{i.setSelectionRange(pos,pos)}catch(x){}}},250)}});
@@ -2940,7 +3029,7 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit","drills"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit","drills","design"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();
@@ -3000,7 +3089,7 @@ document.addEventListener("submit",async e=>{
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit)||(view==="drills"&&!!drEdit);
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit)||(view==="drills"&&!!drEdit)||view==="design";
   db.collection("matches").onSnapshot(s=>{RAW=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");matches=pubMatches();if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
