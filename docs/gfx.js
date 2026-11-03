@@ -16,7 +16,7 @@ if(RG){const lab=(id,t)=>{const l=$(id)&&$(id).closest("label");if(l&&l.firstChi
   const gp=$("goalPick"),ap=$("astPick");if(gp){gp.previousElementSibling.textContent="Try scorers";if(gp.nextElementSibling)gp.nextElementSibling.textContent="Tap + for each try. Our score fills in from the tries and kicks on the match; change it if there was a penalty try."}
   if(ap){ap.hidden=true;ap.previousElementSibling.hidden=true}}
 const PP=/girl/i.test(TEAM.players||"")?"her":/boy|lad/i.test(TEAM.players||"")?"his":"their";
-document.getElementById("potmPhotoLabel").textContent=PP.charAt(0).toUpperCase()+PP.slice(1)+" photo with the award";
+document.getElementById("potmPhotoLabel").textContent="Upload "+PP+" photo with the award";
 // England Rugby asks for written parental consent before a named child is shown in a photo
 if(RG)document.getElementById("potmPhotoLabel").textContent+=" (only with written consent from a parent)";
 const POTM_UP=(((TEAM.potm&&TEAM.potm.sponsor)?TEAM.potm.sponsor+" ":"")+"player of the match").toUpperCase();
@@ -253,9 +253,9 @@ function drawCoffey(cx,cy,r){
   else if(IMG.coffeyLogo){X.beginPath();X.arc(cx,cy+r*.02,r*.58,0,Math.PI*2);X.fillStyle=C.white;X.fill();X.save();X.clip();contain(IMG.coffeyLogo,cx-r*.56,cy-r*.54,r*1.12,r*1.12);X.restore()}
   else{X.fillStyle=C.pink;X.font=font(Math.round(r*.2),DISPLAY);const w2=String((TEAM.potm&&TEAM.potm.sponsor)||(TEAM.potm&&TEAM.potm.icon)||"🏆").toUpperCase().split(/\s+/);X.fillText(w2[0],cx,cy-(w2[1]?r*.12:0));if(w2[1])X.fillText(w2.slice(1).join(" "),cx,cy+r*.12)}
   // ribbon
-  const rw=r*1.7,rh=r*.26,ry=cy+r*.62;X.fillStyle=C.pink;X.strokeStyle="#141414";X.lineWidth=r*.03;
+  const rw=r*1.7,rh=r*.26,ry=cy+r*.62;const RIB=PT?PT.s1:C.pink;X.fillStyle=RIB;X.strokeStyle="#141414";X.lineWidth=r*.03;
   X.beginPath();X.moveTo(cx-rw/2,ry);X.lineTo(cx+rw/2,ry);X.lineTo(cx+rw/2-rh*.4,ry+rh/2);X.lineTo(cx+rw/2,ry+rh);X.lineTo(cx-rw/2,ry+rh);X.lineTo(cx-rw/2+rh*.4,ry+rh/2);X.closePath();X.fill();X.stroke();
-  X.fillStyle="#141414";X.font=font(Math.round(rh*.55),DISPLAY);X.fillText((TEAM.potm&&TEAM.potm.ribbon)||`${TEAM.abbr||""} ${TEAM.ageShort||""}`.trim(),cx,ry+rh*.54);
+  X.fillStyle=lum(RIB)>.45?"#141414":"#FFFFFF";X.font=font(Math.round(rh*.55),DISPLAY);X.fillText((TEAM.potm&&TEAM.potm.ribbon)||`${TEAM.abbr||""} ${TEAM.ageShort||""}`.trim(),cx,ry+rh*.54);
   X.restore();
 }
 const tint=a=>{const h=C.blue.replace("#","");return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`};// club colour, see-through
@@ -337,17 +337,64 @@ function drawFT(){
 }
 
 const pomMonth=()=>S.pomMonth?new Date(S.pomMonth+"-01T12:00:00").toLocaleDateString("en-GB",{month:"long"}).toUpperCase():"";
+// Poster looks for player of the match / month / tournament. Coaches pick the photo, layout and colours
+// under the preview; the choice is kept in this browser (S.pp, S.pLay, S.pTheme, S.pBg, S.pS1, S.pLine).
+const PTHEMES={
+  std:{label:"Standard",bg:C.pink,s1:C.yellow,s2:C.pinkDeep},
+  club:{label:"Club colour",bg:C.blue,s1:C.yellow,s2:"#FFFFFF"},
+  gold:{label:"Gold",bg:C.yellow,s1:C.blue,s2:"#FFFFFF"},
+  dark:{label:"Dark",bg:"#141414",s1:C.yellow,s2:C.blue},
+  white:{label:"White",bg:"#FFFFFF",s1:C.blue,s2:C.yellow}};
+const okHex=v=>/^#[0-9a-f]{6}$/i.test(v||"");
+const hexA=(hex,a)=>{const h=hex.replace("#","");return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`};
+function pTheme(){if(S.pTheme==="custom"&&okHex(S.pBg)&&okHex(S.pS1))return {bg:S.pBg,s1:S.pS1,s2:hexA(S.pS1,.55)};return PTHEMES[S.pTheme]||PTHEMES.std}
+// sponsor on the poster: S.pSp = "team" (the graphics sponsor), "sp:<id>" (Sponsors page), "up" (uploaded this visit) or "none"
+const SPUP={img:null};const SP_IMG={};
+function pSponsorImg(){const v=S.pSp||"team";if(v==="up")return SPUP.img;if(v.startsWith("sp:"))return SP_IMG[v.slice(3)]||null;return null}
+function pSponsorOn(){const v=S.pSp||"team";return v==="team"?HAS_SP():v==="none"?false:!!pSponsorImg()}
+function posterSponsor(x,y,w,h,ink){if(!pSponsorOn())return;const img=pSponsorImg()||((S.pSp||"team")==="team"?IMG.sponsor:null);
+  X.save();X.fillStyle=ink;X.textAlign="center";X.textBaseline="alphabetic";X.font=font(20,BODY,800);X.fillText("PROUDLY SPONSORED BY",x+w/2,y-10);
+  if(img){X.shadowColor="rgba(0,0,0,.2)";X.shadowBlur=14;X.shadowOffsetY=4;X.fillStyle="#FFFFFF";X.beginPath();X.roundRect(x,y,w,h,16);X.fill();X.shadowColor="transparent";contain(img,x+12,y+10,w-24,h-20)}
+  else drawSponsor(x+w/2,y+h/2,h/2);
+  X.restore()}
+let PT=null;// the theme being drawn, so the award badge ribbon matches
+const UP={img:null,for:""};// a photo the coach uploaded for this poster (this page visit only)
+function potmImg(){return S.pp==="up"&&UP.img&&UP.for===S.potm?UP.img:S.pp==="site"?IMG.site:null}
+function potmLayout(){return potmImg()?(S.pLay||"split"):"shirt"}
 function drawPotm(){
-  X.fillStyle=C.pink;X.fillRect(0,0,W,W);
-  X.fillStyle=C.yellow;X.beginPath();X.moveTo(0,90);X.lineTo(330,0);X.lineTo(420,0);X.lineTo(0,160);X.closePath();X.fill();
-  X.fillStyle=C.pinkDeep;X.beginPath();X.moveTo(0,190);X.lineTo(500,0);X.lineTo(540,0);X.lineTo(0,220);X.closePath();X.fill();
-  X.fillStyle=C.yellow;X.beginPath();X.moveTo(W,880);X.lineTo(W,960);X.lineTo(640,W);X.lineTo(560,W);X.closePath();X.fill();
-  X.fillStyle=C.pinkDeep;X.beginPath();X.moveTo(W,990);X.lineTo(W,1030);X.lineTo(880,W);X.lineTo(840,W);X.closePath();X.fill();
-  photoSlot(IMG.potmPhoto,0,0,560,W,`Add ${PP} photo\nwith the award`);
-  drawCrest(30,24,250,150);
-  drawCoffey(810,240,215);
-  const nm=S.potm||"";shirt(820,500,390,S.pkit,nm,playerNum(nm),nm===S.captain);
-  drawSponsor(820,960,42);
+  const T=pTheme();PT=T;const ink=lum(T.bg)>.6?"#141414":"#FFFFFF";
+  X.fillStyle=T.bg;X.fillRect(0,0,W,W);
+  X.fillStyle=T.s1;X.beginPath();X.moveTo(0,90);X.lineTo(330,0);X.lineTo(420,0);X.lineTo(0,160);X.closePath();X.fill();
+  X.fillStyle=T.s2;X.beginPath();X.moveTo(0,190);X.lineTo(500,0);X.lineTo(540,0);X.lineTo(0,220);X.closePath();X.fill();
+  X.fillStyle=T.s1;X.beginPath();X.moveTo(W,880);X.lineTo(W,960);X.lineTo(640,W);X.lineTo(560,W);X.closePath();X.fill();
+  X.fillStyle=T.s2;X.beginPath();X.moveTo(W,990);X.lineTo(W,1030);X.lineTo(880,W);X.lineTo(840,W);X.closePath();X.fill();
+  const img=potmImg(),lay=potmLayout(),nm=S.potm||"",line=(S.pLine||"").trim();
+  const lineInk=lum(T.s1)>.6?"#141414":"#FFFFFF";
+  if(lay==="split"){
+    X.save();X.beginPath();X.rect(0,0,560,W);X.clip();cover(img,0,0,560,W);X.restore();
+    X.fillStyle=T.s1;X.fillRect(560,0,8,W);
+    drawCrest(30,24,250,150);
+    if(line){X.fillStyle=T.s1;X.fillRect(0,968,560,112);
+      X.fillStyle=lineInk;X.textAlign="center";X.textBaseline="middle";fit(line,500,40,DISPLAY);X.fillText(line,280,1026)}
+    drawCoffey(810,240,215);shirt(820,500,390,S.pkit,nm,playerNum(nm),nm===S.captain);posterSponsor(690,955,260,95,ink);
+  } else if(lay==="frame"){
+    drawCrest(30,24,250,150);
+    const cx=290,cy=520,r=225;
+    X.save();X.shadowColor="rgba(0,0,0,.25)";X.shadowBlur=24;X.shadowOffsetY=8;X.beginPath();X.arc(cx,cy,r+22,0,Math.PI*2);X.fillStyle=T.s1;X.fill();X.restore();
+    X.beginPath();X.arc(cx,cy,r+10,0,Math.PI*2);X.fillStyle="#FFFFFF";X.fill();
+    X.save();X.beginPath();X.arc(cx,cy,r,0,Math.PI*2);X.clip();cover(img,cx-r,cy-r,r*2,r*2);X.restore();
+    X.fillStyle=ink;X.textAlign="center";X.textBaseline="alphabetic";const N=nm.toUpperCase();fit(N,520,96,DISPLAY);X.fillText(N,cx,cy+r+130);
+    if(line){fit(line,540,38,BODY,800);X.fillText(line,cx,cy+r+190)}
+    drawCoffey(810,240,215);shirt(820,500,390,S.pkit,nm,playerNum(nm),nm===S.captain);posterSponsor(690,955,260,95,ink);
+  } else {
+    drawCrest(30,24,250,150);
+    drawCoffey(300,470,235);
+    shirt(790,190,430,S.pkit,nm,playerNum(nm),nm===S.captain);
+    X.fillStyle=ink;X.textAlign="center";X.textBaseline="alphabetic";const N=nm.toUpperCase();fit(N,900,130,DISPLAY);X.fillText(N,540,860);
+    if(line){fit(line,860,42,BODY,800);X.fillText(line,540,930)}
+    posterSponsor(760,60,280,105,ink);
+  }
+  PT=null;
 }
 
 let MONTH_LIST=[];
@@ -463,7 +510,38 @@ $("themScore").addEventListener("input",()=>{S.them=$("themScore").value===""?nu
 $("ftPotm").addEventListener("change",()=>{S.ftPotm=$("ftPotm").value;save();render()});
 $("captain").addEventListener("change",()=>{S.captain=$("captain").value;save();render()});
 ROOT.querySelector(".gtabs").addEventListener("click",e=>{const b=e.target.closest("button[data-mode]");if(b&&b.dataset.mode!=="potm")S.potmKind="match"});
-$("potmPlayer").addEventListener("change",()=>{S.potm=$("potmPlayer").value;save();render()});
+$("potmPlayer").addEventListener("change",()=>{S.potm=$("potmPlayer").value;potmPick()});
+// the player's photo from the site (player_photos, already public on the site) is used unless the coach uploads one
+const SITE_PH={};
+async function potmPick(keep){const n=S.potm||"";const src=window.playerPhoto&&window.playerPhoto(n);
+  IMG.site=src?(SITE_PH[src]||(SITE_PH[src]=await loadImg(src))):null;
+  if(!keep||S.pp==null){S.pp=UP.img&&UP.for===n?"up":IMG.site?"site":"none";S.pLay=S.pp==="up"?"split":S.pp==="site"?"frame":"shirt"}
+  posterUI();save();render()}
+function posterUI(){if(!$("posterPanel"))return;const n=S.potm||"",T=pTheme();
+  const has={site:!!IMG.site,up:!!(UP.img&&UP.for===n),none:true};
+  ROOT.querySelectorAll("[data-pph]").forEach(b=>{b.disabled=!has[b.dataset.pph];b.setAttribute("aria-pressed",b.dataset.pph===(potmImg()?S.pp:"none"))});
+  ROOT.querySelectorAll("[data-play]").forEach(b=>{b.disabled=!potmImg()&&b.dataset.play!=="shirt";b.setAttribute("aria-pressed",b.dataset.play===potmLayout())});
+  ROOT.querySelectorAll("[data-pth]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.pth===(S.pTheme||"std")));
+  const SL=(window.siteSponsors&&window.siteSponsors())||[];
+  SL.forEach(x=>{if(!(x.id in SP_IMG)){SP_IMG[x.id]=null;loadImg(x.logo).then(i=>{SP_IMG[x.id]=i;render()})}});
+  const opts=[HAS_SP()?["team",`${(TEAM.sponsor&&TEAM.sponsor.name)||S.sponsorName||"Team sponsor"} (usual graphics sponsor)`]:null,...SL.map(x=>["sp:"+x.id,x.name]),SPUP.img?["up","The logo I uploaded"]:null,["none","No sponsor"]].filter(Boolean);
+  if(!opts.some(o=>o[0]===(S.pSp||"team")))S.pSp=opts[0][0];
+  $("pSponsor").innerHTML=opts.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join("");$("pSponsor").value=S.pSp||"team";
+  $("pcBg").value=okHex(T.bg)?T.bg:"#ffffff";$("pcS1").value=okHex(T.s1)?T.s1:"#ffd200";$("posterLine").value=S.pLine||"";
+  const who=n||"This player";
+  $("posterPhotoHint").textContent=S.pp==="site"&&IMG.site?`Using ${who}'s photo from the site. For a sharper poster, upload the original photo.`
+    :has.up?"Using the photo you uploaded. It stays on this device and isn't added to the site."
+    :IMG.site?`No photo on this poster. ${who}'s site photo is available above.`
+    :`${who} has no photo on the site yet. Upload one below for this poster, or add one on ${PP} player page so it's used every time.`}
+ROOT.querySelector("#posterThemes").innerHTML=Object.entries(PTHEMES).map(([k,t])=>`<button data-pth="${k}" aria-pressed="false" aria-label="${t.label}" title="${t.label}" style="background:linear-gradient(135deg,${t.bg} 0 55%,${t.s1} 55% 75%,${t.s2} 75%)"></button>`).join("");
+ROOT.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.pph){S.pp=b.dataset.pph;S.pLay=S.pp==="up"?"split":S.pp==="site"?"frame":"shirt";posterUI();save();render()}
+  if(b.dataset.play){S.pLay=b.dataset.play;posterUI();save();render()}
+  if(b.dataset.pth){S.pTheme=b.dataset.pth;posterUI();save();render()}});
+["pcBg","pcS1"].forEach(id=>$(id).addEventListener("input",()=>{const T=pTheme();S.pBg=id==="pcBg"?$(id).value:(okHex(T.bg)?T.bg:$("pcBg").value);S.pS1=id==="pcS1"?$(id).value:(okHex(T.s1)?T.s1:$("pcS1").value);S.pTheme="custom";posterUI();save();render()}));
+$("pSponsor").addEventListener("change",()=>{S.pSp=$("pSponsor").value;save();render()});
+$("pSponsorUp").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;const img=await loadImg(await readFile(f));if(!img)return;SPUP.img=await loadImg(shrink(img,800));S.pSp="up";e.target.value="";$("pSponsorThumb").style.backgroundImage=`url("${SPUP.img.src}")`;posterUI();save();render()});
+$("posterLine").addEventListener("input",()=>{S.pLine=$("posterLine").value;save();render()});
 $("msPlayer").addEventListener("change",()=>{S.msPlayer=$("msPlayer").value;save();render()});
 $("msLabel").addEventListener("input",()=>{S.msLabel=$("msLabel").value;save();render()});
 $("gMonth").addEventListener("change",()=>{S.month=$("gMonth").value;MONTH_LIST=window.monthFixtures?window.monthFixtures(S.month):[];save();render()});
@@ -476,7 +554,9 @@ function onUpload(id,key,persist){$(id).addEventListener("change",async e=>{cons
   else{img=await loadImg(shrink(img,2400))}
   IMG[key]=img;thumbs();render()})}
 onUpload("crestUp","crest","logo");onUpload("sponsorUp","sponsor","logo");onUpload("coffeyUp","coffey","logo");onUpload("octopusUp","octopus","logo");onUpload("oppCrest","opp","opp");
-onUpload("squadPhoto","squadPhoto");onUpload("ftPhoto","ftPhoto");onUpload("potmPhoto","potmPhoto");
+onUpload("squadPhoto","squadPhoto");onUpload("ftPhoto","ftPhoto");
+$("potmPhoto").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;let img=await loadImg(await readFile(f));if(!img)return;img=await loadImg(shrink(img,2400));
+  UP.img=img;UP.for=S.potm||"";IMG.potmPhoto=img;S.pp="up";S.pLay="split";e.target.value="";thumbs();posterUI();save();render()});
 $("clearLogos").addEventListener("click",async()=>{const BUILTIN={crest:TEAM.crest||"crest.png",sponsor:TEAM.sponsor&&TEAM.sponsor.logo,octopus:TEAM.kitSponsor&&TEAM.kitSponsor.logo};for(const k of["crest","sponsor","coffey","octopus"]){delete logos[k];IMG[k]=BUILTIN[k]?await loadImg(BUILTIN[k]):null}store.set(SK+".logos",logos);thumbs();render();toast("Back to the club's standard logos.")});
 
 function toast(t){$("gtoast").textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>$("gtoast").textContent="",5000)}
@@ -501,20 +581,20 @@ $("copyCap").addEventListener("click",()=>{const ta=$("caption");const done=()=>
 
 // ---------- portal hooks ----------
 window.GFX={
-  setSquad(list){squad=list.map(p=>({name:p.name,num:p.num??""}));buildPickers();render()},
+  setSquad(list){squad=list.map(p=>({name:p.name,num:p.num??""}));buildPickers();potmPick(true)},
   async loadMatch(m,mode){
     Object.assign(S,{tour:false,opp:m.opp||"",date:m.date||"",ko:m.ko||"",venue:m.venue||"",comp:m.comp||"League",ha:m.ha==="A"?"A":"H",
       picked:Object.keys(m.played||{}).length?Object.keys(m.played):(m.squad||[]).slice(),goals:Object.fromEntries(Object.entries(m.played||{}).filter(([,g])=>g>0)),
       us:m.us??null,them:m.them??null,usManual:m.us!=null,ftPotm:m.potm||"",assists:Object.assign({},m.assists||{})});
     if(RG)S.kicks=JSON.parse(JSON.stringify(m.kicks||{}));
-    if(m.potm)S.potm=m.potm;S.potmKind="match";
+    if(m.potm)S.potm=m.potm;S.potmKind="match";if(m.potm)await potmPick();
     S.picked.sort((a,b)=>squad.findIndex(p=>p.name===a)-squad.findIndex(p=>p.name===b));
     buildPickers();syncInputs();save();await setOppCrestFor(S.opp);setMode(mode||"squad")},
   // the squad for a whole tournament (before its games are on the site): "UNDER 9s SQUAD ANNOUNCEMENT · SPOOKTACULAR CUP"
   async loadTSquad(t){Object.assign(S,{tour:true,opp:t.name||"Tournament",date:t.date||S.date,ko:"",venue:t.venue||"",comp:"Tournament",ha:"N",picked:(t.squad||[]).slice(),goals:{},us:null,them:null,usManual:false,assists:{}});
     S.picked.sort((a,b)=>squad.findIndex(p=>p.name===a)-squad.findIndex(p=>p.name===b));IMG.opp=null;buildPickers();syncInputs();save();setMode("squad")},
-  async loadTournament(t){Object.assign(S,{potm:t.potm,potmKind:"tournament",tname:t.name,date:t.date||S.date,venue:t.venue||"",opp:""});buildPickers();syncInputs();save();setMode("potm")},
-  loadPom(x){Object.assign(S,{potm:x.player,potmKind:"month",pomMonth:x.month,pomNote:x.note||"",tname:"",opp:"",date:x.month+"-01"});buildPickers();syncInputs();save();setMode("potm")},
+  async loadTournament(t){Object.assign(S,{potm:t.potm,potmKind:"tournament",tname:t.name,date:t.date||S.date,venue:t.venue||"",opp:""});buildPickers();syncInputs();await potmPick();setMode("potm")},
+  async loadPom(x){Object.assign(S,{potm:x.player,potmKind:"month",pomMonth:x.month,pomNote:x.note||"",tname:"",opp:"",date:x.month+"-01"});buildPickers();syncInputs();await potmPick();setMode("potm")},
   loadMilestone(n,label){Object.assign(S,{msPlayer:n,msLabel:label});buildPickers();save();setMode("ms")},
   loadMonth(ym){S.month=ym;MONTH_LIST=window.monthFixtures?window.monthFixtures(ym):[];buildPickers();save();setMode("month")},
   refresh(){if(S.mode==="month")MONTH_LIST=window.monthFixtures?window.monthFixtures(S.month):[];render()}
@@ -525,7 +605,7 @@ window.GFX={
   for(const k of["crest","sponsor","coffey","octopus"])IMG[k]=logos[k]?await loadImg(logos[k]):(BUILTIN[k]?await loadImg(BUILTIN[k]):null);
   IMG.coffeyLogo=TEAM.potm&&TEAM.potm.logo?await loadImg(TEAM.potm.logo):null;
   if(S.opp){const src=oppCrests[S.opp.trim().toLowerCase()];if(src)IMG.opp=await loadImg(src)}
-  buildPickers();syncInputs();setMode(S.mode==="setup"?"squad":S.mode);thumbs();
+  buildPickers();syncInputs();setMode(S.mode==="setup"?"squad":S.mode);thumbs();await potmPick(true);
   try{await Promise.race([Promise.all([font(40,DISPLAY),font(40,BODY,800),font(40,BODY,600),font(40,SHIRT)].map(f=>document.fonts.load(f))),new Promise(r=>setTimeout(r,4000))])}catch(e){}
   render();
   
