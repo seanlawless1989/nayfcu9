@@ -11,6 +11,7 @@ self.TEAM = {
   tagline: "Girls Football",
   appName: "Washington Wolves U11s",
   siteUrl: "https://touchlinetales.club/washington-wolves-u11s/",
+  club: { name: "Washington Athletic", url: "https://touchlinetales.club/washington-athletic/" },
   supportName: "Touchline Tales",
 
   league: "Russell Foster League",

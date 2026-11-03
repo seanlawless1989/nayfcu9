@@ -1,0 +1,27 @@
+{
+  "name": "Washington Athletic Youth",
+  "short": "Washington Athletic",
+  "crest": "crest.png",
+  "colours": {
+    "club": "#27207A",
+    "clubDeep": "#18134D",
+    "ink": "#FFFFFF",
+    "second": "#D2232A"
+  },
+  "intro": "Pick your child's team for fixtures, results, photos and match alerts.",
+  "contact": "Can't see your team? Ask your coach, or use the club sign-up above to add it.",
+  "siteUrl": "https://touchlinetales.club/washington-athletic/",
+  "join": {
+    "url": "join/",
+    "title": "Coaches: add your team",
+    "text": "One form for the whole club. Free for the 2026-27 season, setup included."
+  },
+  "teams": [
+    {
+      "name": "Under 11s Wolves",
+      "group": "Girls",
+      "url": "https://touchlinetales.club/washington-wolves-u11s/",
+      "note": "Russell Foster League"
+    }
+  ]
+}
