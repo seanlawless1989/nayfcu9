@@ -553,3 +553,10 @@ table.lb.cs .ctag{white-space:normal;line-height:1.3}
 .bd-edit{display:grid;grid-template-columns:1fr 76px 132px;gap:6px;align-items:center}
 .bd-edit .bd-n{display:flex;align-items:center;gap:6px;min-width:0}.bd-edit .bd-n b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bd-edit select{width:100%;min-height:40px;padding:6px;border:1.5px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font:inherit}
+/* club drills library (coaches only) */
+.drchips{display:flex;flex-wrap:wrap;gap:8px}.drchips button{min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--field);font:700 14px var(--body);color:var(--ink);cursor:pointer}
+.drchips button[aria-pressed="true"]{background:var(--club);border-color:var(--club);color:var(--clubInk)}
+.drlist{display:grid;gap:10px}.drrow{display:flex;gap:12px;align-items:center;text-align:left;width:100%;border:0;cursor:pointer;font:inherit;color:inherit}
+.drrow>span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}.drrow b{font-size:16px}
+.drthumb{width:56px;height:84px;flex:none;border-radius:8px;object-fit:cover;background:#33963F}.drnone{display:flex;align-items:center;justify-content:center;font-size:26px}
+.drpic{width:100%;max-width:360px;align-self:center;border-radius:12px;display:block}.dr h3{margin:4px 0}.dr p{margin:0 0 6px}
