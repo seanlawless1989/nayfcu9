@@ -348,6 +348,15 @@ const PTHEMES={
 const okHex=v=>/^#[0-9a-f]{6}$/i.test(v||"");
 const hexA=(hex,a)=>{const h=hex.replace("#","");return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`};
 function pTheme(){if(S.pTheme==="custom"&&okHex(S.pBg)&&okHex(S.pS1))return {bg:S.pBg,s1:S.pS1,s2:hexA(S.pS1,.55)};return PTHEMES[S.pTheme]||PTHEMES.std}
+// sponsor on the poster: S.pSp = "team" (the graphics sponsor), "sp:<id>" (Sponsors page), "up" (uploaded this visit) or "none"
+const SPUP={img:null};const SP_IMG={};
+function pSponsorImg(){const v=S.pSp||"team";if(v==="up")return SPUP.img;if(v.startsWith("sp:"))return SP_IMG[v.slice(3)]||null;return null}
+function pSponsorOn(){const v=S.pSp||"team";return v==="team"?HAS_SP():v==="none"?false:!!pSponsorImg()}
+function posterSponsor(x,y,w,h,ink){if(!pSponsorOn())return;const img=pSponsorImg()||((S.pSp||"team")==="team"?IMG.sponsor:null);
+  X.save();X.fillStyle=ink;X.textAlign="center";X.textBaseline="alphabetic";X.font=font(20,BODY,800);X.fillText("PROUDLY SPONSORED BY",x+w/2,y-10);
+  if(img){X.shadowColor="rgba(0,0,0,.2)";X.shadowBlur=14;X.shadowOffsetY=4;X.fillStyle="#FFFFFF";X.beginPath();X.roundRect(x,y,w,h,16);X.fill();X.shadowColor="transparent";contain(img,x+12,y+10,w-24,h-20)}
+  else drawSponsor(x+w/2,y+h/2,h/2);
+  X.restore()}
 let PT=null;// the theme being drawn, so the award badge ribbon matches
 const UP={img:null,for:""};// a photo the coach uploaded for this poster (this page visit only)
 function potmImg(){return S.pp==="up"&&UP.img&&UP.for===S.potm?UP.img:S.pp==="site"?IMG.site:null}
@@ -367,7 +376,7 @@ function drawPotm(){
     drawCrest(30,24,250,150);
     if(line){X.fillStyle=T.s1;X.fillRect(0,968,560,112);
       X.fillStyle=lineInk;X.textAlign="center";X.textBaseline="middle";fit(line,500,40,DISPLAY);X.fillText(line,280,1026)}
-    drawCoffey(810,240,215);shirt(820,500,390,S.pkit,nm,playerNum(nm),nm===S.captain);drawSponsor(820,960,42);
+    drawCoffey(810,240,215);shirt(820,500,390,S.pkit,nm,playerNum(nm),nm===S.captain);posterSponsor(690,955,260,95,ink);
   } else if(lay==="frame"){
     drawCrest(30,24,250,150);
     const cx=290,cy=520,r=225;
@@ -376,14 +385,14 @@ function drawPotm(){
     X.save();X.beginPath();X.arc(cx,cy,r,0,Math.PI*2);X.clip();cover(img,cx-r,cy-r,r*2,r*2);X.restore();
     X.fillStyle=ink;X.textAlign="center";X.textBaseline="alphabetic";const N=nm.toUpperCase();fit(N,520,96,DISPLAY);X.fillText(N,cx,cy+r+130);
     if(line){fit(line,540,38,BODY,800);X.fillText(line,cx,cy+r+190)}
-    drawCoffey(810,240,215);shirt(820,500,390,S.pkit,nm,playerNum(nm),nm===S.captain);drawSponsor(820,960,42);
+    drawCoffey(810,240,215);shirt(820,500,390,S.pkit,nm,playerNum(nm),nm===S.captain);posterSponsor(690,955,260,95,ink);
   } else {
     drawCrest(30,24,250,150);
     drawCoffey(300,470,235);
     shirt(790,190,430,S.pkit,nm,playerNum(nm),nm===S.captain);
     X.fillStyle=ink;X.textAlign="center";X.textBaseline="alphabetic";const N=nm.toUpperCase();fit(N,900,130,DISPLAY);X.fillText(N,540,860);
     if(line){fit(line,860,42,BODY,800);X.fillText(line,540,930)}
-    drawSponsor(960,110,62);
+    posterSponsor(760,60,280,105,ink);
   }
   PT=null;
 }
@@ -513,6 +522,11 @@ function posterUI(){if(!$("posterPanel"))return;const n=S.potm||"",T=pTheme();
   ROOT.querySelectorAll("[data-pph]").forEach(b=>{b.disabled=!has[b.dataset.pph];b.setAttribute("aria-pressed",b.dataset.pph===(potmImg()?S.pp:"none"))});
   ROOT.querySelectorAll("[data-play]").forEach(b=>{b.disabled=!potmImg()&&b.dataset.play!=="shirt";b.setAttribute("aria-pressed",b.dataset.play===potmLayout())});
   ROOT.querySelectorAll("[data-pth]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.pth===(S.pTheme||"std")));
+  const SL=(window.siteSponsors&&window.siteSponsors())||[];
+  SL.forEach(x=>{if(!(x.id in SP_IMG)){SP_IMG[x.id]=null;loadImg(x.logo).then(i=>{SP_IMG[x.id]=i;render()})}});
+  const opts=[HAS_SP()?["team",`${(TEAM.sponsor&&TEAM.sponsor.name)||S.sponsorName||"Team sponsor"} (usual graphics sponsor)`]:null,...SL.map(x=>["sp:"+x.id,x.name]),SPUP.img?["up","The logo I uploaded"]:null,["none","No sponsor"]].filter(Boolean);
+  if(!opts.some(o=>o[0]===(S.pSp||"team")))S.pSp=opts[0][0];
+  $("pSponsor").innerHTML=opts.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join("");$("pSponsor").value=S.pSp||"team";
   $("pcBg").value=okHex(T.bg)?T.bg:"#ffffff";$("pcS1").value=okHex(T.s1)?T.s1:"#ffd200";$("posterLine").value=S.pLine||"";
   const who=n||"This player";
   $("posterPhotoHint").textContent=S.pp==="site"&&IMG.site?`Using ${who}'s photo from the site. For a sharper poster, upload the original photo.`
@@ -525,6 +539,8 @@ ROOT.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)retur
   if(b.dataset.play){S.pLay=b.dataset.play;posterUI();save();render()}
   if(b.dataset.pth){S.pTheme=b.dataset.pth;posterUI();save();render()}});
 ["pcBg","pcS1"].forEach(id=>$(id).addEventListener("input",()=>{const T=pTheme();S.pBg=id==="pcBg"?$(id).value:(okHex(T.bg)?T.bg:$("pcBg").value);S.pS1=id==="pcS1"?$(id).value:(okHex(T.s1)?T.s1:$("pcS1").value);S.pTheme="custom";posterUI();save();render()}));
+$("pSponsor").addEventListener("change",()=>{S.pSp=$("pSponsor").value;save();render()});
+$("pSponsorUp").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;const img=await loadImg(await readFile(f));if(!img)return;SPUP.img=await loadImg(shrink(img,800));S.pSp="up";e.target.value="";$("pSponsorThumb").style.backgroundImage=`url("${SPUP.img.src}")`;posterUI();save();render()});
 $("posterLine").addEventListener("input",()=>{S.pLine=$("posterLine").value;save();render()});
 $("msPlayer").addEventListener("change",()=>{S.msPlayer=$("msPlayer").value;save();render()});
 $("msLabel").addEventListener("input",()=>{S.msLabel=$("msLabel").value;save();render()});

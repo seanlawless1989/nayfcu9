@@ -417,6 +417,7 @@ function sponsorText(n){const from=`${season.slice(0,4)}-07-01`,r=sponsorReport(
 // ---------- team sponsors (public.sponsors, supabase/17_sponsors.sql) ----------
 // Coaches add, change, reorder and remove sponsors on the Sponsors page; everyone sees them on the home page.
 let SPON=[],SPON_ON=false,spEdit=null,spBusy=false;
+window.siteSponsors=()=>SPON.filter(s=>s.logo).map(s=>({id:String(s.id),name:s.name||"",logo:s.logo}));// the poster maker (gfx.js) offers these
 async function loadSponsors(){if(!sb)return;try{const {data,error}=await sb.from("sponsors").select("*").order("sort").order("id");if(error)return;SPON_ON=true;SPON=data||[]}catch(e){}}
 const spHref=u=>/^https?:\/\/[^\s"<>]+$/i.test(u||"")?u:"";
 const spIni=n=>String(n||"?").split(/\s+/).filter(w=>/^[A-Za-z0-9]/.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase()||"?";
