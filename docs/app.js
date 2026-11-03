@@ -177,6 +177,7 @@ function render(){
   else if(view==="calendar")main.innerHTML=calendarView();
   else if(view==="training")main.innerHTML=trainingView();
   else if(view==="tactics")main.innerHTML=tacticsView();
+  else if(view==="drills")main.innerHTML=drillsView();
   else if(view==="votes")main.innerHTML=votesView();
   else if(view==="parents")main.innerHTML=parentsView();
   else if(view==="matchday")main.innerHTML=matchdayView();
@@ -1033,7 +1034,7 @@ function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answ
     <div class="btns"><button class="btn ghost" data-view="training">Training details</button></div></section>`}
 function trainingView(){
   if(trEdit&&canWrite)return trFormView();
-  if(!TR)return `<div class="card empty">Training details are on their way.</div>`;
+  if(!TR)return `<div class="stack"><div class="card empty">Training details are on their way.</div>${drillsCard()}</div>`;
   const up=trUpcoming(6),next=up.find(x=>!x.off),offSoon=up.filter(x=>x.off);
   const maps=TR.venue?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(TR.venue)}`:"";
   const facts=[["📍",TR.venue?`<a href="${maps}" target="_blank" rel="noopener">${esc(TR.venue)}</a>`:""],["🎒",TR.kit?`<b>Bring:</b> ${esc(TR.kit)}`:""],["📅",next?`<b>Next session:</b> ${longDate(next.iso)}`:""],
@@ -1042,7 +1043,7 @@ function trainingView(){
     <div class="trbig"><b>Every ${esc(TR.day)}</b><span>${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span></div>
     <div class="trfacts">${facts.map(([i,v])=>`<div><span>${i}</span><span>${v}</span></div>`).join("")}</div>
     ${TR.notes?`<p style="margin:0">${esc(TR.notes)}</p>`:""}
-    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section>${tavCard()}${attCard()}</div>`}
+    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section>${tavCard()}${attCard()}${drillsCard()}</div>`}
 function trFormView(){const F2=trEdit;const off=(F2.off||[]).slice().sort();
   return `<section class="card stack"><h2>Edit training</h2>
     <div class="grid2"><label class="f">Day<select id="tr-day">${WEEKDAYS.map(d=>`<option${d===F2.day?" selected":""}>${d}</option>`).join("")}</select></label>
@@ -1056,6 +1057,111 @@ function trFormView(){const F2=trEdit;const off=(F2.off||[]).slice().sort();
     <p class="hint">Changes show here and in everyone's calendar (phones check every few hours).</p>
     <div class="btns"><button class="btn gold" id="trSave">Save training</button><button class="btn ghost" id="trCancel">Cancel</button></div></section>`}
 function trRead(){if(!trEdit)return;const v=id=>{const el=$("#"+id);return el?el.value:""};Object.assign(trEdit,{day:v("tr-day"),start:v("tr-start"),finish:v("tr-finish"),until:v("tr-until")||null,venue:v("tr-venue").trim(),kit:v("tr-kit").trim(),notes:v("tr-notes").trim()})}
+// ---------- club drills library (coaches only): one library shared by every coach of every team in the club ----------
+// Lives in the project's "club" schema (supabase/26_club_admin.sql), keyed by TEAM.club.id. Each team's own data stays in
+// its own schema; only drills are shared. A drill's diagram is a tactics board with the players' names taken out, kept
+// as the board (so it can be changed later) and as a picture (so the club admin page can show it).
+const CLUB_ID=(TEAM.club&&TEAM.club.id)||"";
+const DR_FOCUS=RUGBY?["Warm-up","Handling","Passing","Running lines","Tackling","Contact","Kicking","Game"]:["Warm-up","Passing","Dribbling","Shooting","Defending","Goalkeeping","Fitness","Game"];
+let drQT=0,DRILLS=null,drOpen=null,drEdit=null,drFocus="",drAge="",drQ="",drBusy=false;
+function drClub(){return sb&&CLUB_ID?sb.schema("club"):null}
+async function loadDrills(){DRILLS=null;const c=drClub();if(!c||!canWrite)return;
+  try{const {data,error}=await c.from("drills").select("*").eq("club",CLUB_ID).order("updated",{ascending:false}).limit(500);if(!error)DRILLS=data||[]}catch(e){}}
+function drMine(d){return !!(me&&d&&(d.author_email||"")===(me.email||"").toLowerCase())}
+function drFavs(){try{return JSON.parse(localStorage.getItem(SK+".drillfavs")||"[]")}catch(e){return []}}
+function drFavSet(id,on){const f=drFavs().filter(x=>x!==id);if(on)f.unshift(id);try{localStorage.setItem(SK+".drillfavs",JSON.stringify(f.slice(0,200)))}catch(e){}}
+function drAges(d){return d.age_from&&d.age_to?(d.age_from===d.age_to?`U${d.age_from}`:`U${d.age_from} to U${d.age_to}`):d.age_from?`U${d.age_from}+`:d.age_to?`Up to U${d.age_to}`:"All ages"}
+function drMeta(d){return [drAges(d),d.players?`${d.players} players`:"",d.minutes?`${d.minutes} min`:""].filter(Boolean).join(" · ")}
+// the picture is shown as an image, never put into the page as markup, so nothing in it can run
+function drPic(d,cls){const s=d&&d.diagram&&d.diagram.svg;return typeof s==="string"&&/^<svg[\s>]/.test(s)?`<img class="${cls||"drpic"}" alt="Drill diagram" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}">`:""}
+// a board for sharing: no names, the players numbered 1, 2, 3...
+function drBoard(b){const c=JSON.parse(JSON.stringify(b));c.us=(c.us||[]).map(p=>Object.assign(p,{n:""}));delete c.squad;delete c.mid;c.title="";return c}
+function drDiagram(b){const c=drBoard(b);return {board:c,svg:tbSvg(c,false,false,true)}}
+function drillsCard(){if(!canWrite||!CLUB_ID||!DRILLS)return "";const n=DRILLS.length,fav=drFavs().filter(id=>DRILLS.some(d=>d.id===id)).length;
+  return `<section class="card stack"><h3>📚 ${esc(TEAM.club.name||"Club")} drills library</h3>
+    <p class="hint" style="margin:0">${n?`${n} drill${n===1?"":"s"} shared by coaches across ${esc(TEAM.club.name||"the club")}${fav?`, ${fav} in your favourites`:""}.`:`No drills yet. Add the first one and every coach at ${esc(TEAM.club.name||"the club")} will see it.`} Only coaches see the library.</p>
+    <div class="btns"><button class="btn gold" data-view="drills">Open the drills library</button><button class="btn ghost" id="drNew">Add a drill</button></div></section>`}
+function drillsView(){
+  if(!canWrite)return `<div class="card empty">The drills library is for coaches. Sign in to use it.</div>`;
+  if(!CLUB_ID||!DRILLS)return `<div class="card empty">The club drills library isn't switched on for this team yet.</div>`;
+  if(drEdit)return drFormView();
+  if(drOpen){const d=DRILLS.find(x=>x.id===drOpen);if(d)return drDetail(d);drOpen=null}
+  const favs=drFavs(),q=drQ.trim().toLowerCase(),age=+drAge||0;
+  const list=DRILLS.filter(d=>(drFocus==="fav"?favs.includes(d.id):!drFocus||(d.focus||[]).includes(drFocus))&&(!age||((d.age_from||0)<=age&&(d.age_to||99)>=age))
+    &&(!q||[d.title,d.setup,d.points,d.equipment].join(" ").toLowerCase().includes(q)));
+  const chip=(k,l)=>`<button data-drfocus="${esc(k)}" aria-pressed="${drFocus===k}">${esc(l)}</button>`;
+  return `<div class="stack"><section class="card stack"><div class="tbhead"><h2>📚 Drills library</h2><button class="btn gold" id="drNew">Add a drill</button></div>
+    <p class="hint" style="margin:0">Shared by every coach at ${esc(TEAM.club.name||"the club")}. Parents and players don't see it.</p>
+    <div class="btns"><input type="text" id="drQ" placeholder="Search drills" enterkeyhint="search" value="${esc(drQ)}" style="flex:1;min-width:160px">
+      <select id="drAge" aria-label="Age group"><option value="">Any age</option>${Array.from({length:14},(_,i)=>i+5).map(a=>`<option value="${a}"${+drAge===a?" selected":""}>U${a}</option>`).join("")}</select></div>
+    <div class="chips drchips">${chip("","All")}${chip("fav","★ Favourites")}${DR_FOCUS.map(f=>chip(f,f)).join("")}</div></section>
+    ${list.length?`<div class="drlist">${list.map(d=>`<button class="card drrow" data-drill="${esc(d.id)}">${drPic(d,"drthumb")||`<span class="drthumb drnone">📋</span>`}<span><b>${favs.includes(d.id)?"★ ":""}${esc(d.title)}</b><span class="hint">${esc(drMeta(d))}</span><span class="hint">${esc((d.focus||[]).join(", "))}</span></span></button>`).join("")}</div>`
+      :`<div class="card empty">${DRILLS.length?"No drills match that. Try another filter.":"No drills yet. Tap Add a drill to share the first one."}</div>`}</div>`}
+function drDetail(d){const fav=drFavs().includes(d.id),yt=/^https:\/\//.test(d.video||"");
+  return `<div class="stack"><section class="card stack dr">
+    <div class="btns"><button class="mini" id="drBack">← All drills</button></div>
+    <h2>${esc(d.title)}</h2><p class="hint" style="margin:0">${esc(drMeta(d))}${(d.focus||[]).length?` · ${esc(d.focus.join(", "))}`:""}</p>
+    ${drPic(d)}
+    ${d.equipment?`<p style="margin:0"><b>You'll need:</b> ${esc(d.equipment)}</p>`:""}
+    ${d.setup?`<div><h3>Set-up</h3>${reportHtml(d.setup)}</div>`:""}
+    ${d.points?`<div><h3>Coaching points</h3>${reportHtml(d.points)}</div>`:""}
+    ${yt?`<p style="margin:0"><a href="${esc(d.video)}" target="_blank" rel="noopener">▶ Watch the video</a></p>`:""}
+    <p class="hint" style="margin:0">Added by ${esc(d.author_name||"a coach")}${d.author_team?` (${esc(d.author_team)})`:""}.</p>
+    <div class="btns"><button class="btn ${fav?"ghost":"gold"}" data-drfav="${esc(d.id)}">${fav?"★ In your favourites":"☆ Add to favourites"}</button>${d.diagram&&d.diagram.board?`<button class="btn ghost" data-drboard="${esc(d.id)}">Open on the tactics board</button>`:""}
+      ${drMine(d)?`<button class="btn ghost" data-dredit="${esc(d.id)}">Edit</button><button class="btn ghost" data-drdel="${esc(d.id)}">Remove</button>`:""}</div></section></div>`}
+function drBlank(){const n=+((String(TEAM.ageGroup||"").match(/\d+/)||[])[0]||0);let name="";try{name=localStorage.getItem(SK+".coachname")||""}catch(e){}
+  return {id:"",title:"",age_from:n||null,age_to:n||null,players:"",minutes:null,equipment:"",focus:[],setup:"",points:"",video:"",diagram:null,pick:"",author_name:name}}
+function drFormView(){const F2=drEdit,s=tbStore(),boards=[["",F2.diagram?"Keep the diagram it has":"No diagram"],...(F2.diagram?[["none","Remove the diagram"]]:[]),...(TB()?[["cur","The board on the tactics board now"]]:[]),...s.saved.map((x,i)=>["s"+i,"Saved board: "+x.name])];
+  const ages=Array.from({length:14},(_,i)=>i+5),ageSel=(id,v)=>`<select id="${id}"><option value="">Any</option>${ages.map(a=>`<option value="${a}"${+v===a?" selected":""}>U${a}</option>`).join("")}</select>`;
+  return `<section class="card stack"><h2>${F2.id?"Edit drill":"Add a drill"}</h2>
+    <label class="f">Name of the drill<input type="text" id="dr-title" maxlength="80" value="${esc(F2.title)}" placeholder="e.g. 4 v 1 rondo"></label>
+    <div class="grid2"><label class="f">From age${ageSel("dr-af",F2.age_from)}</label><label class="f">To age${ageSel("dr-at",F2.age_to)}</label>
+      <label class="f">Players<input type="text" id="dr-players" maxlength="40" value="${esc(F2.players)}" placeholder="e.g. 8 to 12"></label>
+      <label class="f">Minutes<input type="number" id="dr-min" min="1" max="120" value="${esc(F2.minutes??"")}"></label></div>
+    <div><b>What it works on</b><div class="chips drchips" style="margin-top:6px">${DR_FOCUS.map(f=>`<button type="button" data-drtag="${esc(f)}" aria-pressed="${F2.focus.includes(f)}">${esc(f)}</button>`).join("")}</div></div>
+    <label class="f">Equipment<input type="text" id="dr-eq" maxlength="200" value="${esc(F2.equipment)}" placeholder="e.g. 8 cones, 4 bibs, 1 ball"></label>
+    <label class="f">Set-up<textarea id="dr-setup" rows="4" maxlength="4000" placeholder="How to lay it out and how it runs">${esc(F2.setup)}</textarea></label>
+    <label class="f">Coaching points<textarea id="dr-points" rows="4" maxlength="4000" placeholder="What to look for, and how to make it easier or harder">${esc(F2.points)}</textarea></label>
+    <label class="f">Diagram<select id="dr-pick">${boards.map(([v,l])=>`<option value="${esc(v)}"${F2.pick===v?" selected":""}>${esc(l)}</option>`).join("")}</select></label>
+    <p class="hint" style="margin:0">Draw it on the <button type="button" class="mini" id="drToBoard">tactics board</button> first, then pick it here. Players' names are taken off, so the picture only shows numbers.</p>
+    <label class="f">Video link (optional)<input type="url" id="dr-video" value="${esc(F2.video)}" placeholder="https://youtube.com/..."></label>
+    <label class="f">Your first name (shown to other coaches)<input type="text" id="dr-name" maxlength="40" value="${esc(F2.author_name)}"></label>
+    <div class="btns"><button class="btn gold" id="drSave"${drBusy?" disabled":""}>${drBusy?"Saving…":"Save drill"}</button><button class="btn ghost" id="drCancel">Cancel</button></div></section>`}
+function drRead(){if(!drEdit)return;const v=id=>{const el=$("#"+id);return el?el.value:""};
+  Object.assign(drEdit,{title:v("dr-title").trim(),age_from:+v("dr-af")||null,age_to:+v("dr-at")||null,players:v("dr-players").trim(),minutes:+v("dr-min")||null,equipment:v("dr-eq").trim(),
+    setup:v("dr-setup").trim(),points:v("dr-points").trim(),pick:v("dr-pick"),video:v("dr-video").trim(),author_name:v("dr-name").trim()})}
+async function drSave(){drRead();const F2=drEdit,c=drClub();if(!F2||!c)return;
+  if(!F2.title){toast("Give the drill a name.");return}
+  if(F2.video&&!/^https:\/\//.test(F2.video)){toast("The video link should start with https://");return}
+  if(F2.age_from&&F2.age_to&&F2.age_from>F2.age_to){const a=F2.age_from;F2.age_from=F2.age_to;F2.age_to=a}
+  let diagram=F2.diagram;const s=tbStore();
+  if(F2.pick==="none")diagram=null;else if(F2.pick==="cur"&&TB())diagram=drDiagram(TB());else if(/^s\d+$/.test(F2.pick)&&s.saved[+F2.pick.slice(1)])diagram=drDiagram(s.saved[+F2.pick.slice(1)].board);
+  try{localStorage.setItem(SK+".coachname",F2.author_name)}catch(e){}
+  const row={title:F2.title,age_from:F2.age_from,age_to:F2.age_to,players:F2.players,minutes:F2.minutes,equipment:F2.equipment,focus:F2.focus,setup:F2.setup,points:F2.points,video:F2.video,diagram,author_name:F2.author_name};
+  drBusy=true;render();
+  try{const r=F2.id?await c.from("drills").update(row).eq("id",F2.id).select("id"):await c.from("drills").insert(Object.assign(row,{club:CLUB_ID,author_team:`${TEAM.ageGroup||""}`.trim()})).select("id");
+    if(r.error)throw r.error;await loadDrills();drOpen=(r.data&&r.data[0]&&r.data[0].id)||F2.id||null;drEdit=null;toast(F2.id?"Drill saved.":"Drill added. Every coach at the club can see it now.")}
+  catch(e){toast("Couldn't save the drill. Check your connection and try again.")}
+  drBusy=false;render()}
+document.addEventListener("click",async e=>{if(view!=="drills"&&view!=="training")return;const t=e.target.closest("button");if(!t)return;const d=t.dataset;
+  if(t.id==="drNew"){drEdit=drBlank();drOpen=null;if(view!=="drills")setView("drills");else render();return}
+  if(view!=="drills")return;
+  if(d.drill){drOpen=d.drill;render();window.scrollTo({top:0});return}
+  if(t.id==="drBack"){drOpen=null;render();return}
+  if(d.drfocus!==undefined){drFocus=drFocus===d.drfocus&&d.drfocus?"":d.drfocus;render();return}
+  if(d.drfav){drFavSet(d.drfav,!drFavs().includes(d.drfav));render();return}
+  if(d.drtag){drRead();const f=drEdit.focus;drEdit.focus=f.includes(d.drtag)?f.filter(x=>x!==d.drtag):f.concat(d.drtag);render();return}
+  if(d.dredit){const x=DRILLS.find(y=>y.id===d.dredit);if(x){drEdit=Object.assign(drBlank(),x,{pick:""});render()}return}
+  if(d.drdel){if(!confirm("Remove this drill from the club library? Other coaches won't see it any more."))return;
+    const {error}=await drClub().from("drills").delete().eq("id",d.drdel);if(error){toast("Couldn't remove it. Try again.");return}await loadDrills();drOpen=null;toast("Drill removed.");render();return}
+  if(d.drboard){const x=DRILLS.find(y=>y.id===d.drboard);if(!x||!x.diagram||!x.diagram.board)return;const s=tbStore(),k="drill";
+    s.boards[k]=Object.assign(tbNew(""),JSON.parse(JSON.stringify(x.diagram.board)),{title:x.title,squad:players.filter(p=>p.current).map(p=>p.name),at:Date.now()});s.cur=k;tbSel=null;tbUndo=[];tbMode="move";tbSave();setView("tactics");return}
+  if(t.id==="drToBoard"){drRead();setView("tactics");toast("Draw the drill, then come back to the Training page and tap Add a drill.");drEdit=null;return}
+  if(t.id==="drSave"){drSave();return}
+  if(t.id==="drCancel"){drEdit=null;render();return}
+});
+document.addEventListener("input",e=>{if(view!=="drills")return;if(e.target.id==="drQ"){drQ=e.target.value;clearTimeout(drQT);const pos=e.target.selectionStart;drQT=setTimeout(()=>{render();const i=$("#drQ");if(i){i.focus();try{i.setSelectionRange(pos,pos)}catch(x){}}},250)}});
+document.addEventListener("change",e=>{if(view!=="drills")return;if(e.target.id==="drAge"){drAge=e.target.value;render()}});
 // help and changes: coaches send requests (public.help_requests); a scheduled Claude task answers them in "reply"
 let HELP=[],helpShot=null,helpBusy=false;
 const HELP_KINDS={fix:"Fix something wrong",change:"Change or add something",question:"Ask a question",problem:"Something isn't working"};
@@ -1438,7 +1544,7 @@ function tbRugbyMarks(line){const dash=(y,d)=>`<line x1="3" y1="${y}" x2="97" y2
   return `<rect x="3" y="3" width="94" height="144" ${line}/><line x1="3" y1="11" x2="97" y2="11" ${line}/><line x1="3" y1="139" x2="97" y2="139" ${line}/><line x1="3" y1="75" x2="97" y2="75" ${line}/>
     <line x1="3" y1="39" x2="97" y2="39" ${line}/><line x1="3" y1="111" x2="97" y2="111" ${line}/>${dash(62,"2 2")}${dash(88,"2 2")}${dash(17,"1 2")}${dash(133,"1 2")}
     <line x1="8" y1="11" x2="8" y2="139" ${line} stroke-dasharray="1 2"/><line x1="92" y1="11" x2="92" y2="139" ${line} stroke-dasharray="1 2"/>${posts(11,1)}${posts(139,-1)}`}
-function tbSvg(b,live,rot){const [,kb,ki]=tbKit(b),[ob,oi]=tbOppCol(b),line='stroke="rgba(255,255,255,.85)" stroke-width=".5" fill="none"';
+function tbSvg(b,live,rot,anon){const [,kb,ki]=tbKit(b),[ob,oi]=tbOppCol(b),line='stroke="rgba(255,255,255,.85)" stroke-width=".5" fill="none"';
   const stripes=Array.from({length:10},(_,i)=>`<rect x="0" y="${i*15}" width="100" height="15" fill="${i%2?"#2E8B3E":"#33963F"}"/>`).join("");
   const marks=RUGBY?tbRugbyMarks(line):`<rect x="3" y="3" width="94" height="144" ${line}/><line x1="3" y1="75" x2="97" y2="75" ${line}/><circle cx="50" cy="75" r="9" ${line}/><circle cx="50" cy="75" r=".7" fill="#fff"/>
     <rect x="21" y="3" width="58" height="21" ${line}/><rect x="36" y="3" width="28" height="7" ${line}/><circle cx="50" cy="17" r=".6" fill="#fff"/><rect x="44" y=".6" width="12" height="2.4" ${line}/>
@@ -1446,7 +1552,7 @@ function tbSvg(b,live,rot){const [,kb,ki]=tbKit(b),[ob,oi]=tbOppCol(b),line='str
   const heads=Object.keys(TB_ARROW).map(t=>`<marker id="tbh-${t}" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M0 0L10 5L0 10z" fill="${TB_ARROW[t][1]}"/></marker>`).join("");
   const tok=(x,y,fill,ink,txt,name,attr,sel,gk)=>`<g class="tbt" transform="translate(${x} ${y})"${attr}>${rot?'<g transform="rotate(-90)">':""}<circle r="4.2" fill="${gk?"#1AA8A0":fill}" stroke="${sel?"#FF4FA3":fill.toUpperCase()==="#FFFFFF"?"#111":"#fff"}" stroke-width="${sel?1:.6}"/><text y="1.5" text-anchor="middle" font-size="4" font-weight="800" fill="${gk?"#fff":ink}" font-family="Arial,sans-serif">${esc(txt)}</text>${name?`<text y="${(rot?x>92:y>140)?-5.6:8.4}" text-anchor="middle" font-size="3" font-weight="700" fill="#fff" stroke="rgba(0,0,0,.75)" stroke-width=".9" stroke-linejoin="round" paint-order="stroke" font-family="Arial,sans-serif">${esc(name)}</text>`:""}${rot?"</g>":""}</g>`;
   const them=b.oppOn?b.them.map((p,i)=>tok(p.x,p.y,ob,oi,String(i+1),"",live?` data-tbtok="t${i}"`:"",tbSel==="t"+i&&live)).join(""):"";
-  const us=b.us.map((p,i)=>tok(p.x,p.y,kb,ki,p.n?(numOf(p.n)||p.n.slice(0,1)):"?",p.n||"Empty",live?` data-tbtok="u${i}"`:"",tbSel==="u"+i&&live,p.gk)).join("");
+  const us=b.us.map((p,i)=>tok(p.x,p.y,kb,ki,anon?String(i+1):p.n?(numOf(p.n)||p.n.slice(0,1)):"?",anon?"":p.n||"Empty",live?` data-tbtok="u${i}"`:"",tbSel==="u"+i&&live,p.gk)).join("");
   const ball=b.ball?`<g class="tbt" transform="translate(${b.ball.x} ${b.ball.y})"${live?' data-tbtok="ball"':""}>${RUGBY?TB_OVAL:TB_BALL}</g>`:"";
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${rot?"150 100":"100 150"}"${live?' class="tbpitch" id="tbPitch" role="img" aria-label="Tactics board"':' width="1000" height="1500"'}><defs>${heads}<clipPath id="tbBallClip"><circle r="3"/></clipPath></defs><g id="tbG"${rot?' transform="translate(150 0) rotate(90)"':""}>${stripes}${marks}<g id="tbArrows">${b.arrows.map((a,i)=>tbArrowSvg(a,i,live)).join("")}</g>${them}${us}${ball}</g></svg>`}
 function tbFixtures(){const today=todayLocal();return sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&!result(m)&&(m.date||"")>=today)).slice(0,6)}
@@ -2833,12 +2939,12 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit","drills"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();
   await loadTav();alSync();
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadKit();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadKit();await loadDrills();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
@@ -2893,7 +2999,7 @@ document.addEventListener("submit",async e=>{
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
   db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit);
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit)||(view==="drills"&&!!drEdit);
   db.collection("matches").onSnapshot(s=>{RAW=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");matches=pubMatches();if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
@@ -2906,7 +3012,7 @@ document.addEventListener("submit",async e=>{
     else showLogin("<b>That sign-in link has already been used or has run out.</b> Each email link works once. Type your email for a new one, then use the newest email (or type its code). Next time, open this page from your bookmark or Home Screen, not the old email. ")}
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}

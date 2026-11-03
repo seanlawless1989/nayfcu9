@@ -10,6 +10,8 @@ Give each team's team.js  club: {name: "<short>", url: "<siteUrl>"}  so its site
 Output goes to dist/club-<slug>/: index.html and the crest, ready for GitHub Pages or any static host.
 The page is kept out of search engines like the team sites; set "index": true in club.json to allow it.
 A small "Powered by Touchline Tales" link sits in the footer; set "poweredBy": false in club.json to hide it.
+"admin": {id, supabaseUrl, supabaseAnonKey} also builds the club admin page in admin/ (reports inbox, shared drills,
+club admins): id = the club's row in club.clubs (supabase/26_club_admin.sql), and the Supabase project its teams share.
 """
 import html, json, re, shutil, sys
 from pathlib import Path
@@ -47,6 +49,13 @@ def main():
         cards.append(f'<a class="team" href="{esc(url)}">{inner}<i>→</i></a>' if url else f'<div class="team soon">{inner}</div>')
     powered = "" if club.get("poweredBy") is False else (
         f'<br><a class="powered" href="https://touchlinetales.club/?ref=powered-club-{slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>')
+    adm = club.get("admin")
+    if adm:
+        for k in ("id", "supabaseUrl", "supabaseAnonKey"):
+            if not adm.get(k):
+                sys.exit(f"club.json admin needs {k}")
+        build_admin(club, adm, out, crest, (club_c, deep, ink, second))
+        powered = '<br><a class="powered" href="admin/">Club admin</a>' + powered
     robots = "" if club.get("index") else '<meta name="robots" content="noindex,nofollow,noimageindex,noarchive,nosnippet">\n'
     page = f"""<!doctype html>
 <html lang="en-GB">
@@ -85,6 +94,39 @@ footer .powered{{display:inline-block;margin-top:10px;font-size:12px;color:var(-
 """
     (out / "index.html").write_text(page)
     print(f"Built {out}")
+
+
+def build_admin(club, adm, out, crest, colours):
+    club_c, deep, ink, second = colours
+    d = out / "admin"
+    d.mkdir()
+    shutil.copy(ROOT / "tools" / "club_admin" / "admin.js", d / "admin.js")
+    cfg = {"id": adm["id"], "name": club["name"], "short": club.get("short") or club["name"],
+           "supabaseUrl": adm["supabaseUrl"], "supabaseAnonKey": adm["supabaseAnonKey"]}
+    css = (ROOT / "tools" / "club_admin" / "admin.css").read_text()
+    (d / "index.html").write_text(f"""<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noimageindex,noarchive,nosnippet">
+<meta name="theme-color" content="{esc(club_c)}">
+<title>{esc(cfg['short'])} club admin</title>
+<link rel="icon" href="../{esc(crest)}">
+<style>:root{{--club:{club_c};--deep:{deep};--ink:{ink};--second:{second}}}
+{css}</style>
+<script>window.CLUB={json.dumps(cfg)};</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<header><a href="../"><img src="../{esc(crest)}" alt=""></a><div><h1>{esc(cfg['short'])} club admin</h1><div id="who"></div></div></header>
+<main id="main"><div class="card">Loading…</div></main>
+<div id="toast" hidden role="status"></div>
+<footer>Only the club lead, club admins and the club's coaches can sign in here. <a href="https://touchlinetales.club/?ref=powered-club-admin" target="_blank" rel="noopener">Touchline Tales</a></footer>
+<script src="admin.js?v=1"></script>
+</body>
+</html>
+""")
 
 
 if __name__ == "__main__":
