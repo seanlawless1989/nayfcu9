@@ -571,3 +571,52 @@ table.lb.cs .ctag{white-space:normal;line-height:1.3}
 .ddtools button[aria-pressed="true"]{background:var(--club);color:var(--clubInk);border-color:var(--club)}
 .ddwrap{width:100%;border-radius:12px;overflow:hidden;background:#33963F}.ddpitch{display:block;width:100%;height:auto;aspect-ratio:3/2;touch-action:none;user-select:none;-webkit-user-select:none}
 .ddpitch .tbt{cursor:grab}
+/* medals: players' badges for the season, and coaches' and parents' own badges (medalHtml in app.js) */
+.mdl{--m1:#F0B27A;--m2:#9C5A2B;--m3:#6E3B17;display:inline-flex;flex-direction:column;align-items:center;gap:3px;width:78px;text-align:center;vertical-align:top}
+.mdl.silver{--m1:#FBFCFE;--m2:#A7B0BC;--m3:#6B7480}.mdl.gold{--m1:#FFF0A0;--m2:#E0A81E;--m3:#9A6A00}
+.mdl.platinum{--m1:#F2FFFF;--m2:#8FC8E6;--m3:#4A86A8}
+.mdl .rib{width:24px;height:16px;margin-bottom:-6px;background:linear-gradient(90deg,var(--club) 0 34%,var(--gold) 34% 66%,var(--club) 66%);clip-path:polygon(0 0,100% 0,100% 100%,50% 62%,0 100%)}
+.mdl .disc{position:relative;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.75) 0 5%,transparent 6%),conic-gradient(from 200deg,var(--m1),var(--m2),var(--m1),var(--m2),var(--m1));
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.55),inset 0 0 0 5px var(--m3),0 3px 7px rgba(0,0,0,.25)}
+.mdl.platinum .disc{background:radial-gradient(circle at 32% 26%,#fff 0 5%,transparent 6%),conic-gradient(from 0deg,#E8FBFF,#B9E3F7,#FFE9F7,#D8FFF0,#C8D8FF,#E8FBFF)}
+.mdl .disc i{font-style:normal;font-size:26px;line-height:1;filter:drop-shadow(0 1px 0 rgba(0,0,0,.25))}
+.mdl b{font:800 12px/1.15 var(--body);color:var(--ink)}.mdl>span:not(.disc):not(.rib):not(.mprog){font-size:11px;color:var(--muted);line-height:1.2}
+.mdl.lock .disc{background:var(--field);box-shadow:inset 0 0 0 2px var(--line)}.mdl.lock .disc i{filter:grayscale(1);opacity:.35}.mdl.lock .rib{opacity:.25}.mdl.lock b{color:var(--muted)}
+.mdl .disc.blank{background:#fff;box-shadow:inset 0 0 0 .6mm #14182E;border:1mm dashed var(--club)}
+.mprog{display:block;width:60px;height:5px;border-radius:3px;background:var(--line);overflow:hidden}.mprog i{display:block;height:100%;background:var(--club)}
+.mdl.sm{width:46px}.mdl.sm .rib{width:16px;height:10px;margin-bottom:-4px}.mdl.sm .disc{width:36px;height:36px}.mdl.sm .disc i{font-size:17px}.mdl.sm b,.mdl.sm>span:not(.disc):not(.rib){display:none}
+.mdl.xl{width:180px}.mdl.xl .rib{width:44px;height:30px;margin-bottom:-10px}.mdl.xl .disc{width:120px;height:120px}.mdl.xl .disc i{font-size:58px}.mdl.xl b{font:400 22px var(--display);margin-top:6px}
+.mdgrid{display:flex;flex-wrap:wrap;gap:10px 6px}
+.mdrow>span{display:flex;align-items:center;gap:10px}
+.mdlist{display:grid;gap:10px}.mditem{display:grid;grid-template-columns:46px 1fr;gap:10px;align-items:start;padding:8px 10px;border-radius:10px;background:var(--field)}
+.mditem .tier{font:800 10px var(--body);text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:999px;background:#E9C9A7;color:#5A3412}
+.mditem .tier.silver{background:#E3E7EC;color:#3E4652}.mditem .tier.gold{background:#FFE58A;color:#6B4A00}.mditem .tier.platinum{background:#CFEFFF;color:#1F5878}
+.mdname{font:700 12.5px var(--body);border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:3px 10px;margin:4px 2px 0 0;cursor:pointer}
+.mdmini{white-space:nowrap}.mdmini span{font-size:16px;margin-left:1px}
+.mystrip{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.mystrip>div:nth-child(2){flex:1 1 180px}.mystrip .mdgrid{gap:4px;flex-wrap:nowrap}
+.medals details summary{cursor:pointer;font-weight:700;color:var(--club)}
+.mdpop{position:fixed;inset:0;z-index:300;background:rgba(5,8,20,.72);display:grid;place-items:center;padding:16px;animation:mdfade .25s ease-out}
+.mdpop-in{position:relative;background:var(--card);color:var(--ink);border-radius:20px;padding:26px 20px 20px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;border-top:6px solid var(--gold)}
+.mdpop-in .kick{font:400 20px var(--display);text-transform:uppercase;color:var(--club);margin-bottom:6px}
+.mdpop-in .mdl.xl{animation:mdpop .7s cubic-bezier(.2,1.6,.4,1)}.mdpop-in p{margin:8px 0}
+.mdpop .confetti{position:absolute;inset:0;pointer-events:none}
+.mdpop .confetti i{position:absolute;top:-30px;left:calc(var(--i) * 12% + 4%);font-style:normal;font-size:22px;animation:mdfall 2.2s ease-in calc(var(--i) * .12s) both}
+@keyframes mdfade{from{opacity:0}}
+@keyframes mdpop{from{transform:scale(.2) rotate(-25deg);opacity:0}}
+@keyframes mdfall{to{transform:translateY(420px) rotate(320deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.mdpop,.mdpop-in .mdl.xl,.mdpop .confetti i{animation:none}.mdpop .confetti{display:none}}
+/* medals in the printed sticker book */
+.bp .bmd{margin-top:6mm}.bp .bmd h3{font-size:13pt;margin-bottom:2mm}
+.bp .mdls{display:grid;grid-template-columns:repeat(8,1fr);gap:1.5mm 1mm}
+.bp .mdl{width:auto;gap:.6mm}.bp .mdl .rib{width:6mm;height:4mm;margin-bottom:-1.5mm}.bp .mdl .disc{width:14mm;height:14mm}.bp .mdl .disc i{font-size:7mm}
+.bp .mdl b{font:800 6.5pt/1.1 "Archivo",sans-serif;color:#14182E}
+.bp .mdl.more .disc{background:var(--gold);box-shadow:none}.bp .mdl.more .disc i{font:400 10pt "Archivo Black",sans-serif;filter:none}
+.bp .mdsheet{display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:40mm;gap:2mm}
+.bp .mdstk{border:.3mm dashed #bbb;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;text-align:center}
+.bp .mdstk .mdl .disc{width:22mm;height:22mm}.bp .mdstk .mdl .disc i{font-size:11mm}.bp .mdstk .mdl .rib{width:9mm;height:6mm;margin-bottom:-2mm}
+.bp .mdstk>span{font:800 7pt "Archivo",sans-serif;text-transform:uppercase;color:#5b5f78}
+@media print{.mdpop{display:none!important}}
+.mdgroup summary{cursor:pointer;list-style:none}.mdgroup summary::-webkit-details-marker{display:none}
+.mdgroup summary h3{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0}.mdgroup summary h3:after{content:"▾";color:var(--muted)}
+.mdgroup[open] summary h3:after{content:"▴"}.mdgroup[open] summary{margin-bottom:10px}

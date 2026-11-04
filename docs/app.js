@@ -151,7 +151,7 @@ function render(){
   if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   if(setupPending()&&!canWrite&&view!=="login"){main.innerHTML=settingUpView();document.body.classList.toggle("ro",true);return}
   renderTicker();
-  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+homeView();
+  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+myBadgeStrip()+homeView();
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
   else if(view==="ratings")main.innerHTML=ratingsView();
@@ -186,6 +186,7 @@ function render(){
   else if(view==="ftimport")main.innerHTML=ftView();
   else if(view==="help")main.innerHTML=helpView();
   else if(view==="book")main.innerHTML=bookView();
+  else if(view==="medals")main.innerHTML=medalsView();
   else if(view==="tnew"||view==="tedit")main.innerHTML=tFormView();
   else if(view==="hnew"||view==="hedit")main.innerHTML=hFormView();
   else if(view==="players")main.innerHTML=playerView?playerDetail(playerView):playersView();
@@ -193,6 +194,7 @@ function render(){
   else if(view==="opps")main.innerHTML=oppView?oppDetail(oppView):oppsView();
   else if(view==="new"||view==="edit")main.innerHTML=formView();
   document.body.classList.toggle("ro",!canWrite);
+  if(me)medalCheck();
 }
 
 // a tournament we've entered whose games aren't on the site yet comes before the next match when it's sooner
@@ -219,7 +221,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
+const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
@@ -263,6 +265,7 @@ function homeView(){if(noScores())return homeNoScores();
     <section class="card"><h3>Latest result, any competition</h3>${latest?matchRow(latest):`<p class="hint">No results yet this season.</p>`}
       ${(tn=>tn?`<h3 style="margin-top:14px">Next up</h3>${tCard(tn)}`:upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:"")(nextTournament(upcoming&&upcoming.date))}</section>
     ${(ms=>ms.length?`<section class="card"><h3>Recent milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>(x.date||"")>=new Date(Date.now()-60*864e5).toISOString().slice(0,10)).slice(0,6))}
+    ${recentMedalsCard()}
     <section class="card"><h3>Top ${RUGBY?"try ":""}scorers, all games</h3>${scorers.length?`<table class="lb"><tbody>${scorers.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.goals/max*100)}%"></i><b>${o.goals}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No ${SP.goals} logged yet.</p>`}</section>
     ${RUGBY?(pp=>`<section class="card"><h3>Top points scorers</h3>${pp.length?`<table class="lb"><tbody>${pp.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.pts/pp[0][1].pts*100)}%"></i><b>${o.pts}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No points logged yet.</p>`}</section>`)(Object.entries(ps).filter(([,o])=>o.pts>0).sort((a,b)=>b[1].pts-a[1].pts||a[0].localeCompare(b[0]))):""}
     ${SP.assists&&assistsTracked(season)?`<section class="card"><h3>Top assists</h3>${assisters.length?`<table class="lb"><tbody>${assisters.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.assists/assisters[0][1].assists*100)}%"></i><b>${o.assists}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No assists logged yet.</p>`}</section>`:""}
@@ -279,6 +282,7 @@ function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
     <section class="card"><h3>Recent games</h3>${done.length?done.slice(-3).reverse().map(matchRow).join(""):`<p class="hint">No games played yet this season.</p>`}
       ${(tn=>tn?`<h3 style="margin-top:14px">Next up</h3>${tCard(tn)}`:upcoming?`<h3 style="margin-top:14px">Next up</h3>${matchRow(upcoming)}`:"")(nextTournament(upcoming&&upcoming.date))}</section>
     ${(ms=>ms.length?`<section class="card"><h3>Recent milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>(x.date||"")>=new Date(Date.now()-60*864e5).toISOString().slice(0,10)).slice(-5).reverse())}
+    ${recentMedalsCard()}
     <section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="text-align:right"><b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">None yet.</p>`}</section>
   </div><p class="hint">${RUGBY?"Scores and scorers aren't shown publicly for this age group, as the club has chosen.":"Scores and scorers aren't shown publicly for this age group, in line with FA rules for youth football."}</p>${sponsorStrip()}</div>`;
 }
@@ -608,7 +612,7 @@ async function parentJoin(){const el=$("#pCode"),code=(el&&el.value||"").replace
   const {data,error}=await sb.rpc("link_family",{p_code:code});
   if(error){toast(/too many/i.test(error.message)?"Too many tries. Wait an hour, or ask the coach to check the code.":"Couldn't check that code. Try again.");return}
   if(!data){toast("That code isn't right. Check it with the coach.");return}
-  await loadParent();await loadKit();kitDraft=null;await loadTav();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
+  await loadParent();await loadKit();kitDraft=null;await loadTav();logActive();await loadMyDays();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
   const nx=parentNext;parentNext=null;if(nx)setView(nx);else render()}
 async function parentLeave(n){
   if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();await loadKit();kitDraft=null;authBox();render();toast(`${n} is no longer linked to this phone.`);return}
@@ -830,7 +834,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
   ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
-  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
+  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
   ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts. Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
@@ -1983,6 +1987,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("[data-chee
   CH_BUSY=true;refreshCheerCard(d.mid);
   const {error}=await sb.rpc("send_cheer",{p_match:d.mid,p_voter:v,p_cheer:+d.cheer,p_name:name||null});CH_BUSY=false;
   if(error){refreshCheerCard(d.mid);const t=error.message||"";toast(/slow down/i.test(t)?"That's 3 cheers in 10 minutes. Have a breather and try again soon.":/off for/i.test(t)?"Cheers are off for this team.":/week before/i.test(t)?"Cheers open a week before the game.":/lots of/i.test(t)?"So many cheers already! Try again in a minute.":"Couldn't send that cheer. Try again.");return}
+  try{localStorage.setItem(SK+".cheers",(+localStorage.getItem(SK+".cheers")||0)+1)}catch(x){}
   toast("Cheer sent! 📣");await loadCheers(d.mid,false)});
 document.addEventListener("input",e=>{if(e.target.id==="cheerName")try{localStorage.setItem(SK+".cheerName",e.target.value.trim())}catch(x){}});
 setInterval(pollLive,15000);setInterval(()=>{renderTicker();refreshHomeLive();if(view==="live"&&LV&&LV.plan&&!LV.plan.due&&!LV.ask&&LV.subSlot==null&&planDue()){render();return}if(view==="live"&&LV&&LV.status==="live"&&!LV.ask&&LV.subSlot==null){const b=document.querySelector(".live .board small");if(b)b.innerHTML=`<span class="lv">LIVE</span> ${minuteOf(LV)}`}},20000);
@@ -2052,8 +2057,276 @@ function resultsView(){
 }
 
 
+// ---------- medals: badges the players win across a season, and badges for coaches and parents who keep coming back ----------
+// Player medals are worked out on the phone from the season's games, so they need no database and follow the same rules
+// as the rest of the site: when the club keeps scores private (U7-U11), visitors' copies of the games have no goals or
+// results, so only medals for turning up, keeping goal and awards are shown to them; coaches see the lot. Coach-only
+// things (ratings, attendance, availability, birthdays, playing time) never count towards a player's medals.
+// Ids are remembered on phones (which medals someone has already seen), so never change one once it's live.
+// tier: 1 bronze, 2 silver, 3 gold, 4 platinum. stat+at: counting medals, so the player page can show progress.
+// sc: needs scores, so hidden from visitors when scores are private. sp: football only / rugby only.
+const MD_TIER=["","bronze","silver","gold","platinum"],MD_TIERNAME=["","Bronze","Silver","Gold","Platinum"];
+const MD_GROUPS=[["goals",SP.Goals],["assists","Assists"],["keeper","Goalkeeping"],["kicks","Kicking"],["apps","Turning up"],["team","Team wins"],["awards","Awards"],["special","Special moments"]];
+function medalDefs(){if(medalDefs.c)return medalDefs.c;const G=SP.goal,Gs=SP.goals,P=POTM,out=[];
+  const add=(group,id,ic,name,how,tier,o)=>out.push(Object.assign({group,id,ic,name,how,tier},o||{}));
+  // scoring
+  [[1,"g1",SP.ball,"Off the mark",`First ${G} of the season`,1],[5,"g5","🖐️","High five",`5 ${Gs} this season`,1],[10,"g10","🔟","Double figures",`10 ${Gs} this season`,2],
+   [15,"g15","🎯",RUGBY?"Try machine":"Goal machine",`15 ${Gs} this season`,2],[20,"g20","🚀","Twenty club",`20 ${Gs} this season`,3],[30,"g30","🔥","Hotshot",`30 ${Gs} this season`,3],
+   [50,"g50","👑","Half century",`50 ${Gs} this season`,4]].forEach(([at,id,ic,nm,how,t])=>add("goals",id,ic,nm,how,t,{stat:"goals",at,sc:1}));
+  add("goals","brace","✌️","Brace",`2 ${Gs} in one game`,1,{sc:1});
+  add("goals","hat","🎩","Hat-trick hero",`3 ${Gs} in one game`,2,{sc:1});
+  add("goals","haul","💥","Fantastic four",`4 ${Gs} in one game`,3,{sc:1});
+  add("goals","five","🌟","Fab five",`5 or more ${Gs} in one game`,4,{sc:1});
+  add("goals","sc2","🎳","On a roll",`Scored in 2 games in a row`,1,{sc:1});
+  add("goals","sc3","♨️","Hot streak",`Scored in 3 games in a row`,2,{sc:1});
+  add("goals","sc5","⚡","Unstoppable",`Scored in 5 games in a row`,3,{sc:1});
+  add("goals","ghome","🏠","Home hero",`Scored in a home game`,1,{sc:1});
+  add("goals","gaway","🚌","Away day",`Scored in an away game`,1,{sc:1});
+  add("goals","gcup","🏆","Cup scorer",`Scored in a cup game`,2,{sc:1});
+  add("goals","gtour","🎪","Tournament scorer",`Scored at a tournament`,1,{sc:1});
+  add("goals","gopp5","🗺️","Spread the love",`Scored against 5 different teams`,2,{sc:1});
+  add("goals","early","🐦","Early bird",`Scored in the first 5 minutes (games followed live)`,2,{sc:1});
+  add("goals","late","⏱️","Last gasp",`Scored in the last 5 minutes (games followed live)`,2,{sc:1});
+  add("goals","opener","🔓","Opener",`Scored the first ${G} of a game (games followed live)`,1,{sc:1});
+  add("goals","eq","⚖️","Equaliser",`Scored to draw level (games followed live)`,2,{sc:1});
+  add("goals","winner","🥇","Match winner",`Scored the ${G} that won the game (games followed live)`,3,{sc:1});
+  // assists (football)
+  [[1,"a1","🤝","Provider","First assist of the season",1],[5,"a5","🎁","Playmaker","5 assists this season",2],[10,"a10","🧠","Maestro","10 assists this season",3],[20,"a20","🪄","Magician","20 assists this season",4]]
+    .forEach(([at,id,ic,nm,how,t])=>add("assists",id,ic,nm,how,t,{stat:"assists",at,sc:1,sp:"football"}));
+  add("assists","a2g","👯","Double assist","2 assists in one game",2,{sc:1,sp:"football"});
+  add("assists","a3g","🎼","Conductor","3 assists in one game",3,{sc:1,sp:"football"});
+  add("assists","ga","🔁","Do it all",`Scored and made an assist in the same game`,2,{sc:1,sp:"football"});
+  // goalkeeping (football)
+  add("keeper","gk1","🧤","Gloves on","Played in goal",1,{stat:"gk",at:1,sp:"football"});
+  add("keeper","gk5","🥅","Number one","Played in goal in 5 games",2,{stat:"gk",at:5,sp:"football"});
+  [[1,"cs1","🧱","Clean sheet","Kept a clean sheet in goal",1],[3,"cs3","🛡️","Brick wall","3 clean sheets this season",2],[5,"cs5","🙌","Safe hands","5 clean sheets this season",3],[10,"cs10","🏰","Fortress","10 clean sheets this season",4]]
+    .forEach(([at,id,ic,nm,how,t])=>add("keeper",id,ic,nm,how,t,{stat:"cs",at,sc:1,sp:"football"}));
+  add("keeper","both","↔️","Both ends",`Scored and played in goal this season`,2,{sc:1,sp:"football"});
+  // kicking (rugby)
+  add("kicks","con1","🦵","On target","First conversion of the season",1,{stat:"con",at:1,sc:1,sp:"rugby"});
+  add("kicks","con5","🎯","Kicking boots","5 conversions this season",2,{stat:"con",at:5,sc:1,sp:"rugby"});
+  add("kicks","con15","🏹","Sharpshooter","15 conversions this season",3,{stat:"con",at:15,sc:1,sp:"rugby"});
+  add("kicks","drop","💧","Drop goal","Kicked a drop goal",3,{sc:1,sp:"rugby"});
+  add("kicks","pen","⚖️","Three from the tee","Kicked a penalty goal",2,{sc:1,sp:"rugby"});
+  [[25,"pt25","🔢","25 points","25 points this season",1],[50,"pt50","💯","50 points","50 points this season",2],[100,"pt100","🚀","100 points","100 points this season",3],[200,"pt200","👑","200 points","200 points this season",4]]
+    .forEach(([at,id,ic,nm,how,t])=>add("kicks",id,ic,nm,how,t,{stat:"pts",at,sc:1,sp:"rugby"}));
+  // turning up
+  [[1,"ap1","👟","Kick-off","First game of the season",1],[5,"ap5","5️⃣","Regular","5 games this season",1],[10,"ap10","🔟","Ten up","10 games this season",2],[15,"ap15","💪","Squad stalwart","15 games this season",2],
+   [20,"ap20","⭐","Mainstay","20 games this season",3],[30,"ap30","💎","Ever-ready","30 games this season",4]].forEach(([at,id,ic,nm,how,t])=>add("apps",id,ic,nm,how,t,{stat:"apps",at}));
+  add("apps","run5","🔗","Never misses","Played 5 team games in a row",1);
+  add("apps","run10","⛓️","Ironclad","Played 10 team games in a row",3);
+  add("apps","month","📆","Full month","Played every game in a month (3 or more games)",2);
+  add("apps","haway","🧭","Home and away","Played a home game and an away game",1);
+  add("apps","away5","🛣️","Road trip","Played 5 away games",2);
+  add("apps","cup","🏺","Cup tie","Played in a cup game",1);
+  add("apps","tour1","🎪","Tournament day","Played at a tournament",1);
+  add("apps","tour3","🎠","Tournament regular","Played at 3 tournaments",2);
+  add("apps","opp10","🌍","Explorer","Played against 10 different teams",2);
+  add("apps","xmas","🎄","Christmas cracker","Played a game in December",1);
+  add("apps","seasons","🍂","All weathers","Played in autumn, winter and spring",2);
+  add("apps","earlyko","🌅","Early riser","Played a game kicking off at 9.30am or earlier",1);
+  // team wins
+  [[1,"w1","🙌","First win","Played in a win",1],[5,"w5","✋","Five wins","Played in 5 wins",2],[10,"w10","🔟","Ten wins","Played in 10 wins",3],[20,"w20","🏅","Twenty wins","Played in 20 wins",4]]
+    .forEach(([at,id,ic,nm,how,t])=>add("team",id,ic,nm,how,t,{stat:"wins",at,sc:1}));
+  add("team","wrun3","📈","Winning run","Won 3 games in a row while playing",2,{sc:1});
+  add("team","unb5","🛡️","Unbeaten five","Played 5 games in a row without losing",2,{sc:1});
+  add("team","big","🎉","Big win",`Played in a win by ${RUGBY?"30 points":"5 goals"} or more`,2,{sc:1});
+  add("team","thriller","🎢","Thriller",RUGBY?"Played in a game with 60 points or more":"Played in a game with 6 goals or more",1,{sc:1});
+  add("team","tcs","🔒",RUGBY?"Nil to them":"Team clean sheet",RUGBY?"Played in a game where they didn't score":"Played in a game where we didn't concede",1,{sc:1});
+  add("team","comeback","🔄","Comeback","Won a game after being behind (games followed live)",3,{sc:1});
+  add("team","trophy","🏆","Silverware","Played at a tournament we won a trophy at",3);
+  // awards
+  [[1,"pm1",POTM_IC,"Star of the show",`First ${P} award this season`,1],[3,"pm3","🌟","Triple star",`3 ${P} awards this season`,2],[5,"pm5","💫","Superstar",`5 ${P} awards this season`,3],[10,"pm10","👑","Legend",`10 ${P} awards this season`,4]]
+    .forEach(([at,id,ic,nm,how,t])=>add("awards",id,ic,nm,how,t,{stat:"potm",at}));
+  add("awards","pmb2b","🔂","Back to back",`${P.charAt(0).toUpperCase()+P.slice(1)} in 2 games in a row`,2);
+  add("awards","pot","🎖️","Player of the tournament","Named player of the tournament",3);
+  add("awards","pom","📅","Player of the month","Named player of the month",3);
+  add("awards","pom2","🗓️","Monthly double","Player of the month twice this season",4);
+  // special
+  add("special","allr","🦸","All-rounder","Scored, made an assist and played in goal this season",3,{sc:1,sp:"football"});
+  add("special","collector","🧩","Collector","Won 10 different medals this season",2);
+  add("special","collector25","🗃️","Super collector","Won 25 different medals this season",4);
+  medalDefs.c=out.filter(d=>!d.sp||(d.sp==="rugby")===RUGBY);return medalDefs.c}
+const mdDef=id=>medalDefs().find(d=>d.id===id);
+// the medals a visitor can see: medals that need scores are hidden when the club keeps scores private
+const mdShown=()=>medalDefs().filter(d=>!d.sc||!noScores());
+const MD_EV=new Set(["early","late","opener","eq","winner","comeback"]);
+// work out every player's medals for a list of games (a season). Returns {won:{name:{id:{id,date,opp,mid}}}, stat:{name:{...}}}
+function medalsFor(list){const sOf=seasonOf((list[0]||{}).date||"")||season,key=sOf+"|"+list.length+"|"+list.reduce((a,m)=>a+(+m.us||0)+(+m.them||0)+Object.keys(played(m)).length+(m.potm?1:0),0);if(medalsFor.k===key&&medalsFor.m===matches&&medalsFor.t===tournaments&&medalsFor.p===POMS)return medalsFor.c;
+  const games=sortMatches(list.filter(m=>counted(m)&&!m.practice)),S={},won={};
+  const st=n=>S[n]||(S[n]={goals:0,assists:0,gk:0,cs:0,apps:0,wins:0,pts:0,con:0,potm:0,away:0,home:0,scRun:0,apRun:0,wRun:0,uRun:0,tours:new Set(),opps:new Set(),gopps:new Set(),mon:new Set()});
+  const give=(n,id,date,m)=>{if(!n)return;const w=won[n]=won[n]||{};if(!w[id])w[id]={id,date:date||(m&&m.date)||"",opp:m?m.opp||"":"",mid:m?m.id:""}};
+  const stats=medalDefs().filter(d=>d.stat);let prevPotm=null;const monthTeam={},monthPl={};
+  games.forEach(m=>{const pl=played(m),r=result(m),as=assistsOf(m),kp=keepersOf(m),ks=kicksOf(m),cup=/cup/i.test(m.comp||""),tour=m.tournament_id||m.comp==="Tournament",ok=oppKey(m.opp);
+    const who=m.apps!==false?Object.keys(pl):[...new Set([...Object.entries(pl).filter(([,g])=>+g>0).map(([n])=>n),...(m.potm?[m.potm]:[])])];
+    const ym=(m.date||"").slice(0,7),mo=+ym.slice(5,7);
+    if(m.apps!==false){monthTeam[ym]=(monthTeam[ym]||0)+1;Object.keys(S).forEach(n=>{if(!(n in pl))S[n].apRun=0})}
+    who.forEach(n=>{const o=st(n),g=+pl[n]||0,a=SP.assists&&assistsTracked(seasonOf(m.date))?+as[n]||0:0;
+      o.apps++;if(m.apps!==false){o.apRun++;const k=ym+"|"+n;monthPl[k]=(monthPl[k]||0)+1}
+      if(o.apRun>=5)give(n,"run5",0,m);if(o.apRun>=10)give(n,"run10",0,m);
+      o.goals+=g;o.assists+=a;if(RUGBY){o.pts+=ptsIn(m,n);const k=ks[n]||{};o.con+=+k.con||0;if(+k.drop)give(n,"drop",0,m);if(+k.pen)give(n,"pen",0,m)}
+      if(g>=2)give(n,"brace",0,m);if(g>=3)give(n,"hat",0,m);if(g>=4)give(n,"haul",0,m);if(g>=5)give(n,"five",0,m);
+      if(g){o.scRun++;o.gopps.add(ok);if(m.ha==="H")give(n,"ghome",0,m);if(m.ha==="A")give(n,"gaway",0,m);if(cup)give(n,"gcup",0,m);if(tour)give(n,"gtour",0,m);if(o.gopps.size>=5)give(n,"gopp5",0,m)}else o.scRun=0;
+      if(o.scRun>=2)give(n,"sc2",0,m);if(o.scRun>=3)give(n,"sc3",0,m);if(o.scRun>=5)give(n,"sc5",0,m);
+      if(a>=2)give(n,"a2g",0,m);if(a>=3)give(n,"a3g",0,m);if(a&&g)give(n,"ga",0,m);
+      if(n in kp&&!RUGBY){o.gk++;if(+kp[n])o.cs++}
+      if(!RUGBY&&o.goals&&o.gk)give(n,"both",0,m);if(!RUGBY&&o.goals&&o.assists&&o.gk)give(n,"allr",0,m);
+      if(m.ha==="A")o.away++;if(m.ha==="H")o.home++;if(o.home&&o.away)give(n,"haway",0,m);if(o.away>=5)give(n,"away5",0,m);
+      if(cup)give(n,"cup",0,m);if(tour){o.tours.add(m.tournament_id||m.date);give(n,"tour1",0,m);if(o.tours.size>=3)give(n,"tour3",0,m)}
+      if(ok){o.opps.add(ok);if(o.opps.size>=10)give(n,"opp10",0,m)}
+      if(mo===12)give(n,"xmas",0,m);o.mon.add(mo>=9&&mo<=11?"a":mo===12||mo<=2?"w":mo>=3&&mo<=5?"s":"");if(o.mon.has("a")&&o.mon.has("w")&&o.mon.has("s"))give(n,"seasons",0,m);
+      const ko=/^(\d{1,2})[:.](\d{2})/.exec(m.ko||"");if(ko&&+ko[1]*60+ +ko[2]<=570)give(n,"earlyko",0,m);
+      if(r){if(r==="W"){o.wins++;o.wRun++;o.uRun++}else if(r==="D"){o.wRun=0;o.uRun++}else{o.wRun=0;o.uRun=0}
+        if(o.wRun>=3)give(n,"wrun3",0,m);if(o.uRun>=5)give(n,"unb5",0,m);
+        if(r==="W"&&+m.us-+m.them>=(RUGBY?30:5))give(n,"big",0,m);if(+m.us+ +m.them>=(RUGBY?60:6))give(n,"thriller",0,m);if(+m.them===0)give(n,"tcs",0,m)}
+      stats.forEach(d=>{if(o[d.stat]>=d.at)give(n,d.id,0,m)})});
+    if(m.potm){const o=st(m.potm);o.potm++;stats.forEach(d=>{if(d.stat==="potm"&&o.potm>=d.at)give(m.potm,d.id,0,m)});if(prevPotm===m.potm)give(m.potm,"pmb2b",0,m)}prevPotm=m.potm||null;
+    // moments from the live timeline: scores after each event, in order
+    const ev=(m.live&&m.live.events)||[];if(ev.length&&r){let prev=[0,0],behind=false,first=true;const len=m.live.halfLen?gameLen(m.live):0;
+      ev.forEach(e=>{if(!e.s)return;const cur=String(e.s).split(/[–-]/).map(x=>+x);if(cur.length!==2||cur.some(isNaN))return;
+        const ours=e.k==="goal"&&e.n&&(!RUGBY||e.t==="try")&&e.n in pl;
+        if(ours){const abs=parseInt(e.m);// already counted from kick-off: 47' is two minutes into the second half
+          if(first&&prev[0]===0&&prev[1]===0)give(e.n,"opener",0,m);
+          if(abs&&abs<=5)give(e.n,"early",0,m);
+          if(len&&abs&&abs>=len-4)give(e.n,"late",0,m);
+          if(prev[0]<prev[1]&&cur[0]===cur[1])give(e.n,"eq",0,m);
+          if(r==="W"&&prev[0]<=+m.them&&cur[0]>+m.them)give(e.n,"winner",0,m)}
+        if(cur[0]<cur[1])behind=true;if(e.k==="goal"||e.k==="them")first=false;prev=cur});
+      if(behind&&r==="W")who.forEach(n=>give(n,"comeback",0,m))}});
+  // whole months: every game in a month with 3 or more team-sheet games
+  Object.entries(monthTeam).forEach(([ym,c])=>{if(c<3)return;const last=games.filter(m=>(m.date||"").startsWith(ym)).pop();Object.keys(S).forEach(n=>{if(monthPl[ym+"|"+n]===c)give(n,"month",0,last)})});
+  // tournaments, player of the tournament and player of the month
+  tournaments.filter(t=>seasonOf(t.date)===sOf).forEach(t=>{if(t.potm)give(t.potm,"pot",t.date);
+    if(t.trophy&&!/^(no|none|-)$/i.test(t.trophy.trim())){const tg=tGames(t);[...new Set([...tSquad(t),...tg.flatMap(m=>Object.keys(played(m)))])].forEach(n=>give(n,"trophy",tEnd(t)))}});
+  const pm={};POMS.filter(x=>seasonOf(x.month+"-01")===sOf).slice().reverse().forEach(x=>{pm[x.player]=(pm[x.player]||0)+1;give(x.player,"pom",x.month+"-28");if(pm[x.player]>=2)give(x.player,"pom2",x.month+"-28")});
+  // collectors last, counting the medals a visitor can see
+  const shown=new Set(mdShown().map(d=>d.id));Object.entries(won).forEach(([n,w])=>{const k=Object.keys(w).filter(id=>shown.has(id)).length;if(k>=10)give(n,"collector",Object.values(w).map(x=>x.date).sort()[9]);if(k>=25)give(n,"collector25",Object.values(w).map(x=>x.date).sort()[24])});
+  Object.values(won).forEach(w=>Object.keys(w).forEach(id=>{if(!shown.has(id))delete w[id]}));
+  const c={won,stat:S};Object.assign(medalsFor,{k:key,m:matches,t:tournaments,p:POMS,c});return c}
+// one player's medals this season, newest first
+function playerMedals(n,list){const w=(medalsFor(list||seasonMatches()).won[n])||{};return Object.values(w).sort((a,b)=>(b.date||"").localeCompare(a.date||""))}
+// the medals won lately by anyone, newest first
+function recentMedals(days){const from=new Date(Date.now()-days*864e5).toISOString().slice(0,10),out=[];
+  Object.entries(medalsFor(seasonMatches()).won).forEach(([n,w])=>Object.values(w).forEach(x=>{if((x.date||"")>=from)out.push(Object.assign({n},x))}));
+  return out.sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(mdDef(b.id).tier-mdDef(a.id).tier))}
+function medalHtml(d,o){o=o||{};const lock=o.locked;
+  return `<div class="mdl ${MD_TIER[d.tier]}${lock?" lock":""}${o.cls?" "+o.cls:""}" title="${esc(d.name)}: ${esc(d.how)}">${o.blank?`<span class="disc blank"></span>`:`<span class="rib"></span><span class="disc"><i>${d.ic}</i></span>`}
+    <b>${esc(d.name)}</b>${o.sub!=null?`<span>${esc(o.sub)}</span>`:""}${o.prog!=null?`<span class="mprog"><i style="width:${Math.round(o.prog*100)}%"></i></span>`:""}</div>`}
+const mdNice=d=>d?(x=>`${x.getDate()} ${MONTHS[x.getMonth()]}`)(new Date(d+"T12:00:00")):"";
+// progress towards the next counting medals a player hasn't won yet, closest first
+function nextMedals(n,k){const c=medalsFor(seasonMatches()),o=c.stat[n]||{},w=c.won[n]||{};const shown=new Set(mdShown().map(d=>d.id));
+  const best={};mdShown().filter(d=>d.stat&&!w[d.id]&&shown.has(d.id)).forEach(d=>{if(!best[d.stat]||d.at<best[d.stat].at)best[d.stat]=d});
+  return Object.values(best).map(d=>({d,have:o[d.stat]||0,p:Math.min(.99,(o[d.stat]||0)/d.at)})).sort((a,b)=>b.p-a.p).slice(0,k||3)}
+function playerMedalCard(n){const mine=playerMedals(n),all=mdShown(),got=new Set(mine.map(x=>x.id)),nx=nextMedals(n,3);
+  return `<section class="card medals"><h3>🏅 Medals: ${mine.length} won this season</h3>
+    ${mine.length?`<div class="mdgrid">${mine.map(x=>medalHtml(mdDef(x.id),{sub:mdNice(x.date)})).join("")}</div>`:`<p class="hint">No medals yet this season. Every game counts!</p>`}
+    ${nx.length?`<h3 style="margin-top:12px">Next to win</h3><div class="mdgrid">${nx.map(x=>medalHtml(x.d,{locked:1,sub:`${x.have} of ${x.d.at}`,prog:x.p})).join("")}</div>`:""}
+    <details style="margin-top:10px"><summary>See all ${all.length} medals</summary><div class="mdgrid" style="margin-top:8px">${all.map(d=>medalHtml(d,{locked:!got.has(d.id),sub:got.has(d.id)?"Won":d.how})).join("")}</div></details></section>`}
+function medalRow(x){const d=mdDef(x.id);return `<div class="ms mdrow"><span>${medalHtml(d,{cls:"sm"})}<span><b class="click" data-player="${esc(x.n)}">${esc(x.n)}</b> won <b>${esc(d.name)}</b><br><span class="hint">${esc(d.how)}${x.opp?` · v ${esc(x.opp)}`:""}${x.date?`, ${esc(mdNice(x.date))}`:""}</span></span></span>${canWrite?`<button class="mini edit-only" data-msgfx="${esc(x.n)}|${esc(d.name)}">Make graphic</button>`:""}</div>`}
+const recentMedalsCard=()=>(ms=>ms.length?`<section class="card"><h3>🏅 New medals</h3>${ms.map(medalRow).join("")}<div class="btns" style="margin-top:8px"><button class="mini" data-view="medals">Every medal</button></div></section>`:"")(recentMedals(21).slice(0,5));
+
+// ---------- your badges: for coaches and signed-in parents, for coming back to the site (supabase/27_my_badges.sql) ----------
+// The days come from active_days (one row per signed-in person per day, already kept for the coaches' usage card).
+// Everything else is counted from what this phone already has: its own availability answers, votes and cheers.
+let MYDAYS=null;
+async function loadMyDays(){MYDAYS=null;if(!sb||!me||(!canWrite&&!isParent()))return;try{const {data,error}=await sb.rpc("my_days");MYDAYS=error?[]:(Array.isArray(data)?data:[]).map(r=>typeof r==="string"?r:r.my_days||r.day).filter(Boolean)}catch(e){MYDAYS=[]}}
+function myMedalDefs(){const coach=canWrite,out=[];const add=(id,ic,name,how,tier,stat,at,who)=>{if(!who||(who==="coach")===coach)out.push({id,ic,name,how,tier,stat,at,group:"me"})};
+  add("v1","👋","Welcome aboard","Signed in to the site",1,"days",1);
+  add("v5","🙂","Getting the hang of it","Opened the site on 5 different days",1,"days",5);
+  add("v10","😎","Regular","Opened the site on 10 different days",2,"days",10);
+  add("v25","🎟️","Season ticket","Opened the site on 25 different days",2,"days",25);
+  add("v50","📣","Superfan","Opened the site on 50 different days",3,"days",50);
+  add("v100","🛋️","Part of the furniture","Opened the site on 100 different days",4,"days",100);
+  add("wk2","🔥","Two weeks running","Opened the site 2 weeks in a row",1,"weeks",2);
+  add("wk4","🔥","Four weeks running","Opened the site 4 weeks in a row",2,"weeks",4);
+  add("wk8","🔥","Eight weeks running","Opened the site 8 weeks in a row",3,"weeks",8);
+  add("wk12","☄️","Twelve weeks running","Opened the site 12 weeks in a row",3,"weeks",12);
+  add("wk20","🌋","Twenty weeks running","Opened the site 20 weeks in a row",4,"weeks",20);
+  add("md1","📣","Matchday","Opened the site on a match day",1,"mdays",1);
+  add("md5","🏟️","Matchday regular","Opened the site on 5 match days",2,"mdays",5);
+  add("md10","🎽","Never miss a game","Opened the site on 10 match days",3,"mdays",10);
+  add("md20","🏆","Every week, every game","Opened the site on 20 match days",4,"mdays",20);
+  add("app","📲","On the home screen","Opened the site as an app from the Home Screen",1,"app",1);
+  add("alerts","🔔","Alerts on","Turned on match alerts on this phone",1,"alerts",1);
+  add("av1","✅","Let us know",`Answered availability for the first time`,1,"avail",1,"parent");
+  add("av10","📋","Always lets us know",`Answered availability for 10 games`,2,"avail",10,"parent");
+  add("av25","🗂️","Coach's favourite",`Answered availability for 25 games`,3,"avail",25,"parent");
+  add("tav1","🏃","Training too","Answered for a training session",1,"tav",1,"parent");
+  add("tav10","👟","Training regular","Answered for 10 training sessions",2,"tav",10,"parent");
+  add("vote1","🗳️","First vote","Voted in a team vote",1,"votes",1,"parent");
+  add("vote5","🎙️","Voice of the touchline","Voted in 5 team votes",2,"votes",5,"parent");
+  add("ch1","📢","Cheerleader","Sent a cheer from this phone",1,"cheers",1,"parent");
+  add("ch10","🥁","Loudest on the line","Sent 10 cheers from this phone",2,"cheers",10,"parent");
+  add("kit","👕","Kit sorted","Added kit sizes",1,"kit",1,"parent");
+  add("live1","🔴","Live and kicking","The team has followed a game live",1,"live",1,"coach");
+  add("live10","📡","Live pro","10 games followed live",2,"live",10,"coach");
+  add("live25","🛰️","Broadcaster","25 games followed live",3,"live",25,"coach");
+  add("res10","📝","Results logged","10 results on the site",1,"results",10,"coach");
+  add("res50","📚","Record keeper","50 results on the site",3,"results",50,"coach");
+  add("rep1","✍️","Reporter","First match report written",1,"reports",1,"coach");
+  add("rep10","📰","Columnist","10 match reports written",3,"reports",10,"coach");
+  add("post10","🎨","Social star","10 graphics posted",2,"posts",10,"coach");
+  add("poll1","🗳️","Poll starter","Started a team vote",1,"polls",1,"coach");
+  add("pomc","🏅","Award giver","Picked a player of the month",1,"poms",1,"coach");
+  return out}
+function myStats(){const days=new Set(MYDAYS||[]);if(me)days.add(todayLocal());const ds=[...days].sort();
+  const wk=d=>Math.floor((Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5+3)/7);let best=0,run=0,last=null,cur=0;
+  [...new Set(ds.map(wk))].sort((a,b)=>a-b).forEach(w=>{run=last!=null&&w===last+1?run+1:1;best=Math.max(best,run);last=w});
+  if(last!=null&&last>=wk(todayLocal())-1)cur=run;
+  const md=new Set(matches.filter(m=>!m.practice&&m.stage!=="placeholder").map(m=>m.date));
+  let cheers=0;try{cheers=+localStorage.getItem(SK+".cheers")||0}catch(e){}
+  const kids=myKids();
+  return {days:ds.length,weeks:best,curWeeks:cur,mdays:ds.filter(d=>md.has(d)).length,app:alStandalone()?1:0,alerts:AL.sub?1:0,
+    avail:Object.values(AV_MINE).reduce((a,o)=>a+kids.filter(n=>o[n]).length,0),tav:Object.values(TAV_MINE).reduce((a,o)=>a+kids.filter(n=>o[n]).length,0),
+    votes:Object.keys(FAMV).length,cheers,kit:KIT&&kids.some(n=>KIT[n]&&(KIT[n].shirt||KIT[n].shorts||KIT[n].socks))?1:0,
+    live:matches.filter(m=>m.live&&m.live.status==="ft").length,results:matches.filter(m=>result(m)&&!m.practice).length,
+    reports:matches.filter(m=>m.report&&m.report.trim()).length,posts:(POSTS||[]).length,polls:POLLS.length,poms:POMS.length}}
+function myMedals(){const s=myStats();return myMedalDefs().map(d=>({d,got:(s[d.stat]||0)>=d.at,have:s[d.stat]||0}))}
+// the strip on Home for signed-in coaches and parents
+function myBadgeStrip(){if(!me||(!canWrite&&!isParent()))return "";const L=myMedals(),got=L.filter(x=>x.got),s=myStats();
+  const nx=L.filter(x=>!x.got).sort((a,b)=>b.have/b.d.at-a.have/a.d.at)[0];
+  return `<section class="card mystrip"><div class="mdgrid">${got.slice(-4).reverse().map(x=>medalHtml(x.d,{cls:"sm"})).join("")}</div>
+    <div><b>Your badges: ${got.length} of ${L.length}</b>${s.curWeeks>1?` · 🔥 ${s.curWeeks} weeks running`:""}<br><span class="hint">${nx?`Next: ${esc(nx.d.name)} (${esc(nx.d.how.toLowerCase())}, ${nx.have} of ${nx.d.at})`:"You've got every badge!"}</span></div>
+    <button class="mini" data-view="medals">See them</button></section>`}
+function medalsView(){const list=seasonMatches(),c=medalsFor(list),defs=mdShown(),signed=me&&(canWrite||isParent());
+  const who=id=>Object.entries(c.won).filter(([,w])=>w[id]).map(([n])=>n).sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b));
+  const kids=myKids(),mine=signed?myMedals():[];
+  const roster=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(c.won)])].sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b));
+  return `<div class="stack"><section class="card"><h2 style="margin-top:0">🏅 Medals: ${esc(season)}</h2><p class="hint">Players win medals for what they do across the season: ${noScores()?"turning up, tournaments and awards":`${SP.goals}, ${SP.assists?"assists, clean sheets, ":""}turning up, team wins and awards`}. There are ${defs.length} to collect, from bronze up to platinum, and they go in the sticker book at the end of the season.</p>
+    ${kids.length?`<div class="btns">${kids.map(n=>`<button class="btn gold" data-player="${esc(n)}">${esc(n)}'s medals</button>`).join("")}</div>`:""}</section>
+    ${signed?`<section class="card"><h3>Your badges: ${mine.filter(x=>x.got).length} of ${mine.length}</h3><p class="hint">${canWrite?"For you and the coaching team, for keeping the site going.":"For using the site. They're kept on this phone's sign-in, and nobody else sees them."}</p>
+      <div class="mdgrid">${mine.slice().sort((a,b)=>b.got-a.got).map(x=>medalHtml(x.d,{locked:!x.got,sub:x.got?"Won":`${Math.min(x.have,x.d.at)} of ${x.d.at}`,prog:x.got?null:Math.min(.99,x.have/x.d.at)})).join("")}</div></section>`
+     :PL_ON&&!canWrite?`<section class="card"><h3>Parents: get your own badges</h3><p class="hint">Sign in with your family code and you'll collect badges for following the team, and get a pop-up whenever your ${esc(PRN.kid)} wins a medal.</p><div class="btns"><button class="btn gold" data-view="parents">Sign in with your family code</button></div></section>`:""}
+    <section class="card"><h3>Medals won by each ${esc(PL.replace(/s$/,""))}</h3><table class="lb"><tbody>${roster.map(n=>{const w=playerMedals(n,list);return `<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td class="mdmini">${w.slice(0,8).map(x=>`<span title="${esc(mdDef(x.id).name)}" class="${MD_TIER[mdDef(x.id).tier]}">${mdDef(x.id).ic}</span>`).join("")}${w.length>8?` +${w.length-8}`:""}</td><td style="text-align:right"><b>${w.length}</b></td></tr>`}).join("")||`<tr><td class="hint">No players yet.</td></tr>`}</tbody></table></section>
+    ${MD_GROUPS.map(([g,label])=>{const ds=defs.filter(d=>d.group===g);if(!ds.length)return "";
+      return `<details class="card mdgroup"${g===MD_GROUPS.find(([k])=>defs.some(d=>d.group===k))[0]?" open":""}><summary><h3>${esc(label)} <span class="hint">${ds.filter(d=>who(d.id).length).length} of ${ds.length} won</span></h3></summary><div class="mdlist">${ds.map(d=>{const w=who(d.id);return `<div class="mditem">${medalHtml(d,{cls:"sm",locked:!w.length})}<div><b>${esc(d.name)}</b> <span class="tier ${MD_TIER[d.tier]}">${MD_TIERNAME[d.tier]}</span><br><span class="hint">${esc(d.how)}</span><br>${w.length?w.map(n=>`<button class="mdname" data-player="${esc(n)}">${esc(n)}</button>`).join(" "):`<span class="hint">Nobody yet. Who'll be first?</span>`}</div></div>`}).join("")}</div></details>`}).join("")}</div>`}
+
+// pop-ups: when a signed-in parent's child wins a medal, or a coach or parent earns a badge. Which ones this phone has
+// already shown are kept on the phone (localStorage); the first time, everything already won is noted quietly.
+function medalCheck(){clearTimeout(medalCheck.t);medalCheck.t=setTimeout(()=>{try{
+  if(!me||(!canWrite&&!isParent())||!db||["live","gfx","book","login","setup"].includes(view)||document.querySelector(".mdpop"))return;
+  const now=[];myMedals().filter(x=>x.got).forEach(x=>now.push({k:"me:"+x.d.id,d:x.d,who:null}));
+  if(MYDAYS===null)return;// wait until the days have loaded, so day badges aren't announced as new each time
+  const ts=todaySeason(),list=sortMatches(matches.filter(m=>seasonOf(m.date)===ts));
+  myKids().forEach(n=>playerMedals(n,list).forEach(x=>now.push({k:`p:${n}:${ts}:${x.id}`,d:mdDef(x.id),who:n,x})));
+  const key=SK+".medals."+(me.id||"").slice(0,8);let seen=null;try{seen=JSON.parse(localStorage.getItem(key)||"null")}catch(e){}
+  const save=()=>{try{localStorage.setItem(key,JSON.stringify([...new Set([...(seen||[]),...now.map(x=>x.k)])].slice(-600)))}catch(e){}};
+  if(!Array.isArray(seen)){save();const kid=now.filter(x=>x.who),own=now.filter(x=>!x.who);
+    if(kid.length){const k=kid[0].who,L=kid.filter(x=>x.who===k).sort((a,b)=>a.d.tier-b.d.tier);medalPop([L[L.length-1]],`${k} has won ${L.length} medal${L.length>1?"s":""} so far!`)}
+    else if(own.length)medalPop(own.slice(-1),`You've already got ${own.length} badge${own.length>1?"s":""}!`);return}
+  const s=new Set(seen),fresh=now.filter(x=>!s.has(x.k));save();if(fresh.length)medalPop(fresh)}catch(e){}},1500)}
+function medalPop(L,head){const x=L[L.length-1],d=x.d;const el=document.createElement("div");el.className="mdpop";el.setAttribute("role","dialog");el.setAttribute("aria-label","New medal");
+  el.innerHTML=`<div class="mdpop-in"><div class="confetti">${Array.from("🎉✨⭐🎊🎉✨⭐🎊").map((c,i)=>`<i style="--i:${i}">${c}</i>`).join("")}</div>
+    <div class="kick">${esc(head||(x.who?`${x.who} has won a medal!`:"You've earned a badge!"))}</div>
+    ${medalHtml(d,{cls:"xl"})}<p>${esc(d.how)}${x.x&&x.x.opp?` v ${esc(x.x.opp)}`:""}</p>
+    <p class="hint">${MD_TIERNAME[d.tier]||""} ${x.who?"medal":"badge"}${L.length>1?` · and ${L.length-1} more new: ${esc(L.slice(0,-1).map(y=>(y.who?y.who+": ":"")+y.d.name).slice(-4).join(", "))}`:""}</p>
+    <div class="btns" style="justify-content:center">${x.who?`<button class="btn gold" data-player="${esc(x.who)}" data-mdclose>See ${esc(x.who)}'s medals</button>`:`<button class="btn gold" data-view="medals" data-mdclose>See my badges</button>`}<button class="btn ghost" data-mdclose>Brilliant!</button></div></div>`;
+  document.body.appendChild(el);el.addEventListener("click",e=>{if(e.target===el||e.target.closest("[data-mdclose]"))el.remove()})}
+
 // ---------- sticker book ----------
-const BOOK_PH={};// photos stay in this browser tab only; never uploaded
+const BOOK_PH={};
+// a player's medals for the book: best first (gold before bronze), so the ones that fit on the page are the proudest
+const bookMedals=(n,list)=>playerMedals(n,list).slice().sort((a,b)=>mdDef(b.id).tier-mdDef(a.id).tier||(a.date||"").localeCompare(b.date||""));// photos stay in this browser tab only; never uploaded
 function bookView(){
   const list=seasonMatches(),done=list.filter(result),t=teamStats(done),ps=playerStats(list),ts=seasonTournaments();
   const roster=[...new Set([...Object.keys(ps).filter(n=>ps[n].apps||ps[n].goals||ps[n].potm),...(season===todaySeason()?players.filter(p=>p.current).map(p=>p.name):[])])]
@@ -2086,21 +2359,25 @@ function bookView(){
     ${ts.filter(x=>x.potm).length?`<h3 style="margin-top:8mm">Players of the tournament</h3><table>${ts.filter(x=>x.potm).map(x=>`<tr><td>⭐ ${esc(x.potm)}</td><td>${esc(x.name)}</td></tr>`).join("")}</table>`:""}
     ${pomSeason(season).length?`<h3 style="margin-top:8mm">Players of the month</h3><table>${pomSeason(season).slice().reverse().map(x=>`<tr><td>${POM_IC} ${esc(x.player)}</td><td>${esc(pomLabel(x.month))}</td></tr>`).join("")}</table>`:""}`);
   // player pages
-  roster.forEach((n,i)=>{const o=st(n);const best=sortMatches(list.filter(m=>(played(m)[n]||0)>0)).sort((a,b)=>played(b)[n]-played(a)[n])[0];
+  roster.forEach((n,i)=>{const o=st(n),mds=bookMedals(n,list),many=mds.length>16;const best=sortMatches(list.filter(m=>(played(m)[n]||0)>0)).sort((a,b)=>played(b)[n]-played(a)[n])[0];
     out+=page("player",`<div class="top"><div class="slot">${BOOK_PH[n]&&BOOK_LAYOUT==="print"?`<img src="${BOOK_PH[n]}" alt="">`:(BOOK_LAYOUT==="stickers"?`<div class="sn">${i+2}</div><div class="sl">Stick ${esc(n)} here</div>`:BOOK_LAYOUT==="print"?`<div class="sl">Add ${esc(n)}'s photo</div>`:`<div class="sn">${esc(numOf(n))||"·"}</div><div class="sl">${esc(n)}</div>`)}</div>
       <div><div class="big">${esc(numOf(n))||"·"}</div><h1 class="pname">${esc(n)}</h1>
       <div class="stats">${tracked?`<div><b>${o.apps}</b><span>Games</span></div>`:""}<div><b>${o.goals}</b><span>${SP.Goals}</span></div>${RUGBY?`<div><b>${o.pts}</b><span>Points</span></div>`:""}${at?`<div><b>${o.assists}</b><span>Assists</span></div>`:""}<div><b>${o.potm}</b><span>Player of the match</span></div>${pot(n)?`<div><b>${pot(n)}</b><span>Player of the tournament</span></div>`:""}${(k=>k?`<div><b>${k}</b><span>Player of the month</span></div>`:"")(pomSeason(season).filter(x=>x.player===n).length)}</div>
       ${best?`<div class="hl">${SP.ball} Best game: ${played(best)[n]} ${played(best)[n]>1?SP.goals:SP.goal} v ${esc(best.opp)} (${nice(best.date)})</div>`:""}</div></div>
-      <div class="lines"><h3>My favourite moment this season</h3><i></i><i></i><i></i></div>
-      <div class="lines"><h3>My coach says…</h3><i></i><i></i><i></i></div>
-      <div class="lines"><h3>Autographs</h3><i></i><i></i></div>`)});
+      ${mds.length?`<div class="bmd"><h3>${BOOK_LAYOUT==="stickers"?"Stick my medals here":"My medals"} <span class="hint">${mds.length} won this season</span></h3><div class="mdls">${mds.slice(0,many?15:16).map(x=>medalHtml(mdDef(x.id),{blank:BOOK_LAYOUT==="stickers"})).join("")}${many?`<div class="mdl more"><span class="disc"><i>+${mds.length-15}</i></span><b>more medals</b></div>`:""}</div></div>`:""}
+      <div class="lines"><h3>My favourite moment this season</h3><i></i><i></i>${mds.length?"":"<i></i>"}</div>
+      <div class="lines"><h3>My coach says…</h3><i></i><i></i>${mds.length?"":"<i></i>"}</div>
+      ${mds.length?"":`<div class="lines"><h3>Autographs</h3><i></i><i></i></div>`}`)});
   // sticker sheets
   if(BOOK_LAYOUT==="stickers"){const stk=[{shiny:1,img:CREST,cap:"Club badge",no:1},...roster.map((n,i)=>({n,no:i+2})),...[TEAM.sponsor,TEAM.potm&&TEAM.potm.logo?{logo:TEAM.potm.logo,name:TEAM.potm.sponsor}:null].filter(x=>x&&x.logo).map((x,i)=>({shiny:1,img:x.logo,cap:x.name,no:roster.length+2+i}))];
     for(let i=0;i<stk.length;i+=9)out+=page("",`<h1 class="ttl">Stickers${i?"":` <span class="hint" style="font-family:Archivo;font-size:10pt;text-transform:none">Print on sticker paper and cut out</span>`}</h1><div class="sheet">${stk.slice(i,i+9).map(x=>x.n?
       `<div class="stk"><span class="no">No. ${x.no}</span><div class="ph" style="${BOOK_PH[x.n]?`background-image:url('${BOOK_PH[x.n]}')`:""}">${BOOK_PH[x.n]?"":esc(numOf(x.n)||"")}</div><div class="cap"><span>${esc(x.n)}</span><span>${esc(numOf(x.n))}</span></div></div>`:
-      `<div class="stk shiny"><span class="no">No. ${x.no}</span><div class="ph"><img src="${x.img}" alt=""></div><div class="cap"><span>${esc(x.cap)}</span><span>✦</span></div></div>`).join("")}</div>`)}
+      `<div class="stk shiny"><span class="no">No. ${x.no}</span><div class="ph"><img src="${x.img}" alt=""></div><div class="cap"><span>${esc(x.cap)}</span><span>✦</span></div></div>`).join("")}</div>`)
+    // medal stickers: each player's medals (up to the 15 or 16 places on their page), to cut out and stick in
+    const ms=roster.flatMap(n=>{const L=bookMedals(n,list);return L.slice(0,L.length>16?15:16).map(x=>({n,d:mdDef(x.id)}))});
+    for(let i=0;i<ms.length;i+=30)out+=page("",`<h1 class="ttl">Medal stickers${i?"":` <span class="hint" style="font-family:Archivo;font-size:10pt;text-transform:none">Cut out and stick on each player's page</span>`}</h1><div class="mdsheet">${ms.slice(i,i+30).map(x=>`<div class="mdstk">${medalHtml(x.d)}<span>${esc(x.n)}</span></div>`).join("")}</div>`)}
   return `<div class="bookctl card stack" style="margin-bottom:16px"><h2>Sticker book: ${esc(season)}</h2>
-    <p class="hint">Built from this season's results. Change the season at the top right. Add a photo for each player, then press <b>Print or save as PDF</b> and choose "Save as PDF" or your printer. Photos stay on this device. They're never uploaded to the site and they're cleared when you close the page.</p>
+    <p class="hint">Built from this season's results, with every medal each player has won. Change the season at the top right. Add a photo for each player, then press <b>Print or save as PDF</b> and choose "Save as PDF" or your printer. Photos stay on this device. They're never uploaded to the site and they're cleared when you close the page.</p>
     <div class="bookbar"><div class="seg" role="group" aria-label="Photos"><button data-blay="stickers" aria-pressed="${BOOK_LAYOUT==="stickers"}">Sticker sheets</button><button data-blay="print" aria-pressed="${BOOK_LAYOUT==="print"}">Photos printed in</button><button data-blay="none" aria-pressed="${BOOK_LAYOUT==="none"}">No photos</button></div>
     <button class="btn gold" id="bookPrint">Print or save as PDF</button></div>
     ${BOOK_LAYOUT==="none"?"":`<div class="bookph">${roster.map(n=>`<label>${BOOK_PH[n]?`<img src="${BOOK_PH[n]}" alt="">`:`<span class="ph0"></span>`}<span>${esc(n)}</span><input type="file" accept="image/*" data-bookph="${esc(n)}"></label>`).join("")}</div>`}</div>
@@ -2374,6 +2651,7 @@ function playerDetail(n){
   <button class="btn gold" data-story="${esc(n)}" style="align-self:flex-start">✨ ${esc(n)}'s ${esc(season)} season story</button>
   ${(L=>L.length?`<section class="card"><h3>Player of the month</h3>${L.map(x=>`<div class="potm">${POM_IC} ${esc(pomLabel(x.month))}${x.note?` <span class="meta">· ${esc(x.note)}</span>`:""}</div>`).join("")}${canWrite?`<div class="mg edit-only" style="margin-top:8px">${L.map(x=>`<button class="mini" data-pomgfx="${esc(x.month)}">${esc(pomMonthName(x.month))} poster</button>`).join("")}</div>`:""}</section>`:"")(pomOf(n))}
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
+  ${playerMedalCard(n)}
   ${rtPlayerCard(n)}${bdPlayerCard(n)}${kitPlayerCard(n)}<div class="csgrid"><section class="card"><h3>${esc(season)} by competition</h3>${compSplit(n,seasonMatches(),seasonTournaments())}</section>
   <section class="card"><h3>Career by competition</h3>${compSplit(n,matches.filter(m=>m.stage!=="placeholder"),tournaments)}</section></div>
   ${noScores()?"":`<section class="card"><h3>By season</h3><table class="lb"><thead><tr><th>Season</th><th>Apps</th><th>${SP.Goals}</th>${RUGBY?"<th>Kicks</th><th>Points</th>":"<th>Assists</th><th>Clean sheets</th>"}<th>PotM</th></tr></thead><tbody>
@@ -3032,7 +3310,7 @@ async function checkCoach(){
   if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit","drills","design"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
-  FAM=null;await loadParent();logActive();
+  FAM=null;await loadParent();logActive();await loadMyDays();
   await loadTav();alSync();
   await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadKit();await loadDrills();
   authBox();render();
