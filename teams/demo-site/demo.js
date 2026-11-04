@@ -279,7 +279,7 @@ function askLater(){
 function showLead(){
   ss.set(ASKED,1);const el=document.createElement("form");el.className="ttlead";el.noValidate=true;el.setAttribute("aria-label","Get in touch");
   el.innerHTML=`<button type="button" class="x" aria-label="Not now">×</button><h3>Want this for your team?</h3>
-    <p>Leave your details and we'll be in touch to answer questions and get you set up. Free for founding teams.</p>
+    <p>Leave your details and we'll be in touch to answer questions and get you set up. £5 a month, free setup, cancel anytime.</p>
     <input name="name" placeholder="Your name" autocomplete="name" required><input name="email" type="email" placeholder="Your email" autocomplete="email" required>
     <input name="club" placeholder="Club and team, e.g. Sample Town U10s" required>
     <label class="tk"><input type="checkbox" name="consent" required><span>It's fine to contact me about Touchline Tales (<a href="../privacy/" target="_blank" rel="noopener">privacy</a>).</span></label>
