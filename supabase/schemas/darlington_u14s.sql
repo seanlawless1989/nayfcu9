@@ -1,5 +1,4 @@
 -- Team schema darlington_u14s: run in the SQL Editor of the shared project. Made by tools/team_schema_sql.py.
--- Generated; to change it, change the numbered files and run: python3 tools/team_schema_sql.py darlington_u14s
 create schema if not exists darlington_u14s;
 grant usage on schema darlington_u14s to anon, authenticated, service_role;
 alter default privileges for role postgres in schema darlington_u14s grant all on tables to anon, authenticated, service_role;
@@ -67,6 +66,7 @@ drop policy if exists "see own coach row" on darlington_u14s.coaches;
 create policy "see own coach row" on darlington_u14s.coaches for select to authenticated using (email = lower(auth.jwt() ->> 'email'));
 
 -- >>> Change this to your email, then run. Add a line per coach.
+insert into darlington_u14s.coaches (email) values ('peter.locke@northstarhg.co.uk') on conflict do nothing;
 
 -- Only emails on the coaches list can create a sign-in account.
 
@@ -88,6 +88,12 @@ create table if not exists darlington_u14s.honours(
 alter table darlington_u14s.tournaments add column if not exists end_date date;
 alter table darlington_u14s.tournaments drop constraint if exists tournaments_end_after_start;
 alter table darlington_u14s.tournaments add constraint tournaments_end_after_start check (end_date is null or end_date >= date);
+-- Added 2026-10-26: the teams entered and their groups ("" = groups not drawn yet), see 14_tournament_teams.sql.
+alter table darlington_u14s.tournaments add column if not exists teams jsonb not null default '[]'::jsonb;
+-- Added 2026-10-31: the squad picked for the whole tournament, see 15_tournament_squad.sql.
+alter table darlington_u14s.tournaments add column if not exists squad jsonb;
+-- Added 2026-11-01: one report for the whole tournament, see 23_tournament_report.sql.
+alter table darlington_u14s.tournaments add column if not exists report text;
 alter table darlington_u14s.tournaments enable row level security;
 alter table darlington_u14s.honours enable row level security;
 drop policy if exists "read tournaments" on darlington_u14s.tournaments;
@@ -115,7 +121,9 @@ create table if not exists darlington_u14s.availability(
 );
 alter table darlington_u14s.availability enable row level security;
 -- Only coaches can see answers; parents answer through set_availability below.
+drop policy if exists "coaches read availability" on darlington_u14s.availability;
 create policy "coaches read availability" on darlington_u14s.availability for select using (darlington_u14s.is_coach());
+drop policy if exists "coaches write availability" on darlington_u14s.availability;
 create policy "coaches write availability" on darlington_u14s.availability for all using (darlington_u14s.is_coach()) with check (darlington_u14s.is_coach());
 
 create or replace function darlington_u14s.set_availability(p_match text, p_player text, p_status text)
@@ -142,15 +150,19 @@ alter table darlington_u14s.matches add column if not exists live jsonb;
 -- Opposition badges, shared across the site (small PNG data URLs), public read, coach write
 create table if not exists darlington_u14s.badges(key text primary key, name text, img text not null, updated timestamptz default now());
 alter table darlington_u14s.badges enable row level security;
+drop policy if exists "public read badges" on darlington_u14s.badges;
 create policy "public read badges" on darlington_u14s.badges for select using (true);
+drop policy if exists "coaches write badges" on darlington_u14s.badges;
 create policy "coaches write badges" on darlington_u14s.badges for all using (darlington_u14s.is_coach()) with check (darlington_u14s.is_coach());
 
 -- Player photos: coaches only (never public)
 create table if not exists darlington_u14s.player_photos(player text primary key, img text not null, updated timestamptz default now());
 alter table darlington_u14s.player_photos enable row level security;
 -- 2026-10-17: Sean asked for photos to be visible to everyone (they were coach-only); only coaches can add or change them.
+drop policy if exists "everyone reads photos" on darlington_u14s.player_photos;
 create policy "everyone reads photos" on darlington_u14s.player_photos for select using (true);
 grant select on darlington_u14s.player_photos to anon;
+drop policy if exists "coaches write photos" on darlington_u14s.player_photos;
 create policy "coaches write photos" on darlington_u14s.player_photos for all using (darlington_u14s.is_coach()) with check (darlington_u14s.is_coach());
 grant select, insert, update, delete on darlington_u14s.player_photos to authenticated;
 
@@ -158,6 +170,7 @@ grant select, insert, update, delete on darlington_u14s.player_photos to authent
 -- views = times the site was opened; visitors = phones/computers that opened it that day (the site remembers "seen today" in the browser).
 create table if not exists darlington_u14s.page_views(day date primary key, views int not null default 0, visitors int not null default 0);
 alter table darlington_u14s.page_views enable row level security;
+drop policy if exists "coaches read page views" on darlington_u14s.page_views;
 create policy "coaches read page views" on darlington_u14s.page_views for select to authenticated using (darlington_u14s.is_coach());
 grant select on darlington_u14s.page_views to authenticated;
 
@@ -877,3 +890,438 @@ end $$;
 revoke all on function darlington_u14s.send_cheer(text,text,int,text), darlington_u14s.cheers_for(text), darlington_u14s.hide_cheer(bigint) from public;
 grant execute on function darlington_u14s.send_cheer(text,text,int,text), darlington_u14s.cheers_for(text) to anon, authenticated;
 grant execute on function darlington_u14s.hide_cheer(bigint) to authenticated;
+
+-- ===================== 14_tournament_teams.sql =====================
+-- Added 2026-10-26: the teams entered in a tournament, and which group each is in. Safe to re-run.
+-- A list like [{"name":"Beamish","group":"A"}, ...]. group is "" until the groups are drawn, and the site then shows
+-- "Groups to be drawn". Coaches change it on the Edit tournament form; everyone can read it (it's on the public page).
+alter table darlington_u14s.tournaments add column if not exists teams jsonb not null default '[]'::jsonb;
+alter table darlington_u14s.tournaments drop constraint if exists tournaments_teams_is_list;
+alter table darlington_u14s.tournaments add constraint tournaments_teams_is_list check (jsonb_typeof(teams) = 'array' and jsonb_array_length(teams) <= 64);
+notify pgrst, 'reload schema';
+
+-- ===================== 15_tournament_squad.sql =====================
+-- Added 2026-10-31: the squad picked for a tournament, before its games are on the site. Safe to re-run.
+-- A list of first names, like matches.squad. Coaches pick it from the tournament card (Pick squad), parents see it on
+-- the tournament card, and every game added to the tournament starts with it. Everyone can read it (it's on the public page).
+alter table darlington_u14s.tournaments add column if not exists squad jsonb;
+alter table darlington_u14s.tournaments drop constraint if exists tournaments_squad_is_list;
+alter table darlington_u14s.tournaments add constraint tournaments_squad_is_list check (squad is null or (jsonb_typeof(squad) = 'array' and jsonb_array_length(squad) <= 60));
+notify pgrst, 'reload schema';
+
+-- ===================== 16_availability_alerts.sql =====================
+-- Added 2026-10-31: availability alerts, training availability and reminders to answer. Safe to re-run.
+-- 1. A coach can have an alert on their phone each time a parent says whether their child can make a game or training.
+-- 2. Parents answer for training as well as games (training_availability; only coaches see the answers).
+-- 3. Reminders to answer go the Wednesday evening before a game and 24 hours before training. A phone signed in
+--    with a family code gets one while its own child hasn't answered; phones that aren't signed in and coaches'
+--    phones don't get them.
+-- Run it on every team's database (and for every team schema), then redeploy the notify edge function.
+
+-- ---------- Which sign-in turned alerts on ----------
+-- uid: the phone's sign-in when alerts were turned on or changed (a parent's family-code sign-in, or a coach).
+-- It's how a reminder knows which child the phone is for. Nothing else about the parent is stored.
+alter table darlington_u14s.push_subs add column if not exists uid uuid references auth.users(id) on delete set null;
+alter table darlington_u14s.push_subs add column if not exists coach boolean not null default false;   -- a coach's phone
+alter table darlington_u14s.push_subs add column if not exists avail boolean not null default false;   -- a coach wants availability answers
+
+drop function if exists darlington_u14s.push_subscribe2(text, text, text, boolean, boolean, boolean, boolean);
+create or replace function darlington_u14s.push_subscribe2(p_endpoint text, p_p256dh text, p_auth text, p_reminders boolean, p_live boolean,
+                                                  p_goals boolean, p_results boolean, p_avail boolean default null)
+returns void language plpgsql security definer set search_path = darlington_u14s as $$
+declare c boolean := darlington_u14s.is_coach();
+begin
+  perform darlington_u14s.push_subscribe(p_endpoint, p_p256dh, p_auth, p_reminders, p_live);  -- checks it's a real push address
+  update darlington_u14s.push_subs set goals = coalesce(p_goals, false), results = coalesce(p_results, false),
+    uid = auth.uid(), coach = c,
+    avail = c and (case when p_avail is null then avail else p_avail end)   -- null: an older page that doesn't know about it
+  where endpoint = p_endpoint;
+end $$;
+revoke all on function darlington_u14s.push_subscribe2(text, text, text, boolean, boolean, boolean, boolean, boolean) from public;
+grant execute on function darlington_u14s.push_subscribe2(text, text, text, boolean, boolean, boolean, boolean, boolean) to anon, authenticated;
+
+-- ---------- Training availability ----------
+create table if not exists darlington_u14s.training_availability(
+  day     date not null,
+  player  text not null,
+  status  text not null check (status in ('yes','no','maybe')),
+  updated timestamptz not null default now(),
+  primary key(day, player)
+);
+alter table darlington_u14s.training_availability enable row level security;
+drop policy if exists "coaches read training availability" on darlington_u14s.training_availability;
+create policy "coaches read training availability" on darlington_u14s.training_availability for select using (darlington_u14s.is_coach());
+drop policy if exists "coaches write training availability" on darlington_u14s.training_availability;
+create policy "coaches write training availability" on darlington_u14s.training_availability for all to authenticated using (darlington_u14s.is_coach()) with check (darlington_u14s.is_coach());
+-- anon can "read" it (and gets no rows): that's how the site knows the feature is switched on
+grant select on darlington_u14s.training_availability to anon, authenticated;
+grant insert, update, delete on darlington_u14s.training_availability to authenticated;
+revoke insert, update, delete, truncate on darlington_u14s.training_availability from anon;
+
+-- a parent answers for their own child (or anyone, while "parents must sign in" is off), for a real upcoming session
+create or replace function darlington_u14s.set_training_availability(p_day date, p_player text, p_status text)
+returns void language plpgsql security definer set search_path = darlington_u14s as $$
+declare t darlington_u14s.training;
+begin
+  if p_status not in ('yes','no','maybe') then raise exception 'bad status'; end if;
+  if not (darlington_u14s.is_coach() or darlington_u14s.is_parent_of(p_player) or not darlington_u14s.parents_required()) then
+    raise exception 'Sign in with your family code first';
+  end if;
+  select * into t from darlington_u14s.training where id = 1;
+  if t.id is null or p_day < current_date - 1 or p_day > current_date + 60 or trim(to_char(p_day, 'Day')) <> t.day
+     or p_day = any(t.off) or (t.until is not null and p_day > t.until) then
+    raise exception 'unknown training session';
+  end if;
+  if not exists (select 1 from darlington_u14s.players where name = p_player and current) then raise exception 'unknown player'; end if;
+  insert into darlington_u14s.training_availability(day, player, status, updated) values (p_day, p_player, p_status, now())
+  on conflict (day, player) do update set status = excluded.status, updated = now();
+end $$;
+grant execute on function darlington_u14s.set_training_availability(date, text, text) to anon, authenticated;
+
+-- this phone's own training answers
+create or replace function darlington_u14s.my_training_availability() returns table(day date, player text, status text)
+language sql stable security definer set search_path = darlington_u14s as $$
+  select a.day, a.player, a.status from darlington_u14s.training_availability a where a.day >= current_date - 1 and darlington_u14s.is_parent_of(a.player);
+$$;
+revoke execute on function darlington_u14s.my_training_availability() from public, anon;
+grant execute on function darlington_u14s.my_training_availability() to authenticated;
+
+-- ---------- Used by the notify edge function only ----------
+-- Once-only and changed-since-sent markers, keyed by text in push_log:
+--   "av:<match>|<player>" and "tav:<day>|<player>": the answer last sent to coaches
+--   "avr:<match>" and "trr:<day>": the reminder to answer has gone
+alter table darlington_u14s.push_log add column if not exists note_sent text;
+create or replace function darlington_u14s.push_claim_note(p_key text, p_value text)
+returns boolean language plpgsql security definer set search_path = darlington_u14s as $$
+begin
+  insert into darlington_u14s.push_log (match_id) values (p_key) on conflict do nothing;
+  update darlington_u14s.push_log set note_sent = p_value where match_id = p_key and note_sent is distinct from p_value;
+  return found;
+end $$;
+revoke all on function darlington_u14s.push_claim_note(text, text) from public, anon, authenticated;
+
+-- phones of current coaches who asked for availability answers
+create or replace function darlington_u14s.avail_coach_targets()
+returns table(endpoint text, p256dh text, auth text)
+language sql stable security definer set search_path = darlington_u14s as $$
+  select s.endpoint, s.p256dh, s.auth from darlington_u14s.push_subs s
+  join auth.users u on u.id = s.uid
+  where s.avail and exists (select 1 from darlington_u14s.coaches c where c.email = lower(u.email));
+$$;
+revoke all on function darlington_u14s.avail_coach_targets() from public, anon, authenticated;
+
+-- who to remind about a game (p_match) or a training session (p_day), and which of their children haven't answered.
+-- Phones with Reminders on, not coaches, signed in with a family code, and only while one of their own children is
+-- still to answer. Phones not signed in never get one: they could be anyone's (grandparents, fans).
+create or replace function darlington_u14s.avail_reminder_targets(p_match text, p_day date)
+returns table(endpoint text, p256dh text, auth text, kids text[])
+language sql stable security definer set search_path = darlington_u14s as $$
+  with waiting as (
+    select p.id, p.name, p.num from darlington_u14s.players p
+    where p.current
+      and not (p_match is not null and exists (select 1 from darlington_u14s.availability a where a.match_id = p_match and a.player = p.name))
+      and not (p_day is not null and exists (select 1 from darlington_u14s.training_availability t where t.day = p_day and t.player = p.name))
+  )
+  select s.endpoint, s.p256dh, s.auth, x.kids
+  from darlington_u14s.push_subs s
+  cross join lateral (
+    select count(*) as linked,
+           coalesce(array_agg(w.name order by w.num nulls last, w.name) filter (where w.id is not null), '{}') as kids
+    from darlington_u14s.parent_links l
+    join darlington_u14s.players p on p.id = l.player_id and p.current
+    left join waiting w on w.id = p.id
+    where s.uid is not null and l.uid = s.uid
+  ) x
+  where s.reminders and not s.coach
+    and x.linked > 0 and cardinality(x.kids) > 0;   -- only phones signed in with a family code (Sean, 31 Oct)
+$$;
+revoke all on function darlington_u14s.avail_reminder_targets(text, date) from public, anon, authenticated;
+
+-- The team's name and alert settings for the notify function, for a team that shares this project in its own schema
+-- (the project's own team uses the notify function's secrets). Same shape as TEAM in team.js:
+-- {"name": "...", "ageGroup": "...", "publicScores": false, "sport": "football", "potm": {"sponsor": "", "icon": "🏆"}}
+create table if not exists darlington_u14s.alert_team(
+  id       int primary key default 1 check (id = 1),
+  settings jsonb not null default '{}'::jsonb
+);
+alter table darlington_u14s.alert_team enable row level security;   -- no policies: only the edge function reads it
+revoke all on darlington_u14s.alert_team from anon, authenticated;
+
+
+-- ===================== 17_sponsors.sql =====================
+-- Added 2026-10-31: team sponsors. Safe to re-run. Run it once on every team's database (SQL editor).
+-- Coaches add, change and remove the team's sponsors on the Sponsors page (name, logo, an optional link and an
+-- optional line on what they sponsor). Everyone sees them in the "Thank you to our sponsors" strip on the home page.
+-- Logos are small pictures shrunk on the coach's phone and kept here as text, like opposition badges.
+-- Nothing about children goes in this table.
+create table if not exists darlington_u14s.sponsors(
+  id      bigint generated always as identity primary key,
+  name    text not null check (length(btrim(name)) between 1 and 80),
+  logo    text check (logo is null or length(logo) <= 400000),
+  url     text check (url is null or (url ~* '^https?://' and length(url) <= 300)),
+  about   text check (about is null or length(about) <= 60),   -- e.g. "Home kit" or "Player of the match"
+  sort    int not null default 0,
+  created timestamptz not null default now()
+);
+alter table darlington_u14s.sponsors enable row level security;
+drop policy if exists "everyone reads sponsors" on darlington_u14s.sponsors;
+create policy "everyone reads sponsors" on darlington_u14s.sponsors for select using (true);
+drop policy if exists "coaches write sponsors" on darlington_u14s.sponsors;
+create policy "coaches write sponsors" on darlington_u14s.sponsors for all to authenticated using (darlington_u14s.is_coach()) with check (darlington_u14s.is_coach());
+grant select on darlington_u14s.sponsors to anon, authenticated;
+grant insert, update, delete on darlington_u14s.sponsors to authenticated;
+
+-- ===================== 18_player_ratings.sql =====================
+-- Added 2026-11-01: coach ratings. Safe to re-run. Run it once on every team's database (SQL editor).
+-- After each game the coaches give every player who played a score out of 10. The Player ratings page adds them up
+-- over the season (totals and averages) to help pick the coaches' player of the year.
+-- COACHES ONLY: nobody else can read a single row. Visitors (anon) have no rights on the table at all, and parents
+-- signed in with a family code are "authenticated" but is_coach() is false for them, so the rules refuse them too.
+create table if not exists darlington_u14s.player_ratings(
+  match_id text not null references darlington_u14s.matches(id) on delete cascade,
+  player   text not null check (length(btrim(player)) between 1 and 60),   -- first name, as in matches.played
+  score    smallint not null check (score between 1 and 10),
+  updated  timestamptz not null default now(),
+  primary key (match_id, player)
+);
+alter table darlington_u14s.player_ratings enable row level security;
+drop policy if exists "coaches only read ratings" on darlington_u14s.player_ratings;
+create policy "coaches only read ratings" on darlington_u14s.player_ratings for select to authenticated using (darlington_u14s.is_coach());
+drop policy if exists "coaches only write ratings" on darlington_u14s.player_ratings;
+create policy "coaches only write ratings" on darlington_u14s.player_ratings for all to authenticated using (darlington_u14s.is_coach()) with check (darlington_u14s.is_coach());
+revoke all on darlington_u14s.player_ratings from anon, public;
+grant select, insert, update, delete on darlington_u14s.player_ratings to authenticated;
+
+-- ===================== 19_player_birthdays.sql =====================
+-- Added 2026-11-01: player birthdays. Safe to re-run. Run it once on every team's database (SQL editor).
+-- Coaches can note each player's birthday so the site reminds them when one is coming up.
+-- DAY AND MONTH ONLY, never the year: no date of birth and no age is stored anywhere.
+-- COACHES ONLY: nobody else can read a single row. Visitors (anon) have no rights on the table at all, and parents
+-- signed in with a family code are "authenticated" but is_coach() is false for them, so the rules refuse them too.
+create table if not exists darlington_u14s.player_birthdays(
+  player  text primary key check (length(btrim(player)) between 1 and 60),   -- first name, as in players.name
+  bday    text not null check (bday ~ '^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'),   -- "MM-DD", e.g. "03-14"
+  updated timestamptz not null default now()
+);
+alter table darlington_u14s.player_birthdays enable row level security;
+drop policy if exists "coaches only read birthdays" on darlington_u14s.player_birthdays;
+create policy "coaches only read birthdays" on darlington_u14s.player_birthdays for select to authenticated using (darlington_u14s.is_coach());
+drop policy if exists "coaches only write birthdays" on darlington_u14s.player_birthdays;
+create policy "coaches only write birthdays" on darlington_u14s.player_birthdays for all to authenticated using (darlington_u14s.is_coach()) with check (darlington_u14s.is_coach());
+revoke all on darlington_u14s.player_birthdays from anon, public;
+grant select, insert, update, delete on darlington_u14s.player_birthdays to authenticated;
+
+-- ===================== 20_player_of_month.sql =====================
+-- Added 2026-11-01: player of the month. Safe to re-run. Run it once on every team's database (SQL editor).
+-- Coaches pick one player each month on the Player of the month page, with an optional line on why. Everyone sees it
+-- on the home page, the honours board and the player's own page, and coaches make a poster for Facebook or WhatsApp.
+-- First names only, like everything else on the site.
+create table if not exists darlington_u14s.player_of_month(
+  month   text primary key check (month ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),   -- e.g. '2026-10' for October 2026
+  player  text not null check (length(btrim(player)) between 1 and 60),
+  note    text check (note is null or length(note) <= 160),               -- e.g. "Brilliant in goal all month"
+  updated timestamptz not null default now()
+);
+alter table darlington_u14s.player_of_month enable row level security;
+drop policy if exists "everyone reads player of the month" on darlington_u14s.player_of_month;
+create policy "everyone reads player of the month" on darlington_u14s.player_of_month for select using (true);
+drop policy if exists "coaches write player of the month" on darlington_u14s.player_of_month;
+create policy "coaches write player of the month" on darlington_u14s.player_of_month for all to authenticated using (darlington_u14s.is_coach()) with check (darlington_u14s.is_coach());
+grant select on darlington_u14s.player_of_month to anon, authenticated;
+grant insert, update, delete on darlington_u14s.player_of_month to authenticated;
+
+-- ===================== 21_kit_sizes.sql =====================
+-- Added 2026-11-01: kit sizes. Safe to re-run. Run it once on every team's database (SQL editor).
+-- Coaches, or each family for their own child, note the player's shirt, shorts and socks size (and anything else, e.g. gloves) so ordering kit is easy.
+-- The Kit sizes page adds them up into an order list they can copy for the kit supplier.
+-- WHO CAN SEE IT: the team's signed-in coaches see and change everyone's sizes. A parent signed in with a family code
+-- sees and changes only their own child's sizes (is_parent_of). Visitors (anon) have no rights on the table at all.
+create table if not exists darlington_u14s.player_kit(
+  player  text primary key check (length(btrim(player)) between 1 and 60),   -- first name, as in players.name
+  shirt   text check (length(shirt) <= 20),
+  shorts  text check (length(shorts) <= 20),
+  socks   text check (length(socks) <= 20),
+  notes   text check (length(notes) <= 120),
+  updated timestamptz not null default now()
+);
+alter table darlington_u14s.player_kit enable row level security;
+drop policy if exists "coaches only read kit sizes" on darlington_u14s.player_kit;
+drop policy if exists "coaches only write kit sizes" on darlington_u14s.player_kit;
+drop policy if exists "coaches and own family read kit sizes" on darlington_u14s.player_kit;
+create policy "coaches and own family read kit sizes" on darlington_u14s.player_kit for select to authenticated
+  using (darlington_u14s.is_coach() or darlington_u14s.is_parent_of(player));
+drop policy if exists "coaches and own family write kit sizes" on darlington_u14s.player_kit;
+create policy "coaches and own family write kit sizes" on darlington_u14s.player_kit for all to authenticated
+  using (darlington_u14s.is_coach() or darlington_u14s.is_parent_of(player)) with check (darlington_u14s.is_coach() or darlington_u14s.is_parent_of(player));
+revoke all on darlington_u14s.player_kit from anon, public;
+grant select, insert, update, delete on darlington_u14s.player_kit to authenticated;
+
+-- ===================== 22_coach_availability.sql =====================
+-- Added 2026-11-01: coaches answer availability for any player. Safe to re-run. Run it on every team's database
+-- (and for every team schema, tools/team_schema_sql.py --only 22_coach_availability.sql).
+-- A parent often tells the coach on WhatsApp or at training instead of using the site. A signed-in coach can now set
+-- (or change, or clear) any current player's answer for a game or training, and it counts exactly like the parent's:
+-- Pick squad, the "not answered yet" list and the reminders all use it, and a parent signed in with the family code
+-- sees the answer on their own phone.
+-- by_coach marks an answer a coach set, so the coaches can see who said it. A parent answering again clears the mark.
+
+alter table darlington_u14s.availability add column if not exists by_coach boolean not null default false;
+alter table darlington_u14s.training_availability add column if not exists by_coach boolean not null default false;
+
+create or replace function darlington_u14s.set_availability(p_match text, p_player text, p_status text)
+returns void language plpgsql security definer set search_path = darlington_u14s as $$
+declare c boolean := darlington_u14s.is_coach();
+begin
+  if p_status not in ('yes','no','maybe') then raise exception 'bad status'; end if;
+  if not (c or darlington_u14s.is_parent_of(p_player) or not darlington_u14s.parents_required()) then
+    raise exception 'Sign in with your family code first';
+  end if;
+  if not exists (select 1 from matches where id = p_match and date >= current_date - 1) then raise exception 'unknown fixture'; end if;
+  if not exists (select 1 from players where name = p_player and current) then raise exception 'unknown player'; end if;
+  insert into availability(match_id, player, status, updated, by_coach) values (p_match, p_player, p_status, now(), c)
+  on conflict (match_id, player) do update set status = excluded.status, updated = now(), by_coach = excluded.by_coach;
+end $$;
+grant execute on function darlington_u14s.set_availability(text,text,text) to anon, authenticated;
+
+create or replace function darlington_u14s.set_training_availability(p_day date, p_player text, p_status text)
+returns void language plpgsql security definer set search_path = darlington_u14s as $$
+declare t darlington_u14s.training; c boolean := darlington_u14s.is_coach();
+begin
+  if p_status not in ('yes','no','maybe') then raise exception 'bad status'; end if;
+  if not (c or darlington_u14s.is_parent_of(p_player) or not darlington_u14s.parents_required()) then
+    raise exception 'Sign in with your family code first';
+  end if;
+  select * into t from darlington_u14s.training where id = 1;
+  if t.id is null or p_day < current_date - 1 or p_day > current_date + 60 or trim(to_char(p_day, 'Day')) <> t.day
+     or p_day = any(t.off) or (t.until is not null and p_day > t.until) then
+    raise exception 'unknown training session';
+  end if;
+  if not exists (select 1 from darlington_u14s.players where name = p_player and current) then raise exception 'unknown player'; end if;
+  insert into darlington_u14s.training_availability(day, player, status, updated, by_coach) values (p_day, p_player, p_status, now(), c)
+  on conflict (day, player) do update set status = excluded.status, updated = now(), by_coach = excluded.by_coach;
+end $$;
+grant execute on function darlington_u14s.set_training_availability(date, text, text) to anon, authenticated;
+
+-- ===================== 23_tournament_report.sql =====================
+-- Added 2026-11-01: one report for a whole tournament, instead of a report for each of its games. Safe to re-run.
+-- Coaches write it from the tournament card (Write tournament report); everyone can read it (it's on the public page,
+-- at ?tour=<id>), like matches.report.
+alter table darlington_u14s.tournaments add column if not exists report text;
+alter table darlington_u14s.tournaments drop constraint if exists tournaments_report_length;
+alter table darlington_u14s.tournaments add constraint tournaments_report_length check (report is null or length(report) <= 20000);
+notify pgrst, 'reload schema';
+
+-- ===================== 24_shared_coaches.sql =====================
+-- Added 2026-11: sister teams whose coaches run both sites share one coach list.
+-- Team setup step 5 already writes darlington_u14s.coaches, which is the list sign-in checks (the sign-up check and
+-- is_coach), so a coach added there can sign in straight away. This adds darlington_u14s.coach_share: the schemas of other
+-- teams in this project that use the same coaches (e.g. Newton Aycliffe U11s Wildcats and Pumas). Adding or removing
+-- a coach on one site then does the same on the others. Only the database owner fills coach_share in; the site
+-- can't read or change it. Safe to re-run.
+create table if not exists darlington_u14s.coach_share (schema_name text primary key);
+alter table darlington_u14s.coach_share enable row level security;   -- no policies: hidden from the site
+revoke all on darlington_u14s.coach_share from anon, authenticated;
+
+create or replace function darlington_u14s.add_coach(new_email text) returns void
+language plpgsql security definer set search_path = darlington_u14s as $$
+declare em text := lower(trim(coalesce(new_email, ''))); s text;
+begin
+  if not darlington_u14s.is_coach() then raise exception 'Only coaches can add coaches'; end if;
+  if em !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'That doesn''t look like an email address'; end if;
+  insert into darlington_u14s.coaches (email) values (em) on conflict do nothing;
+  for s in select schema_name from darlington_u14s.coach_share loop
+    if to_regclass(format('%I.coaches', s)) is not null then
+      execute format('insert into %I.coaches (email) values ($1) on conflict do nothing', s) using em;
+    end if;
+  end loop;
+end $$;
+
+create or replace function darlington_u14s.remove_coach(old_email text) returns void
+language plpgsql security definer set search_path = darlington_u14s as $$
+declare em text := lower(trim(coalesce(old_email, ''))); s text;
+begin
+  if not darlington_u14s.is_coach() then raise exception 'Only coaches can remove coaches'; end if;
+  if em = lower(auth.jwt() ->> 'email') then raise exception 'You can''t remove yourself'; end if;
+  delete from darlington_u14s.coaches where email = em;
+  for s in select schema_name from darlington_u14s.coach_share loop
+    if to_regclass(format('%I.coaches', s)) is not null then
+      execute format('delete from %I.coaches where email = $1', s) using em;
+    end if;
+  end loop;
+end $$;
+
+-- which sites a coach added here also goes on (Team setup shows it), as site names are not stored: just a count
+create or replace function darlington_u14s.coach_share_count() returns int
+language sql stable security definer set search_path = darlington_u14s as $$
+  select case when darlington_u14s.is_coach() then (select count(*)::int from darlington_u14s.coach_share) else 0 end;
+$$;
+revoke execute on function darlington_u14s.add_coach(text), darlington_u14s.remove_coach(text), darlington_u14s.coach_share_count() from public, anon;
+grant execute on function darlington_u14s.add_coach(text), darlington_u14s.remove_coach(text), darlington_u14s.coach_share_count() to authenticated;
+
+-- ===================== 25_active_days.sql =====================
+-- Added 2026-11: how many coaches and parents use the site. One row per signed-in person per day: a coach, or a
+-- parent's phone linked by a family code. Plain visitors are already counted in page_views (1_schema.sql).
+-- Only the user id, the day and how many times the site was opened that day are kept, never names or emails.
+-- Coaches see the totals on the home page's Website visits card (active_summary); the rows themselves are hidden.
+-- Safe to re-run.
+create table if not exists darlington_u14s.active_days(
+  day date not null default (now() at time zone 'Europe/London')::date,
+  uid uuid not null,
+  role text not null check (role in ('coach', 'parent')),
+  opens int not null default 1,
+  primary key (day, uid));
+alter table darlington_u14s.active_days enable row level security;   -- no policies: only the functions below touch it
+revoke all on darlington_u14s.active_days from anon, authenticated;
+
+-- the site calls this once per page load when someone is signed in
+create or replace function darlington_u14s.log_active() returns void
+language plpgsql security definer set search_path = darlington_u14s as $$
+declare r text;
+begin
+  if auth.uid() is null then return; end if;
+  if darlington_u14s.is_coach() then r := 'coach';
+  elsif exists (select 1 from darlington_u14s.parent_links where uid = auth.uid()) then r := 'parent';
+  else return; end if;
+  insert into darlington_u14s.active_days as a (day, uid, role) values ((now() at time zone 'Europe/London')::date, auth.uid(), r)
+  on conflict (day, uid) do update set opens = a.opens + 1, role = excluded.role;
+end $$;
+
+-- coaches only: people signed in per day, plus how many different coaches and parents overall and in the last 7 days
+create or replace function darlington_u14s.active_summary() returns json
+language sql stable security definer set search_path = darlington_u14s as $$
+  select case when not darlington_u14s.is_coach() then null else json_build_object(
+    'since', (select min(day) from darlington_u14s.active_days),
+    'days', coalesce((select json_agg(d order by d.day) from (
+        select day, count(*) filter (where role = 'coach') as coaches, count(*) filter (where role = 'parent') as parents,
+               coalesce(sum(opens), 0) as opens
+        from darlington_u14s.active_days group by day) d), '[]'::json),
+    'coaches', (select count(distinct uid) from darlington_u14s.active_days where role = 'coach'),
+    'parents', (select count(distinct uid) from darlington_u14s.active_days where role = 'parent'),
+    'coaches7', (select count(distinct uid) from darlington_u14s.active_days where role = 'coach' and day > (now() at time zone 'Europe/London')::date - 7),
+    'parents7', (select count(distinct uid) from darlington_u14s.active_days where role = 'parent' and day > (now() at time zone 'Europe/London')::date - 7))
+  end;
+$$;
+revoke execute on function darlington_u14s.log_active(), darlington_u14s.active_summary() from public, anon;
+grant execute on function darlington_u14s.log_active(), darlington_u14s.active_summary() to authenticated;
+
+-- a head start from what's already known: the day each parent's phone was linked, and each coach's latest sign-in
+insert into darlington_u14s.active_days (day, uid, role)
+  select distinct (linked at time zone 'Europe/London')::date, uid, 'parent' from darlington_u14s.parent_links where linked is not null
+  on conflict do nothing;
+insert into darlington_u14s.active_days (day, uid, role)
+  select (u.last_sign_in_at at time zone 'Europe/London')::date, u.id, 'coach'
+  from auth.users u join darlington_u14s.coaches c on c.email = lower(u.email)
+  where u.last_sign_in_at is not null and not coalesce(u.is_anonymous, false)
+  on conflict do nothing;
+
+-- ===================== 27_my_badges.sql =====================
+-- Added 2026-11: badges for coaches and parents who keep coming back (the Medals page and the "Your badges" strip).
+-- A signed-in coach or parent's phone reads back only its OWN days from active_days (25_active_days.sql), to count
+-- days, weeks in a row and match days. Nobody can read anyone else's days; coaches still only get the totals.
+-- Player medals need nothing here: the site works them out from the games. Safe to re-run.
+create or replace function darlington_u14s.my_days() returns json
+language sql stable security definer set search_path = darlington_u14s as $$
+  select coalesce(json_agg(day order by day), '[]'::json) from darlington_u14s.active_days where uid = auth.uid() and auth.uid() is not null;
+$$;
+revoke execute on function darlington_u14s.my_days() from public, anon;
+grant execute on function darlington_u14s.my_days() to authenticated;
