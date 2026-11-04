@@ -158,6 +158,7 @@ function render(){
   else if(view==="kit")main.innerHTML=kitView();
   else if(view==="pom")main.innerHTML=pomView();
   else if(view==="birthdays")main.innerHTML=birthdaysView();
+  else if(view==="cphotos")main.innerHTML=coachPhotosView();
   else if(view==="results")main.innerHTML=resultsView();
   else if(view==="fixtures")main.innerHTML=fixturesView();
   else if(view==="honours")main.innerHTML=honoursView();
@@ -222,7 +223,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -850,7 +851,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time. There's no photo gallery.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos in a private store that only the team's signed-in coaches can open. These photos are never shown on the site and have no public links. Ask the coach to delete a photo at any time. There's no public photo gallery.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -923,6 +924,94 @@ async function lbAction(a){const p=LB&&LB.list[LB.i];if(a==="x"||a==="bg"){lbClo
   if(a==="del"){if(!confirm("Delete this photo for everyone?"))return;const {error}=await sb.from("match_photos").delete().eq("id",p.id);if(error){toast("Couldn't delete it. Try again.");return}
     sb.storage.from(galBucket()).remove([p.path,p.thumb]).catch(()=>{});GAL=GAL.filter(x=>x.id!==p.id);LB.list.splice(LB.i,1);if(LB.i>=LB.list.length)LB.i=0;toast("Photo deleted.");lbDraw();render()}}
 document.addEventListener("keydown",e=>{if(!LB)return;if(e.key==="Escape")lbClose();else if(e.key==="ArrowRight")lbStep(1);else if(e.key==="ArrowLeft")lbStep(-1)});
+// ---------- coach photos: a private photo store only the team's signed-in coaches can open ----------
+// public.coach_photos (supabase/29_coach_photos.sql) plus the PRIVATE "coach-photos" storage bucket. Nothing here is ever
+// shown on the site: no public links, and each picture opens through a signed link that runs out after an hour.
+// The database refuses everyone who isn't a coach, parents signed in with a family code included.
+// CP is null when the team's database isn't set up for it yet.
+let CP=null,cpAlbum="",cpOpen="",CPL=null,cpBusy=false;const CPU={};
+const cpBucket=()=>CFG.schema?CFG.schema+"-coach-photos":"coach-photos";
+const CP_LOCK=`<p class="hint rt-lock">🔒 Only coaches signed in to this site can see these photos. They're never shown on the site and have no public links.</p>`;
+async function loadCoachPhotos(){CP=null;CPL=null;if(!sb||!canWrite||window.DEMO)return;try{const {data,error}=await sb.from("coach_photos").select("*").order("created");if(!error)CP=data||[]}catch(e){}}
+const cpName=p=>p.album||"Other photos";
+// albums, newest first (by their latest photo)
+function cpAlbums(){const by=new Map();(CP||[]).forEach(p=>{const k=cpName(p);if(!by.has(k))by.set(k,[]);by.get(k).push(p)});
+  return [...by.entries()].map(([name,ps])=>({name,ps,last:ps[ps.length-1].created})).sort((a,b)=>String(b.last).localeCompare(String(a.last)))}
+// signed links, made in batches and kept until ten minutes before they run out
+async function cpSign(paths){const now=Date.now(),need=[...new Set(paths)].filter(p=>p&&(!CPU[p]||CPU[p].exp<now+6e5));
+  for(let i=0;i<need.length;i+=100){try{const {data,error}=await sb.storage.from(cpBucket()).createSignedUrls(need.slice(i,i+100),3600);
+    if(!error)(data||[]).forEach(d=>{if(d.signedUrl&&d.path)CPU[d.path]={url:d.signedUrl,exp:now+3600e3}})}catch(e){}}}
+const cpSrc=p=>CPU[p]&&CPU[p].exp>Date.now()?CPU[p].url:"";
+// after the page is drawn, fill in any pictures that still need a signed link
+async function cpPaint(){const imgs=[...document.querySelectorAll("img[data-cpimg]")];if(!imgs.length)return;await cpSign(imgs.map(i=>i.dataset.cpimg));
+  imgs.forEach(i=>{const u=cpSrc(i.dataset.cpimg);if(u&&i.getAttribute("src")!==u)i.src=u})}
+const cpTh=(p,cls="")=>`<button class="gal-th${cls}" data-cpph="${esc(p.id)}" aria-label="${esc(p.caption||"Open photo")}"><img data-cpimg="${esc(p.thumb)}" src="${cpSrc(p.thumb)}" alt="" loading="lazy"></button>`;
+// where new photos go: a recent game, Training, Team photos, an album already made, or a new one
+function cpChoices(){const recent=sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&(m.date||"")<=todayLocal())).reverse().slice(0,12);
+  const games=recent.map(m=>({v:"m:"+m.id,label:`v ${m.opp||""}, ${shortDay(m.date)}`,mid:m.id}));
+  const named=["Training","Team photos",...cpAlbums().map(a=>a.name)].filter((x,i,a)=>a.indexOf(x)===i&&!games.some(g=>g.label===x));
+  return [...games,...named.map(n=>({v:"a:"+n,label:n}))]}
+function cpAddCard(fixed){
+  if(fixed)return `<div class="btns" style="margin-top:10px"><label class="btn gold galadd">📷 Add photos to this album<input type="file" accept="image/*" multiple data-cpup="1" hidden></label></div>`;
+  const ch=cpChoices();if(!cpAlbum||(cpAlbum!=="new"&&!ch.some(c=>c.v===cpAlbum)))cpAlbum=ch.length?ch[0].v:"new";
+  return `<section class="card"><h3>Add photos</h3><label class="f">Which album?<select id="cpPick">${ch.map(c=>`<option value="${esc(c.v)}"${c.v===cpAlbum?" selected":""}>${esc(c.label)}</option>`).join("")}<option value="new"${cpAlbum==="new"?" selected":""}>New album…</option></select></label>
+    ${cpAlbum==="new"?`<label class="f">Album name<input id="cpNewName" maxlength="80" placeholder="e.g. Presentation night 2027"></label>`:""}
+    <div class="btns" style="margin-top:10px"><label class="btn gold galadd">📷 Add photos<input type="file" accept="image/*" multiple data-cpup="1" hidden></label></div>
+    <p class="hint" style="margin-top:8px">Pick several at once. Each photo is resized to save space and the phone's location data is taken out. Only add photos the club has parents' consent for.</p></section>`}
+function coachPhotosView(){
+  if(!canWrite)return `<div class="stack"><section class="card empty">Coach photos are for coaches only. Sign in as a coach to see them.</section></div>`;
+  if(window.DEMO)return `<div class="stack"><section class="card"><h2 style="margin-top:0">🔒 Coach photos</h2><p>On your own site, coaches keep match, training and team photos here in a private store that only signed-in coaches can open. Photos aren't part of the demo, so nothing is uploaded here.</p></section></div>`;
+  if(CP===null)return `<div class="stack"><section class="card"><h2 style="margin-top:0">🔒 Coach photos</h2><p class="hint">Coach photos aren't switched on for this team's database yet. Ask Touchline Tales to turn them on.</p></section></div>`;
+  setTimeout(cpPaint,0);
+  const albs=cpAlbums(),open=cpOpen&&albs.find(a=>a.name===cpOpen);if(cpOpen&&!open)cpOpen="";
+  if(open)return `<div class="stack"><div class="btns"><button class="btn ghost" id="cpBack">← All albums</button></div>
+    <section class="card"><h2 style="margin-top:0">${esc(open.name)}</h2><p class="hint">${open.ps.length} photo${open.ps.length===1?"":"s"}. Tap one to see it full size, save it to your phone or delete it.</p>
+    <div class="gal" style="margin-top:10px">${open.ps.slice().reverse().map(p=>cpTh(p)).join("")}</div>${cpAddCard(true)}${CP_LOCK}</section></div>`;
+  return `<div class="stack"><section class="card"><h2 style="margin-top:0">🔒 Coach photos</h2><p>A private place for the coaches to keep match, training and team photos, and share them with each other. Save one to your phone to use it in a post or a graphic.</p>${CP_LOCK}</section>
+    ${cpAddCard(false)}
+    ${albs.length?`<div class="albs">${albs.map(a=>{const ps=a.ps.slice().reverse(),strip=ps.slice(1,4),more=ps.length-1-strip.length;
+      return `<div class="alb">${cpTh(ps[0])}${strip.length?`<div class="alb-strip">${strip.map((p,i)=>i===strip.length-1&&more>0?`<div class="alb-more">${cpTh(p)}<span>+${more}</span></div>`:cpTh(p)).join("")}</div>`:""}
+        <button class="alb-meta" data-cpalb="${esc(a.name)}" style="text-align:left;border:0;background:none;cursor:pointer"><b>${esc(a.name)}</b><small>${shortDay(String(a.last).slice(0,10))} · ${a.ps.length} photo${a.ps.length===1?"":"s"}</small></button></div>`}).join("")}</div>`
+      :`<div class="card empty">No photos yet. Add the first ones above.</div>`}</div>`}
+async function cpUpload(files){files=[...files];if(!files.length||!canWrite||CP===null||cpBusy)return;
+  let album,mid=null;
+  if(cpOpen){album=cpOpen;const p=CP.find(x=>cpName(x)===cpOpen&&x.match_id);mid=p?p.match_id:null}
+  else if(cpAlbum==="new"){album=(($("#cpNewName")||{}).value||"").trim().slice(0,80);if(!album){toast("Give the new album a name first.");return}}
+  else if(cpAlbum.startsWith("m:")){const c=cpChoices().find(x=>x.v===cpAlbum);album=c?c.label:"Match photos";mid=cpAlbum.slice(2)}
+  else album=cpAlbum.slice(2);
+  cpBusy=true;let ok=0;const folder=new Date().toISOString().slice(0,7);
+  for(let i=0;i<files.length;i++){toast(`Adding photo ${i+1} of ${files.length}…`);
+    try{const id=crypto.randomUUID(),big=await galShrink(files[i],2400,.88),sm=await galShrink(files[i],480,.75),path=`${folder}/${id}.jpg`,thumb=`${folder}/${id}_t.jpg`;
+      for(const [p,b] of [[path,big.b],[thumb,sm.b]]){const {error}=await sb.storage.from(cpBucket()).upload(p,b,{contentType:"image/jpeg",cacheControl:"3600"});if(error)throw error}
+      const {data,error}=await sb.from("coach_photos").insert({id,album,match_id:mid,path,thumb,w:big.w,h:big.h}).select().single();if(error)throw error;CP.push(data);ok++}
+    catch(e){console.warn("coach photo upload",e)}}
+  cpBusy=false;if(ok&&!cpOpen&&cpAlbum==="new")cpAlbum="a:"+album;
+  toast(ok===files.length?`${ok} photo${ok>1?"s":""} added. Only coaches can see ${ok>1?"them":"it"}.`:ok?`${ok} of ${files.length} photos added. Try the others again.`:"Couldn't add those photos. Check your signal and try again.");
+  if(view==="cphotos")render()}
+// full-screen viewer, the same look as the old gallery's
+function cpLbOpen(id){const p=(CP||[]).find(x=>x.id===id);if(!p)return;const list=CP.filter(x=>cpName(x)===cpName(p)).reverse();CPL={list,i:list.indexOf(p)};cpLbDraw()}
+function cpLbClose(){CPL=null;document.querySelectorAll(".lb-ov.cp").forEach(x=>x.remove());document.body.classList.remove("lb-on")}
+function cpLbStep(n){if(!CPL||CPL.list.length<2)return;CPL.i=(CPL.i+n+CPL.list.length)%CPL.list.length;cpLbDraw()}
+async function cpLbDraw(){const p=CPL&&CPL.list[CPL.i];if(!p){cpLbClose();return}const many=CPL.list.length>1;
+  await cpSign([p.path]);let dl="";try{const {data}=await sb.storage.from(cpBucket()).createSignedUrl(p.path,600,{download:`${fileTag}-${p.id.slice(0,8)}.jpg`});dl=data&&data.signedUrl||""}catch(e){}
+  if(!CPL||CPL.list[CPL.i]!==p)return;
+  document.querySelectorAll(".lb-ov.cp").forEach(x=>x.remove());const d=document.createElement("div");d.className="lb-ov cp";d.setAttribute("role","dialog");d.setAttribute("aria-label","Photo");
+  d.innerHTML=`<div class="lb-top"><span>${many?`${CPL.i+1} of ${CPL.list.length} · `:""}${esc(cpName(p))} · 🔒 coaches only</span><button class="lb-x" data-cpl="x" aria-label="Close">✕</button></div>
+    <div class="lb-img" data-cpl="bg"><img src="${cpSrc(p.path)}" alt="${esc(p.caption||"Photo")}"></div>${p.caption?`<p class="lb-cap">${esc(p.caption)}</p>`:""}
+    <div class="lb-bar">${many?`<button class="btn ghost" data-cpl="prev" aria-label="Previous photo">←</button>`:""}${dl?`<a class="btn ghost" href="${esc(dl)}">Save</a>`:""}<button class="btn ghost" data-cpl="cap">${p.caption?"Edit caption":"Add caption"}</button><button class="btn ghost" data-cpl="del">Delete</button>${many?`<button class="btn ghost" data-cpl="next" aria-label="Next photo">→</button>`:""}</div>`;
+  let sx=null;d.addEventListener("touchstart",e=>{sx=e.touches[0].clientX},{passive:true});d.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)cpLbStep(dx<0?1:-1)});
+  document.body.appendChild(d);document.body.classList.add("lb-on")}
+async function cpAction(a){const p=CPL&&CPL.list[CPL.i];if(a==="x"||a==="bg"){cpLbClose();return}if(a==="prev"){cpLbStep(-1);return}if(a==="next"){cpLbStep(1);return}if(!p||!canWrite)return;
+  if(a==="cap"){const c=prompt("Caption (first names only)",p.caption||"");if(c==null)return;const {error}=await sb.from("coach_photos").update({caption:c.trim().slice(0,200)}).eq("id",p.id);if(error){toast("Couldn't save the caption.");return}p.caption=c.trim().slice(0,200);cpLbDraw();return}
+  if(a==="del"){if(!confirm("Delete this photo for all the coaches? It can't be brought back."))return;const {error}=await sb.from("coach_photos").delete().eq("id",p.id);if(error){toast("Couldn't delete it. Try again.");return}
+    sb.storage.from(cpBucket()).remove([p.path,p.thumb]).catch(()=>{});CP=CP.filter(x=>x.id!==p.id);CPL.list.splice(CPL.i,1);if(CPL.i>=CPL.list.length)CPL.i=0;toast("Photo deleted.");if(CPL.list.length)cpLbDraw();else cpLbClose();render()}}
+document.addEventListener("click",e=>{const t=e.target.closest("[data-cpl],[data-cpph],[data-cpalb],#cpBack");if(!t)return;
+  if(t.dataset.cpl){if(t.dataset.cpl==="bg"&&e.target.tagName==="IMG")return;cpAction(t.dataset.cpl);return}
+  if(t.dataset.cpph){cpLbOpen(t.dataset.cpph);return}
+  if(t.dataset.cpalb){cpOpen=t.dataset.cpalb;render();window.scrollTo({top:0});return}
+  if(t.id==="cpBack"){cpOpen="";render();window.scrollTo({top:0})}});
+document.addEventListener("change",e=>{const t=e.target;if(t.dataset&&t.dataset.cpup){const fs=[...t.files];t.value="";cpUpload(fs);return}if(t.id==="cpPick"){cpAlbum=t.value;render();if(t.value==="new")setTimeout(()=>{const i=$("#cpNewName");if(i)i.focus()},0)}});
+document.addEventListener("keydown",e=>{if(!CPL)return;if(e.key==="Escape")cpLbClose();else if(e.key==="ArrowRight")cpLbStep(1);else if(e.key==="ArrowLeft")cpLbStep(-1)});
 
 // ---------- calendar ----------
 // The "calendar" Supabase function serves every fixture, tournament and training session as a feed that phones
@@ -3336,12 +3425,12 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit","drills","design"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit","cphotos","drills","design"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
   await loadTav();alSync();
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadKit();await loadDrills();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadCoachPhotos();await loadKit();await loadDrills();
   authBox();render();
 }
 document.addEventListener("click",async e=>{
@@ -3409,7 +3498,7 @@ document.addEventListener("submit",async e=>{
     else showLogin("<b>That sign-in link has already been used or has run out.</b> Each email link works once. Type your email for a new one, then use the newest email (or type its code). Next time, open this page from your bookmark or Home Screen, not the old email. ")}
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos"])if(new URLSearchParams(location.search).has(v))setView(v);
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
