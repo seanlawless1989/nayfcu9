@@ -9,8 +9,9 @@
 //   POST {tsquad: "<id>"}  from a coach's phone after picking a tournament's squad (again only if it changed)
 //   POST {tournament: "<id>"} from a coach's phone when a tournament's groups and games are confirmed (once per tournament)
 //   POST {avail: {match, player}} from a parent's phone after answering availability: tells coaches who asked for it
+//                                 (match is "t:<tournament id>" for a whole tournament)
 //   POST {tavail: {day, player}}  the same for a training session
-// The every-minute call also sends the reminders to answer availability: the Wednesday evening before a game, and
+// The every-minute call also sends the reminders to answer availability: the Wednesday evening before a game or a tournament, and
 // 24 hours before training (supabase/16_availability_alerts.sql).
 // Add schema: "<schema>" to any of these for a team that shares this project in its own schema (tools/team_schema_sql.py).
 // The every-minute call covers every team schema that's exposed in the Data API.
@@ -275,8 +276,13 @@ async function availAlert(kind: "avail" | "tavail", ref: string, player: string)
   const said = SAID[row?.status ?? ""]; if (!said) return -1;
   let where: string, url: string;
   if (kind === "avail") {
-    const { data: m } = await db.from("matches").select("date,opp,ha,ko").eq("id", ref).maybeSingle(); if (!m) return -1;
-    where = `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"}, ${dayName(m.date)}${/\d[:.]\d\d/.test(m.ko || "") ? `, ${m.ko.trim()} KO` : ""}.`;
+    if (ref.startsWith("t:")) {   // a whole tournament (supabase/30_tournament_availability.sql)
+      const { data: t } = await db.from("tournaments").select("name,date").eq("id", ref.slice(2)).maybeSingle(); if (!t) return -1;
+      where = `${US} at the ${(t.name || "tournament").replace(/^the /i, "")}, ${dayName(t.date)}.`;
+    } else {
+      const { data: m } = await db.from("matches").select("date,opp,ha,ko").eq("id", ref).maybeSingle(); if (!m) return -1;
+      where = `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"}, ${dayName(m.date)}${/\d[:.]\d\d/.test(m.ko || "") ? `, ${m.ko.trim()} KO` : ""}.`;
+    }
     url = `${SITE}?fixtures`;
   } else { where = `Training, ${dayName(ref)}.`; url = `${SITE}?training`; }
   const { data: claimed } = await db.rpc("push_claim_note", { p_key: `${kind === "avail" ? "av" : "tav"}:${ref}|${player}`, p_value: row!.status });
@@ -314,6 +320,15 @@ async function availReminders(now: number) {
       const body = `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"}, ${dayName(m.date)}${/\d[:.]\d\d/.test(m.ko || "") ? `, ${m.ko.trim()} KO` : ""}. Tap to answer yes, maybe or no.`;
       sent += await remindAnswer(`avr:${m.id}`, { p_match: m.id, p_day: null }, (kids) =>
         ({ title: `🗓️ Can ${kids.length ? names(kids) : "your child"} make ${day}'s game?`, body, url: `${SITE}?avail=${encodeURIComponent(m.id)}`, tag: `avr-${m.id}` }));
+    }
+    // tournaments starting in the next 7 days: one answer for the whole tournament (supabase/30_tournament_availability.sql)
+    const { data: ts } = await db.from("tournaments").select("id,name,date")
+      .gte("date", londonDate(now + 864e5)).lte("date", londonDate(now + 7 * 864e5));
+    for (const t of (ts ?? []) as Tournament[]) {
+      const key = `t:${t.id}`, nm = (t.name || "tournament").replace(/^the /i, "");
+      const body = `${US} at the ${nm}, ${dayName(t.date)}. Tap to answer yes, maybe or no.`;
+      sent += await remindAnswer(`avr:${key}`, { p_match: key, p_day: null }, (kids) =>
+        ({ title: `🏆 Can ${kids.length ? names(kids) : "your child"} make the ${nm}?`, body, url: `${SITE}?avail=${encodeURIComponent(key)}`, tag: `avr-${key}` }));
     }
   }
   // training: 24 hours before (up to two hours late, if the job was down). Only once a coach has set training up (a venue).
