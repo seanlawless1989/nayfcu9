@@ -620,3 +620,12 @@ table.lb.cs .ctag{white-space:normal;line-height:1.3}
 .mdgroup summary{cursor:pointer;list-style:none}.mdgroup summary::-webkit-details-marker{display:none}
 .mdgroup summary h3{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0}.mdgroup summary h3:after{content:"▾";color:var(--muted)}
 .mdgroup[open] summary h3:after{content:"▴"}.mdgroup[open] summary{margin-bottom:10px}
+
+/* weekly training rows in the Fixtures list: slimmer than a match */
+.trfix{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;padding:6px 14px;border:1px dashed var(--line);border-radius:12px;background:var(--card)}
+.trfix .d{font:700 11px var(--body);color:var(--muted);text-align:center;line-height:1.1;min-width:44px}.trfix .d b{display:block;font:400 17px var(--display);color:var(--ink)}
+.trfix .o{font:700 14px var(--body)}.trfix .o span{font-weight:400;font-size:13px;color:var(--muted)}
+.trfix.off{opacity:.65;padding:4px 14px}.trfix.off .o{font-weight:600;font-size:13px;color:var(--muted)}
+.trsum{font:700 12px var(--body);color:var(--muted);margin-top:3px}
+.trav .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0 0;font:600 13px var(--body)}.trav .row>.seg{flex:none}
+.trav .seg button{padding:6px 11px;font-size:13px}
