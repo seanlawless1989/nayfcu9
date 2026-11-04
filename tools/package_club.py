@@ -10,6 +10,7 @@ Give each team's team.js  club: {name: "<short>", url: "<siteUrl>"}  so its site
 Output goes to dist/club-<slug>/: index.html and the crest, ready for GitHub Pages or any static host.
 The page is kept out of search engines like the team sites; set "index": true in club.json to allow it.
 A small "Powered by Touchline Tales" link sits in the footer; set "poweredBy": false in club.json to hide it.
+"join": {url, title, text} adds a highlighted card at the top for coaches whose team isn't on yet (e.g. the club sign-up form).
 "admin": {id, supabaseUrl, supabaseAnonKey} also builds the club admin page in admin/ (reports inbox, shared drills,
 club admins): id = the club's row in club.clubs (supabase/26_club_admin.sql), and the Supabase project its teams share.
 """
@@ -47,6 +48,12 @@ def main():
             sys.exit(f"Team {t.get('name')}: url must start with https://")
         inner = f'<b>{esc(t["name"])}</b><span>{esc(t.get("note") or ("Fixtures, results and match alerts" if url else "Site coming soon"))}</span>'
         cards.append(f'<a class="team" href="{esc(url)}">{inner}<i>→</i></a>' if url else f'<div class="team soon">{inner}</div>')
+    j = club.get("join")
+    if j:
+        if not re.match(r"^(https?://|[a-z0-9])", j.get("url", "")):
+            sys.exit("club.json join needs a url")
+        cards.insert(0, f'<a class="team join" href="{esc(j["url"])}"><b>{esc(j.get("title") or "Add your team")}</b>'
+                        f'<span>{esc(j.get("text") or "Get your team its own site")}</span><i>→</i></a>')
     powered = "" if club.get("poweredBy") is False else (
         f'<br><a class="powered" href="https://touchlinetales.club/?ref=powered-club-{slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>')
     adm = club.get("admin")
@@ -77,6 +84,7 @@ main{{max-width:760px;margin:-22px auto 40px;padding:0 16px;display:grid;gap:12p
 .team{{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:16px 18px;text-decoration:none;color:inherit;box-shadow:0 1px 3px rgb(0 0 0 / .08);border-left:6px solid var(--club)}}
 .team b{{font-size:18px;flex:0 0 auto}}.team span{{color:var(--muted);flex:1;font-size:14px}}.team i{{font-style:normal;font-size:22px;color:var(--club)}}
 a.team:hover,a.team:focus-visible{{outline:3px solid var(--second);outline-offset:2px}}.team.soon{{opacity:.6;border-left-color:#ccc}}
+.team.join{{background:var(--second);color:#fff;border-left-color:var(--deep);margin-top:34px}}.team.join span{{color:#fff;opacity:.92}}.team.join i{{color:#fff}}main .team.join + h2{{margin-top:14px}}
 @media(max-width:520px){{.team{{flex-wrap:wrap}}.team span{{flex-basis:100%;order:3}}}}
 h2{{font:800 15px/1.2 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:14px 4px 0}}main h2:first-child{{margin-top:34px}}
 footer{{text-align:center;color:var(--muted);font-size:13px;padding:0 16px 32px}}

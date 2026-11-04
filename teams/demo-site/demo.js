@@ -197,6 +197,9 @@ function rpc(fn,a){
     case "send_cheer":{if(T.cheer_settings[0].muted)return json({message:"Cheers are off for this team"},400);const mine=T.cheers.filter(c=>c.voter===a.p_voter&&Date.now()-Date.parse(c.at)<600e3);
       if(mine.length>=3)return json({message:"Slow down: 3 cheers every 10 minutes"},400);const c={id:++seq+5000,match_id:a.p_match,cheer:a.p_cheer,name:String(a.p_name||"").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' -]/g,"").trim().slice(0,20)||null,voter:a.p_voter,at:new Date().toISOString(),hidden:false};
       T.cheers.push(c);save();return json(c.id)}
+    // the badges demo: a made-up habit of opening the site on match days and midweek over the last two months
+    case "my_days":{const t=new Date().toLocaleDateString("en-CA"),from=new Date(Date.now()-60*864e5).toLocaleDateString("en-CA"),d=new Set();
+      T.matches.filter(m=>m.date>=from&&m.date<=t).forEach(m=>{d.add(m.date);d.add(new Date(Date.parse(m.date+"T12:00:00")-3*864e5).toLocaleDateString("en-CA"))});return json([...d].filter(x=>x<=t).sort())}
     case "hide_cheer":T.cheers.forEach(c=>{if(c.id===a.p_id)c.hidden=true});save();return json(null);
     default:return json(null)}  // log_view, push_subscribe and the rest: nothing to record in a demo
 }
@@ -279,7 +282,7 @@ function askLater(){
 function showLead(){
   ss.set(ASKED,1);const el=document.createElement("form");el.className="ttlead";el.noValidate=true;el.setAttribute("aria-label","Get in touch");
   el.innerHTML=`<button type="button" class="x" aria-label="Not now">×</button><h3>Want this for your team?</h3>
-    <p>Leave your details and we'll be in touch to answer questions and get you set up. Free for founding teams.</p>
+    <p>Leave your details and we'll be in touch to answer questions and get you set up. £5 a month, free setup, cancel anytime.</p>
     <input name="name" placeholder="Your name" autocomplete="name" required><input name="email" type="email" placeholder="Your email" autocomplete="email" required>
     <input name="club" placeholder="Club and team, e.g. Sample Town U10s" required>
     <label class="tk"><input type="checkbox" name="consent" required><span>It's fine to contact me about Touchline Tales (<a href="../privacy/" target="_blank" rel="noopener">privacy</a>).</span></label>
