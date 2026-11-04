@@ -73,11 +73,15 @@ begin
     -- website visits (coach phones aren't counted)
     if to_regclass(format('%I.page_views', s)) is not null then
       execute format('select jsonb_build_object(
-          ''views'', coalesce(sum(views), 0), ''views7'', coalesce(sum(views) filter (where day > $1 - 7), 0),
+          ''views'', coalesce(sum(views), 0), ''visitors'', coalesce(sum(visitors), 0),
+          ''views_today'', coalesce(sum(views) filter (where day = $1), 0), ''visitors_today'', coalesce(sum(visitors) filter (where day = $1), 0),
+          ''views7'', coalesce(sum(views) filter (where day > $1 - 7), 0),
           ''visitors7'', coalesce(sum(visitors) filter (where day > $1 - 7), 0),
+          ''views30'', coalesce(sum(views) filter (where day > $1 - 30), 0),
+          ''visitors30'', coalesce(sum(visitors) filter (where day > $1 - 30), 0),
           ''views_since'', min(day), ''last_view'', max(day),
           ''days'', coalesce((select jsonb_agg(jsonb_build_object(''day'', d::date, ''views'', coalesce(p.views, 0), ''visitors'', coalesce(p.visitors, 0)) order by d)
-                    from generate_series($1 - 13, $1, interval ''1 day'') d left join %I.page_views p on p.day = d::date), ''[]''::jsonb))
+                    from generate_series($1 - 29, $1, interval ''1 day'') d left join %I.page_views p on p.day = d::date), ''[]''::jsonb))
         from %I.page_views', s, s) into v using today;
       j := j || v;
     end if;
