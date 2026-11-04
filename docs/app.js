@@ -2043,8 +2043,20 @@ async function ftImport(){const list=ftRows().filter(f=>FT.picks.has(f.key)&&f.s
   for(const f of list){try{if(f.ex){const b={date:f.date};if(f.ko)b.ko=f.ko;if(f.venue)b.venue=f.venue;await db.collection("matches").doc(f.ex.id).update(b)}
     else{const b=Object.assign({},(({id,...x})=>x)(blankForm()),{date:f.date,ko:f.ko,opp:f.opp,ha:f.ha,venue:f.venue,comp:f.comp,us:null,them:null,potm:null,check:"",updated:new Date().toISOString()});delete b.saves;delete b.gk;b.postponed=false;await db.collection("matches").doc(`${f.date}-${slug(f.opp)}-${Math.random().toString(36).slice(2,6)}`).set(b)}n++}catch(e){}}
   toast(n===list.length?`Done: ${n} fixture${n>1?"s":""} added or updated.`:`${n} of ${list.length} saved. Try the rest again.`);FT=null;setView("fixtures")}
+// Weekly training in the Fixtures list: one slim row per session for the next four weeks, so parents can say if their
+// child is coming right there (same answers as the Training page and ?tavail, public.training_availability).
+// Weeks off show as "No training". Hidden when a competition filter is on or another season is picked.
+function trFixRows(){if(!TR||compFilter)return [];return trUpcoming(4).filter(x=>seasonOf(x.iso)===season).map(x=>({date:x.iso,pp:false,html:trFixRow(x)}))}
+function trFixRow(x){const d=new Date(x.iso+"T12:00:00"),day=`<div class="d"><b>${d.getDate()}</b>${MONTHS[d.getMonth()]}</div>`;
+  if(x.off)return `<div class="trfix off">${day}<div class="o">🚫 No training this ${esc(TR.day)}</div></div>`;
+  const when=`${clock(TR.start)} to ${clock(TR.finish)}${TR.venue?` · ${TR.venue.split(",")[0]}`:""}`;let body="";
+  if(TAV_ON){if(canWrite){const a=TAV[x.iso]||{},c={yes:0,maybe:0,no:0};Object.values(a).forEach(v=>c[v]!=null&&c[v]++);const w=players.filter(p=>p.current&&!a[p.name]).length;
+      body=`<div class="trsum">✅ ${c.yes} ❔ ${c.maybe} ❌ ${c.no}${w?` ⏳ ${w}`:""} <button class="mini" data-tavopen="${x.iso}">Set answers</button></div>`}
+    else{const kids=myKids();body=kids.length?`<div class="trav">${kids.map(n=>avRow(n,(TAV_MINE[x.iso]||{})[n],"tav",false,` data-day="${x.iso}"`,kids.length>1?"":`Coming?`)).join("")}</div>`
+      :`<div class="trsum"><button class="mini" data-tavopen="${x.iso}">Say if your ${esc(PRN.kid)} is coming</button></div>`}}
+  return `<div class="trfix">${day}<div style="min-width:0"><div class="o">🏃 Training <span>${esc(when)}</span></div>${body}</div></div>`}
 function fixturesView(){
-  const items=listItems(byComp(seasonMatches().filter(isFixture)),tByComp(seasonTournaments().filter(tIsFixture))).sort((a,b)=>a.date.localeCompare(b.date));
+  const items=listItems(byComp(seasonMatches().filter(isFixture)),tByComp(seasonTournaments().filter(tIsFixture))).concat(trFixRows()).sort((a,b)=>a.date.localeCompare(b.date));
   const calBtn=`<div class="btns" style="margin-bottom:8px"><button class="btn ghost" data-view="calendar">🗓️ Add all fixtures to my calendar</button><button class="btn ghost" data-view="training">🏃 Training</button></div>`;
   if(!items.length)return `${calBtn}${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one${RUGBY?"":`, or <button class="mini" id="ftStart">📥 import league fixtures</button>`}.`:""}</div>`;
   const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
