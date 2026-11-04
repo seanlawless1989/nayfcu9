@@ -785,7 +785,7 @@ async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.s
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:fnBody({match:id})}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
 async function alSend(body){if(!sb||!CFG.vapidPublicKey)return null;   // alerts not switched on for this team
-try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament??data.avail;return typeof v==="number"?v:null}catch(e){return null}}
+try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament??data.avail??data.fixture;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
@@ -1998,12 +1998,19 @@ function liveHalves(){const h={};[1,2].forEach(q=>(LV.touched[q]||[]).forEach(n=
 function liveKeepers(m){const ks={};LV.events.filter(e=>e.k==="ko"||e.k==="gk").forEach(e=>{const n=e.k==="ko"?e.line[0]:e.n;if(n)ks[n]=0});if(LV.slots[0])ks[LV.slots[0]]=0;const cs=+m.them===0?1:0;Object.keys(ks).forEach(n=>ks[n]=cs);return ks}
 function seasonTournaments(){return tournaments.filter(t=>seasonOf(t.date)===season)}
 // ---------- league fixtures from FA Full-Time ----------
-// The "fulltime" edge function reads the team's Fixtures page on fulltime.thefa.com; a coach can also paste the
-// table straight from the page. Rows naming the team become a list to tick; games already on the site are matched
+// Full-Time turns away automated readers (a Cloudflare check, Nov 2026), so the coach opens the team's Fixtures page,
+// copies the table and pastes it here. The "Get fixtures" button (the "fulltime" edge function) is kept for if that changes. Rows naming the team become a list to tick; games already on the site are matched
 // by date and opponent, so a kick-off time or venue that changed can be updated instead of added twice.
 let FT=null;// {url, name, rows, picks:Set, busy, msg}
 const FT_KEY=SK+".fulltime";
-function ftStart(){let saved={};try{saved=JSON.parse(localStorage.getItem(FT_KEY)||"{}")}catch(e){}FT={url:saved.url||TEAM.fullTimeUrl||"",name:saved.name||TEAM.fullTimeName||TEAM.name||"",rows:null,picks:new Set(),busy:false,msg:""};setView("ftimport")}
+function ftStart(){let saved={};try{saved=JSON.parse(localStorage.getItem(FT_KEY)||"{}")}catch(e){}FT={url:saved.url||TEAM.fullTimeUrl||"",name:saved.name||TEAM.fullTimeName||TEAM.name||"",checked:saved.checked||"",rows:null,picks:new Set(),busy:false,msg:""};setView("ftimport")}
+function ftSave(){try{localStorage.setItem(FT_KEY,JSON.stringify({url:FT.url,name:FT.name,checked:FT.checked||""}))}catch(e){}}
+// coaches: a nudge on the Fixtures page when nobody on this phone has checked Full-Time for a week (league fixtures only)
+function ftDue(){if(!canWrite||RUGBY)return false;let c="";try{c=(JSON.parse(localStorage.getItem(FT_KEY)||"{}")).checked||""}catch(e){}
+  return !c||Date.now()-new Date(c)>6*864e5}
+// date|kick-off|venue: when these change on an upcoming game, parents with alerts on are told (notify: fixture)
+const fxSig=m=>[m.date||"",String(m.ko||"").trim(),String(m.venue||"").trim()].join("|");
+function fxTell(id,was){alSend({fixture:{match:id,was}}).then(r=>{if(r!=null&&r>0)toast(`Parents with alerts on have been told about the change.`)})}
 const ftDate=c=>{const m=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(c||"");if(!m)return null;const y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`};
 const ftTime=c=>{const m=/\b(\d{1,2})[:.](\d{2})\b/.exec(c||"");return m?`${m[1].padStart(2,"0")}:${m[2]}`:""};
 const ftSame=(a,b)=>oppKey(a)===oppKey(b)||oppKey(a).includes(oppKey(b))||oppKey(b).includes(oppKey(a));
@@ -2022,24 +2029,25 @@ function ftRows(){if(!FT||!FT.rows)return [];const seen=new Set();return FT.rows
     return Object.assign(f,{key:f.date+"|"+oppKey(f.opp),ex,change,state:!ex?"new":change.length?"changed":"same"})}).filter(f=>f.date>=todayLocal()||f.state!=="same")}
 function ftView(){if(!canWrite||!FT)return `<div class="card empty">Coaches only.</div>`;const list=ftRows();
   return `<section class="card stack"><h2>📥 Import league fixtures</h2>
-    <p class="hint" style="margin:0">On FA Full-Time, open your team's <b>Fixtures</b> page and copy its address from the browser. Or select the fixtures table on that page, copy it, and paste it in the box below.</p>
-    <label class="f">Full-Time fixtures page<input type="url" id="ft-url" value="${esc(FT.url)}" placeholder="https://fulltime.thefa.com/fixtures.html?..."></label>
+    <p class="hint" style="margin:0">Use this whenever the league moves a game. 1. Open your team's <b>Fixtures</b> page on FA Full-Time. 2. Select the whole fixtures table and copy it. 3. Paste it below. New games are added, and any date, venue or kick-off that changed is updated. Parents with alerts on get told about changes.</p>
+    ${FT.url?`<div class="btns"><a class="btn ghost" href="${esc(FT.url)}" target="_blank" rel="noopener">Open our Full-Time fixtures ↗</a></div>`:""}
     <label class="f">Your team's name on Full-Time<input type="text" id="ft-name" value="${esc(FT.name)}"></label>
-    <div class="btns"><button class="btn gold" id="ftFetch"${FT.busy?" disabled":""}>${FT.busy?"Reading Full-Time…":"Get fixtures"}</button></div>
-    <details><summary>Or paste the fixtures table</summary><textarea id="ft-paste" rows="6" style="width:100%" placeholder="Paste here"></textarea><div class="btns" style="margin-top:6px"><button class="btn ghost" id="ftPaste">Read what I pasted</button></div></details>
+    <textarea id="ft-paste" rows="6" style="width:100%" placeholder="Paste the fixtures table here"></textarea><div class="btns" style="margin-top:6px"><button class="btn gold" id="ftPaste">Check for changes</button></div>
+    ${FT.checked?`<p class="hint" style="margin:0">Last checked on this phone ${esc(new Date(FT.checked).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}))}.</p>`:""}
+    <details><summary>Our Full-Time fixtures page address</summary><label class="f">Saved so the button above opens it<input type="url" id="ft-url" value="${esc(FT.url)}" placeholder="https://fulltime.thefa.com/fixtures.html?..."></label></details>
     ${FT.msg?`<div class="note">${esc(FT.msg)}</div>`:""}</section>
   ${FT.rows?`<section class="card stack"><h3>${list.length?`${list.length} fixture${list.length>1?"s":""} for ${esc(FT.name)}`:"Nothing found"}</h3>${list.length?`
     <div class="av">${list.map(f=>`<label class="row" style="cursor:pointer;align-items:flex-start"><span><input type="checkbox" data-ftpick="${esc(f.key)}"${f.state==="same"?" disabled":FT.picks.has(f.key)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(shortDay(f.date))}</b> ${f.ha==="A"?"at":"v"} ${esc(f.opp)}<br><span class="hint">${[f.ko?f.ko+" KO":"KO TBC",f.venue,f.comp!=="League"?f.comp:""].filter(Boolean).map(esc).join(" · ")}</span></span><span class="pill">${f.state==="new"?"New":f.state==="changed"?`Update ${f.change.join(", ")}`:"Already on the site"}</span></label>`).join("")}</div>
     <div class="btns"><button class="btn gold" id="ftImport">Add or update ticked fixtures</button><button class="mini" id="ftAll">Tick all new and changed</button></div>`:`<p class="hint">No rows with "${esc(FT.name)}" in them. Check your team's name matches Full-Time exactly.</p>`}</section>`:""}`}
-async function ftFetch(){FT.url=$("#ft-url").value.trim();FT.name=$("#ft-name").value.trim();try{localStorage.setItem(FT_KEY,JSON.stringify({url:FT.url,name:FT.name}))}catch(e){}
+async function ftFetch(){FT.url=$("#ft-url").value.trim();FT.name=$("#ft-name").value.trim();ftSave();
   if(!/^https:\/\/fulltime\.thefa\.com\//.test(FT.url)){FT.msg="Paste the address of a Full-Time page (it starts https://fulltime.thefa.com/).";render();return}
   FT.busy=true;FT.msg="";render();
   try{const {data,error}=await sb.functions.invoke("fulltime",{body:{url:FT.url}});if(error||!data||data.error)throw new Error((data&&data.error)||"");FT.rows=data.rows||[];FT.picks=new Set(ftRows().filter(f=>f.state!=="same").map(f=>f.key))}
   catch(e){FT.msg=`Couldn't read Full-Time${e.message?`: ${e.message}`:""}. Try pasting the table instead.`}finally{FT.busy=false;render()}}
-function ftPasted(){FT.name=$("#ft-name").value.trim();const t=$("#ft-paste").value;
-  FT.rows=t.split(/\r?\n/).map(l=>l.includes("\t")?l.split("\t"):l.split(/\s{2,}|\s+(?=v\s)|(?<=\sv)\s+/i)).filter(r=>r.some(c=>ftDate(c)));FT.picks=new Set(ftRows().filter(f=>f.state!=="same").map(f=>f.key));FT.msg=FT.rows.length?"":"Couldn't find any dates in that. Copy the whole fixtures table.";render()}
+function ftPasted(){FT.name=$("#ft-name").value.trim();const u=($("#ft-url")||{}).value;if(u!=null&&(!u.trim()||/^https:\/\/fulltime\.thefa\.com\//.test(u.trim())))FT.url=u.trim();const t=$("#ft-paste").value;
+  FT.rows=t.split(/\r?\n/).map(l=>l.includes("\t")?l.split("\t"):l.split(/\s{2,}|\s+(?=v\s)|(?<=\sv)\s+/i)).filter(r=>r.some(c=>ftDate(c)));FT.picks=new Set(ftRows().filter(f=>f.state!=="same").map(f=>f.key));FT.msg=FT.rows.length?"":"Couldn't find any dates in that. Copy the whole fixtures table.";if(FT.rows.length){FT.checked=new Date().toISOString()}ftSave();render()}
 async function ftImport(){const list=ftRows().filter(f=>FT.picks.has(f.key)&&f.state!=="same");if(!list.length){toast("Tick at least one fixture.");return}let n=0;
-  for(const f of list){try{if(f.ex){const b={date:f.date};if(f.ko)b.ko=f.ko;if(f.venue)b.venue=f.venue;await db.collection("matches").doc(f.ex.id).update(b)}
+  for(const f of list){try{if(f.ex){const b={date:f.date};if(f.ko)b.ko=f.ko;if(f.venue)b.venue=f.venue;await db.collection("matches").doc(f.ex.id).update(b);if(!result(f.ex)&&!f.ex.postponed)fxTell(f.ex.id,fxSig(f.ex))}
     else{const b=Object.assign({},(({id,...x})=>x)(blankForm()),{date:f.date,ko:f.ko,opp:f.opp,ha:f.ha,venue:f.venue,comp:f.comp,us:null,them:null,potm:null,check:"",updated:new Date().toISOString()});delete b.saves;delete b.gk;b.postponed=false;await db.collection("matches").doc(`${f.date}-${slug(f.opp)}-${Math.random().toString(36).slice(2,6)}`).set(b)}n++}catch(e){}}
   toast(n===list.length?`Done: ${n} fixture${n>1?"s":""} added or updated.`:`${n} of ${list.length} saved. Try the rest again.`);FT=null;setView("fixtures")}
 function fixturesView(){
@@ -2048,7 +2056,7 @@ function fixturesView(){
   if(!items.length)return `${calBtn}${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one${RUGBY?"":`, or <button class="mini" id="ftStart">📥 import league fixtures</button>`}.`:""}</div>`;
   const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
   const nx=nextFixture();
-  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 Import league fixtures</button>`}</div>`:""}${CKEY()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
+  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 ${ftDue()?"Check league fixtures":"Import league fixtures"}</button>`}</div>${ftDue()?`<div class="note edit-only" style="margin-bottom:8px">📅 Has the league moved any games? Check Full-Time once a week: <button class="mini" id="ftStart2">check now</button></div>`:""}`:""}${CKEY()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
 }
 function resultsView(){
   const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
@@ -3129,10 +3137,12 @@ async function saveMatch(){
   $("#saveM").disabled=true;
   const was=F.id?matches.find(x=>x.id===F.id)||{}:{},tellPP=!!F.id&&!!body.postponed!==!!was.postponed&&body.date>=new Date().toISOString().slice(0,10);// the function alerts on postponed, and resets when it's back on
   // a newly chosen player of the match for a game just played is sent to parents' phones (the function skips older games)
+  const tellFx=!!F.id&&!!was.id&&body.us==null&&body.them==null&&!body.postponed&&body.stage!=="placeholder"&&fxSig(was)!==fxSig(body)&&(body.date>=todayLocal()||was.date>=todayLocal()),wasSig=fxSig(was);
   const prevPotm=F.id?(matches.find(x=>x.id===F.id)||{}).potm||null:null,tellPotm=!!body.potm&&body.potm!==prevPotm&&body.us!=null&&body.comp!=="Tournament";
   try{try{await db.collection("matches").doc(id).set(body)}catch(er){if(!("matchday" in body))throw er;delete body.matchday;await db.collection("matches").doc(id).set(body);toast("Match saved, but not the meet time, pitch or kit: the database needs its October update.");await new Promise(r=>setTimeout(r,2500))}// older database without matches.matchday
     toast("Match saved.");
     if(tellPP)alSend({postponed:id}).then(r=>{if(body.postponed&&r!=null&&r>=0)toast("Match saved. Parents with alerts on have been told it's postponed.")});
+    if(tellFx)fxTell(id,wasSig);
     if(tellPotm)alSend({potm:id}).then(r=>{if(r!=null&&r>=0)toast(`Match saved. ${POTM.charAt(0).toUpperCase()+POTM.slice(1)} sent to parents' phones.`)});season=seasonOf(F.date);F=null;editing=null;setView(isFixture(body)?"fixtures":"results")}
   catch(e){$("#saveM").disabled=false;toast(e&&e.code==="quota_exceeded"?"The results store is full.":"Couldn't save. Check your connection and try again.");if(e&&e.code==="invalid_argument"){canWrite=false;render()}}
 }
@@ -3159,7 +3169,7 @@ document.addEventListener("click",async e=>{
   if(t.dataset.mday){mdayMatch=t.dataset.mday==="1"?null:t.dataset.mday;setView("matchday");return}
   if(t.dataset.mdayav){availMatch=t.dataset.mdayav;view="avail";render();return}
   if(t.dataset.mdayrep){mdWrite=true;mdPrevWrite=false;mdFrom="matchday";mdMatch=t.dataset.mdayrep;setView("md");return}
-  if(t.id==="ftStart"&&canWrite){ftStart();return}
+  if((t.id==="ftStart"||t.id==="ftStart2")&&canWrite){ftStart();return}
   if(t.id==="ftFetch"){ftFetch();return}
   if(t.id==="ftPaste"){ftPasted();return}
   if(t.id==="ftImport"){t.disabled=true;ftImport();return}
