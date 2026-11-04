@@ -22,8 +22,10 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 // The project's own team (schema public) is set up by these secrets. A team in its own schema uses its alert_team row.
 const ENV_SITE = Deno.env.get("SITE_URL") ?? "https://nayfootball.club/";
-// where a tap on an alert opens. Teams in their own schema: "./" opens the site the phone turned alerts on from.
-let SITE = ENV_SITE;
+// where a tap on an alert opens: "./" is read against the phone's own copy of the site, so a phone that turned alerts on
+// at touchlinetales.club/newton-aycliffe-u9s/ opens that address, and one from nayfootball.club opens that. Every team, every schema.
+// ENV_SITE is only the web push contact address now.
+let SITE = "./";
 let US = Deno.env.get("TEAM_NAME") ?? "Newton Aycliffe";
 // PUBLIC_SCORES=false: no goal alerts and no scores in alerts (FA rules for U7-U11). Matches the site's TEAM.publicScores.
 let SCORES = Deno.env.get("PUBLIC_SCORES") !== "false";
@@ -49,10 +51,9 @@ async function useTeam(schema: string) {
   SCHEMA = schema;
   db = clients[schema] ??= createClient(URL_, KEY, { auth: { persistSession: false }, db: { schema } });
   let base = ENV;
-  SITE = ENV_SITE;
+  SITE = "./";
   if (schema !== "public") {
     // a team sharing the project: nothing from the secrets above (they're the project's own team); scores off unless it says so
-    SITE = "./";
     const { data } = await db.from("alert_team").select("settings").eq("id", 1).maybeSingle();
     const a = data?.settings ?? {};
     const sp = (a.potm?.sponsor ?? "").trim();
