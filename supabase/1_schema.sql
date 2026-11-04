@@ -130,7 +130,9 @@ create table if not exists public.availability(
 );
 alter table public.availability enable row level security;
 -- Only coaches can see answers; parents answer through set_availability below.
+drop policy if exists "coaches read availability" on public.availability;
 create policy "coaches read availability" on public.availability for select using (public.is_coach());
+drop policy if exists "coaches write availability" on public.availability;
 create policy "coaches write availability" on public.availability for all using (public.is_coach()) with check (public.is_coach());
 
 create or replace function public.set_availability(p_match text, p_player text, p_status text)
@@ -157,15 +159,19 @@ alter table public.matches add column if not exists live jsonb;
 -- Opposition badges, shared across the site (small PNG data URLs), public read, coach write
 create table if not exists public.badges(key text primary key, name text, img text not null, updated timestamptz default now());
 alter table public.badges enable row level security;
+drop policy if exists "public read badges" on public.badges;
 create policy "public read badges" on public.badges for select using (true);
+drop policy if exists "coaches write badges" on public.badges;
 create policy "coaches write badges" on public.badges for all using (public.is_coach()) with check (public.is_coach());
 
 -- Player photos: coaches only (never public)
 create table if not exists public.player_photos(player text primary key, img text not null, updated timestamptz default now());
 alter table public.player_photos enable row level security;
 -- 2026-10-17: Sean asked for photos to be visible to everyone (they were coach-only); only coaches can add or change them.
+drop policy if exists "everyone reads photos" on public.player_photos;
 create policy "everyone reads photos" on public.player_photos for select using (true);
 grant select on public.player_photos to anon;
+drop policy if exists "coaches write photos" on public.player_photos;
 create policy "coaches write photos" on public.player_photos for all using (public.is_coach()) with check (public.is_coach());
 grant select, insert, update, delete on public.player_photos to authenticated;
 
@@ -173,6 +179,7 @@ grant select, insert, update, delete on public.player_photos to authenticated;
 -- views = times the site was opened; visitors = phones/computers that opened it that day (the site remembers "seen today" in the browser).
 create table if not exists public.page_views(day date primary key, views int not null default 0, visitors int not null default 0);
 alter table public.page_views enable row level security;
+drop policy if exists "coaches read page views" on public.page_views;
 create policy "coaches read page views" on public.page_views for select to authenticated using (public.is_coach());
 grant select on public.page_views to authenticated;
 
