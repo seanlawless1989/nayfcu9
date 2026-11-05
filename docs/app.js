@@ -2129,7 +2129,10 @@ function ftParse(cells,name){cells=cells.map(c=>String(c||"").trim());const dc=c
   const home=other.i>rest[us].i,after=rest.filter(x=>x.i>Math.max(other.i,rest[us].i));
   const compCell=cells.find(c=>/cup|trophy|shield|plate/i.test(c)),fr=cells.some(c=>/^f$|friendly/i.test(c));
   return {date,ko,opp:other.c.replace(/\s+/g," "),ha:home?"H":"A",venue:(after[0]&&!/cup|division|league|trophy/i.test(after[0].c)?after[0].c:""),comp:compCell?"Cup":fr?"Friendly":"League"}}
-function ftRows(rows,name){rows=rows||(FT&&FT.rows);name=name||(FT&&FT.name);if(!rows)return [];const seen=new Set();return rows.map(r=>ftParse(r,name)).filter(Boolean).filter(f=>{const k=f.date+"|"+oppKey(f.opp);if(seen.has(k))return false;seen.add(k);return true})
+// the name on Full-Time is often the club's ("Newton Aycliffe Youth Football Club U11"), not the site's ("Newton Aycliffe Pumas"):
+// if the name given finds nothing, try TEAM.fullTimeName, the club's name and the team's name, and use the first that does
+function ftName(rows,name){const c=[...new Set([name,TEAM.fullTimeName,TEAM.club&&TEAM.club.name,TEAM.name,String(TEAM.name||"").split(" ").slice(0,2).join(" ")].filter(Boolean))];return c.find(n=>rows.some(r=>ftParse(r,n)))||name}
+function ftRows(rows,name){rows=rows||(FT&&FT.rows);name=name||(FT&&FT.name);if(!rows)return [];name=ftName(rows,name);if(FT&&rows===FT.rows&&FT.name!==name){FT.name=name}const seen=new Set();return rows.map(r=>ftParse(r,name)).filter(Boolean).filter(f=>{const k=f.date+"|"+oppKey(f.opp);if(seen.has(k))return false;seen.add(k);return true})
   .map(f=>{const ex=matches.find(m=>m.date===f.date&&ftSame(m.opp,f.opp))||matches.find(m=>!result(m)&&ftSame(m.opp,f.opp)&&m.comp===f.comp&&Math.abs(new Date(m.date)-new Date(f.date))<15*864e5&&m.date!==f.date);
     const change=ex&&!result(ex)?[ex.date!==f.date?"date":"",f.ko&&ex.ko!==f.ko?"kick-off":"",f.venue&&ex.venue!==f.venue?"venue":""].filter(Boolean):[];
     return Object.assign(f,{key:f.date+"|"+oppKey(f.opp),ex,change,state:!ex?"new":change.length?"changed":"same"})}).filter(f=>f.date>=todayLocal()||f.state!=="same")}
