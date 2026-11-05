@@ -12,6 +12,8 @@ self.TEAM = {
   appName: "NAYFC U9s",                          // home-screen app name and calendar name
   siteUrl: "https://nayfootball.club",
   club: { id: "newton-aycliffe", name: "Newton Aycliffe", url: "https://touchlinetales.club/newton-aycliffe/" },   // "All Newton Aycliffe teams" link in the masthead
+  fullTimeUrl: "https://fulltime.thefa.com/index.html?selectedSeason=592151960&selectedFixtureGroupAgeGroup=0&selectedDivision=223971786&selectedCompetition=0",   // U9 Girls Division One on FA Full-Time (Open our Full-Time fixtures button)
+  fullTimeName: "Newton Aycliffe",
   supportName: "Sean",                           // who coaches message on matchday (Help page)
 
   league: "Russell Foster League",               // shown wherever a game's competition is "League"
