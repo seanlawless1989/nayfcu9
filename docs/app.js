@@ -101,14 +101,15 @@ const badgeDefaults=()=>Object.fromEntries(Object.entries(BADGE_FILES).map(([k,f
 let BADGES=badgeDefaults();
 async function loadBadges(){try{const {data}=await sb.from("badges").select("*");BADGES=badgeDefaults();(data||[]).forEach(r=>BADGES[r.key]=r.img)}catch(e){}}
 function oppIni(n){return (n||"?").split(/\s+/).filter(w=>w&&!/^(fc|afc|the)$/i.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase()}
-function badge(n,cls){const b=BADGES[oppKey(n)];return b?`<img class="badge ${cls||""}" src="${b}" alt="">`:`<span class="badge ini ${cls||""}">${esc(oppIni(n))}</span>`}
-window.oppBadge=n=>BADGES[oppKey(n)]||null;window.saveBadgeFile=(n,f)=>canWrite&&saveBadge(n,f);
+function badgeOf(n){const k=oppKey(n);if(BADGES[k])return BADGES[k];const f=k&&Object.keys(BADGES).find(x=>!x.startsWith("t:")&&sameOpp(x,n));return f?BADGES[f]:null}
+function badge(n,cls){const b=badgeOf(n);return b?`<img class="badge ${cls||""}" src="${b}" alt="">`:`<span class="badge ini ${cls||""}">${esc(oppIni(n))}</span>`}
+window.oppBadge=n=>badgeOf(n);window.saveBadgeFile=(n,f)=>canWrite&&saveBadge(n,f);
 function shrinkBadge(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=200,c=document.createElement("canvas");const k=Math.min(S/im.width,S/im.height,1);c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/png"))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function saveBadge(name,file){try{const img=await shrinkBadge(file);const {error}=await sb.from("badges").upsert({key:oppKey(name),name,img});if(error)throw error;BADGES[oppKey(name)]=img;toast(`Badge saved for ${name}.`);render()}catch(e){toast("Couldn't save that badge. Try a PNG or JPG.")}}
 // tournament logos live in the badges table too, under "t:" + the tournament's id
 const tLogo=t=>t&&BADGES["t:"+t.id]||null;
 async function saveTLogo(id,file){const t=tournaments.find(x=>x.id===id);if(!t)return;try{const img=await shrinkBadge(file);const {error}=await sb.from("badges").upsert({key:"t:"+id,name:t.name||"Tournament",img});if(error)throw error;BADGES["t:"+id]=img;toast(`Logo saved for ${t.name||"the tournament"}.`);render()}catch(e){toast("Couldn't save that logo. Try a PNG or JPG.")}}
-function meetings(opp,before){const k=oppKey(opp);return sortMatches(matches.filter(m=>result(m)&&oppKey(m.opp)===k&&(!before||m.date<before))).reverse()}
+function meetings(opp,before){return sortMatches(matches.filter(m=>result(m)&&sameOpp(m.opp,opp)&&(!before||m.date<before))).reverse()}
 function scChip(m){const r=result(m);return `<span class="sc-chip ${r}" title="${esc(m.date)} ${esc(m.comp||"")}">${r} ${m.us}–${m.them}</span>`}
 window.H2H=opp=>meetings(opp,new Date().toISOString().slice(0,10));
 function assistsOf(m){return m.assists||{}}
@@ -2119,7 +2120,12 @@ const fxSig=m=>[m.date||"",String(m.ko||"").trim(),String(m.venue||"").trim()].j
 function fxTell(id,was){alSend({fixture:{match:id,was}}).then(r=>{if(r!=null&&r>0)toast(`Parents with alerts on have been told about the change.`)})}
 const ftDate=c=>{const m=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(c||"");if(!m)return null;const y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`};
 const ftTime=c=>{const m=/\b(\d{1,2})[:.](\d{2})\b/.exec(c||"");return m?`${m[1].padStart(2,"0")}:${m[2]}`:""};
-const ftSame=(a,b)=>oppKey(a)===oppKey(b)||oppKey(a).includes(oppKey(b))||oppKey(b).includes(oppKey(a));
+// Full-Time names are long ("Whickham F.C. Youth U11 Girls Phoenix"), ours short ("Whickham Phoenix"): the same team when
+// every word of the shorter name (2+ words) is in the longer one, ignoring F.C., age groups like U11 and plurals
+const oppWords=n=>oppKey(n).split(" ").filter(w=>w.length>1&&!/^u\d+s?$/.test(w)).map(w=>w.length>3?w.replace(/s$/,""):w);
+function sameOpp(a,b){const x=oppKey(a),y=oppKey(b);if(!x||!y)return false;if(x===y||x.includes(y)||y.includes(x))return true;
+  let p=oppWords(a),q=oppWords(b);if(p.length>q.length)[p,q]=[q,p];return p.length>=2&&p.every(w=>q.includes(w))}
+const ftSame=sameOpp;
 // one row of cells -> {date, ko, opp, ha, venue, comp} when our team is playing in it
 function ftParse(cells,name){cells=cells.map(c=>String(c||"").trim());const dc=cells.findIndex(c=>ftDate(c));if(dc<0)return null;
   const date=ftDate(cells[dc]),ko=ftTime(cells[dc])||ftTime(cells[dc+1]||"");const me=oppKey(name);
@@ -2134,7 +2140,7 @@ function ftParse(cells,name){cells=cells.map(c=>String(c||"").trim());const dc=c
 function ftName(rows,name){const c=[...new Set([name,TEAM.fullTimeName,TEAM.club&&TEAM.club.name,TEAM.name,String(TEAM.name||"").split(" ").slice(0,2).join(" ")].filter(Boolean))];return c.find(n=>rows.some(r=>ftParse(r,n)))||name}
 function ftRows(rows,name){rows=rows||(FT&&FT.rows);name=name||(FT&&FT.name);if(!rows)return [];name=ftName(rows,name);if(FT&&rows===FT.rows&&FT.name!==name){FT.name=name}const seen=new Set();return rows.map(r=>ftParse(r,name)).filter(Boolean).filter(f=>{const k=f.date+"|"+oppKey(f.opp);if(seen.has(k))return false;seen.add(k);return true})
   .map(f=>{const ex=matches.find(m=>m.date===f.date&&ftSame(m.opp,f.opp))||matches.find(m=>!result(m)&&ftSame(m.opp,f.opp)&&m.comp===f.comp&&Math.abs(new Date(m.date)-new Date(f.date))<15*864e5&&m.date!==f.date);
-    const change=ex&&!result(ex)?[ex.date!==f.date?"date":"",f.ko&&ex.ko!==f.ko?"kick-off":"",f.venue&&ex.venue!==f.venue?"venue":""].filter(Boolean):[];
+    const change=ex&&!result(ex)?[ex.date!==f.date?"date":"",f.ko&&ex.ko!==f.ko?"kick-off":"",f.venue&&ex.venue!==f.venue?"venue":"",f.opp&&ex.opp!==f.opp?"name":""].filter(Boolean):[];
     return Object.assign(f,{key:f.date+"|"+oppKey(f.opp),ex,change,state:!ex?"new":change.length?"changed":"same"})}).filter(f=>f.date>=todayLocal()||f.state!=="same")}
 // Full-Time's own code snippet (TEAM.fullTimeSnippet, the lrcode a league or club Full-Time admin makes for club websites).
 // It loads in this browser exactly as it would on any club website, inside a hidden frame, and the fixtures table it
@@ -2153,12 +2159,15 @@ function ftSnippet(code){return new Promise((res,rej)=>{code=String(code||"");if
   document.body.appendChild(f)})}
 // a coach's phone checks the team's snippet by itself (at most every 3 hours): changed dates, kick-offs and venues of
 // games already on the site are updated straight away and parents told; new games wait for a coach to tick them
+// what an import changes on a game we already have: date, kick-off, venue, and the opponent's name as Full-Time writes it
+// (Sean, 5 Nov: always use the Full-Time name). The opponent's logo carries over (badge() matches similar names).
+function ftUpd(f){const b={date:f.date};if(f.ko)b.ko=f.ko;if(f.venue)b.venue=f.venue;if(f.opp&&f.opp!==f.ex.opp)b.opp=f.opp;return b}
 async function ftAuto(){const code=TEAM.fullTimeSnippet;if(!canWrite||RUGBY||!code||!db)return;let last=0;try{last=+localStorage.getItem(FT_KEY+".auto")||0}catch(e){}
   if(Date.now()-last<3*36e5)return;try{localStorage.setItem(FT_KEY+".auto",String(Date.now()))}catch(e){}
   let r;try{r=await ftSnippet(code)}catch(e){return}if(!r.rows.length||!canWrite)return;
   let saved={};try{saved=JSON.parse(localStorage.getItem(FT_KEY)||"{}")}catch(e){}const name=saved.name||TEAM.fullTimeName||TEAM.name||"";
   const list=ftRows(r.rows,name),ch=list.filter(f=>f.state==="changed"),nw=list.filter(f=>f.state==="new").length;let n=0;
-  for(const f of ch){try{const b={date:f.date};if(f.ko)b.ko=f.ko;if(f.venue)b.venue=f.venue;await db.collection("matches").doc(f.ex.id).update(b);if(!f.ex.postponed)fxTell(f.ex.id,fxSig(f.ex));n++}catch(e){}}
+  for(const f of ch){try{const b=ftUpd(f);await db.collection("matches").doc(f.ex.id).update(b);if(!f.ex.postponed&&fxSig(Object.assign({},f.ex,b))!==fxSig(f.ex))fxTell(f.ex.id,fxSig(f.ex));n++}catch(e){}}
   try{saved.checked=new Date().toISOString();saved.newOnFT=nw;localStorage.setItem(FT_KEY,JSON.stringify(saved))}catch(e){}
   if(n||nw){toast([n?`Full-Time: ${n} game${n>1?"s":""} moved, now updated on the site.`:"",nw?`${nw} new fixture${nw>1?"s":""} on Full-Time to add (Fixtures > Import).`:""].filter(Boolean).join(" "));if(view==="fixtures"||view==="home")render()}}
 async function ftFromSnippet(){FT.name=$("#ft-name").value.trim();FT.busy=true;FT.msg="";render();
@@ -2186,7 +2195,7 @@ async function ftFetch(){FT.url=$("#ft-url").value.trim();FT.name=$("#ft-name").
 function ftPasted(){FT.name=$("#ft-name").value.trim();const u=($("#ft-url")||{}).value;if(u!=null&&(!u.trim()||/^https:\/\/fulltime\.thefa\.com\//.test(u.trim())))FT.url=u.trim();const t=$("#ft-paste").value;
   FT.rows=t.split(/\r?\n/).map(l=>l.includes("\t")?l.split("\t"):l.split(/\s{2,}|\s+(?=v\s)|(?<=\sv)\s+/i)).filter(r=>r.some(c=>ftDate(c)));FT.picks=new Set(ftRows().filter(f=>f.state!=="same").map(f=>f.key));FT.msg=FT.rows.length?"":"Couldn't find any dates in that. Copy the whole fixtures table.";if(FT.rows.length){FT.checked=new Date().toISOString()}ftSave();render()}
 async function ftImport(){const list=ftRows().filter(f=>FT.picks.has(f.key)&&f.state!=="same");if(!list.length){toast("Tick at least one fixture.");return}let n=0;
-  for(const f of list){try{if(f.ex){const b={date:f.date};if(f.ko)b.ko=f.ko;if(f.venue)b.venue=f.venue;await db.collection("matches").doc(f.ex.id).update(b);if(!result(f.ex)&&!f.ex.postponed)fxTell(f.ex.id,fxSig(f.ex))}
+  for(const f of list){try{if(f.ex){const b=ftUpd(f);await db.collection("matches").doc(f.ex.id).update(b);if(!result(f.ex)&&!f.ex.postponed&&fxSig(Object.assign({},f.ex,b))!==fxSig(f.ex))fxTell(f.ex.id,fxSig(f.ex))}
     else{const b=Object.assign({},(({id,...x})=>x)(blankForm()),{date:f.date,ko:f.ko,opp:f.opp,ha:f.ha,venue:f.venue,comp:f.comp,us:null,them:null,potm:null,check:"",updated:new Date().toISOString()});delete b.saves;delete b.gk;b.postponed=false;await db.collection("matches").doc(`${f.date}-${slug(f.opp)}-${Math.random().toString(36).slice(2,6)}`).set(b)}n++}catch(e){}}
   toast(n===list.length?`Done: ${n} fixture${n>1?"s":""} added or updated.`:`${n} of ${list.length} saved. Try the rest again.`);FT=null;setView("fixtures")}
 // Weekly training in the Fixtures list: one slim row per session for the next four weeks, so parents can say if their
@@ -2778,7 +2787,7 @@ function oppsView(){if(noScores())return oppsNoScores();
     .sort((a,b)=>(a.next?a.next.date:"9")<(b.next?b.next.date:"9")?-1:(a.next?a.next.date:"9")>(b.next?b.next.date:"9")?1:b.t.P-a.t.P||a.name.localeCompare(b.name));
   return `<section class="card"><h2>Head to head</h2><p class="hint" style="margin-bottom:10px">Every team we've played or are due to play, with the next game first. Last 5 reads oldest to newest. Tap a team to see every result against them.</p>
    <div class="scroll"><table class="lb"><thead><tr><th>Opponent</th><th>P</th><th>W</th><th>D</th><th>L</th><th>F</th><th>A</th><th>Last 5</th><th>Next</th></tr></thead><tbody>
-   ${rows.map(({name,t,done,next,pp})=>`<tr class="click" data-opp="${esc(name)}"><td>${badge(name,"sm")}${esc(name)}${canWrite&&!BADGES[oppKey(name)]?` <label class="bup" onclick="event.stopPropagation()">+ badge<input type="file" accept="image/*" data-badge="${esc(name)}"></label>`:""}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td><td>${t.F}</td><td>${t.A}</td>
+   ${rows.map(({name,t,done,next,pp})=>`<tr class="click" data-opp="${esc(name)}"><td>${badge(name,"sm")}${esc(name)}${canWrite&&!badgeOf(name)?` <label class="bup" onclick="event.stopPropagation()">+ badge<input type="file" accept="image/*" data-badge="${esc(name)}"></label>`:""}</td><td>${t.P}</td><td>${t.W}</td><td>${t.D}</td><td>${t.L}</td><td>${t.F}</td><td>${t.A}</td>
      <td><div class="form" style="justify-content:flex-end">${done.slice(-5).map(m=>`<span class="chip ${result(m)}" title="${esc(m.date)} ${m.us}-${m.them}">${result(m)}</span>`).join("")||"–"}</div></td>
      <td>${next?(d=>`${d.getDate()} ${MONTHS[d.getMonth()]}`)(new Date(next.date+"T12:00:00")):pp?"Postponed":"–"}</td></tr>`).join("")}
    </tbody></table></div></section>`;
@@ -2793,7 +2802,7 @@ function oppsNoScores(){const today=new Date().toISOString().slice(0,10);const g
    </tbody></table></div></section>`;
 }
 function oppDetail(name){
-  const k=oppKey(name);const list=sortMatches(matches.filter(m=>oppKey(m.opp)===k)).reverse();const t=teamStats(list.filter(result));
+  const list=sortMatches(matches.filter(m=>sameOpp(m.opp,name))).reverse();const t=teamStats(list.filter(result));
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All opponents</button>
   <section class="card"><div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">${badge(name,"lg")}<h2 style="margin:0">${esc(name)}</h2>${canWrite?`<label class="bup btn ghost" style="margin-left:auto">${BADGES[oppKey(name)]?"Change badge":"Upload badge"}<input type="file" accept="image/*" data-badge="${esc(name)}"></label>`:""}</div>
     ${noScores()?"":`<div class="record">${[["P","Played",""],["W","Won","w"],["D","Drawn","d"],["L","Lost","l"],["F","Scored",""],["A","Conceded",""],["GD",RUGBY?"Points diff":"Goal diff",""]].map(([k,l,c])=>`<div class="rec ${c}"><b>${k==="GD"&&t.GD>0?"+":""}${t[k]}</b><span>${l}</span></div>`).join("")}</div>`}</section>
