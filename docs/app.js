@@ -2024,13 +2024,43 @@ function ftParse(cells,name){cells=cells.map(c=>String(c||"").trim());const dc=c
   const home=other.i>rest[us].i,after=rest.filter(x=>x.i>Math.max(other.i,rest[us].i));
   const compCell=cells.find(c=>/cup|trophy|shield|plate/i.test(c)),fr=cells.some(c=>/^f$|friendly/i.test(c));
   return {date,ko,opp:other.c.replace(/\s+/g," "),ha:home?"H":"A",venue:(after[0]&&!/cup|division|league|trophy/i.test(after[0].c)?after[0].c:""),comp:compCell?"Cup":fr?"Friendly":"League"}}
-function ftRows(){if(!FT||!FT.rows)return [];const seen=new Set();return FT.rows.map(r=>ftParse(r,FT.name)).filter(Boolean).filter(f=>{const k=f.date+"|"+oppKey(f.opp);if(seen.has(k))return false;seen.add(k);return true})
+function ftRows(rows,name){rows=rows||(FT&&FT.rows);name=name||(FT&&FT.name);if(!rows)return [];const seen=new Set();return rows.map(r=>ftParse(r,name)).filter(Boolean).filter(f=>{const k=f.date+"|"+oppKey(f.opp);if(seen.has(k))return false;seen.add(k);return true})
   .map(f=>{const ex=matches.find(m=>m.date===f.date&&ftSame(m.opp,f.opp))||matches.find(m=>!result(m)&&ftSame(m.opp,f.opp)&&m.comp===f.comp&&Math.abs(new Date(m.date)-new Date(f.date))<15*864e5&&m.date!==f.date);
     const change=ex&&!result(ex)?[ex.date!==f.date?"date":"",f.ko&&ex.ko!==f.ko?"kick-off":"",f.venue&&ex.venue!==f.venue?"venue":""].filter(Boolean):[];
     return Object.assign(f,{key:f.date+"|"+oppKey(f.opp),ex,change,state:!ex?"new":change.length?"changed":"same"})}).filter(f=>f.date>=todayLocal()||f.state!=="same")}
+// Full-Time's own code snippet (TEAM.fullTimeSnippet, the lrcode a league or club Full-Time admin makes for club websites).
+// It loads in this browser exactly as it would on any club website, inside a hidden frame, and the fixtures table it
+// draws is read like a pasted one. Resolves {rows, text}; rejects when Full-Time doesn't answer.
+function ftSnippet(code){return new Promise((res,rej)=>{code=String(code||"");if(!/^\d{5,12}$/.test(code))return rej(new Error("No Full-Time snippet for this team."));
+  const f=document.createElement("iframe");f.setAttribute("aria-hidden","true");f.tabIndex=-1;f.style.cssText="position:absolute;left:-9999px;top:0;width:900px;height:600px;border:0";
+  f.srcdoc=`<!doctype html><html><body><div id="lrep${code}">Data loading....</div><script>var lrcode='${code}'<\/script><script src="https://fulltime.thefa.com/client/api/cs1.js"><\/script></body></html>`;
+  let n=0,t=null;const done=(v,e)=>{clearInterval(t);f.remove();e?rej(e):res(v)};
+  const cells=el=>[...el.children].map(c=>(c.innerText||c.textContent||"").replace(/\s+/g," ").trim());
+  t=setInterval(()=>{n++;let d=null;try{d=f.contentDocument}catch(e){}const box=d&&d.getElementById("lrep"+code);
+    if(box&&!/Data loading/i.test(box.textContent||"")){const text=(box.innerText||box.textContent||"").trim();
+      let rows=[...box.querySelectorAll("tr")].map(cells).filter(r=>r.some(c=>ftDate(c)));
+      if(!rows.length)rows=text.split(/\n+/).filter(l=>ftDate(l)).map(l=>l.split(/\t|\s{2,}|\s+(?=v\s)|(?<=\sv)\s+/i));
+      if(rows.length||n>16)return done({rows,text:text.slice(0,3000)})}
+    if(n>40)done(null,new Error("Full-Time didn't answer."))},500);
+  document.body.appendChild(f)})}
+// a coach's phone checks the team's snippet by itself (at most every 3 hours): changed dates, kick-offs and venues of
+// games already on the site are updated straight away and parents told; new games wait for a coach to tick them
+async function ftAuto(){const code=TEAM.fullTimeSnippet;if(!canWrite||RUGBY||!code||!db)return;let last=0;try{last=+localStorage.getItem(FT_KEY+".auto")||0}catch(e){}
+  if(Date.now()-last<3*36e5)return;try{localStorage.setItem(FT_KEY+".auto",String(Date.now()))}catch(e){}
+  let r;try{r=await ftSnippet(code)}catch(e){return}if(!r.rows.length||!canWrite)return;
+  let saved={};try{saved=JSON.parse(localStorage.getItem(FT_KEY)||"{}")}catch(e){}const name=saved.name||TEAM.fullTimeName||TEAM.name||"";
+  const list=ftRows(r.rows,name),ch=list.filter(f=>f.state==="changed"),nw=list.filter(f=>f.state==="new").length;let n=0;
+  for(const f of ch){try{const b={date:f.date};if(f.ko)b.ko=f.ko;if(f.venue)b.venue=f.venue;await db.collection("matches").doc(f.ex.id).update(b);if(!f.ex.postponed)fxTell(f.ex.id,fxSig(f.ex));n++}catch(e){}}
+  try{saved.checked=new Date().toISOString();saved.newOnFT=nw;localStorage.setItem(FT_KEY,JSON.stringify(saved))}catch(e){}
+  if(n||nw){toast([n?`Full-Time: ${n} game${n>1?"s":""} moved, now updated on the site.`:"",nw?`${nw} new fixture${nw>1?"s":""} on Full-Time to add (Fixtures > Import).`:""].filter(Boolean).join(" "));if(view==="fixtures"||view==="home")render()}}
+async function ftFromSnippet(){FT.name=$("#ft-name").value.trim();FT.busy=true;FT.msg="";render();
+  try{const r=await ftSnippet(TEAM.fullTimeSnippet);FT.rows=r.rows;FT.picks=new Set(ftRows().filter(f=>f.state!=="same").map(f=>f.key));
+    if(r.rows.length){FT.checked=new Date().toISOString();ftSave()}else FT.msg=`Full-Time answered but showed no fixtures${r.text?`: "${r.text.slice(0,160)}…"`:""}. Paste the table instead.`}
+  catch(e){FT.msg=`Couldn't load Full-Time (${e.message}) Paste the table instead.`}finally{FT.busy=false;render()}}
 function ftView(){if(!canWrite||!FT)return `<div class="card empty">Coaches only.</div>`;const list=ftRows();
   return `<section class="card stack"><h2>📥 Import league fixtures</h2>
     <p class="hint" style="margin:0">Use this whenever the league moves a game. 1. Open your team's <b>Fixtures</b> page on FA Full-Time. 2. Select the whole fixtures table and copy it. 3. Paste it below. New games are added, and any date, venue or kick-off that changed is updated. Parents with alerts on get told about changes.</p>
+    ${TEAM.fullTimeSnippet?`<div class="btns"><button class="btn gold" id="ftSnip"${FT.busy?" disabled":""}>${FT.busy?"Reading Full-Time…":"Get fixtures from Full-Time"}</button></div><p class="hint" style="margin:0">This phone also checks Full-Time by itself every few hours while a coach is signed in, and updates moved games straight away.</p>`:""}
     ${FT.url?`<div class="btns"><a class="btn ghost" href="${esc(FT.url)}" target="_blank" rel="noopener">Open our Full-Time fixtures ↗</a></div>`:""}
     <label class="f">Your team's name on Full-Time<input type="text" id="ft-name" value="${esc(FT.name)}"></label>
     <textarea id="ft-paste" rows="6" style="width:100%" placeholder="Paste the fixtures table here"></textarea><div class="btns" style="margin-top:6px"><button class="btn gold" id="ftPaste">Check for changes</button></div>
@@ -3173,6 +3203,7 @@ document.addEventListener("click",async e=>{
   if((t.id==="ftStart"||t.id==="ftStart2")&&canWrite){ftStart();return}
   if(t.id==="ftFetch"){ftFetch();return}
   if(t.id==="ftPaste"){ftPasted();return}
+  if(t.id==="ftSnip"){ftFromSnippet();return}
   if(t.id==="ftImport"){t.disabled=true;ftImport();return}
   if(t.id==="ftAll"){ftRows().filter(f=>f.state!=="same").forEach(f=>FT.picks.add(f.key));render();return}
   if(t.dataset.sprep){const tx=sponsorText(t.dataset.sprep);try{await navigator.clipboard.writeText(tx);toast("Report copied. Paste it into an email.")}catch(er){prompt("Copy this report",tx)}return}
@@ -3325,6 +3356,7 @@ async function checkCoach(){
   await loadTav();alSync();
   await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadKit();await loadDrills();
   authBox();render();
+  if(canWrite)setTimeout(()=>ftAuto().catch(()=>{}),4000);
 }
 document.addEventListener("click",async e=>{
   const b=e.target.closest("button");if(!b)return;

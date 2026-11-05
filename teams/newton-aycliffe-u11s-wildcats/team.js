@@ -15,6 +15,8 @@ self.TEAM = {
   supportName: "Touchline Tales",
 
   league: "Russell Foster League",
+  fullTimeSnippet: "224146698",                 // FA Full-Time code snippet (lrcode): coaches' phones check it for moved games
+  fullTimeUrl: "https://fulltime.thefa.com/index.html?divisionseason=312710196",
   assistsFrom: "2026-27",
   format: "7v7",
   halfLength: 25,
