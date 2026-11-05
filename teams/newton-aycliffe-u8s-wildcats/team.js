@@ -17,7 +17,7 @@ self.TEAM = {
   assistsFrom: "2026-27",
   format: "5v5",
   halfLength: 20,
-  publicScores: false,                           // U8s: scores hidden from visitors (FA rule); coaches still see them
+  publicScores: true,                            // 5 Nov: scores shown; the coach can switch them off in Team setup
   poweredBy: true,
 
   colours: { club: "#2235E8", clubDeep: "#16239E", clubInk: "#FFFFFF", gold: "#FFD200", goldInk: "#1A1A1A",
