@@ -1,7 +1,7 @@
 -- Fixture changes: when a coach changes an upcoming game's date, kick-off or venue (by hand, or by pasting the league's
 -- Full-Time fixtures into "Import league fixtures"), the notify function tells parents with alerts on.
 -- push_log.fixture_sig holds "date|ko|venue" as last told, so the same change is only ever sent once.
--- Re-runnable. Run on every team (tools/team_schema_sql.py --only 29_fixture_change.sql for teams in their own schema).
+-- Re-runnable. Run on every team (tools/team_schema_sql.py --only 31_fixture_change.sql for teams in their own schema).
 alter table public.push_log add column if not exists fixture_sig text;
 
 -- Returns what the game was ("date|ko|venue") when it has changed since parents were last told, otherwise null.
