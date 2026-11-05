@@ -5,6 +5,8 @@
 //   POST {squad: "<id>"}  from a coach's phone after saving Pick squad: "squad announced" (again only if it changed)
 //   POST {potm: "<id>"}   from a coach's phone after saving the player of the match
 //   POST {postponed: "<id>"} from a coach's phone after marking an upcoming game postponed (or back on)
+//   POST {fixture: {match, was}} from a coach's phone after an upcoming game's date, kick-off or venue changed
+//                         (by hand or from the league's fixtures); was = "date|ko|venue" before. Once per change.
 //   POST {preview: "<id>"} from a coach's phone after saving a match preview (once per game)
 //   POST {tsquad: "<id>"}  from a coach's phone after picking a tournament's squad (again only if it changed)
 //   POST {tournament: "<id>"} from a coach's phone when a tournament's groups and games are confirmed (once per tournament)
@@ -224,6 +226,24 @@ async function postponedAlert(m: Match) {
   return await send("reminders", { title: "⚠️ Game postponed", body: `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"} on ${dayName(m.date)} is off. New date to follow.`, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `pp-${m.id}` });
 }
 
+// ---- fixture change: the league (or a coach) moved the date, kick-off or venue of an upcoming game ----
+async function fixtureAlert(m: Match, was: string) {
+  if (m.postponed || m.us != null || m.stage === "placeholder" || (m.live?.status && m.live.status !== "pre")) return -1;
+  // what the phone said it was: only a well-formed "YYYY-MM-DD|ko|venue" is used, and only the first time (see 31_fixture_change.sql)
+  const p = typeof was === "string" && /^\d{4}-\d{2}-\d{2}\|[^|]{0,20}\|[^|]{0,200}$/.test(was) ? was : null;
+  const { data: old, error } = await db.rpc("push_claim_fixture", { p_match: m.id, p_was: p });
+  if (error || !old) return -1; // nothing changed since parents were last told
+  const [od, ok, ov] = String(old).split("|"), today = londonDate(Date.now());
+  if (m.date < today && od < today) return -1;   // an old game tidied up
+  const hasKo = /\d[:.]\d\d/.test(m.ko || ""), ko = (m.ko || "").trim(), venue = (m.venue || "").trim();
+  const what = [od !== m.date ? "date" : "", ok !== ko && hasKo ? "kick-off" : "", ov !== venue && venue ? "venue" : ""].filter(Boolean);
+  if (!what.length) return -1;   // e.g. a kick-off time taken away: nothing useful to tell
+  const title = what.length > 1 ? "📅 Fixture change" : what[0] === "kick-off" ? "⏰ New kick-off time" : what[0] === "venue" ? "📍 New venue" : "📅 New date";
+  const was_ = what.length === 1 ? what[0] === "kick-off" && /\d[:.]\d\d/.test(ok) ? ` (was ${ok})` : what[0] === "date" ? ` (was ${dayName(od)})` : "" : "";
+  const body = `${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"} is now ${dayName(m.date)}${hasKo ? `, ${ko} KO` : ""}${venue ? `, ${venue}` : ""}${was_}.`;
+  return await send("reminders", { title, body, url: `${SITE}?match=${encodeURIComponent(m.id)}`, tag: `fx-${m.id}` });
+}
+
 // ---- match preview (written by a coach before the game) ----
 async function previewAlert(m: Match) {
   const text = (m.preview ?? "").trim();
@@ -375,6 +395,9 @@ async function handle(req: Request) {
     } else if (typeof body.postponed === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.postponed).maybeSingle();
       out.postponed = data ? await postponedAlert(data as Match) : -1;
+    } else if (typeof body.fixture === "object" && body.fixture && typeof body.fixture.match === "string") {
+      const { data } = await db.from("matches").select(COLS).eq("id", body.fixture.match).maybeSingle();
+      out.fixture = data ? await fixtureAlert(data as Match, body.fixture.was) : -1;
     } else if (typeof body.tsquad === "string") {
       const { data } = await db.from("tournaments").select("*").eq("id", body.tsquad).maybeSingle();
       out.tsquad = data ? await tSquadAlert(data as Tournament) : -1;
