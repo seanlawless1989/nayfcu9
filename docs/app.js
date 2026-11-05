@@ -96,12 +96,18 @@ const BADGE_FILES={"beamish lionesses":"beamish-lionesses","brandon community":"
   "hebburn town":"hebburn","wearside pink":"wearside-fc","beamish panthers":"beamish-lionesses",
   "hetton":"hetton-juniors","hetton athena":"hetton-juniors","shincliffe":"shincliffe-juniors","sunderland west end":"sunderland-west-end",
   "hartlepool":"fc-hartlepool","fc hartlepool":"fc-hartlepool","harton and westoe":"harton-westoe","harton westoe":"harton-westoe",
-  "consett":"consett-juniors","consett lionesses":"consett-juniors","washington athletic":"washington-athletic","washington athletic wolves":"washington-athletic"};
+  "consett":"consett-juniors","consett lionesses":"consett-juniors","washington athletic":"washington-athletic","washington athletic wolves":"washington-athletic",
+  "whickham reds":"whickham-fc","whickham":"whickham-fc","hebburn town gold madrid":"hebburn","washington tigons":"washington-afc",
+  "hartlepool lionhearts":"fc-hartlepool","seaham girls reds":"seaham-afc","washington association lionesses":"washington-afc",
+  "chester le street":"chester-le-street-town","newton aycliffe":"newton-aycliffe","newton aycliffe wildcats":"newton-aycliffe","newton aycliffe pumas":"newton-aycliffe"};
 const badgeDefaults=()=>Object.fromEntries(Object.entries(BADGE_FILES).map(([k,f])=>[k,`badges/${f}.png`]));
 let BADGES=badgeDefaults();
 async function loadBadges(){try{const {data}=await sb.from("badges").select("*");BADGES=badgeDefaults();(data||[]).forEach(r=>BADGES[r.key]=r.img)}catch(e){}}
 function oppIni(n){return (n||"?").split(/\s+/).filter(w=>w&&!/^(fc|afc|the)$/i.test(w)).map(w=>w[0]).join("").slice(0,3).toUpperCase()}
-function badgeOf(n){const k=oppKey(n);if(BADGES[k])return BADGES[k];const f=k&&Object.keys(BADGES).find(x=>!x.startsWith("t:")&&sameOpp(x,n));return f?BADGES[f]:null}
+// logo for an opponent: exact name first, then a saved name whose words (2+) all appear in it or the other way round
+// ("whickham phoenix" -> "Whickham F.C. Youth U11 Girls Phoenix"). One-word names ("washington") never stretch to others.
+function oppSub(a,b){let p=oppWords(a),q=oppWords(b);if(p.length>q.length)[p,q]=[q,p];return p.length>=2&&p.every(w=>q.includes(w))}
+function badgeOf(n){const k=oppKey(n);if(BADGES[k])return BADGES[k];const f=k&&Object.keys(BADGES).find(x=>!x.startsWith("t:")&&oppSub(x,n));return f?BADGES[f]:null}
 function badge(n,cls){const b=badgeOf(n);return b?`<img class="badge ${cls||""}" src="${b}" alt="">`:`<span class="badge ini ${cls||""}">${esc(oppIni(n))}</span>`}
 window.oppBadge=n=>badgeOf(n);window.saveBadgeFile=(n,f)=>canWrite&&saveBadge(n,f);
 function shrinkBadge(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=200,c=document.createElement("canvas");const k=Math.min(S/im.width,S/im.height,1);c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);ok(c.toDataURL("image/png"))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
