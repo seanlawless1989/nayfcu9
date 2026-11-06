@@ -1,5 +1,5 @@
 -- Added 2026-11-04: pitch fundraiser. Safe to re-run. Run it once on every team's database (SQL editor), or for a team
--- in its own schema: python3 tools/team_schema_sql.py <schema> --only 31_fundraiser.sql
+-- in its own schema: python3 tools/team_schema_sql.py <schema> --only 32_fundraiser.sql
 --
 -- Supporters buy a square on a picture of the team's pitch and put a name (and an optional message) on it.
 -- It's a donation to the club, not a raffle: there are no prizes, no draw and no odds, so no gambling licence is needed.

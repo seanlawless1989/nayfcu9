@@ -15,6 +15,9 @@ self.TEAM = {
   supportName: "Touchline Tales",
 
   league: "Russell Foster League",
+  fullTimeSnippet: "675326095",                 // FA Full-Time code snippet (lrcode): coaches' phones check it for moved games
+  fullTimeName: "Newton Aycliffe",              // how the team is named in the fixtures on Full-Time (Newton Aycliffe Youth Football Club U11)
+  fullTimeUrl: "https://fulltime.thefa.com/index.html?divisionseason=610946694",
   assistsFrom: "2026-27",
   format: "7v7",
   halfLength: 25,

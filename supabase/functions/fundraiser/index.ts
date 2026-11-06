@@ -1,4 +1,4 @@
-// The pitch fundraiser's payments (supabase/31_fundraiser.sql). Supporters buy a square on the team's virtual pitch;
+// The pitch fundraiser's payments (supabase/32_fundraiser.sql). Supporters buy a square on the team's virtual pitch;
 // the money goes straight to the club's own Stripe account and Touchline Tales' fee is taken by Stripe on the way.
 // Touchline Tales never holds club money. It's a donation, not a raffle: no prizes, ever (see the SQL file).
 //
