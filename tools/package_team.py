@@ -178,7 +178,7 @@ supabase functions deploy fulltime
 supabase functions deploy fundraiser --no-verify-jwt
 ```
 The pitch fundraiser takes payments only once the project has the Touchline Tales Stripe secrets
-(`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) and the club's treasurer has linked their Stripe account from the
+(`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`) and the club's treasurer has linked their Stripe account from the
 Fundraiser page. See supabase/functions/fundraiser/index.ts.
 Then add the Touchline Tales Anthropic API key, which writes the coaches' "Suggest a preview" and "Suggest a report" drafts:
 `supabase secrets set ANTHROPIC_API_KEY=<key>` (or Edge Functions > Secrets in the dashboard). Without it, those buttons

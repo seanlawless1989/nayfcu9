@@ -542,7 +542,8 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     if(navigator.share){navigator.share({title:TEAM.name,text,url}).catch(()=>{})}else copyOut(text+" "+url,"Link copied. Paste it into WhatsApp or Facebook.");return}
   if(b.id==="fPay"){fRead();if(!fForm.name.trim()&&!fForm.anon){toast("Add the name that goes on your square.");document.getElementById("f-name")?.focus();return}
     fBusy=true;render();const r=await fInvoke({action:"checkout",fundraiser:FUND.id,idx:fSel,gold:fGold,name:fForm.anon?(fForm.name.trim()||"Anonymous"):fForm.name,message:fForm.msg,anon:fForm.anon,cover:fCover,email:fForm.email,site});
-    if(r.url){location.href=r.url;return}
+    if(r.client_secret){const p=fPrice(fGold);fPayOpen(r,p+(fCover?fCardFee(p):0));return}
+    if(r.url){location.href=r.url;return}// the demo site "pays" straight away
     fBusy=false;toast(({taken:"Someone has just picked that square. Choose another one.",closed:"This fundraiser has finished.",not_ready:"Payments aren't switched on for this team yet."})[r.error]||"Couldn't open the payment page. Try again.");
     if(r.error==="taken")fSel=null;await loadFund();render();return}
   if(!canWrite)return;
@@ -562,6 +563,29 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     if(error){toast("Couldn't save. Check the numbers and try again.");render();return}
     fEdit=null;await loadFund();toast(b.id==="fLiveOn"?"It's live. Share the link with your families.":b.id==="fClose"?"Fundraiser ended. Thank you!":"Saved.");render();return}
 });
+// Stripe's embedded payment form, in a sheet over the page. It lives outside render() so a re-render can't tear it down.
+// Stripe.js must come straight from js.stripe.com (never bundled or copied), and only loads when someone pays.
+let fPayEl=null;
+const F_LOOK={theme:"stripe",labels:"auto",inputs:"spaced",variables:{borderRadius:"4px",colorBackground:"#ffffff",colorDanger:"#df1b41",colorPrimary:"#0570de",colorSuccess:"#00c853",colorText:"#30313d",fontFamily:"default",fontSizeBase:"16px",spacingUnit:"4px"}};
+const fStripeJs=()=>window.Stripe?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement("script");s.src="https://js.stripe.com/dahlia/stripe.js";s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+async function fPayOpen(r,total){fPayClose();
+  const el=document.createElement("div");el.className="fd-paysheet";el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");el.setAttribute("aria-label","Pay for your square");
+  el.innerHTML=`<div class="fd-paybox"><div class="fd-payhead"><b>Pay ${fMoney(total)} to ${esc(TEAM.name)}</b><button class="mini" id="fPayX" type="button">Cancel</button></div>
+    <p class="hint">A donation to the club, paid securely through Stripe. Card details never touch this site.</p><div id="checkout-form"><p class="hint">Loading the payment form…</p></div></div>`;
+  document.body.appendChild(el);document.body.classList.add("fd-paying");fPayEl={el,square:r.square,form:null};
+  el.querySelector("#fPayX").addEventListener("click",()=>fPayCancel());
+  try{await fStripeJs();if(!fPayEl||fPayEl.el!==el)return;
+    const stripe=Stripe(r.pk,{stripeAccount:r.account});// a direct charge on the club's own Stripe account
+    const checkout=stripe.initCheckoutFormSdk({clientSecret:r.client_secret,appearance:F_LOOK});
+    const form=checkout.createForm({layout:"expanded"});el.querySelector("#checkout-form").innerHTML="";form.mount("#checkout-form");fPayEl.form=form;
+    const L=await checkout.loadActions();if(L.type!=="success")throw new Error("actions");
+    form.on("confirm",async ev=>{try{const res=await L.actions.confirm({formConfirmEvent:ev});// on success Stripe goes to ?fund&paid=<session>
+        if(res&&res.type==="error")toast((res.error&&res.error.message)||"That payment didn't go through. Try again.")}catch(e){toast("That payment didn't go through. Try again.")}})
+  }catch(e){if(fPayEl&&fPayEl.el===el)fPayCancel("Couldn't load the payment form. Check your signal and try again.")}}
+function fPayClose(){if(!fPayEl)return;try{fPayEl.form&&fPayEl.form.unmount&&fPayEl.form.unmount()}catch(e){}fPayEl.el.remove();fPayEl=null;document.body.classList.remove("fd-paying")}
+async function fPayCancel(msg){const sq=fPayEl&&fPayEl.square;fPayClose();fBusy=false;if(sq)await fInvoke({action:"release",square:sq});
+  toast(msg||"No payment was taken. Your square is free again.");await loadFund();render()}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&fPayEl)fPayCancel()});
 // back from Stripe: ?fund&paid=<session>, ?fund&cancelled=<square>, or ?fund&stripe=back (a coach linking the club's account)
 async function fundReturn(q){const paid=q.get("paid"),gone=q.get("cancelled");try{history.replaceState(null,"",location.pathname+"?fund")}catch(e){}
   if(paid){const r=await fInvoke({action:"confirm",session:paid});if(r.paid){fThanks={name:(r.square&&r.square.name)||""};fSel=null}else toast("Your payment hasn't come through yet. If Stripe took it, your square will show shortly.")}

@@ -4,7 +4,8 @@
 //
 //   POST {action:"info"}                          anyone: can this team take payments yet, and what's our fee
 //   POST {action:"checkout", fundraiser, idx, gold, name, message, anon, cover, email, site}
-//                                                 anyone: hold the square for 35 minutes and return Stripe's payment page
+//                                                 anyone: hold the square for 35 minutes and return what the page needs to
+//                                                 show Stripe's embedded payment form: {client_secret, account, pk, square}
 //   POST {action:"confirm", session}              anyone, back from Stripe: marks the square paid if Stripe says so
 //   POST {action:"connect", site}                 coaches: start (or carry on) linking the club's Stripe account
 //   POST {action:"status"}                        coaches: is the club's Stripe account ready yet
@@ -12,7 +13,8 @@
 //   Stripe webhook (Connect events)               checkout.session.completed / async_payment_succeeded / expired
 // Add schema: "<schema>" for a team that shares this project in its own schema, as with the other functions.
 //
-// Secrets: STRIPE_SECRET_KEY (Touchline Tales' platform account), STRIPE_WEBHOOK_SECRET (the Connect webhook's signing
+// Secrets: STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY (Touchline Tales' platform account; the publishable key is
+// handed to the page so it can draw the payment form), STRIPE_WEBHOOK_SECRET (the Connect webhook's signing
 // secret), optional FEE_BPS (our fee in hundredths of a percent, default 500 = 5%) and FREE_SCHEMAS (teams that pay no
 // fee, default the Newton Aycliffe teams). Deploy with JWT checks off (--no-verify-jwt): Stripe's webhook has no
 // Supabase login, so coach actions check the caller themselves.
@@ -22,6 +24,9 @@ const URL_ = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const STRIPE = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+const STRIPE_PK = Deno.env.get("STRIPE_PUBLISHABLE_KEY") ?? "";
+// the embedded payment form (Checkout ui_mode "form") needs this API version or later
+const STRIPE_VERSION = "2026-03-25.dahlia";
 const WHSEC = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 const FEE_BPS = Math.max(0, Math.min(3000, +(Deno.env.get("FEE_BPS") ?? "500") || 0));
 // Sean, 4 Nov 2026: Newton Aycliffe teams pay no fee (the money goes back into the club anyway)
@@ -51,7 +56,7 @@ function form(o: Record<string, unknown>, pre = "", acc: string[] = []) {
 }
 // deno-lint-ignore no-explicit-any
 async function stripe(method: string, path: string, body?: Record<string, unknown>, account?: string): Promise<any> {
-  const h: Record<string, string> = { Authorization: `Bearer ${STRIPE}`, "Stripe-Version": "2024-06-20" };
+  const h: Record<string, string> = { Authorization: `Bearer ${STRIPE}`, "Stripe-Version": STRIPE_VERSION };
   if (account) h["Stripe-Account"] = account;
   if (body) h["Content-Type"] = "application/x-www-form-urlencoded";
   const r = await fetch(`https://api.stripe.com/v1/${path}`, { method, headers: h, body: body ? form(body).join("&") : undefined });
@@ -138,11 +143,11 @@ Deno.serve(async (req) => {
   try {
     if (b.action === "info") {
       const a = await account(db);
-      return out({ ready: !!(STRIPE && a?.stripe && a.ready), fee_bps: fee, stripe: !!STRIPE });
+      return out({ ready: !!(STRIPE && STRIPE_PK && a?.stripe && a.ready), fee_bps: fee, stripe: !!(STRIPE && STRIPE_PK) });
     }
 
     if (b.action === "checkout") {
-      if (!STRIPE) return out({ error: "not_ready" });
+      if (!STRIPE || !STRIPE_PK) return out({ error: "not_ready" });
       const a = await account(db);
       if (!a?.stripe || !a.ready) return out({ error: "not_ready" });
       const site = String(b.site ?? "");
@@ -166,7 +171,14 @@ Deno.serve(async (req) => {
       const ours = Math.round(price * fee / 10000);
       const back = site.split("?")[0].split("#")[0];
       try {
+        // Stripe's embedded form: it draws inside our page, on the club's own account (a direct charge)
         const s = await stripe("POST", "checkout/sessions", {
+          ui_mode: "form",
+          integration_identifier: "custom_embedded_web_0001",
+          billing_address_collection: "auto",
+          phone_number_collection: { enabled: false },
+          automatic_tax: { enabled: false },
+          submit_type: "auto",
           mode: "payment",
           line_items: { 0: { quantity: 1, price_data: { currency: "gbp", unit_amount: total,
             product_data: { name: `${gold ? "Gold square" : "A square"} on the pitch: ${f.title}`.slice(0, 120),
@@ -176,11 +188,12 @@ Deno.serve(async (req) => {
           metadata: { schema, square: sq.id, fundraiser: f.id },
           customer_email: email,
           expires_at: Math.floor(Date.now() / 1000) + 30 * 60 + 30,
-          success_url: `${back}?fund&paid={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${back}?fund&cancelled=${sq.id}`,
+          // where Stripe sends people after paying (or after a bank or wallet page); backing out is the page's
+          // "Pick a different square" button, which calls release
+          return_url: `${back}?fund&paid={CHECKOUT_SESSION_ID}`,
         }, a.stripe);
         await db.from("fund_squares").update({ session: s.id, fee: ours }).eq("id", sq.id);
-        return out({ url: s.url });
+        return out({ client_secret: s.client_secret, account: a.stripe, pk: STRIPE_PK, square: sq.id });
       } catch (e) {
         await db.from("fund_squares").delete().eq("id", sq.id).eq("state", "held");
         console.error("checkout", schema, e);
@@ -224,7 +237,9 @@ Deno.serve(async (req) => {
       let a = await account(db);
       if (!a?.stripe) {
         // a Standard account: the club owns it, signs in to Stripe itself, and pays Stripe's card fees from its own takings
-        const acct = await stripe("POST", "accounts", { type: "standard", country: "GB", business_profile: { product_description: "Club fundraising: supporters' donations for squares on a virtual pitch" } });
+        const acct = await stripe("POST", "accounts", { country: "GB",
+          // the club owns its account: full Stripe Dashboard, Stripe charges it its fees and carries the losses
+          controller: { stripe_dashboard: { type: "full" }, fees: { payer: "account" }, losses: { payments: "stripe" } }, business_profile: { product_description: "Club fundraising: supporters' donations for squares on a virtual pitch" } });
         await db.from("fund_account").upsert({ id: 1, stripe: acct.id, ready: false, updated: new Date().toISOString() });
         a = { stripe: acct.id, ready: false };
       }
