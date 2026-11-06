@@ -104,6 +104,13 @@ const svgLogo=(bg,fg,t1,t2)=>"data:image/svg+xml,"+encodeURIComponent(`<svg xmln
 if(!T.sponsors){T.sponsors=[{id:9001,name:"Riverside Bakery",about:"Home kit",url:null,logo:svgLogo("#F6E7C8","#7A4B1E","Riverside","BAKERY"),sort:0},
   {id:9002,name:"Sample Town Motors",about:"Player of the match",url:null,logo:svgLogo("#13213F","#FFFFFF","ST Motors","SAMPLE TOWN"),sort:1},
   {id:9003,name:"Greenway Garden Centre",about:null,url:null,logo:null,sort:2}];save()}
+// a pitch fundraiser already part-way there: squares bought by made-up supporters, two messages waiting for a coach
+if(!T.fundraisers){T.fundraisers=[{id:1,title:"New 9v9 goals",about:null,goal:2400,price:1000,gold:2500,cols:20,rows:10,ends:null,status:"live",created:new Date(Date.now()-21*864e5).toISOString()}];
+  const who=[["Nana Jean","Proud of you all"],["The Patel family","Go on Sample Town!"],["Riverside Bakery","Bacon butties after every home game"],["Uncle Dev","Up the Town"],["Grandad Ken",null],["Auntie Sam","Love watching you play"],["Sample Town Motors","Proud to support our young players"],["Anonymous","Good luck this season"],["The Browns","Number one fans"],["Coach Lee's dad","Keep working hard"]];
+  let r=11;const rnd=()=>(r=(r*9301+49297)%233280)/233280;T.fund_squares=[];
+  for(let i=0;i<200;i++)if(rnd()<.32){const k=T.fund_squares.length,w=who[k%who.length],gold=rnd()<.1;
+    T.fund_squares.push({id:7000+k,fundraiser:1,idx:i,state:"paid",name:w[0],message:w[1],anon:w[0]==="Anonymous",gold,amount:gold?2558:1036,fee:gold?125:50,email:null,approved:k>1,hidden:false,session:null,payment:null,held_until:null,created:new Date(Date.now()-(20-k%20)*864e5).toISOString(),paid_at:new Date(Date.now()-(80-k)*3600e3).toISOString()})}
+  save()}
 // coaches' scores out of 10 for every game played so far but the last one (left for the visitor to score)
 if(!T.player_ratings){const done=T.matches.filter(m=>m.us!=null&&m.date<day(0)&&!m.live).sort((x,y)=>x.date.localeCompare(y.date)).slice(0,-1);
   T.player_ratings=done.flatMap((m,i)=>Object.keys(m.played||{}).map((player,j)=>{const base=5+((i*3+j*7+player.length)%4),g=+m.played[player]||0;
@@ -153,7 +160,7 @@ function shape(list,q){let out=list.slice();const o=q.get("order");
 let seq=1000;
 function defaults(t,b){const r=Object.assign({},b);if(keyOf(t)[0]==="id"&&r.id==null)r.id=++seq;
   if(["polls","help_requests","match_photos","post_log"].includes(t)&&!r.created)r.created=new Date().toISOString();
-  if(t==="post_log"&&!r.day)r.day=day(0);if(t==="help_requests"){r.status=r.status||"new";r.email=r.email||COACH}return r}
+  if(t==="post_log"&&!r.day)r.day=day(0);if(t==="fundraisers"){r.status=r.status||"draft";r.created=r.created||new Date().toISOString()}if(t==="help_requests"){r.status=r.status||"new";r.email=r.email||COACH}return r}
 function upsert(t,b,keys){const L=T[t]=T[t]||[];const i=L.findIndex(r=>keys.every(k=>String(r[k])===String(b[k])));if(i>=0){Object.assign(L[i],b);return L[i]}L.push(b);return b}
 const json=(body,status)=>new Response(status===204?null:JSON.stringify(body),{status:status||200,headers:{"Content-Type":"application/json"}});
 
@@ -200,6 +207,8 @@ function rpc(fn,a){
     // the badges demo: a made-up habit of opening the site on match days and midweek over the last two months
     case "my_days":{const t=new Date().toLocaleDateString("en-CA"),from=new Date(Date.now()-60*864e5).toLocaleDateString("en-CA"),d=new Set();
       T.matches.filter(m=>m.date>=from&&m.date<=t).forEach(m=>{d.add(m.date);d.add(new Date(Date.parse(m.date+"T12:00:00")-3*864e5).toLocaleDateString("en-CA"))});return json([...d].filter(x=>x<=t).sort())}
+    case "fund_total":{const f=(T.fundraisers||[]).find(x=>x.id===+a.p_fundraiser),L=(T.fund_squares||[]).filter(s=>s.fundraiser===+a.p_fundraiser&&s.state==="paid");
+      return json(f?{raised:L.reduce((t,s)=>t+(s.gold&&f.gold?f.gold:f.price),0),squares:L.length}:{raised:0,squares:0})}
     case "hide_cheer":T.cheers.forEach(c=>{if(c.id===a.p_id)c.hidden=true});save();return json(null);
     default:return json(null)}  // log_view, push_subscribe and the rest: nothing to record in a demo
 }
@@ -224,6 +233,22 @@ function auth(path){
   if(path.endsWith("/user"))return tok()?json(session(isParent()).user):json({message:"not signed in"},401);
   return json({})}
 
+// the pitch fundraiser: no real payments in the demo. "Paying" puts the square straight on the pitch.
+function fundFn(b){const sq=T.fund_squares||(T.fund_squares=[]),f=(T.fundraisers||[]).find(x=>x.id===+b.fundraiser);
+  if(b.action==="info")return json({ready:true,fee_bps:500,stripe:true});
+  if(b.action==="status")return json({linked:true,ready:true,details:true,fee_bps:500});
+  if(b.action==="connect")return json({error:"In the demo the club's Stripe account is already linked. On your own site the treasurer links it once."});
+  if(b.action==="checkout"){if(!f||f.status!=="live")return json({error:"closed"});if(sq.some(s=>s.idx===+b.idx&&s.state!=="refunded"))return json({error:"taken"});
+    const price=b.gold&&f.gold?f.gold:f.price,id=++seq;sq.push({id,fundraiser:f.id,idx:+b.idx,state:"paid",name:String(b.name||"A supporter").slice(0,30),message:String(b.message||"").slice(0,80)||null,anon:!!b.anon,gold:!!(b.gold&&f.gold),
+      amount:b.cover?Math.ceil((price+20)/(1-.015)):price,fee:Math.round(price*.05),email:null,approved:false,hidden:false,created:new Date().toISOString(),paid_at:new Date().toISOString()});save();
+    return json({url:location.pathname+"?fund&paid=cs_demo_"+id})}
+  if(b.action==="confirm"){const s=sq.find(x=>"cs_demo_"+x.id===b.session);return json(s?{paid:true,square:{idx:s.idx,name:s.anon?"Anonymous":s.name}}:{paid:false})}
+  if(b.action==="refund"){const s=sq.find(x=>x.id===+b.square);if(s)s.state="refunded";save();return json({ok:true})}
+  return json({ok:true})}
+function fundBoard(q){const live=new Set((T.fundraisers||[]).filter(f=>f.status!=="draft").map(f=>f.id)),fid=(q.get("fundraiser")||"").replace(/^eq\./,"");
+  return json((T.fund_squares||[]).filter(s=>s.state==="paid"&&s.idx!=null&&live.has(s.fundraiser)&&(!fid||String(s.fundraiser)===fid)).map(s=>({fundraiser:s.fundraiser,idx:s.idx,gold:s.gold,state:s.state,
+    name:s.hidden?"A supporter":s.anon?"Anonymous":s.name,message:s.approved&&!s.hidden?s.message:null,paid_at:s.paid_at})))}
+
 const realFetch=window.fetch.bind(window);
 window.fetch=async function(input,init){
   const url=typeof input==="string"?input:input instanceof URL?input.href:input.url;
@@ -232,9 +257,11 @@ window.fetch=async function(input,init){
   let body=null;try{body=init.body?JSON.parse(init.body):null}catch(e){}
   await new Promise(r=>setTimeout(r,60));
   const p=u.pathname;let m;
+  if(p==="/rest/v1/fund_board")return fundBoard(u.searchParams);
   if((m=p.match(/^\/rest\/v1\/rpc\/([a-z_0-9]+)/)))return rpc(m[1],body||{});
   if((m=p.match(/^\/rest\/v1\/([a-z_0-9]+)/)))return rest(m[1],meth,u.searchParams,body,h);
   if(p.startsWith("/auth/v1"))return auth(p);
+  if(p.startsWith("/functions/v1/fundraiser"))return fundFn(body||{});
   if(p.startsWith("/functions/v1/fulltime"))return json({error:"FA Full-Time import isn't part of the demo. On your own site it pulls in your fixtures for you."});
   if(p.startsWith("/functions/v1/"))return json({});   // notify and preview: the preview button writes its own draft instead
   if(p.startsWith("/storage/v1/object/list"))return json([]);

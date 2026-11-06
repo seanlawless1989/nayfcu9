@@ -148,7 +148,7 @@ function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boo
 function appsTracked(list){return list.length>0}// scorers and PotM count as apps even without a team sheet
 
 // ---------- views ----------
-function setView(v){if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));render();window.scrollTo({top:0})}
+function setView(v){if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));if(v==="fund"){fSel=null;fundOpen()}render();window.scrollTo({top:0})}
 function render(){
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
@@ -161,6 +161,7 @@ function render(){
   if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+myBadgeStrip()+homeView();
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
+  else if(view==="fund")main.innerHTML=fundView();
   else if(view==="ratings")main.innerHTML=ratingsView();
   else if(view==="kit")main.innerHTML=kitView();
   else if(view==="pom")main.innerHTML=pomView();
@@ -230,10 +231,11 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
+  const fi=HOME_ITEMS.findIndex(x=>x[0]==="fund");if(fLive()){const t=["fund","💷","Fundraiser","Get your name on our pitch"];if(fi<0)HOME_ITEMS.splice(1,0,t)}else if(fi>=0)HOME_ITEMS.splice(fi,1);
   const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:`${RUGBY?"Try":"Goal"} of the month and more`;
   return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||PHOTOS_ON)&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
 function homeView(){if(noScores())return homeNoScores();
@@ -278,7 +280,7 @@ function homeView(){if(noScores())return homeNoScores();
     ${RUGBY?(pp=>`<section class="card"><h3>Top points scorers</h3>${pp.length?`<table class="lb"><tbody>${pp.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.pts/pp[0][1].pts*100)}%"></i><b>${o.pts}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No points logged yet.</p>`}</section>`)(Object.entries(ps).filter(([,o])=>o.pts>0).sort((a,b)=>b[1].pts-a[1].pts||a[0].localeCompare(b[0]))):""}
     ${SP.assists&&assistsTracked(season)?`<section class="card"><h3>Top assists</h3>${assisters.length?`<table class="lb"><tbody>${assisters.slice(0,8).map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="width:55%"><div class="bar"><i style="width:${Math.max(6,o.assists/assisters[0][1].assists*100)}%"></i><b>${o.assists}</b></div></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No assists logged yet.</p>`}</section>`:""}
     <section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td><span class="potm">${POTM_IC.repeat(Math.min(o.potm,6))}</span> <b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">No awards logged yet.</p>`}</section>
-  </div>${sponsorStrip()}</div>`;
+  </div>${fundStrip()}${sponsorStrip()}</div>`;
 }
 
 function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
@@ -292,7 +294,7 @@ function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
     ${(ms=>ms.length?`<section class="card"><h3>Recent milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>(x.date||"")>=new Date(Date.now()-60*864e5).toISOString().slice(0,10)).slice(-5).reverse())}
     ${recentMedalsCard()}
     <section class="card"><h3>${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}</h3>${potms.length?`<table class="lb"><tbody>${potms.map(([n,o])=>`<tr class="click" data-player="${esc(n)}"><td>${esc(n)}</td><td style="text-align:right"><b>${o.potm}</b></td></tr>`).join("")}</tbody></table>`:`<p class="hint">None yet.</p>`}</section>
-  </div><p class="hint">${RUGBY?"Scores and scorers aren't shown publicly for this age group, as the club has chosen.":"Scores and scorers aren't shown publicly for this age group, in line with FA rules for youth football."}</p>${sponsorStrip()}</div>`;
+  </div><p class="hint">${RUGBY?"Scores and scorers aren't shown publicly for this age group, as the club has chosen.":"Scores and scorers aren't shown publicly for this age group, in line with FA rules for youth football."}</p>${fundStrip()}${sponsorStrip()}</div>`;
 }
 function matchRow(m){
   const d=m.date?new Date(m.date+"T12:00:00"):null;const r=result(m);
@@ -432,6 +434,164 @@ function sponsorText(n){const from=`${season.slice(0,4)}-07-01`,r=sponsorReport(
   return `${TEAM.name} ${TEAM.ageGroup||""}: thank you, ${n}\n\nSince 1 July ${season.slice(0,4)}:\n• ${r.posts} matchday post${r.posts===1?"":"s"} with your logo${Object.keys(r.kinds).length?` (${kindsText(r.kinds)})`:""}\n• ${r.views} visits to the team website\n\nThank you for supporting the team.`}
 // ---------- team sponsors (public.sponsors, supabase/17_sponsors.sql) ----------
 // Coaches add, change, reorder and remove sponsors on the Sponsors page; everyone sees them on the home page.
+// ---------- pitch fundraiser (supabase/32_fundraiser.sql + the "fundraiser" edge function) ----------
+// Supporters buy a square on a picture of the team's pitch and put their name and a message on it. It's a donation to
+// the club, not a raffle: no prizes, ever (a prize makes it a lottery, which needs a licence). Payments go through
+// Stripe straight to the club's own account; Touchline Tales never holds club money. Messages show once a coach approves
+// them, and the page asks supporters not to put children's surnames on squares.
+let FUND=null,FSQ=[],FALL=null,FUND_ON=false,FINFO=null,FSTRIPE=null,FTOTAL=null,fSel=null,fGold=false,fCover=true,fBusy=false,fEdit=null,fThanks=null,fAllRows=false,fForm={name:"",msg:"",email:"",anon:false};
+const FSIZES=[[20,10],[25,20],[40,25]];// 200, 500 and 1,000 squares
+const fMoney=p=>"£"+(p%100?(p/100).toFixed(2):(p/100).toLocaleString("en-GB"));
+const fCardFee=p=>Math.ceil((p+20)/(1-.015))-p;// UK card 1.5% + 20p, the same sum as the edge function
+const fLive=()=>!!(FUND&&FUND.status==="live"&&!(FUND.ends&&FUND.ends<todayLocal()));
+const fRaised=()=>FTOTAL?+FTOTAL.raised||0:0;
+const fPrice=g=>g&&FUND.gold?FUND.gold:FUND.price;
+const fFee=()=>FINFO?+FINFO.fee_bps||0:500;
+const fInvoke=async body=>{try{const {data,error}=await sb.functions.invoke("fundraiser",{body:fnBody(body)});if(error){let j=null;try{j=await error.context.json()}catch(e){}return j||{error:"network"}}return data||{}}catch(e){return {error:"network"}}};
+async function loadFund(){if(!sb)return;try{const {data,error}=await sb.from("fundraisers").select("*").order("id",{ascending:false}).limit(3);if(error)return;FUND_ON=true;
+  FUND=(data||[]).find(f=>f.status==="live")||(data||[])[0]||null;FSQ=[];FTOTAL=null;FALL=null;if(!FUND)return;
+  const [b,t]=await Promise.all([sb.from("fund_board").select("*").eq("fundraiser",FUND.id),sb.rpc("fund_total",{p_fundraiser:FUND.id})]);FSQ=b.data||[];FTOTAL=t.data||null;
+  if(canWrite){const {data:a}=await sb.from("fund_squares").select("*").eq("fundraiser",FUND.id).order("created",{ascending:false});FALL=a||[]}}catch(e){}}
+async function fundOpen(){await loadFund();FINFO=await fInvoke({action:"info"});if(canWrite)FSTRIPE=await fInvoke({action:"status"});if(view==="fund")render()}
+function fundStrip(){if(!fLive())return "";const p=Math.min(100,fRaised()/(FUND.goal*100)*100);
+  return `<section class="card fd-strip"><div style="flex:1 1 220px;min-width:0"><b>Help us raise £${FUND.goal.toLocaleString("en-GB")} for ${esc(FUND.title.charAt(0).toLowerCase()+FUND.title.slice(1))}</b>
+    <div class="fd-bar" style="margin-top:8px"><i style="width:${p}%"></i></div><p class="hint" style="margin-top:6px">${fMoney(fRaised())} raised so far. Put your name on our pitch.</p></div>
+    <button class="btn gold" data-view="fund">${SP.ball} Get your name on our pitch</button></section>`}
+function fPitchSvg(){// the lines drawn over the squares: a football or rugby pitch
+  const L=RUGBY?`<rect x="2" y="2" width="196" height="116"/><line x1="10" y1="2" x2="10" y2="118"/><line x1="190" y1="2" x2="190" y2="118"/><line x1="50" y1="2" x2="50" y2="118"/><line x1="150" y1="2" x2="150" y2="118"/><line x1="100" y1="2" x2="100" y2="118"/><line x1="82" y1="2" x2="82" y2="118" stroke-dasharray="4 4"/><line x1="118" y1="2" x2="118" y2="118" stroke-dasharray="4 4"/>`
+    :`<rect x="2" y="2" width="196" height="116"/><line x1="100" y1="2" x2="100" y2="118"/><ellipse cx="100" cy="60" rx="15" ry="15"/><rect x="2" y="30" width="28" height="60"/><rect x="170" y="30" width="28" height="60"/><rect x="2" y="46" width="10" height="28"/><rect x="188" y="46" width="10" height="28"/>`;
+  return `<svg class="fd-lines" viewBox="0 0 200 120" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="rgba(255,255,255,.8)" stroke-width="1.4" vector-effect="non-scaling-stroke">${L}</g></svg>`}
+function fBoard(){const n=FUND.cols*FUND.rows,by={};FSQ.forEach(s=>by[s.idx]=s);let h="";
+  for(let i=0;i<n;i++){const s=by[i],r=Math.floor(i/FUND.cols)+1,c=i%FUND.cols+1;
+    h+=s?`<button class="fd-sq ${s.state==="paid"?"taken":"held"}${s.gold?" gold":""}" data-fsq="${i}" aria-label="Square ${r}-${c}, ${s.state==="paid"?esc(s.name||"taken"):"being paid for"}"></button>`
+      :`<button class="fd-sq${fSel===i?" sel":""}" data-fsq="${i}" aria-label="Square ${r}-${c}, free"${fLive()?"":" disabled"}></button>`}
+  return `<div class="fd-wrap"><div class="fd-pitch" style="aspect-ratio:${FUND.cols*1.2}/${FUND.rows};min-width:${FUND.cols*15}px">${fPitchSvg()}<div class="fd-grid" style="grid-template-columns:repeat(${FUND.cols},1fr);grid-template-rows:repeat(${FUND.rows},1fr)">${h}</div></div></div>
+    <div class="fd-key"><span><b class="k-free"></b>Free</span><span><b class="k-taken"></b>Taken</span>${FUND.gold?`<span><b class="k-gold"></b>Gold square (${fMoney(FUND.gold)})</span>`:""}</div>`}
+function fPanel(){
+  if(fThanks)return `<section class="card stack" style="gap:10px;text-align:center;align-items:center"><div class="fd-thanks"><span>${SP.ball}</span><b>I'm on the pitch</b><small>Helping ${esc(TEAM.name)} ${esc(TEAM.ageShort||"")}</small></div>
+    <h3 style="margin:0">Thank you${fThanks.name&&fThanks.name!=="Anonymous"?", "+esc(fThanks.name):""}!</h3><p class="hint">Your square is on our pitch. Any message shows once a coach has seen it. Stripe has emailed your receipt.</p>
+    <div class="btns" style="justify-content:center"><button class="btn gold" id="fShare">Share the fundraiser</button><button class="btn ghost" id="fAgain">Done</button></div></section>`;
+  if(!fLive())return `<section class="card"><h3 style="margin-top:0">${FUND.status==="closed"||FUND.ends&&FUND.ends<todayLocal()?"This fundraiser has finished":"Coming soon"}</h3><p class="hint">${FUND.status==="draft"?"Only coaches can see this until it goes live.":"Thank you to everyone who put their name on our pitch."}</p></section>`;
+  const ready=FINFO&&FINFO.ready;
+  if(fSel===null)return `<section class="card stack" style="gap:10px"><h3 style="margin:0">Claim a square</h3><p class="hint">Tap any free square on the pitch to choose where your name goes.</p>
+    <div class="fd-split"><div><span>A square</span><b>${fMoney(FUND.price)}</b></div>${FUND.gold?`<div><span>A gold square</span><b>${fMoney(FUND.gold)}</b></div>`:""}</div>
+    ${ready?"":`<p class="note">${FINFO?"Payments aren't switched on for this team yet. Check back soon.":"Checking payments…"}</p>`}<p class="hint">This is a donation to the club, not a raffle. There are no prizes.</p></section>`;
+  const r=Math.floor(fSel/FUND.cols)+1,c=fSel%FUND.cols+1,price=fPrice(fGold),card=fCardFee(price),ours=Math.round(price*fFee()/10000),total=price+(fCover?card:0),club=price-ours-(fCover?0:card);
+  return `<section class="card stack" style="gap:10px"><h3 style="margin:0">Square ${r}-${c}</h3>
+    ${FUND.gold?`<div class="seg" role="group" aria-label="Square type"><button data-fgold="0" aria-pressed="${!fGold}">Square ${fMoney(FUND.price)}</button><button data-fgold="1" aria-pressed="${fGold}">Gold ${fMoney(FUND.gold)}</button></div>`:""}
+    <label class="f">Name on the square<input type="text" id="f-name" maxlength="30" placeholder="e.g. Nana Jean, or a business name" value="${esc(fForm.name)}"></label>
+    <label class="f">Message (optional)<input type="text" id="f-msg" maxlength="80" placeholder="Up to 80 letters" value="${esc(fForm.msg)}"></label>
+    <label class="f">Email for your receipt<input type="text" inputmode="email" id="f-email" maxlength="200" autocomplete="email" value="${esc(fForm.email)}"></label>
+    <label class="fd-check"><input type="checkbox" id="f-anon"${fForm.anon?" checked":""}> Show my square as "Anonymous"</label>
+    <label class="fd-check"><input type="checkbox" id="f-cover"${fCover?" checked":""}> Add ${fMoney(card)} to cover the card fee, so the club gets more</label>
+    <div class="fd-split"><div><span>The club gets</span><b>${fMoney(club)}</b></div>${ours?`<div><span>Touchline Tales (${fFee()/100}%)</span><b>${fMoney(ours)}</b></div>`:""}<div><span>Card fee</span><b>${fMoney(card)}</b></div><div class="tot"><span>You pay</span><b>${fMoney(total)}</b></div></div>
+    <p class="hint">Please don't put children's surnames on squares. Your email is only seen by the coaches, to say thank you.</p>
+    <button class="btn gold" id="fPay"${fBusy||!ready?" disabled":""}>${fBusy?"Opening Stripe…":`Pay ${fMoney(total)} securely`}</button>
+    ${ready?"":`<p class="note">Payments aren't switched on for this team yet.</p>`}
+    <p class="hint" style="text-align:center">Card, Apple Pay or Google Pay through Stripe. A donation to the club, not a raffle.</p>
+    <button class="mini" id="fBack" style="align-self:center">Pick a different square</button></section>`}
+function fTakenCard(i){const s=FSQ.find(x=>x.idx===i);if(!s)return "";return `<section class="card"><h3 style="margin-top:0">${s.gold?"⭐ Gold square":"Square taken"}</h3><p><b>${esc(s.name||"Being paid for")}</b></p>${s.message?`<p class="hint">${esc(s.message)}</p>`:""}<button class="mini" id="fBack" style="margin-top:8px">Pick a free square</button></section>`}
+function fWall(){const L=FSQ.filter(s=>s.state==="paid").sort((a,b)=>(b.paid_at||"").localeCompare(a.paid_at||"")).slice(0,8);if(!L.length)return "";
+  return `<h3 style="margin:14px 0 4px">Latest supporters</h3>${L.map(s=>`<div class="fd-note"><span class="fd-dot">${esc((s.name||"?").charAt(0).toUpperCase())}</span><div style="min-width:0"><b>${esc(s.name)}${s.gold?" ⭐":""}</b>${s.message?`<div class="hint">${esc(s.message)}</div>`:""}</div></div>`).join("")}`}
+function fundView(){
+  if(!FUND_ON)return canWrite?`<section class="card empty">The fundraiser needs a quick update to the site's database first. Ask ${esc(TEAM.supportName||"the site admin")} via Help and changes.</section>`:homeView();
+  if(!FUND&&!canWrite)return `<section class="card empty">No fundraiser running at the moment.</section>`;
+  const pub=FUND&&(FUND.status!=="draft"||canWrite)?`<section class="card stack" style="gap:8px">${FUND.status==="draft"?`<p class="note">Draft: only coaches can see this until you press Go live.</p>`:""}<h2 style="margin:0">Get your name on our pitch</h2>
+      <p class="hint">${esc(FUND.about||`Every square helps pay for ${FUND.title.charAt(0).toLowerCase()+FUND.title.slice(1)}. Pick a square, add your name and a message, and it stays on our pitch.`)}</p>
+      <div class="fd-goal"><b>${fMoney(fRaised())}</b><span>raised of £${FUND.goal.toLocaleString("en-GB")} for ${esc(FUND.title.charAt(0).toLowerCase()+FUND.title.slice(1))}</span><span class="hint" style="margin-left:auto">${FTOTAL?FTOTAL.squares:0} of ${FUND.cols*FUND.rows} squares taken</span></div>
+      <div class="fd-bar"><i style="width:${Math.min(100,fRaised()/(FUND.goal*100)*100)}%"></i></div></section>
+    <div class="fd-cols"><section class="card">${fBoard()}${fWall()}</section><div>${fSel!==null&&FSQ.some(s=>s.idx===fSel)?fTakenCard(fSel):fPanel()}</div></div>`:"";
+  return `<div class="stack">${pub}${canWrite?fCoach():""}</div>`}
+// ---------- the coaches' side ----------
+function fCoach(){const st=FSTRIPE||{},f=fEdit||(FUND?{title:FUND.title,about:FUND.about||"",goal:String(FUND.goal),price:String(FUND.price/100),gold:FUND.gold?String(FUND.gold/100):"",size:String(Math.max(0,FSIZES.findIndex(([c,r])=>c===FUND.cols&&r===FUND.rows))),ends:FUND.ends||""}:{title:"",about:"",goal:"1000",price:"10",gold:"25",size:"0",ends:""});
+  if(!fEdit)fEdit=f;const sold=(FALL||[]).some(s=>s.state==="paid"||s.state==="held"),fee=st.fee_bps??fFee();
+  const pay=st.error==="no_stripe"||(FINFO&&FINFO.stripe===false)?`<p class="hint">Touchline Tales is still switching payments on. You can set up your pitch now and go live once payments are ready.</p>`
+    :!st.linked?`<p class="hint">Money from squares goes straight into the club's bank through Stripe. The club's treasurer links the club's own Stripe account once (about 10 minutes, and Stripe checks their ID).</p><div class="btns" style="margin-top:8px"><button class="btn" id="fConnect"${fBusy?" disabled":""}>Connect the club's Stripe account</button></div>`
+    :st.ready?`<p><span class="fd-pill ok">Taking payments</span></p><p class="hint" style="margin-top:6px">Stripe pays the club's bank directly. Sign in at dashboard.stripe.com to see payouts.</p>`
+    :`<p><span class="fd-pill">Stripe is checking the club's details</span></p><p class="hint" style="margin-top:6px">${st.details?"This usually takes a day or two.":"The Stripe form isn't finished yet."}</p><div class="btns" style="margin-top:8px"><button class="btn ghost" id="fConnect">${st.details?"Open Stripe again":"Carry on with Stripe"}</button><button class="mini" id="fRecheck">Check again</button></div>`;
+  const msgs=(FALL||[]).filter(s=>s.state==="paid"&&s.message&&!s.approved&&!s.hidden);
+  const paid=(FALL||[]).filter(s=>s.state==="paid"||s.state==="refunded");
+  return `<h2 class="sect">Coaches only</h2>
+  <section class="card"><h3 style="margin-top:0">Payments</h3>${pay}<p class="hint" style="margin-top:8px">${fee?`Touchline Tales keeps ${fee/100}% of each square. Stripe's card fee comes out of the club's money unless the supporter ticks the box to cover it.`:"No Touchline Tales fee for your team: the club keeps everything except Stripe's card fee, and supporters can cover that too."} It's a donation, not a raffle: never offer prizes for squares.</p></section>
+  ${msgs.length?`<section class="card"><h3 style="margin-top:0">Messages to approve</h3><p class="hint">Nothing shows on the pitch until a coach approves it. Hide anything with a child's surname or that isn't kind.</p>${msgs.map(s=>`<div class="fd-row"><div style="flex:1 1 160px;min-width:0"><b>${esc(s.name)}</b><div class="hint">${esc(s.message)}</div></div><button class="mini" data-fok="${s.id}">Approve</button><button class="mini" data-fhide="${s.id}">Hide</button></div>`).join("")}</section>`:""}
+  <section class="card stack" style="gap:10px"><h3 style="margin:0">${FUND?"The pitch":"Start a fundraiser"}</h3>
+    <label class="f">What it's for<input type="text" id="fe-title" maxlength="80" placeholder="e.g. New 9v9 goals" value="${esc(f.title)}"></label>
+    <label class="f">A line for supporters (optional)<input type="text" id="fe-about" maxlength="400" value="${esc(f.about)}"></label>
+    <div class="fd-form"><label class="f">Goal (£)<input type="number" id="fe-goal" min="10" step="1" inputmode="numeric" value="${esc(f.goal)}"></label>
+      <label class="f">Square price (£)<input type="number" id="fe-price" min="1" step="1" inputmode="decimal" value="${esc(f.price)}"${sold?" disabled":""}></label>
+      <label class="f">Gold square (£, optional)<input type="number" id="fe-gold" min="1" step="1" inputmode="decimal" value="${esc(f.gold)}"${sold?" disabled":""}></label>
+      <label class="f">Pitch size<select id="fe-size"${sold?" disabled":""}>${FSIZES.map(([c,r],i)=>`<option value="${i}"${+f.size===i?" selected":""}>${(c*r).toLocaleString("en-GB")} squares</option>`).join("")}</select></label>
+      <label class="f">Ends (optional)<input type="date" id="fe-ends" value="${esc(f.ends)}"></label></div>
+    ${sold?`<p class="hint">Prices and pitch size are fixed once squares are sold.</p>`:""}
+    <div class="btns"><button class="btn gold" id="fSave"${fBusy?" disabled":""}>${FUND?"Save":"Save as a draft"}</button>${FUND&&FUND.status==="draft"?`<button class="btn" id="fLiveOn">Go live</button>`:""}${FUND&&FUND.status==="live"?`<button class="btn ghost" id="fClose">End the fundraiser</button>`:""}${FUND&&FUND.status==="closed"?`<button class="btn ghost" id="fNew">Start a new one</button>`:""}</div></section>
+  ${paid.length?`<section class="card"><h3 style="margin-top:0">Supporters (${paid.filter(s=>s.state==="paid").length})</h3><p class="hint">Emails are for the coaches only, to say thank you. A refund gives the supporter all their money back, our fee included.</p>
+    ${(fAllRows?paid:paid.slice(0,10)).map(s=>`<div class="fd-row"><div style="flex:1 1 180px;min-width:0"><b>${esc(s.name)}</b>${s.anon?" <span class=\"hint\">(shows as Anonymous)</span>":""}${s.hidden?" <span class=\"hint\">(hidden)</span>":""}<div class="hint">${s.idx==null?"No square: refund this one":"Square "+(Math.floor(s.idx/FUND.cols)+1)+"-"+(s.idx%FUND.cols+1)}${s.gold?" ⭐":""} · ${fMoney(s.amount||0)} · ${new Date(s.paid_at||s.created).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${s.email?" · "+esc(s.email):""}</div></div>
+      ${s.state==="refunded"?`<span class="fd-pill">Refunded</span>`:`${s.hidden?`<button class="mini" data-fshow="${s.id}">Show</button>`:`<button class="mini" data-fhide="${s.id}">Hide</button>`}<button class="mini" data-frefund="${s.id}">Refund</button>`}</div>`).join("")}
+    <div class="btns" style="margin-top:10px">${paid.length>10&&!fAllRows?`<button class="btn ghost" id="fAll">Show all ${paid.length}</button>`:""}<button class="btn ghost" id="fCopy">Copy the list</button></div></section>`:""}`}
+function fRead(){const v=id=>{const el=document.getElementById(id);return el?el.value:null};
+  if(fEdit)[["title","fe-title"],["about","fe-about"],["goal","fe-goal"],["price","fe-price"],["gold","fe-gold"],["size","fe-size"],["ends","fe-ends"]].forEach(([k,id])=>{const x=v(id);if(x!==null)fEdit[k]=x});
+  [["name","f-name"],["msg","f-msg"],["email","f-email"]].forEach(([k,id])=>{const x=v(id);if(x!==null)fForm[k]=x});const a=document.getElementById("f-anon");if(a)fForm.anon=a.checked}
+document.addEventListener("input",e=>{if(view==="fund"&&e.target.id&&/^(f|fe)-/.test(e.target.id))fRead()});
+document.addEventListener("change",e=>{if(view!=="fund")return;if(e.target.id==="f-cover"){fCover=e.target.checked;render()}else if(e.target.id==="f-anon"||e.target.id==="fe-size")fRead()});
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b||view!=="fund"||!sb)return;const d=b.dataset,site=location.origin+location.pathname;
+  if(d.fsq!==undefined){fRead();fSel=+d.fsq;fThanks=null;render();if(innerWidth<760)setTimeout(()=>{const p=document.querySelector(".fd-cols>div");p&&p.scrollIntoView({behavior:"smooth",block:"start"})},30);return}
+  if(b.id==="fBack"){fSel=null;render();return}
+  if(d.fgold!==undefined){fRead();fGold=d.fgold==="1";render();return}
+  if(b.id==="fAgain"){fThanks=null;fSel=null;render();return}
+  if(b.id==="fShare"){const url=site+"?fund",text=`Get your name on the ${TEAM.name} pitch and help us raise money for ${FUND.title.toLowerCase()}.`;
+    if(navigator.share){navigator.share({title:TEAM.name,text,url}).catch(()=>{})}else copyOut(text+" "+url,"Link copied. Paste it into WhatsApp or Facebook.");return}
+  if(b.id==="fPay"){fRead();if(!fForm.name.trim()&&!fForm.anon){toast("Add the name that goes on your square.");document.getElementById("f-name")?.focus();return}
+    fBusy=true;render();const r=await fInvoke({action:"checkout",fundraiser:FUND.id,idx:fSel,gold:fGold,name:fForm.anon?(fForm.name.trim()||"Anonymous"):fForm.name,message:fForm.msg,anon:fForm.anon,cover:fCover,email:fForm.email,site});
+    if(r.client_secret){const p=fPrice(fGold);fPayOpen(r,p+(fCover?fCardFee(p):0));return}
+    if(r.url){location.href=r.url;return}// the demo site "pays" straight away
+    fBusy=false;toast(({taken:"Someone has just picked that square. Choose another one.",closed:"This fundraiser has finished.",not_ready:"Payments aren't switched on for this team yet."})[r.error]||"Couldn't open the payment page. Try again.");
+    if(r.error==="taken")fSel=null;await loadFund();render();return}
+  if(!canWrite)return;
+  if(b.id==="fConnect"){fBusy=true;render();const r=await fInvoke({action:"connect",site});fBusy=false;if(r.url){location.href=r.url;return}toast(r.error==="no_stripe"?"Payments aren't switched on yet. Touchline Tales will let you know.":"Couldn't open Stripe. Try again.");render();return}
+  if(b.id==="fRecheck"){FSTRIPE=await fInvoke({action:"status"});FINFO=await fInvoke({action:"info"});render();return}
+  if(d.fok||d.fhide||d.fshow){const id=+(d.fok||d.fhide||d.fshow),row=d.fok?{approved:true}:{hidden:!!d.fhide};const {error}=await sb.from("fund_squares").update(row).eq("id",id);if(error){toast("Couldn't save that. Try again.");return}await loadFund();render();return}
+  if(d.frefund){const s=(FALL||[]).find(x=>x.id===+d.frefund);if(!s||!confirm(`Refund ${fMoney(s.amount||0)} to ${s.name}? Their square goes back on the pitch.`))return;const r=await fInvoke({action:"refund",square:s.id});toast(r.ok?"Refunded. Stripe tells the supporter.":"Couldn't refund that. Try again, or refund it in Stripe.");await loadFund();render();return}
+  if(b.id==="fCopy"){const L=(FALL||[]).filter(s=>s.state==="paid").map(s=>[s.name,s.email||"",fMoney(s.amount||0),s.message||""].join("\t"));copyOut(["Name\tEmail\tPaid\tMessage",...L].join("\n"),"List copied. Paste it into a spreadsheet.");return}
+  if(b.id==="fAll"){fAllRows=true;render();return}
+  if(b.id==="fNew"){FUND=null;fEdit=null;FALL=[];render();return}
+  if(b.id==="fSave"||b.id==="fLiveOn"||b.id==="fClose"){fRead();const f=fEdit,goal=Math.round(+f.goal),price=Math.round(+f.price*100),gold=f.gold===""?null:Math.round(+f.gold*100),[cols,rows]=FSIZES[+f.size||0];
+    if(b.id==="fClose"&&!confirm("End the fundraiser? The pitch stays on the site but no more squares can be bought."))return;
+    if(b.id==="fSave"||b.id==="fLiveOn"){if(!f.title.trim()){toast("Say what the money is for.");return}if(!(goal>=10)){toast("Set a goal of at least £10.");return}if(!(price>=100)){toast("Squares need to cost at least £1.");return}if(gold!==null&&!(gold>price)){toast("Make the gold square cost more than a normal one, or leave it empty.");return}}
+    const row={title:f.title.trim(),about:f.about.trim()||null,goal,ends:f.ends||null};if(!(FALL||[]).some(s=>s.state==="paid"||s.state==="held"))Object.assign(row,{price,gold,cols,rows});
+    if(b.id==="fLiveOn")row.status="live";if(b.id==="fClose")row.status="closed";
+    fBusy=true;render();const q=FUND?sb.from("fundraisers").update(row).eq("id",FUND.id):sb.from("fundraisers").insert(row);const {error}=await q;fBusy=false;
+    if(error){toast("Couldn't save. Check the numbers and try again.");render();return}
+    fEdit=null;await loadFund();toast(b.id==="fLiveOn"?"It's live. Share the link with your families.":b.id==="fClose"?"Fundraiser ended. Thank you!":"Saved.");render();return}
+});
+// Stripe's embedded payment form, in a sheet over the page. It lives outside render() so a re-render can't tear it down.
+// Stripe.js must come straight from js.stripe.com (never bundled or copied), and only loads when someone pays.
+let fPayEl=null;
+const F_LOOK={theme:"stripe",labels:"auto",inputs:"spaced",variables:{borderRadius:"4px",colorBackground:"#ffffff",colorDanger:"#df1b41",colorPrimary:"#0570de",colorSuccess:"#00c853",colorText:"#30313d",fontFamily:"default",fontSizeBase:"16px",spacingUnit:"4px"}};
+const fStripeJs=()=>window.Stripe?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement("script");s.src="https://js.stripe.com/dahlia/stripe.js";s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+async function fPayOpen(r,total){fPayClose();
+  const el=document.createElement("div");el.className="fd-paysheet";el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");el.setAttribute("aria-label","Pay for your square");
+  el.innerHTML=`<div class="fd-paybox"><div class="fd-payhead"><b>Pay ${fMoney(total)} to ${esc(TEAM.name)}</b><button class="mini" id="fPayX" type="button">Cancel</button></div>
+    <p class="hint">A donation to the club, paid securely through Stripe. Card details never touch this site.</p><div id="checkout-form"><p class="hint">Loading the payment form…</p></div></div>`;
+  document.body.appendChild(el);document.body.classList.add("fd-paying");fPayEl={el,square:r.square,form:null};
+  el.querySelector("#fPayX").addEventListener("click",()=>fPayCancel());
+  try{await fStripeJs();if(!fPayEl||fPayEl.el!==el)return;
+    const stripe=Stripe(r.pk,{stripeAccount:r.account});// a direct charge on the club's own Stripe account
+    const checkout=stripe.initCheckoutFormSdk({clientSecret:r.client_secret,appearance:F_LOOK});
+    const form=checkout.createForm({layout:"expanded"});el.querySelector("#checkout-form").innerHTML="";form.mount("#checkout-form");fPayEl.form=form;
+    const L=await checkout.loadActions();if(L.type!=="success")throw new Error("actions");
+    form.on("confirm",async ev=>{try{const res=await L.actions.confirm({formConfirmEvent:ev});// on success Stripe goes to ?fund&paid=<session>
+        if(res&&res.type==="error")toast((res.error&&res.error.message)||"That payment didn't go through. Try again.")}catch(e){toast("That payment didn't go through. Try again.")}})
+  }catch(e){if(fPayEl&&fPayEl.el===el)fPayCancel("Couldn't load the payment form. Check your signal and try again.")}}
+function fPayClose(){if(!fPayEl)return;try{fPayEl.form&&fPayEl.form.unmount&&fPayEl.form.unmount()}catch(e){}fPayEl.el.remove();fPayEl=null;document.body.classList.remove("fd-paying")}
+async function fPayCancel(msg){const sq=fPayEl&&fPayEl.square;fPayClose();fBusy=false;if(sq)await fInvoke({action:"release",square:sq});
+  toast(msg||"No payment was taken. Your square is free again.");await loadFund();render()}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&fPayEl)fPayCancel()});
+// back from Stripe: ?fund&paid=<session>, ?fund&cancelled=<square>, or ?fund&stripe=back (a coach linking the club's account)
+async function fundReturn(q){const paid=q.get("paid"),gone=q.get("cancelled");try{history.replaceState(null,"",location.pathname+"?fund")}catch(e){}
+  if(paid){const r=await fInvoke({action:"confirm",session:paid});if(r.paid){fThanks={name:(r.square&&r.square.name)||""};fSel=null}else toast("Your payment hasn't come through yet. If Stripe took it, your square will show shortly.")}
+  if(gone){await fInvoke({action:"release",square:gone});toast("No payment was taken. Your square is free again.")}
+  await fundOpen()}
+
 let SPON=[],SPON_ON=false,spEdit=null,spBusy=false;
 window.siteSponsors=()=>SPON.filter(s=>s.logo).map(s=>({id:String(s.id),name:s.name||"",logo:s.logo}));// the poster maker (gfx.js) offers these
 async function loadSponsors(){if(!sb)return;try{const {data,error}=await sb.from("sponsors").select("*").order("sort").order("id");if(error)return;SPON_ON=true;SPON=data||[]}catch(e){}}
@@ -859,7 +1019,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
   ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos in a private store that only the team's signed-in coaches can open. These photos are never shown on the site and have no public links. Ask the coach to delete a photo at any time. There's no public photo gallery.</li></ul>`)}
-  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
+  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you buy a square on the club's pitch fundraiser: the name and message for your square and your email address for the receipt. Only the coaches see your email and what you paid, and messages show once a coach approves them. You pay through Stripe straight to the club; the site never sees your card.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
   ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts. Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
@@ -3551,7 +3711,7 @@ document.addEventListener("submit",async e=>{
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
-  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors(),loadPom()]);
+  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors(),loadPom(),loadFund()]);
   if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
   if(linkErr){try{sessionStorage.removeItem("linkErr")}catch(e){}if(canWrite)toast("You're already signed in as a coach. That email link was an old one, so you don't need it.");
@@ -3559,6 +3719,7 @@ document.addEventListener("submit",async e=>{
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
   for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos"])if(new URLSearchParams(location.search).has(v))setView(v);
+  if(new URLSearchParams(location.search).has("fund")){view="fund";render();fundReturn(new URLSearchParams(location.search))}
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}

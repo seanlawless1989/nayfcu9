@@ -128,7 +128,7 @@ def build_sql(team, out):
     for name in ("1_schema.sql", "3_notifications.sql", "4_gallery_training.sql", "5_help_requests.sql", "6_match_updated.sql",
                  "7_team_setup.sql", "8_multi_day_tournaments.sql", "9_matchday_and_more.sql", "10_parent_login.sql", "11_rugby.sql",
                  "12_preview_alert.sql", "13_cheers.sql", "14_tournament_teams.sql", "15_tournament_squad.sql",
-                 "16_availability_alerts.sql", "17_sponsors.sql", "18_player_ratings.sql", "19_player_birthdays.sql", "20_player_of_month.sql", "21_kit_sizes.sql", "22_coach_availability.sql", "23_tournament_report.sql", "24_shared_coaches.sql", "25_active_days.sql", "26_club_admin.sql", "27_my_badges.sql", "28_platform_admin.sql", "29_coach_photos.sql", "30_tournament_availability.sql", "31_fixture_change.sql"):
+                 "16_availability_alerts.sql", "17_sponsors.sql", "18_player_ratings.sql", "19_player_birthdays.sql", "20_player_of_month.sql", "21_kit_sizes.sql", "22_coach_availability.sql", "23_tournament_report.sql", "24_shared_coaches.sql", "25_active_days.sql", "26_club_admin.sql", "27_my_badges.sql", "28_platform_admin.sql", "29_coach_photos.sql", "30_tournament_availability.sql", "31_fixture_change.sql", "32_fundraiser.sql"):
         s = (SQL / name).read_text()
         s = s.replace("-- Newton Aycliffe U9s: ", f"-- {team['name']} {team.get('ageShort', '')}: ")
         if name == "3_notifications.sql":
@@ -175,7 +175,11 @@ supabase functions deploy notify
 supabase functions deploy calendar --no-verify-jwt
 supabase functions deploy preview
 supabase functions deploy fulltime
+supabase functions deploy fundraiser --no-verify-jwt
 ```
+The pitch fundraiser takes payments only once the project has the Touchline Tales Stripe secrets
+(`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`) and the club's treasurer has linked their Stripe account from the
+Fundraiser page. See supabase/functions/fundraiser/index.ts.
 Then add the Touchline Tales Anthropic API key, which writes the coaches' "Suggest a preview" and "Suggest a report" drafts:
 `supabase secrets set ANTHROPIC_API_KEY=<key>` (or Edge Functions > Secrets in the dashboard). Without it, those buttons
 write a simple draft from the stats instead. Drafts leave out scores, results and scorers for under-7s to under-11s (FA rule).
