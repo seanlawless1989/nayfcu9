@@ -778,3 +778,25 @@ body.fd-paying{overflow:hidden}
 .iw-r small{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.45}.iw-r small b{color:var(--ink);font-weight:700}
 .iw-d{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted);white-space:nowrap}.iw-d.up{color:var(--win);font-weight:800}.iw-d.dn{color:var(--loss);font-weight:800}
 #insCa{border-left:5px solid var(--club)}#insCb{border-left:5px solid var(--c2)}
+/* insights: radar, race lines, scatter, donut, rolling form */
+.ins-svg polygon.g{fill:none;stroke:var(--line);stroke-width:1}
+.ins-radar{max-width:360px;margin:6px auto 0}
+.ins-svg .rd{stroke-width:2;stroke-linejoin:round;cursor:pointer}
+.ins-svg .rd.a{fill:rgb(var(--clubRGB)/.18);stroke:var(--club)}
+.ins-svg .rd.b{fill:color-mix(in srgb,var(--c2) 16%,transparent);stroke:var(--c2)}
+.ins-svg .rdp{stroke:var(--card);stroke-width:1.5}.ins-svg .rdp.a{fill:var(--club)}.ins-svg .rdp.b{fill:var(--c2)}
+.ins-svg .race{fill:none;stroke-width:2;stroke-linejoin:round}
+.ins-svg .race.c1{stroke:var(--club)}.ins-svg .race.c2{stroke:var(--c2)}.ins-svg .race.c3{stroke:var(--c3)}.ins-svg .race.c4{stroke:var(--c4)}
+.ins-svg .rdot{stroke:var(--card);stroke-width:1.5;cursor:pointer}
+.ins-svg .rdot.c1{fill:var(--club)}.ins-svg .rdot.c2{fill:var(--c2)}.ins-svg .rdot.c3{fill:var(--c3)}.ins-svg .rdot.c4{fill:var(--c4)}
+.ins-svg .rlab{fill:var(--ink);font:700 10.5px var(--body)}
+.ins-svg .sc circle{fill:var(--club);stroke:var(--card);stroke-width:2}.ins-svg .sc circle.hit{fill:transparent;stroke:none;cursor:pointer}
+.ins-svg .slab{fill:var(--muted);font:600 10px var(--body)}
+.ins-svg .fr-W{fill:var(--win)}.ins-svg .fr-D{fill:var(--draw)}.ins-svg .fr-L{fill:var(--loss)}
+.ins-svg .pt circle.fr-W{fill:var(--win)}.ins-svg .pt circle.fr-D{fill:var(--draw)}.ins-svg .pt circle.fr-L{fill:var(--loss)}
+.ins-donut{display:flex;align-items:center;gap:18px;margin-top:6px}
+.ins-donut svg{width:130px;height:130px;flex:none}
+.ins-donut circle{fill:none;stroke-width:14;cursor:pointer}
+.ins-donut .dn-win{stroke:var(--win)}.ins-donut .dn-draw{stroke:var(--draw)}.ins-donut .dn-loss{stroke:var(--loss)}
+.ins-donut .dn-n{font:400 18px var(--display);fill:var(--ink)}.ins-donut .dn-s{font:600 9px var(--body);fill:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ins-donut .ins-leg{font-size:14px;color:var(--ink)}.ins-donut .ins-leg b{margin-left:4px}

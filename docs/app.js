@@ -3201,7 +3201,7 @@ function insightsView(){
 
 // ---- players tab ----
 function insPlayers(games){const names=insRoster(games);if(!insPl||!names.includes(insPl))insPl=names[0];
-  return insGrid(games,names)+insForm(games,names)+insCompare(games,names)+insInvolve(games,names)}
+  return insGrid(games,names)+insForm(games,names)+insCompare(games,names)+insInvolve(games,names)+insRace(games,names)}
 // compare two players side by side: every number for the season, the better one of each pair in bold
 function insSum(games,n){const mine=games.filter(m=>insIn(m,n)),ps=playerStats(games)[n]||{goals:0,assists:0,potm:0};
   const rs=mine.map(m=>insRate(m,n)).filter(v=>v!=null),sh=mine.map(m=>insShare(m,n)).filter(v=>v!=null);
@@ -3215,7 +3215,7 @@ function insCompare(games,names){if(!insCa||!names.includes(insCa))insCa=names[0
     ...(RT&&RT.length?[["Average rating",o=>o.rate,f1],["Last 3 ratings",o=>o.last,f1],["Best rating",o=>o.best,v=>v==null?"–":String(v)]]:[]),
     ["Share of each game",o=>o.share,insPct],["Said available",o=>o.avail,insPct],...(ATT?[["Training",o=>o.train,insPct]]:[]),["Games won when playing",o=>o.win,insPct]];
   const sel=(id,v)=>`<select id="${id}" aria-label="Pick a player">${names.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("")}</select>`;
-  return `<section class="card"><h3>Compare players</h3><div class="ins-vs">${sel("insCa",a)}<span>v</span>${sel("insCb",b)}</div>
+  return `<section class="card"><h3>Compare players</h3><div class="ins-vs">${sel("insCa",a)}<span>v</span>${sel("insCb",b)}</div>${insRadar(games,names,a,b)}
     <table class="lb ins-cmp"><tbody>${rows.map(([k,f,fmt])=>{const x=f(A),y=f(B),mx=Math.max(x||0,y||0)||1,hi=x!=null&&y!=null&&x!==y?(x>y?"a":"b"):"";
       return `<tr><td class="${hi==="a"?"win":""}">${fmt(x)}<div class="ins-mini l"><i style="width:${(x||0)/mx*100}%"></i></div></td><th>${k}</th><td class="${hi==="b"?"win":""}">${fmt(y)}<div class="ins-mini"><i class="c2" style="width:${(y||0)/mx*100}%"></i></div></td></tr>`}).join("")}</tbody></table>
     <p class="hint" style="margin-top:8px">Bold is the higher of the two. Share of each game uses the halves counter; availability counts the games where it was asked.</p></section>`}
@@ -3231,6 +3231,75 @@ function insWith(list){const sheets=list.filter(m=>result(m)&&m.apps!==false&&Ob
     <div class="ins-with">${rows.map(o=>{const d=diff(o),w=`${pts(o.w.pts)} (${o.w.P} game${o.w.P===1?"":"s"}, won ${insPct(o.w.win)}, GD ${gd(o.w.gd)})`,wo=o.wo.P?`${pts(o.wo.pts)} (${o.wo.P} game${o.wo.P===1?"":"s"}, won ${insPct(o.wo.win)}, GD ${gd(o.wo.gd)})`:"played every game";
       return `<div class="iw-r" title="${esc(`${o.n}. With: ${w}. Without: ${wo}`)}"><div class="iw-t"><span class="click" data-player="${esc(o.n)}">${esc(o.n)}</span>${d==null?`<span class="iw-d">${o.wo.P?"too few games":"–"}</span>`:`<span class="iw-d ${d>=.25?"up":d<=-.25?"dn":""}">${d>0?"▲ +":d<0?"▼ ":""}${d.toFixed(1)}</span>`}</div><small><b>With</b> ${w}<br><b>Without</b> ${wo}</small></div>`}).join("")}</div>
     <p class="hint" style="margin-top:8px">The number on the right is the difference in points per game. ▲ means the team picked up more points with them playing. It shows a pattern, not the reason for it.</p></section>`}
+// ---- more chart types: radar (compare), goals race, game time v rating scatter, results donut, rolling form ----
+// which games get an x-axis label: about six, the last one only when it has room
+function insTk(i,n){const st=Math.ceil(n/6),r=(n-1)%st;return i%st===0||(i===n-1&&(r===0||r>=st*.75))}
+// spread end-of-line labels so they never sit on top of each other
+function insSpread(ys,gap,lo,hi){const o=ys.map((y,i)=>({y,i})).sort((a,b)=>a.y-b.y);for(let k=1;k<o.length;k++)if(o[k].y-o[k-1].y<gap)o[k].y=o[k-1].y+gap;
+  const over=o.length?o[o.length-1].y-hi:0;if(over>0)o.forEach(p=>p.y-=over);o.forEach(p=>p.y=Math.max(lo,p.y));const out=[];o.forEach(p=>out[p.i]=p.y);return out}
+// radar: each player's shape across the season, every spoke scaled to the best in the squad
+function insRadar(games,names,a,b){const useA=SP.assists&&assistsTracked(season),all=names.map(n=>insSum(games,n));
+  const ax=[["Games",o=>o.g],[SP.Goals,o=>o.goals],...(useA?[["Assists",o=>o.assists]]:[]),...(RT&&RT.length?[["Rating",o=>o.rate]]:[]),["Game time",o=>o.share],["Available",o=>o.avail],...(ATT?[["Training",o=>o.train]]:[])];
+  const mx=ax.map(([,f])=>Math.max(...all.map(f).map(v=>v||0))||1),A=insSum(games,a),B=insSum(games,b);
+  const W=320,H=250,cx=W/2,cy=H/2+4,R=88,n=ax.length,pt=(i,r)=>[cx+r*Math.sin(2*Math.PI*i/n),cy-r*Math.cos(2*Math.PI*i/n)];
+  const poly=o=>ax.map(([,f],i)=>pt(i,R*Math.min(1,(f(o)||0)/mx[i])).map(v=>v.toFixed(1)).join(",")).join(" ");
+  const tip=(o,nm)=>ax.map(([k,f],i)=>{const v=f(o);return `${k} ${v==null?"–":k==="Rating"?v.toFixed(1):["Game time","Available","Training"].includes(k)?insPct(v):v}`}).join(", ");
+  return `<svg class="ins-svg ins-radar" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`${a} and ${b} compared on ${ax.map(x=>x[0]).join(", ")}`)}">
+    ${[.33,.66,1].map(r=>`<polygon class="g" points="${ax.map((x,i)=>pt(i,R*r).join(",")).join(" ")}"/>`).join("")}
+    ${ax.map((x,i)=>{const [x1,y1]=pt(i,R),[lx,ly]=pt(i,R+16);return `<line class="g" x1="${cx}" y1="${cy}" x2="${x1}" y2="${y1}"/><text class="ax" x="${lx}" y="${ly+3}" text-anchor="${Math.abs(lx-cx)<8?"middle":lx>cx?"start":"end"}">${esc(x[0])}</text>`}).join("")}
+    <polygon class="rd b" points="${poly(B)}"><title>${esc(`${b}: ${tip(B)}`)}</title></polygon><polygon class="rd a" points="${poly(A)}"><title>${esc(`${a}: ${tip(A)}`)}</title></polygon>
+    ${ax.map(([,f],i)=>[[A,"a"],[B,"b"]].map(([o,c])=>{const [x,y]=pt(i,R*Math.min(1,(f(o)||0)/mx[i]));return `<circle class="rdp ${c}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"/>`}).join("")).join("")}
+  </svg><div class="ins-leg"><span><i class="sw c1"></i>${esc(a)}</span><span><i class="sw c2"></i>${esc(b)}</span><span>The edge of each spoke is the best in the squad</span></div>`}
+// goals race: running total through the season for the top four scorers
+function insRace(games,names){const list=games.filter(m=>Object.values(played(m)).some(g=>+g>0)||result(m));if(list.length<2)return "";
+  const tot={};names.forEach(n=>tot[n]=0);list.forEach(m=>Object.entries(played(m)).forEach(([n,g])=>{if(n in tot)tot[n]+=+g||0}));
+  const top=Object.entries(tot).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([n])=>n);if(!top.length)return "";
+  const run=top.map(n=>{let c=0;return list.map(m=>c+=+played(m)[n]||0)}),mx=Math.max(1,...run.map(r=>r[r.length-1]));
+  const W=340,H=180,L=24,R=72,T=10,B=24,x=i=>L+i*(W-L-R)/(list.length-1),y=v=>T+(1-v/mx)*(H-T-B);
+  const ends=insSpread(run.map(r=>y(r[r.length-1])),12,T+4,H-B);
+  return `<section class="card"><h3>Top scorers race</h3><p class="hint">Running total of ${SP.goals} through the season for the top ${top.length}.</p>
+    <svg class="ins-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Running total of ${SP.goals} for ${esc(top.join(", "))}">
+    ${[0,Math.round(mx/2),mx].filter((v,i,a)=>a.indexOf(v)===i).map(v=>`<line class="g" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join("")}
+    ${run.map((r,k)=>`<path class="race c${k+1}" d="${r.map((v,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("")}"/>`).join("")}
+    ${run.map((r,k)=>r.map((v,i)=>v>(i?r[i-1]:0)?`<circle class="rdot c${k+1}" cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3.5"><title>${esc(`${top[k]}: ${v} after v ${list[i].opp} (${insDate(list[i])})`)}</title></circle>`:"").join("")).join("")}
+    ${run.map((r,k)=>`<text class="rlab" x="${W-R+6}" y="${ends[k]+4}">${esc(top[k])} ${r[r.length-1]}</text>`).join("")}
+    ${list.map((m,i)=>insTk(i,list.length)?`<text class="ax" x="${x(i)}" y="${H-6}" text-anchor="middle">${esc(oppIni(m.opp))}</text>`:"").join("")}
+    </svg><div class="ins-leg">${top.map((n,k)=>`<span><i class="sw c${k+1}"></i>${esc(n)}</span>`).join("")}</div></section>`}
+// scatter: share of each game against average rating, so you can spot who rates well but plays less
+function insScatter(games,names){if(!(RT&&RT.length))return "";const pts=names.map(n=>{const o=insSum(games,n);return {n,x:o.share,y:o.rate,g:o.g}}).filter(o=>o.x!=null&&o.y!=null);
+  if(pts.length<3)return "";const W=340,H=240,L=30,R=12,T=12,B=30,lo=Math.max(0,Math.floor(Math.min(...pts.map(p=>p.y))-1)),hi=Math.min(10,Math.ceil(Math.max(...pts.map(p=>p.y))+.5));
+  const x0=Math.max(0,Math.floor((Math.min(...pts.map(p=>p.x))-.05)*10)/10),x1=Math.min(1,Math.ceil((Math.max(...pts.map(p=>p.x))+.05)*10)/10);
+  const x=v=>L+(v-x0)/((x1-x0)||1)*(W-L-R),y=v=>T+(hi-v)/(hi-lo||1)*(H-T-B),mx=insAvg(pts.map(p=>p.x)),my=insAvg(pts.map(p=>p.y));
+  // labels: try right, left, above, below each dot; leave a label off (tap the dot instead) when every spot is taken
+  const box=[],hit=(a,b)=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h;pts.forEach(p=>box.push({x:x(p.x)-6,y:y(p.y)-6,w:12,h:12}));
+  const lab=pts.map(p=>{const w=p.n.length*5.6+2,h=11,cx=x(p.x),cy=y(p.y);for(const [bx,by,an] of [[cx+8,cy-5.5,"start"],[cx-8-w,cy-5.5,"end"],[cx-w/2,cy-18,"middle"],[cx-w/2,cy+7,"middle"]]){const b={x:bx,y:by,w,h};
+      if(bx<L||bx+w>W||by<T-2||by+h>H-B)continue;if(box.some(o=>hit(o,b)))continue;box.push(b);return {x:an==="start"?bx:an==="end"?bx+w:bx+w/2,y:by+9,an}}return null});
+  return `<section class="card"><h3>Game time v rating</h3><p class="hint">Each dot is a ${esc(PL.replace(/s$/,""))}: further right plays more of each game, higher up rates better. Top left is rating well but playing less. The dashed lines are the squad averages. Tap a dot to see who it is.</p>
+    <svg class="ins-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Share of each game against average coach rating for each player">
+    ${[x0,(x0+x1)/2,x1].map(v=>`<line class="g" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H-B}"/><text class="ax" x="${x(v)}" y="${H-B+14}" text-anchor="middle">${Math.round(v*100)}%</text>`).join("")}
+    ${[lo,(lo+hi)/2,hi].map(v=>`<line class="g" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-5}" y="${y(v)+4}" text-anchor="end">${+v.toFixed(1)}</text>`).join("")}
+    <line class="avg" x1="${x(mx)}" x2="${x(mx)}" y1="${T}" y2="${H-B}"/><line class="avg" x1="${L}" x2="${W-R}" y1="${y(my)}" y2="${y(my)}"/>
+    <text class="ax" x="${W-R}" y="${H-4}" text-anchor="end">Share of each game →</text>
+    ${pts.map((p,i)=>`<g class="sc"><circle cx="${x(p.x).toFixed(1)}" cy="${y(p.y).toFixed(1)}" r="5"/>${lab[i]?`<text class="slab" x="${lab[i].x.toFixed(1)}" y="${lab[i].y.toFixed(1)}" text-anchor="${lab[i].an}">${esc(p.n)}</text>`:""}<circle class="hit" cx="${x(p.x).toFixed(1)}" cy="${y(p.y).toFixed(1)}" r="13"><title>${esc(`${p.n}: ${insPct(p.x)} of each game, average rating ${p.y.toFixed(1)} (${p.g} games)`)}</title></circle></g>`).join("")}
+    </svg></section>`}
+// results donut and rolling form: how the season has gone, and whether it's getting better
+function insFormCard(list){const t=teamStats(list);if(t.P<2)return "";
+  const seg=[["W","Won","win"],["D","Drawn","draw"],["L","Lost","loss"]].map(([k,l,c])=>({k,l,c,v:t[k]})).filter(s=>s.v);
+  const C=2*Math.PI*36;let off=0;const ring=seg.map(s=>{const len=s.v/t.P*C,gap=seg.length>1?1.5:0,el=`<circle class="dn-${s.c}" r="36" cx="50" cy="50" stroke-dasharray="${Math.max(0,len-gap).toFixed(2)} ${(C-len+gap).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"><title>${s.l}: ${s.v} of ${t.P}</title></circle>`;off+=len;return el}).join("");
+  const p=list.map(m=>({W:3,D:1,L:0})[result(m)]),roll=p.map((v,i)=>{const w=p.slice(Math.max(0,i-2),i+1);return w.reduce((s,x)=>s+x,0)/w.length}),avg=p.reduce((s,v)=>s+v,0)/p.length;
+  const W=340,H=150,L=26,R=10,T=10,B=24,x=i=>L+i*(W-L-R)/(list.length-1),y=v=>T+(3-v)/3*(H-T-B);
+  const line=`<svg class="ins-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Points per game over the last 3 games through the season">
+    ${[0,1,2,3].map(v=>`<line class="g" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join("")}
+    <line class="avg" x1="${L}" x2="${W-R}" y1="${y(avg)}" y2="${y(avg)}"/>
+    <path class="ln" d="${roll.map((v,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("")}"/>
+    ${list.map((m,i)=>`<g class="pt"><circle class="fr-${result(m)}" cx="${x(i)}" cy="${y(roll[i])}" r="4.5"/><circle class="hit" cx="${x(i)}" cy="${y(roll[i])}" r="13"><title>${esc(`v ${m.opp}, ${insDate(m)}: ${m.us}–${m.them} (${result(m)}). Last 3 games: ${roll[i].toFixed(1)} points a game`)}</title></circle></g>`).join("")}
+    ${list.map((m,i)=>insTk(i,list.length)?`<text class="ax" x="${x(i)}" y="${H-6}" text-anchor="middle">${esc(oppIni(m.opp))}</text>`:"").join("")}
+  </svg>`;
+  const now=roll[roll.length-1],trend=now-avg>=.4?"better than":now-avg<=-.4?"worse than":"about the same as";
+  return `<section class="card"><h3>Form over the season</h3>
+    <div class="ins-donut"><svg viewBox="0 0 100 100" role="img" aria-label="${esc(seg.map(s=>`${s.l} ${s.v}`).join(", "))}"><g transform="rotate(-90 50 50)">${ring}</g><text x="50" y="49" text-anchor="middle" class="dn-n">${Math.round(t.W/t.P*100)}%</text><text x="50" y="62" text-anchor="middle" class="dn-s">won</text></svg>
+      <div class="ins-leg" style="flex-direction:column;gap:6px">${seg.map(s=>`<span><i class="sw st-${s.c}"></i>${s.l} <b>${s.v}</b></span>`).join("")}</div></div>
+    <h3 style="margin-top:14px">Points a game, last 3 games</h3><p class="hint">A win is 3 points and a draw 1. Each dot is the average of that game and the two before it, coloured by that game's result. The dashed line is the season average (${avg.toFixed(1)}). The last 3 games are ${trend} the season so far.</p>${line}</section>`}
 // season at a glance: one row per player, one column per game. Shade = coach rating when there is one.
 function insGrid(games,names){const rated=RT&&RT.length;
   const cell=(m,n)=>{const on=insIn(m,n),g=+played(m)[n]||0,a=+assistsOf(m)[n]||0,gk=n in keepersOf(m),pom=m.potm===n,r=insRate(m,n),av=(AV[m.id]||{})[n];
@@ -3255,7 +3324,7 @@ function insForm(games,names){const n=insPl,mine=games.filter(m=>insIn(m,n)),rat
       ${[0,5,10].map(v=>`<line class="g" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join("")}
       <path class="avg" d="${path("avg")}"/><path class="ln" d="${path("r")}"/>
       ${rs.map((o,i)=>`<g class="pt"><circle cx="${x(i)}" cy="${y(o.r)}" r="5"/><circle class="hit" cx="${x(i)}" cy="${y(o.r)}" r="14"><title>${esc(`v ${o.m.opp}, ${insDate(o.m)}: ${o.r}/10 (team average ${o.avg.toFixed(1)})`)}</title></circle></g>`).join("")}
-      ${rs.map((o,i)=>i%Math.ceil(rs.length/6)===0||i===rs.length-1?`<text class="ax" x="${x(i)}" y="${H-8}" text-anchor="middle">${esc(oppIni(o.m.opp))}</text>`:"").join("")}
+      ${rs.map((o,i)=>insTk(i,rs.length)?`<text class="ax" x="${x(i)}" y="${H-8}" text-anchor="middle">${esc(oppIni(o.m.opp))}</text>`:"").join("")}
     </svg><div class="ins-leg"><span><i class="sw ln"></i>${esc(n)}</span><span><i class="sw avg"></i>Team average that game</span></div>`}
   else chart=`<p class="hint">${rated?`${esc(n)} hasn't been rated yet this season.`:`Rate ${esc(PL)} after each game on the <button class="mini" data-view="ratings">Player ratings</button> page and their form shows here.`}</p>`;
   const sh=mine.map(m=>({m,s:insShare(m,n)})).filter(o=>o.s!=null);
@@ -3286,7 +3355,7 @@ function insTime(games){const names=insRoster(games),hv=games.filter(m=>Object.k
     <div class="ins-hb ins-pt">${rows.map(o=>{const tr=o.avg!=null&&o.last!=null&&hv.length>3?(o.last-o.avg>=.15?"▲":o.last-o.avg<=-.15?"▼":""):"";
       return `<div class="r"><span class="click" data-player="${esc(o.n)}">${esc(o.n)}</span><div class="b" title="${esc(`${o.n}: ${insPct(o.avg)} of the games they were at (${o.g} game${o.g===1?"":"s"}), last 3: ${insPct(o.last)}`)}"><i class="c1" style="width:${(o.avg||0)*100}%"></i>${team!=null?`<em style="left:${team*100}%"></em>`:""}</div><b>${insPct(o.avg)}${tr?` <small class="${tr==="▲"?"up":"dn"}" title="Last 3 games ${insPct(o.last)}">${tr}</small>`:""}</b></div>`}).join("")}</div>
     <p class="hint" style="margin-top:8px">▲ or ▼ means their last 3 games were well above or below their season so far.</p></section>`}
-  return html+insPos(games,names)}
+  return html+insScatter(games,names)+insPos(games,names)}
 // where they started: positions from the line-up at kick-off in games run in live match mode
 function insZone(lbl){lbl=String(lbl||"").toUpperCase();if(lbl==="GK")return 0;if(/WB|B$|CB|DEF/.test(lbl))return 1;if(/M$|CM|MID/.test(lbl))return 2;return 3}
 function insPos(games,names){const out={},zl=RUGBY?["Forwards","Backs"]:SP.keeper?["Goal","Defence","Midfield","Attack"]:["Defence","Midfield","Attack"];let n0=0;
@@ -3332,7 +3401,7 @@ function insTeam(games){const list=games.filter(result),U=RUGBY?"Points":SP.Goal
   const comps=[...new Set(list.map(m=>m.tournament_id?"Tournament":compName(m.comp||"")||"Other"))];
   const halfs=insHalves(list);
   return `<section class="card"><h3>Every game</h3><div class="kv ins-kv">${tile("Played",t.P,`${t.W} won, ${t.D} drawn, ${t.L} lost`)}${tile(`${U} per game`,(t.F/t.P).toFixed(1),`${(t.A/t.P).toFixed(1)} against`)}${tile("Scored in",`${scoredIn}/${t.P}`,"games")}${SP.keeper?tile("Clean sheets",cs):""}${tile(`Different ${SP.goals==="goals"?"scorers":"try scorers"}`,scorers)}</div>${chart}</section>
-  <section class="card"><h3>Where we do best</h3><table class="lb"><thead><tr><th></th><th>P</th><th>W</th><th>D</th><th>L</th><th>F</th><th>A</th><th>Won</th></tr></thead><tbody>
+  ${insFormCard(list)}<section class="card"><h3>Where we do best</h3><table class="lb"><thead><tr><th></th><th>P</th><th>W</th><th>D</th><th>L</th><th>F</th><th>A</th><th>Won</th></tr></thead><tbody>
     ${split("Home",m=>m.ha==="H"&&!m.tournament_id)}${split("Away",m=>m.ha==="A"&&!m.tournament_id)}${comps.length>1?comps.map(c=>split(esc(c),m=>(m.tournament_id?"Tournament":compName(m.comp||"")||"Other")===c)).join(""):""}</tbody></table></section>${insWith(list)}${halfs}`}
 // first half v second half, only from games where the live clock was actually running (goals spread across the game)
 function insHalves(list){const ok=list.filter(m=>{const L=m.live;if(!L||L.noHt||!L.events)return false;const ev=L.events.filter(e=>e.k==="goal"||e.k==="them");return ev.length&&ev.some(e=>e.h===2)&&new Set(ev.map(e=>e.m)).size>1});
@@ -3341,7 +3410,7 @@ function insHalves(list){const ok=list.filter(m=>{const L=m.live;if(!L||L.noHt||
   return `<section class="card"><h3>First half or second half?</h3><p class="hint">From the ${ok.length} games run live with the clock going.</p><div class="ins-leg"><span><i class="sw c1"></i>For</span><span><i class="sw c2"></i>Against</span></div>
   <div class="ins-hb">${bar(c.f1,"c1","1st half, for")}${bar(c.a1,"c2","1st half, against")}${bar(c.f2,"c1","2nd half, for")}${bar(c.a2,"c2","2nd half, against")}</div></section>`}
 document.addEventListener("click",e=>{if(view!=="insights")return;const b=e.target.closest("[data-instab]");if(b){insTab=b.dataset.instab;try{localStorage.setItem(SK+".instab",insTab)}catch(err){}render();return}
-  const t=e.target.closest(".iw-r[title],.ig td[title],.ins-cols>div[title],.ins-div>div[title],.ins-hb i[title],.ins-hb .b[title],.ins-svg .hit");if(t){const s=t.getAttribute("title")||(t.querySelector("title")||{}).textContent;if(s)toast(s)}});
+  const t=e.target.closest(".iw-r[title],.ig td[title],.ins-cols>div[title],.ins-div>div[title],.ins-hb i[title],.ins-hb .b[title],.ins-svg .hit,.ins-svg .rdot,.ins-svg .rd,.ins-donut circle");if(t){const s=t.getAttribute("title")||(t.querySelector("title")||{}).textContent;if(s)toast(s)}});
 document.addEventListener("change",e=>{if(view!=="insights")return;const id=e.target.id;if(id==="insPl")insPl=e.target.value;else if(id==="insCa")insCa=e.target.value;else if(id==="insCb")insCb=e.target.value;else return;render()});
 try{insTab=localStorage.getItem(SK+".instab")||"players";if(!INS_TABS.some(([k])=>k===insTab))insTab="players"}catch(e){}
 function kitView(){
