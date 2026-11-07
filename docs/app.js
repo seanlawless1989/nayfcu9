@@ -3177,7 +3177,7 @@ const kitDatalists=()=>KIT_F.map(([f])=>`<datalist id="kit-${f}">${KIT_SIZES[f].
 // Everything here is worked out on the coach's phone from data the site already loads for coaches (matches, availability,
 // training attendance, player ratings). Nothing new is stored and parents never see it. Four tabs: players, playing time,
 // availability and team. Charts are plain SVG/HTML with a title on every mark, and every chart has the numbers beside it.
-let insTab="players",insPl=null;
+let insTab="players",insPl=null,insCa=null,insCb=null;
 const INS_TABS=[["players","Players"],["time","Game time"],["avail","Availability"],["team","Team"]];
 function insGames(){return seasonMatches().filter(m=>counted(m)&&(result(m)||Object.keys(played(m)).length||m.potm))}
 function insDate(m){return `${+m.date.slice(8,10)} ${MONTHS[+m.date.slice(5,7)-1]}`}
@@ -3201,7 +3201,36 @@ function insightsView(){
 
 // ---- players tab ----
 function insPlayers(games){const names=insRoster(games);if(!insPl||!names.includes(insPl))insPl=names[0];
-  return insGrid(games,names)+insForm(games,names)+insInvolve(games,names)}
+  return insGrid(games,names)+insForm(games,names)+insCompare(games,names)+insInvolve(games,names)}
+// compare two players side by side: every number for the season, the better one of each pair in bold
+function insSum(games,n){const mine=games.filter(m=>insIn(m,n)),ps=playerStats(games)[n]||{goals:0,assists:0,potm:0};
+  const rs=mine.map(m=>insRate(m,n)).filter(v=>v!=null),sh=mine.map(m=>insShare(m,n)).filter(v=>v!=null);
+  const asked=seasonMatches().filter(m=>!m.postponed&&m.stage!=="placeholder"&&AV[m.id]&&Object.keys(AV[m.id]).length),yes=asked.filter(m=>AV[m.id][n]==="yes").length;
+  const at=ATT?attStats(season):null,w=mine.filter(m=>result(m)==="W").length,res=mine.filter(result).length;
+  return {g:mine.length,goals:ps.goals,assists:ps.assists,potm:ps.potm,rate:insAvg(rs),last:insAvg(rs.slice(-3)),best:rs.length?Math.max(...rs):null,share:insAvg(sh),
+    avail:asked.length?yes/asked.length:null,train:at&&at.sessions?(at.out[n]||0)/at.sessions:null,win:res?w/res:null}}
+function insCompare(games,names){if(!insCa||!names.includes(insCa))insCa=names[0];const a=insCa,b=insCb&&insCb!==a&&names.includes(insCb)?insCb:names.find(x=>x!==a);insCb=b;
+  if(!b)return "";const A=insSum(games,a),B=insSum(games,b),useA=SP.assists&&assistsTracked(season);
+  const f1=v=>v==null?"–":v.toFixed(1),rows=[["Games played",o=>o.g,String],[SP.Goals,o=>o.goals,String],...(useA?[["Assists",o=>o.assists,String]]:[]),[POTM_IC+" "+POTM.charAt(0).toUpperCase()+POTM.slice(1),o=>o.potm,String],
+    ...(RT&&RT.length?[["Average rating",o=>o.rate,f1],["Last 3 ratings",o=>o.last,f1],["Best rating",o=>o.best,v=>v==null?"–":String(v)]]:[]),
+    ["Share of each game",o=>o.share,insPct],["Said available",o=>o.avail,insPct],...(ATT?[["Training",o=>o.train,insPct]]:[]),["Games won when playing",o=>o.win,insPct]];
+  const sel=(id,v)=>`<select id="${id}" aria-label="Pick a player">${names.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("")}</select>`;
+  return `<section class="card"><h3>Compare players</h3><div class="ins-vs">${sel("insCa",a)}<span>v</span>${sel("insCb",b)}</div>
+    <table class="lb ins-cmp"><tbody>${rows.map(([k,f,fmt])=>{const x=f(A),y=f(B),mx=Math.max(x||0,y||0)||1,hi=x!=null&&y!=null&&x!==y?(x>y?"a":"b"):"";
+      return `<tr><td class="${hi==="a"?"win":""}">${fmt(x)}<div class="ins-mini l"><i style="width:${(x||0)/mx*100}%"></i></div></td><th>${k}</th><td class="${hi==="b"?"win":""}">${fmt(y)}<div class="ins-mini"><i class="c2" style="width:${(y||0)/mx*100}%"></i></div></td></tr>`}).join("")}</tbody></table>
+    <p class="hint" style="margin-top:8px">Bold is the higher of the two. Share of each game uses the halves counter; availability counts the games where it was asked.</p></section>`}
+// with and without: how the team got on in games each player played, against games they missed (team sheets only)
+function insWith(list){const sheets=list.filter(m=>result(m)&&m.apps!==false&&Object.keys(played(m)).length);
+  if(sheets.length<4)return `<section class="card"><h3>With and without</h3><p class="hint">Needs at least 4 results with a team sheet (who played) to compare. ${sheets.length} so far.</p></section>`;
+  const st=g=>{const s=teamStats(g);return {P:s.P,pts:s.P?(s.W*3+s.D)/s.P:null,win:s.P?s.W/s.P:null,gd:s.P?s.GD/s.P:null}};
+  const rows=insRoster(sheets).map(n=>{const w=sheets.filter(m=>insIn(m,n)),wo=sheets.filter(m=>!insIn(m,n));return {n,w:st(w),wo:st(wo)}}).filter(o=>o.w.P);
+  const ok=o=>o.w.P>=2&&o.wo.P>=2,diff=o=>ok(o)?o.w.pts-o.wo.pts:null;
+  rows.sort((a,b)=>(diff(b)??-99)-(diff(a)??-99)||b.w.P-a.w.P);
+  const gd=v=>v==null?"–":(v>0?"+":"")+v.toFixed(1),pts=v=>v==null?"–":v.toFixed(1);
+  return `<section class="card"><h3>With and without</h3><p class="hint">How the team did in games each ${esc(PL.replace(/s$/,""))} played compared with games they missed, from ${sheets.length} results with a team sheet. Points per game counts a win as 3 and a draw as 1. Small numbers of games can mislead, so it's only worked out when there are at least 2 games each way.</p>
+    <div class="ins-with">${rows.map(o=>{const d=diff(o),w=`${pts(o.w.pts)} (${o.w.P} game${o.w.P===1?"":"s"}, won ${insPct(o.w.win)}, GD ${gd(o.w.gd)})`,wo=o.wo.P?`${pts(o.wo.pts)} (${o.wo.P} game${o.wo.P===1?"":"s"}, won ${insPct(o.wo.win)}, GD ${gd(o.wo.gd)})`:"played every game";
+      return `<div class="iw-r" title="${esc(`${o.n}. With: ${w}. Without: ${wo}`)}"><div class="iw-t"><span class="click" data-player="${esc(o.n)}">${esc(o.n)}</span>${d==null?`<span class="iw-d">${o.wo.P?"too few games":"–"}</span>`:`<span class="iw-d ${d>=.25?"up":d<=-.25?"dn":""}">${d>0?"▲ +":d<0?"▼ ":""}${d.toFixed(1)}</span>`}</div><small><b>With</b> ${w}<br><b>Without</b> ${wo}</small></div>`}).join("")}</div>
+    <p class="hint" style="margin-top:8px">The number on the right is the difference in points per game. ▲ means the team picked up more points with them playing. It shows a pattern, not the reason for it.</p></section>`}
 // season at a glance: one row per player, one column per game. Shade = coach rating when there is one.
 function insGrid(games,names){const rated=RT&&RT.length;
   const cell=(m,n)=>{const on=insIn(m,n),g=+played(m)[n]||0,a=+assistsOf(m)[n]||0,gk=n in keepersOf(m),pom=m.potm===n,r=insRate(m,n),av=(AV[m.id]||{})[n];
@@ -3304,7 +3333,7 @@ function insTeam(games){const list=games.filter(result),U=RUGBY?"Points":SP.Goal
   const halfs=insHalves(list);
   return `<section class="card"><h3>Every game</h3><div class="kv ins-kv">${tile("Played",t.P,`${t.W} won, ${t.D} drawn, ${t.L} lost`)}${tile(`${U} per game`,(t.F/t.P).toFixed(1),`${(t.A/t.P).toFixed(1)} against`)}${tile("Scored in",`${scoredIn}/${t.P}`,"games")}${SP.keeper?tile("Clean sheets",cs):""}${tile(`Different ${SP.goals==="goals"?"scorers":"try scorers"}`,scorers)}</div>${chart}</section>
   <section class="card"><h3>Where we do best</h3><table class="lb"><thead><tr><th></th><th>P</th><th>W</th><th>D</th><th>L</th><th>F</th><th>A</th><th>Won</th></tr></thead><tbody>
-    ${split("Home",m=>m.ha==="H"&&!m.tournament_id)}${split("Away",m=>m.ha==="A"&&!m.tournament_id)}${comps.length>1?comps.map(c=>split(esc(c),m=>(m.tournament_id?"Tournament":compName(m.comp||"")||"Other")===c)).join(""):""}</tbody></table></section>${halfs}`}
+    ${split("Home",m=>m.ha==="H"&&!m.tournament_id)}${split("Away",m=>m.ha==="A"&&!m.tournament_id)}${comps.length>1?comps.map(c=>split(esc(c),m=>(m.tournament_id?"Tournament":compName(m.comp||"")||"Other")===c)).join(""):""}</tbody></table></section>${insWith(list)}${halfs}`}
 // first half v second half, only from games where the live clock was actually running (goals spread across the game)
 function insHalves(list){const ok=list.filter(m=>{const L=m.live;if(!L||L.noHt||!L.events)return false;const ev=L.events.filter(e=>e.k==="goal"||e.k==="them");return ev.length&&ev.some(e=>e.h===2)&&new Set(ev.map(e=>e.m)).size>1});
   if(ok.length<2)return "";const c={f1:0,f2:0,a1:0,a2:0};ok.forEach(m=>m.live.events.forEach(e=>{if(e.k==="goal")c[e.h===2?"f2":"f1"]++;if(e.k==="them")c[e.h===2?"a2":"a1"]++}));
@@ -3312,8 +3341,8 @@ function insHalves(list){const ok=list.filter(m=>{const L=m.live;if(!L||L.noHt||
   return `<section class="card"><h3>First half or second half?</h3><p class="hint">From the ${ok.length} games run live with the clock going.</p><div class="ins-leg"><span><i class="sw c1"></i>For</span><span><i class="sw c2"></i>Against</span></div>
   <div class="ins-hb">${bar(c.f1,"c1","1st half, for")}${bar(c.a1,"c2","1st half, against")}${bar(c.f2,"c1","2nd half, for")}${bar(c.a2,"c2","2nd half, against")}</div></section>`}
 document.addEventListener("click",e=>{if(view!=="insights")return;const b=e.target.closest("[data-instab]");if(b){insTab=b.dataset.instab;try{localStorage.setItem(SK+".instab",insTab)}catch(err){}render();return}
-  const t=e.target.closest(".ig td[title],.ins-cols>div[title],.ins-div>div[title],.ins-hb i[title],.ins-hb .b[title],.ins-svg .hit");if(t){const s=t.getAttribute("title")||(t.querySelector("title")||{}).textContent;if(s)toast(s)}});
-document.addEventListener("change",e=>{if(view==="insights"&&e.target.id==="insPl"){insPl=e.target.value;render()}});
+  const t=e.target.closest(".iw-r[title],.ig td[title],.ins-cols>div[title],.ins-div>div[title],.ins-hb i[title],.ins-hb .b[title],.ins-svg .hit");if(t){const s=t.getAttribute("title")||(t.querySelector("title")||{}).textContent;if(s)toast(s)}});
+document.addEventListener("change",e=>{if(view!=="insights")return;const id=e.target.id;if(id==="insPl")insPl=e.target.value;else if(id==="insCa")insCa=e.target.value;else if(id==="insCb")insCb=e.target.value;else return;render()});
 try{insTab=localStorage.getItem(SK+".instab")||"players";if(!INS_TABS.some(([k])=>k===insTab))insTab="players"}catch(e){}
 function kitView(){
   if(!canWrite)return `<div class="stack"><section class="card empty">Kit sizes are for coaches only. Sign in as a coach to see them.</section></div>`;

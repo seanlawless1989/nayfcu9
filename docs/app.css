@@ -759,3 +759,22 @@ body.fd-paying{overflow:hidden}
 .trkid{max-width:360px;margin:2px 0 4px}
 .mdl[data-mdid]{cursor:pointer}.mdl[data-mdid]:focus-visible{outline:2px solid var(--club);outline-offset:3px;border-radius:8px}
 .bp .mdl[data-mdid]{cursor:default}
+/* insights: compare two players, with and without */
+.ins-vs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin:10px 0 6px}
+.ins-vs select{font:600 14px var(--body);padding:8px 10px;border-radius:9px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);min-width:0;width:100%}
+.ins-vs span{font:400 14px var(--display);color:var(--muted)}
+.ins-cmp td,.ins-cmp th{padding:7px 4px;vertical-align:middle}
+.ins-cmp th{text-align:center!important;font:700 11px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line);width:36%}
+.ins-cmp td{width:32%;font-variant-numeric:tabular-nums;font-size:15px}
+.ins-cmp td:first-child{text-align:right!important}.ins-cmp td:last-child{text-align:left!important}
+.ins-cmp td.win{font-weight:800}
+.ins-mini{height:6px;background:var(--field);border-radius:3px;margin-top:4px;display:flex}
+.ins-mini.l{justify-content:flex-end}
+.ins-mini i{display:block;height:100%;background:var(--club);border-radius:3px}.ins-mini i.c2{background:var(--c2)}
+.ins-with{display:flex;flex-direction:column}
+.iw-r{padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.iw-t{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-weight:600}
+.iw-t .click{text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.iw-r small{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.45}.iw-r small b{color:var(--ink);font-weight:700}
+.iw-d{font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted);white-space:nowrap}.iw-d.up{color:var(--win);font-weight:800}.iw-d.dn{color:var(--loss);font-weight:800}
+#insCa{border-left:5px solid var(--club)}#insCb{border-left:5px solid var(--c2)}
