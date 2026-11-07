@@ -3833,8 +3833,8 @@ function authBox(){
   // a coach who is also a parent may have this phone signed in with a family code: they can still sign in as a coach
   if(me&&isParent()){el.innerHTML=(KIDS.length?`<button class="mini" data-view="parents">👪 ${esc(KIDS.join(", "))}</button>`:"")+(/[?&]coach\b/.test(location.search)?`<button class="mini" id="signIn">Coach sign in</button>`:"")}
   else if(me){el.innerHTML=`<span class="who">${canWrite?"Coach":"Signed in"}: ${esc(me.email)}</span><button class="mini" id="signOut">Sign out</button>`}
-  else if(/[?&]coach\b/.test(location.search)){el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
-  else{el.innerHTML=""}
+  // shown to everyone signed out (not only with ?coach) so coaches can find it at the top of the page
+  else{el.innerHTML=`<button class="mini" id="signIn">Coach sign in</button>`}
   // the Home Screen app always opens at the plain address (no ?coach), so coaches get a sign-in link in the footer there
   const fc=document.getElementById("footCoach");
   if(fc)fc.innerHTML=!canWrite&&(alStandalone()||/[?&]coach\b/.test(location.search))?`<button type="button" id="signIn" style="background:none;border:0;padding:0;font:inherit;color:var(--muted);opacity:.85;cursor:pointer">Coach sign in</button> · `:"";
