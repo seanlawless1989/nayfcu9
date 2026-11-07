@@ -233,11 +233,11 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
-  const pics=GAL.slice(-6).reverse(),openPolls=POLLS.filter(pollOpen);
+  const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
   const fi=HOME_ITEMS.findIndex(x=>x[0]==="fund");if(fLive()){const t=["fund","💷","Fundraiser","Get your name on our pitch"];if(fi<0)HOME_ITEMS.splice(1,0,t)}else if(fi>=0)HOME_ITEMS.splice(fi,1);
   const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:`${RUGBY?"Try":"Goal"} of the month and more`;
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||PHOTOS_ON)&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${GAL.length})</button></div>`:""}`}
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||(PHOTOS_ON&&GAL_DB))&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${galWaiting().length?`<section class="card" style="margin-top:12px"><b>📥 ${galWaiting().length} photo${galWaiting().length>1?"s":""} to check.</b> Families can't see ${galWaiting().length>1?"them":"it"} until a coach approves. <button class="mini" data-view="gallery">Check now</button></section>`:""}${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${pics.length})</button></div>`:""}`}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -795,15 +795,15 @@ async function parentJoin(){const el=$("#pCode"),code=(el&&el.value||"").replace
   const {data,error}=await sb.rpc("link_family",{p_code:code});
   if(error){toast(/too many/i.test(error.message)?"Too many tries. Wait an hour, or ask the coach to check the code.":"Couldn't check that code. Try again.");return}
   if(!data){toast("That code isn't right. Check it with the coach.");return}
-  await loadParent();await loadKit();kitDraft=null;await loadTav();logActive();await loadMyDays();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
+  await loadParent();await loadKit();kitDraft=null;await loadTav();logActive();await loadMyDays();await loadGallery();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
   const nx=parentNext;parentNext=null;if(nx)setView(nx);else render()}
 async function parentLeave(n){
-  if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();await loadKit();kitDraft=null;authBox();render();toast(`${n} is no longer linked to this phone.`);return}
+  if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();await loadKit();await loadGallery();kitDraft=null;authBox();render();toast(`${n} is no longer linked to this phone.`);return}
   if(!confirm("Sign this phone out? You'll need the family code to sign in again."))return;
   await sb.rpc("unlink_family",{p_player:null});KIDS=[];FAMV={};await sb.auth.signOut();toast("This phone is signed out.")}
 const coachToo=()=>`<p class="hint" style="margin:0">Are you one of the coaches? <button class="mini" id="signIn">Coach sign in</button> You'll see the coach view, and can answer for every ${esc(PL.replace(/s$/,""))}, your own included.</p>`;
 function parentsView(){const kid=PRN.kid,kids=myKids();
-  const what=`<ul style="margin:0;padding-left:20px"><li>Tell the coaches whether your ${kid} can make each game</li><li>Vote in team votes, one vote per family</li><li>Add your ${kid}'s kit sizes for the coaches</li></ul>`;
+  const what=`<ul style="margin:0;padding-left:20px"><li>Tell the coaches whether your ${kid} can make each game</li><li>Vote in team votes, one vote per family</li><li>Add your ${kid}'s kit sizes for the coaches</li>${PHOTOS_ON&&GAL_DB?`<li>See the team's match-day photos and add your own</li>`:""}</ul>`;
   if(!PL_ON)return `<section class="card stack"><h2>👪 Parents</h2><p>Parent sign-in isn't switched on for this team yet.</p></section>`;
   if(canWrite)return `<section class="card stack"><h2>👪 Parents</h2><p>You're signed in as a coach. Each family's code is on the Squad page.</p><div class="btns"><button class="btn gold" data-view="squad">Family codes</button></div></section>`;
   if(kids.length)return `<section class="card stack"><h2>👪 Parents</h2><p>This phone is signed in for <b>${kids.map(esc).join(" and ")}</b>. You can:</p>${what}
@@ -1018,7 +1018,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos in a private store that only the team's signed-in coaches can open. These photos are never shown on the site and have no public links. Ask the coach to delete a photo at any time. There's no public photo gallery.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos in a private store that only the team's signed-in coaches can open. These photos are never shown on the site and have no public links. Ask the coach to delete a photo at any time.</li><li>Match-day photos that families and coaches add on the Photos page. Only the team's signed-in coaches and families (a phone signed in with a family code) can see them: they're never public and have no public links. A coach checks every photo a parent adds before the other families can see it. Any family can ask for a photo to come down, which hides it straight away, and coaches can delete any photo. The site takes the phone's location data out of each photo. The site keeps an anonymous code for the phone that added each photo, never a parent's name.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you buy a square on the club's pitch fundraiser: the name and message for your square and your email address for the receipt. Only the coaches see your email and what you paid, and messages show once a coach approves them. You pay through Stripe straight to the club; the site never sees your card.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -1027,69 +1027,128 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   ${sec("Your rights",`<p>You can ask to see, correct or delete your child's information, or object to it being shown. Speak to the team's coach or the club's ${WELFARE}, or email <a href="mailto:hello@touchlinetales.club">hello@touchlinetales.club</a> and we'll pass it on to the club.</p><p>If you're unhappy, you can complain to the Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">ico.org.uk/make-a-complaint</a> or on 0303 123 1113.</p>`)}
   <div class="btns"><button class="btn ghost" data-view="home">Back to the home page</button></div></div>`}
 
-// ---------- photo gallery ----------
-// public.match_photos rows point at files in the public "gallery" storage bucket (supabase/4_gallery_training.sql).
-// Coaches add photos from a match page or the Photos page. Each one is re-drawn (1600px max, plus a 480px thumbnail),
-// which also drops the location data phones put in pictures.
-let GAL=[],galMatch="",LB=null;
+// ---------- team photos: families and coaches share match-day pictures ----------
+// public.team_photos (supabase/33_team_photos.sql) plus the PRIVATE "team-photos" storage bucket. Only the team's signed-in
+// coaches and families (a phone linked with a family code) can see them. Visitors see a note asking them to sign in.
+// A parent's photo waits until a coach approves it, and only then do the other families see it. Any family can ask for a
+// photo to come down, which hides it straight away until a coach looks again. Coaches can remove any photo.
+// Pictures open through signed links that run out after an hour, so there are no public links to pass around.
+// Each photo is re-drawn before upload (2000px max, plus a 480px thumbnail), which also drops the phone's location data.
+// (The old public gallery, match_photos in the public "gallery" bucket, stays archived and isn't used.)
+let GAL=[],galMatch="",LB=null,GAL_DB=false,galBusy=false;const GALU={};
 // Edge functions serve the project's own team; another team sharing the project says which schema is theirs.
 const fnBody=b=>CFG.schema?Object.assign({schema:CFG.schema},b):b;
-const galBucket=()=>CFG.schema?CFG.schema+"-gallery":"gallery";
-const galUrl=p=>CFG.supabaseUrl+"/storage/v1/object/public/"+galBucket()+"/"+String(p).split("/").map(encodeURIComponent).join("/");
-// The Photos page is archived until parents have their own login: no tab, tile or match-page photos, and nothing is loaded.
-// Player profile pictures (player_photos) are separate and stay. A team can bring Photos back with photos: true in team.js.
-const PHOTOS_ON=TEAM.photos===true;
-async function loadGallery(){if(!sb||!PHOTOS_ON){GAL=[];return}try{const {data}=await sb.from("match_photos").select("*").order("created");GAL=data||[]}catch(e){GAL=[]}}
-const galOf=id=>GAL.filter(p=>p.match_id===id);
-function galGrid(list){return `<div class="gal">${list.map(p=>`<button class="gal-th" data-photo="${esc(p.id)}" aria-label="${esc(p.caption||"Open photo")}"><img src="${galUrl(p.thumb)}" alt="" loading="lazy"></button>`).join("")}</div>`}
-function galAdd(id){return canWrite&&id?`<label class="btn gold galadd edit-only">📷 Add photos<input type="file" accept="image/*" multiple data-galup="${esc(id)}" hidden></label>`:""}
-function photosCard(m){if(!PHOTOS_ON)return "";const ps=galOf(m.id);if(!ps.length&&!(canWrite&&!isFixture(m)))return "";
-  return `<section class="card"><h3>Photos${ps.length>1?` (${ps.length})`:""}</h3>${ps.length?galGrid(ps):`<p class="hint">No photos from this game yet.</p>`}${canWrite?`<div class="btns edit-only" style="margin-top:10px">${galAdd(m.id)}</div>`:""}</section>`}
+const galBucket=()=>CFG.schema?CFG.schema+"-team-photos":"team-photos";
+// on for every team once its database has team_photos; a team can switch it off with photos: false in team.js
+const PHOTOS_ON=TEAM.photos!==false;
+const galSee=()=>!!(me&&(canWrite||(isParent()&&KIDS.length)));
+async function loadGallery(){GAL=[];GAL_DB=false;if(!sb||!PHOTOS_ON||window.DEMO)return;
+  try{const {data,error}=await sb.from("team_photos").select("*").order("created");
+    // a visitor isn't allowed to read it at all (42501), which still tells us it's set up
+    if(!error){GAL_DB=true;GAL=galSee()?data||[]:[]}else if(error.code==="42501")GAL_DB=true}catch(e){}}
+const galOk=p=>p.status==="approved";
+const galOf=id=>GAL.filter(p=>p.match_id===id&&galOk(p));
+const galWaiting=()=>canWrite?GAL.filter(p=>!galOk(p)):[];
+const galMine=()=>me&&!canWrite?GAL.filter(p=>!galOk(p)&&p.uploader===me.id):[];
+// signed links, made in batches and kept until ten minutes before they run out
+async function galSign(paths){const now=Date.now(),need=[...new Set(paths)].filter(p=>p&&(!GALU[p]||GALU[p].exp<now+6e5));
+  for(let i=0;i<need.length;i+=100){try{const {data,error}=await sb.storage.from(galBucket()).createSignedUrls(need.slice(i,i+100),3600);
+    if(!error)(data||[]).forEach(d=>{if(d.signedUrl&&d.path)GALU[d.path]={url:d.signedUrl,exp:now+3600e3}})}catch(e){}}}
+const galSrc=p=>GALU[p]&&GALU[p].exp>Date.now()?GALU[p].url:"";
+async function galPaint(){const imgs=[...document.querySelectorAll("img[data-galimg]")];if(!imgs.length)return;await galSign(imgs.map(i=>i.dataset.galimg));
+  imgs.forEach(i=>{const u=galSrc(i.dataset.galimg);if(u&&i.getAttribute("src")!==u)i.src=u})}
+const galPaintSoon=()=>{clearTimeout(galPaintSoon.t);galPaintSoon.t=setTimeout(galPaint,0)};
+// a game (matches.id) or a whole tournament day ("t:" + tournaments.id)
+function galWhat(id){if(String(id).startsWith("t:")){const t=tournaments.find(x=>x.id===id.slice(2));return t?{label:t.name||"Tournament",date:t.date,attr:`data-tour="${esc(t.id)}"`}:{label:"Tournament",date:"",attr:""}}
+  const m=matches.find(x=>x.id===id);return m?{label:`${m.ha==="A"?"at ":"v "}${m.opp||""}`,date:m.date,attr:`data-md="${esc(m.id)}"`,m}:{label:"Match photos",date:"",attr:""}}
+const galTh=p=>`<button class="gal-th" data-photo="${esc(p.id)}" aria-label="${esc(p.caption||"Open photo")}"><img data-galimg="${esc(p.thumb)}" src="${galSrc(p.thumb)}" alt="${esc(p.caption||"")}" loading="lazy"></button>`;
+function galGrid(list){galPaintSoon();return `<div class="gal">${list.map(galTh).join("")}</div>`}
+const GAL_RULES=`<details class="hint" style="margin-top:8px"><summary>What's OK to add?</summary><ul style="margin:6px 0 0;padding-left:20px"><li>Photos you took yourself at our games and tournaments.</li><li>Nothing from changing rooms or toilets, and nothing a ${PL.replace(/s$/,"")} would be embarrassed by.</li><li>No close-ups of children from other teams.</li><li>No names, school badges or anything that shows where someone lives.</li></ul></details>`;
+function galAdd(id,big){if(!id||!galSee()||!GAL_DB)return "";const coach=canWrite;
+  return `<div class="stack" style="gap:8px">${coach?"":`<label class="f" style="flex-direction:row;align-items:flex-start;gap:8px"><input type="checkbox" id="galAgree" style="width:auto;margin-top:3px"> <span>I took these photos and they're fine for the team's families to see.</span></label>`}
+    <div class="btns"><label class="btn gold galadd">📷 Add photos<input type="file" accept="image/*" multiple data-galup="${esc(id)}" hidden></label></div>
+    <p class="hint" style="margin:0">${coach?"Photos you add go straight on for the team's families. Only add photos the club has parents' consent for.":"A coach checks each photo before the other families can see it."} Only signed-in coaches and families can see photos. They're never public.</p>${coach?"":GAL_RULES}</div>`}
+function photosCard(m){if(!PHOTOS_ON||!GAL_DB)return "";const ps=galOf(m.id),can=galSee()&&!isFixture(m);
+  if(!galSee())return `<section class="card"><h3>Photos</h3><p class="hint" style="margin:0">Photos from our games are for the team's families. <button class="mini" data-view="parents">Sign in with your family code</button> to see them and add your own.</p></section>`;
+  if(!ps.length&&!can)return "";
+  return `<section class="card"><h3>Photos${ps.length>1?` (${ps.length})`:""}</h3>${ps.length?galGrid(ps):`<p class="hint">No photos from this game yet.</p>`}${can?`<div style="margin-top:10px">${galAdd(m.id)}</div>`:""}</section>`}
 // newest games with photos, each as an album card
-function albums(n){const ids=[...new Set(GAL.slice().reverse().map(p=>p.match_id))].slice(0,n);
-  return `<div class="albs">${ids.map(id=>{const ps=galOf(id),m=matches.find(x=>x.id===id),c=ps.find(p=>p.caption)||ps[0],rest=ps.filter(p=>p!==c),strip=rest.slice(0,3),more=ps.length-1-strip.length;
-    const th=p=>`<button class="gal-th" data-photo="${esc(p.id)}" aria-label="${esc(p.caption||"Open photo")}"><img src="${galUrl(p.thumb)}" alt="${esc(p.caption||"")}" loading="lazy"></button>`;
-    return `<div class="alb">${th(c)}${strip.length?`<div class="alb-strip">${strip.map((p,i)=>i===strip.length-1&&more>0?`<div class="alb-more">${th(p)}<span>+${more}</span></div>`:th(p)).join("")}</div>`:""}
-      <button class="alb-meta" data-md="${esc(id)}" style="text-align:left;border:0;background:none;cursor:pointer"><b>${m?`${m.ha==="A"?"at ":"v "}${esc(m.opp||"")}`:"Match photos"}</b><small>${m?esc(shortDay(m.date)):""} · ${ps.length} photo${ps.length===1?"":"s"}</small>${c.caption?`<i>${esc(c.caption)}</i>`:""}</button></div>`}).join("")}</div>`}
+function albums(n){const shown=GAL.filter(galOk),ids=[...new Set(shown.slice().reverse().map(p=>p.match_id))].slice(0,n);galPaintSoon();
+  return `<div class="albs">${ids.map(id=>{const ps=galOf(id),w=galWhat(id),c=ps.find(p=>p.caption)||ps[0],rest=ps.filter(p=>p!==c),strip=rest.slice(0,3),more=ps.length-1-strip.length;
+    return `<div class="alb">${galTh(c)}${strip.length?`<div class="alb-strip">${strip.map((p,i)=>i===strip.length-1&&more>0?`<div class="alb-more">${galTh(p)}<span>+${more}</span></div>`:galTh(p)).join("")}</div>`:""}
+      <button class="alb-meta" ${w.attr} style="text-align:left;border:0;background:none;cursor:pointer"><b>${esc(w.label)}</b><small>${w.date?esc(shortDay(w.date))+" · ":""}${ps.length} photo${ps.length===1?"":"s"}</small>${c.caption?`<i>${esc(c.caption)}</i>`:""}</button></div>`}).join("")}</div>`}
 function galLabel(m){return `${shortDay(m.date)} · v ${esc(m.opp||"")}${result(m)?` · ${m.us}–${m.them}`:""}`}
 function shortDay(iso){const d=new Date((iso||"")+"T12:00:00");return isNaN(d)?"":d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})}
 if(!PHOTOS_ON)document.querySelectorAll('nav.tabs [data-view="gallery"]').forEach(b=>b.remove());
+// games and tournaments already played, newest first, for "Which game?"
+function galChoices(){const today=todayLocal();
+  const gs=matches.filter(m=>!m.practice&&!m.postponed&&!m.tournament_id&&(result(m)||isLive(m)||(m.date||"")<=today)).map(m=>({v:m.id,date:m.date||"",label:galLabel(m)}));
+  const ts=tournaments.filter(t=>(t.date||"")<=today).map(t=>({v:"t:"+t.id,date:t.date||"",label:`${shortDay(t.date)} · ${esc(t.name||"Tournament")}`}));
+  return [...gs,...ts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,15)}
+function galCheckCard(){const w=galWaiting();if(!w.length)return "";
+  return `<section class="card" style="border:2px solid var(--gold,#e0b000)"><h3>📥 To check (${w.length})</h3><p class="hint">Photos parents have added, and any a family has asked to take down (⚑). Families can't see these until you approve them. Tap one to approve or remove it. Check nobody is in a photo without the club's photo consent.</p>
+    <div class="gal">${w.map(p=>`<div style="position:relative">${galTh(p)}${p.flagged?`<span style="position:absolute;top:4px;left:4px;background:#c0392b;color:#fff;border-radius:6px;padding:0 5px;font-size:12px">⚑</span>`:""}</div>`).join("")}</div>
+    ${w.some(p=>!p.flagged)?`<div class="btns" style="margin-top:10px"><button class="btn ghost" id="galApproveAll">${(n=>n>1?`Approve all ${n} new ones`:"Approve the new one")(w.filter(p=>!p.flagged).length)}</button></div>`:""}</section>`}
 function galleryView(){
-  const ids=new Set(GAL.map(p=>p.match_id));const ms=sortMatches(matches.filter(m=>ids.has(m.id))).reverse();
-  let up="";
-  if(canWrite){const recent=sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&(result(m)||isLive(m)||(m.date||"")<=todayLocal()))).reverse().slice(0,15);
-    if(!recent.some(m=>m.id===galMatch))galMatch=recent[0]?recent[0].id:"";
-    up=`<section class="card edit-only"><h3>Add photos</h3><label class="f">Which game?<select id="galPick">${recent.map(m=>`<option value="${esc(m.id)}"${m.id===galMatch?" selected":""}>${galLabel(m)}</option>`).join("")}</select></label>
-      <div class="btns" style="margin-top:10px">${galAdd(galMatch)}</div><p class="hint" style="margin-top:8px">Everyone can see photos once they're added. You can also add them from any match page.</p></section>`}
-  const body=ms.length?ms.map(m=>`<section class="card"><button class="gal-h" data-md="${esc(m.id)}">${galLabel(m)} <span>Match page →</span></button>${galGrid(galOf(m.id))}</section>`).join("")
-    :`<div class="card empty">No photos yet. The coaches will add match-day pictures here.</div>`;
-  return `<div class="stack"><h2 style="margin:6px 0 -6px">📸 Photos</h2><p class="hint">Match-day pictures, newest game first. Tap a photo to see it full size.</p>${up}${body}</div>`}
+  if(window.DEMO)return `<div class="stack"><section class="card"><h2 style="margin-top:0">📸 Photos</h2><p>On your own site, families and coaches share match-day photos here. A coach approves each parent's photo first, and only signed-in families and coaches can see them. Photos aren't part of the demo, so nothing is uploaded here.</p></section></div>`;
+  if(!GAL_DB)return `<div class="stack"><section class="card"><h2 style="margin-top:0">📸 Photos</h2><p class="hint">Photos aren't switched on for this team's database yet.${canWrite?" Ask Touchline Tales to turn them on.":""}</p></section></div>`;
+  if(!galSee())return `<div class="stack"><section class="card"><h2 style="margin-top:0">📸 Photos</h2><p>Match-day photos are just for the team's families and coaches, so they're never public.</p><p>Sign in with your family code to see them and add your own.</p><div class="btns"><button class="btn gold" data-view="parents">Sign in with your family code</button></div><p class="hint">No code? Ask the coach for your ${PRN.kid}'s family code.</p></section></div>`;
+  galPaintSoon();
+  const ch=galChoices();if(!ch.some(c=>c.v===galMatch))galMatch=ch[0]?ch[0].v:"";
+  const up=ch.length?`<section class="card"><h3>Add photos</h3><label class="f">Which game?<select id="galPick">${ch.map(c=>`<option value="${esc(c.v)}"${c.v===galMatch?" selected":""}>${c.label}</option>`).join("")}</select></label><div style="margin-top:10px">${galAdd(galMatch)}</div></section>`:"";
+  const mine=galMine(),mineCard=mine.length?`<section class="card"><h3>⏳ Waiting for a coach (${mine.length})</h3><p class="hint">Only you and the coaches can see these until a coach approves them. Tap one to delete it.</p>${galGrid(mine)}</section>`:"";
+  const shown=GAL.filter(galOk),ids=[...new Set(shown.map(p=>p.match_id))].map(id=>({id,w:galWhat(id)})).sort((a,b)=>String(b.w.date||"").localeCompare(String(a.w.date||"")));
+  const body=ids.length?ids.map(({id,w})=>`<section class="card"><button class="gal-h" ${w.attr}>${w.date?esc(shortDay(w.date))+" · ":""}${esc(w.label)} <span>${w.attr?(id.startsWith("t:")?"Tournament page →":"Match page →"):""}</span></button>${galGrid(galOf(id))}</section>`).join("")
+    :`<div class="card empty">No photos yet. Add the first ones above.</div>`;
+  return `<div class="stack"><h2 style="margin:6px 0 -6px">📸 Photos</h2><p class="hint">Match-day pictures from the team's families and coaches, newest game first. Tap a photo to see it full size. 🔒 Only signed-in families and coaches can see them.</p>${galCheckCard()}${up}${mineCard}${body}</div>`}
 function galShrink(file,max,q){return new Promise((ok,bad)=>{const url=URL.createObjectURL(file),im=new Image();
   im.onload=()=>{const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);
     c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(b=>b?ok({b,w:c.width,h:c.height}):bad(new Error("encode")),"image/jpeg",q)};
   im.onerror=()=>{URL.revokeObjectURL(url);bad(new Error("decode"))};im.src=url})}
-async function galUpload(mid,files){files=[...files];if(!files.length||!canWrite||!mid)return;let ok=0;
-  for(let i=0;i<files.length;i++){toast(`Adding photo ${i+1} of ${files.length}…`);
-    try{const id=crypto.randomUUID(),big=await galShrink(files[i],1600,.85),sm=await galShrink(files[i],480,.75),path=`${mid}/${id}.jpg`,thumb=`${mid}/${id}_t.jpg`;
-      for(const [p,b] of [[path,big.b],[thumb,sm.b]]){const {error}=await sb.storage.from(galBucket()).upload(p,b,{contentType:"image/jpeg",cacheControl:"31536000"});if(error)throw error}
-      const {data,error}=await sb.from("match_photos").insert({id,match_id:mid,path,thumb,w:big.w,h:big.h}).select().single();if(error)throw error;GAL.push(data);ok++}
+async function galUpload(mid,files){files=[...files];if(!files.length||!galSee()||!GAL_DB||!mid||galBusy)return;
+  const coach=canWrite;if(!coach&&!(($("#galAgree")||{}).checked)){toast("Tick the box to say the photos are fine for the team's families first.");return}
+  if(files.length>20){toast("Add up to 20 photos at a time.");files=files.slice(0,20)}
+  galBusy=true;let ok=0,limit=false;const folder=new Date().toISOString().slice(0,7);
+  for(let i=0;i<files.length&&!limit;i++){toast(`Adding photo ${i+1} of ${files.length}…`);
+    try{const id=crypto.randomUUID(),big=await galShrink(files[i],2000,.86),sm=await galShrink(files[i],480,.75),path=`${folder}/${id}.jpg`,thumb=`${folder}/${id}_t.jpg`;
+      for(const [p,b] of [[path,big.b],[thumb,sm.b]]){const {error}=await sb.storage.from(galBucket()).upload(p,b,{contentType:"image/jpeg",cacheControl:"3600"});if(error)throw error}
+      const row={id,match_id:mid,path,thumb,w:big.w,h:big.h,uploader:me.id,by_coach:coach,status:coach?"approved":"waiting"};
+      const {data,error}=await sb.from("team_photos").insert(row).select().single();
+      if(error){sb.storage.from(galBucket()).remove([path,thumb]).catch(()=>{});if(/most photos/i.test(error.message||""))limit=true;throw error}
+      GAL.push(data);ok++}
     catch(e){console.warn("photo upload",e)}}
-  toast(ok===files.length?`${ok} photo${ok>1?"s":""} added.`:ok?`${ok} of ${files.length} photos added. Try the others again.`:"Couldn't add those photos. Check your signal and try again.");render()}
+  galBusy=false;
+  toast(limit?`${ok?ok+" added. ":""}That's the most photos one phone can add in a day. Try the rest tomorrow.`:ok===files.length?`${ok} photo${ok>1?"s":""} added.${coach?"":" A coach will check "+(ok>1?"them":"it")+" before the other families can see "+(ok>1?"them":"it")+"."}`:ok?`${ok} of ${files.length} photos added. Try the others again.`:"Couldn't add those photos. Check your signal and try again.");render()}
 // full-screen viewer: arrows or swipe for the next photo, Esc or ✕ to close
-function lbOpen(id){const p=GAL.find(x=>x.id===id);if(!p)return;const list=galOf(p.match_id);LB={list,i:list.indexOf(p)};lbDraw()}
-function lbClose(){LB=null;document.querySelectorAll(".lb-ov").forEach(x=>x.remove());document.body.classList.remove("lb-on")}
+function lbOpen(id){const p=GAL.find(x=>x.id===id);if(!p)return;const list=galOk(p)?galOf(p.match_id):(canWrite?galWaiting():galMine());LB={list,i:Math.max(0,list.indexOf(p))};lbDraw()}
+function lbClose(){LB=null;document.querySelectorAll(".lb-ov:not(.cp)").forEach(x=>x.remove());document.body.classList.remove("lb-on")}
 function lbStep(n){if(!LB||LB.list.length<2)return;LB.i=(LB.i+n+LB.list.length)%LB.list.length;lbDraw()}
-function lbDraw(){document.querySelectorAll(".lb-ov").forEach(x=>x.remove());const p=LB&&LB.list[LB.i];if(!p){lbClose();return}
-  const m=matches.find(x=>x.id===p.match_id),many=LB.list.length>1,d=document.createElement("div");d.className="lb-ov";d.setAttribute("role","dialog");d.setAttribute("aria-label","Photo");
-  d.innerHTML=`<div class="lb-top"><span>${many?`${LB.i+1} of ${LB.list.length}`:""}${m?`${many?" · ":""}v ${esc(m.opp)}, ${shortDay(m.date)}`:""}</span><button class="lb-x" data-lb="x" aria-label="Close">✕</button></div>
-    <div class="lb-img"><img src="${galUrl(p.path)}" alt="${esc(p.caption||"Match photo")}"></div>${p.caption?`<p class="lb-cap">${esc(p.caption)}</p>`:""}
-    <div class="lb-bar">${many?`<button class="btn ghost" data-lb="prev" aria-label="Previous photo">←</button>`:""}<a class="btn ghost" href="${galUrl(p.path)}?download=${fileTag}-${esc(p.id.slice(0,8))}.jpg">Save</a>${canWrite?`<button class="btn ghost" data-lb="cap">${p.caption?"Edit caption":"Add caption"}</button><button class="btn ghost" data-lb="del">Delete</button>`:""}${many?`<button class="btn ghost" data-lb="next" aria-label="Next photo">→</button>`:""}</div>`;
+async function lbDraw(){const p=LB&&LB.list[LB.i];if(!p){lbClose();return}
+  if(!galSrc(p.path))await galSign([p.path]);if(!LB||LB.list[LB.i]!==p)return;
+  document.querySelectorAll(".lb-ov:not(.cp)").forEach(x=>x.remove());
+  const w=galWhat(p.match_id),many=LB.list.length>1,src=galSrc(p.path),mine=me&&p.uploader===me.id,d=document.createElement("div");d.className="lb-ov";d.setAttribute("role","dialog");d.setAttribute("aria-label","Photo");
+  const save=src?`<a class="btn ghost" href="${esc(src)}&download=${encodeURIComponent(fileTag+"-"+p.id.slice(0,8)+".jpg")}">Save</a>`:"";
+  const acts=canWrite?`${!galOk(p)?`<button class="btn gold" data-lb="ok">Approve</button>`:""}<button class="btn ghost" data-lb="cap">${p.caption?"Edit caption":"Add caption"}</button><button class="btn ghost" data-lb="del">${galOk(p)?"Delete":"Remove"}</button>`
+    :mine?`<button class="btn ghost" data-lb="del">Delete</button>`:galOk(p)?`<button class="btn ghost" data-lb="flag">Ask to take down</button>`:"";
+  d.innerHTML=`<div class="lb-top"><span>${many?`${LB.i+1} of ${LB.list.length} · `:""}${esc(w.label)}${w.date?", "+esc(shortDay(w.date)):""}${!galOk(p)?(p.flagged?" · ⚑ a family asked to take this down":" · waiting for a coach"):""}${canWrite&&!p.by_coach?" · added by a parent":""}</span><button class="lb-x" data-lb="x" aria-label="Close">✕</button></div>
+    <div class="lb-img"><img src="${esc(src)}" alt="${esc(p.caption||"Match photo")}"></div>${p.caption?`<p class="lb-cap">${esc(p.caption)}</p>`:""}
+    <div class="lb-bar">${many?`<button class="btn ghost" data-lb="prev" aria-label="Previous photo">←</button>`:""}${save}${acts}${many?`<button class="btn ghost" data-lb="next" aria-label="Next photo">→</button>`:""}</div>`;
   let sx=null;d.addEventListener("touchstart",e=>{sx=e.touches[0].clientX},{passive:true});d.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)lbStep(dx<0?1:-1)});
   document.body.appendChild(d);document.body.classList.add("lb-on")}
-async function lbAction(a){const p=LB&&LB.list[LB.i];if(a==="x"||a==="bg"){lbClose();return}if(a==="prev"){lbStep(-1);return}if(a==="next"){lbStep(1);return}if(!p||!canWrite)return;
-  if(a==="cap"){const c=prompt("Caption (first names only)",p.caption||"");if(c==null)return;const {error}=await sb.from("match_photos").update({caption:c.trim()}).eq("id",p.id);if(error){toast("Couldn't save the caption.");return}p.caption=c.trim();lbDraw();return}
-  if(a==="del"){if(!confirm("Delete this photo for everyone?"))return;const {error}=await sb.from("match_photos").delete().eq("id",p.id);if(error){toast("Couldn't delete it. Try again.");return}
-    sb.storage.from(galBucket()).remove([p.path,p.thumb]).catch(()=>{});GAL=GAL.filter(x=>x.id!==p.id);LB.list.splice(LB.i,1);if(LB.i>=LB.list.length)LB.i=0;toast("Photo deleted.");lbDraw();render()}}
+function lbDrop(p){GAL=GAL.filter(x=>x.id!==p.id);LB.list.splice(LB.i,1);if(LB.i>=LB.list.length)LB.i=0;lbDraw();render()}
+async function lbAction(a){const p=LB&&LB.list[LB.i];if(a==="x"||a==="bg"){lbClose();return}if(a==="prev"){lbStep(-1);return}if(a==="next"){lbStep(1);return}if(!p||!me)return;
+  if(a==="ok"&&canWrite){const {error}=await sb.from("team_photos").update({status:"approved",flagged:false,checked:new Date().toISOString()}).eq("id",p.id);if(error){toast("Couldn't approve it. Try again.");return}
+    p.status="approved";p.flagged=false;LB.list.splice(LB.i,1);if(LB.i>=LB.list.length)LB.i=0;toast("Approved. The team's families can see it now.");lbDraw();render();return}
+  if(a==="cap"&&canWrite){const c=prompt("Caption (first names only)",p.caption||"");if(c==null)return;const {error}=await sb.from("team_photos").update({caption:c.trim().slice(0,200)}).eq("id",p.id);if(error){toast("Couldn't save the caption.");return}p.caption=c.trim().slice(0,200);lbDraw();return}
+  if(a==="flag"&&!canWrite){if(!confirm("Ask the coaches to take this photo down? It's hidden from everyone straight away until a coach looks at it."))return;
+    const {error}=await sb.rpc("flag_team_photo",{p_id:p.id});if(error){toast("Couldn't do that. Try again.");return}toast("Thanks. The photo is hidden and the coaches will look at it.");lbDrop(p);return}
+  if(a==="del"&&(canWrite||p.uploader===me.id)){if(!confirm(canWrite&&!galOk(p)?"Remove this photo? The parent who added it won't see it again.":"Delete this photo for everyone?"))return;
+    const {error}=await sb.from("team_photos").delete().eq("id",p.id);if(error){toast("Couldn't delete it. Try again.");return}
+    sb.storage.from(galBucket()).remove([p.path,p.thumb]).catch(()=>{});toast("Photo deleted.");lbDrop(p)}}
+async function galApproveAll(){const ids=galWaiting().filter(p=>!p.flagged).map(p=>p.id);if(!ids.length||!confirm(`Approve ${ids.length} photo${ids.length>1?"s":""}? Make sure you've looked at each one first.`))return;
+  const {error}=await sb.from("team_photos").update({status:"approved",checked:new Date().toISOString()}).in("id",ids);if(error){toast("Couldn't approve them. Try again.");return}
+  GAL.forEach(p=>{if(ids.includes(p.id))p.status="approved"});toast("Approved. The team's families can see them now.");render()}
+document.addEventListener("click",e=>{if(e.target.closest("#galApproveAll"))galApproveAll()});
 document.addEventListener("keydown",e=>{if(!LB)return;if(e.key==="Escape")lbClose();else if(e.key==="ArrowRight")lbStep(1);else if(e.key==="ArrowLeft")lbStep(-1)});
 // ---------- coach photos: a private photo store only the team's signed-in coaches can open ----------
 // public.coach_photos (supabase/29_coach_photos.sql) plus the PRIVATE "coach-photos" storage bucket. Nothing here is ever
@@ -3649,7 +3708,7 @@ async function checkCoach(){
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
   await loadTav();alSync();
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadCoachPhotos();await loadKit();await loadDrills();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadCoachPhotos();await loadGallery();await loadKit();await loadDrills();
   authBox();render();
   if(canWrite)setTimeout(()=>ftAuto().catch(()=>{}),4000);
 }
@@ -3711,7 +3770,7 @@ document.addEventListener("submit",async e=>{
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
-  await Promise.all([loadGallery(),loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors(),loadPom(),loadFund()]);
+  await Promise.all([loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors(),loadPom(),loadFund()]);
   if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
   if(linkErr){try{sessionStorage.removeItem("linkErr")}catch(e){}if(canWrite)toast("You're already signed in as a coach. That email link was an old one, so you don't need it.");
