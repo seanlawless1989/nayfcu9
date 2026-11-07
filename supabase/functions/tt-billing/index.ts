@@ -14,19 +14,23 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
-const WHSEC = Deno.env.get("TT_BILLING_WEBHOOK_SECRET") ?? "";
+const WHSEC = (Deno.env.get("TT_BILLING_WEBHOOK_SECRET") ?? "").trim();
 const out = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 // Stripe-Signature: t=<time>,v1=<hmac>. HMAC-SHA256 of "<time>.<body>" with the webhook secret; within 5 minutes.
+// Returns "" when the signature is good, otherwise why not (logged, and shown in Stripe's delivery log).
 async function verified(raw: string, sig: string) {
-  if (!WHSEC) return false;
+  if (!WHSEC) return "no secret set";
+  if (!WHSEC.startsWith("whsec_")) return "secret doesn't start whsec_";
+  if (!sig) return "no Stripe-Signature header";
   const t = +(sig.split(",").find((p) => p.startsWith("t="))?.slice(2) ?? 0);
-  if (!t || Math.abs(Date.now() / 1000 - t) > 300) return false;
+  if (!t || Math.abs(Date.now() / 1000 - t) > 300) return "timestamp too old";
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(WHSEC), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${raw}`)));
   const hex = [...mac].map((b) => b.toString(16).padStart(2, "0")).join("");
   const v1s = sig.split(",").filter((p) => p.startsWith("v1=")).map((p) => p.slice(3));
-  return v1s.some((v) => v.length === hex.length && [...v].reduce((d, c, i) => d | (c.charCodeAt(0) ^ hex.charCodeAt(i)), 0) === 0);
+  const ok = v1s.some((v) => v.length === hex.length && [...v].reduce((d, c, i) => d | (c.charCodeAt(0) ^ hex.charCodeAt(i)), 0) === 0);
+  return ok ? "" : "signature doesn't match the secret";
 }
 
 const idOf = (x: unknown) => typeof x === "string" ? x : (x as { id?: string } | null)?.id ?? null;
@@ -67,7 +71,8 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return out({ error: "post" }, 405);
   const raw = await req.text();
   const sig = req.headers.get("Stripe-Signature") ?? "";
-  if (!(await verified(raw, sig))) return out({ error: "signature" }, 400);
+  const bad = await verified(raw, sig);
+  if (bad) { console.error("tt-billing signature:", bad); return out({ error: "signature", why: bad }, 400); }
   const ev = JSON.parse(raw);
   // deno-lint-ignore no-explicit-any
   const o: any = ev.data?.object ?? {};
