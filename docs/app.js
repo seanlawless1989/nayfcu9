@@ -163,6 +163,7 @@ function render(){
   else if(view==="sponsors")main.innerHTML=sponsorsView();
   else if(view==="fund")main.innerHTML=fundView();
   else if(view==="ratings")main.innerHTML=ratingsView();
+  else if(view==="insights")main.innerHTML=insightsView();
   else if(view==="kit")main.innerHTML=kitView();
   else if(view==="pom")main.innerHTML=pomView();
   else if(view==="birthdays")main.innerHTML=birthdaysView();
@@ -231,7 +232,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["insights","📊","Coach insights","Charts of the season, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -3150,6 +3151,148 @@ const kitRow=(n,tag)=>{const d=kitDraft[n]||{};return `<div class="kit-p"><div c
     <div class="kit-in">${KIT_F.map(([f,l])=>`<label class="f">${l}<input type="text" list="kit-${f}" maxlength="20" autocomplete="off" data-kitn="${esc(n)}" data-kitf="${f}" value="${esc(d[f])}" placeholder="Size"></label>`).join("")}</div>
     <label class="f kit-note">Notes (optional)<input type="text" maxlength="120" data-kitn="${esc(n)}" data-kitf="notes" value="${esc(d.notes)}" placeholder="e.g. goalkeeper top, gloves size 6, name on shirt"></label></div>`};
 const kitDatalists=()=>KIT_F.map(([f])=>`<datalist id="kit-${f}">${KIT_SIZES[f].map(v=>`<option value="${esc(v)}">`).join("")}</datalist>`).join("");
+// ---------- coach insights: the season's data shown as charts (coaches only) ----------
+// Everything here is worked out on the coach's phone from data the site already loads for coaches (matches, availability,
+// training attendance, player ratings). Nothing new is stored and parents never see it. Four tabs: players, playing time,
+// availability and team. Charts are plain SVG/HTML with a title on every mark, and every chart has the numbers beside it.
+let insTab="players",insPl=null;
+const INS_TABS=[["players","Players"],["time","Game time"],["avail","Availability"],["team","Team"]];
+function insGames(){return seasonMatches().filter(m=>counted(m)&&(result(m)||Object.keys(played(m)).length||m.potm))}
+function insDate(m){return `${+m.date.slice(8,10)} ${MONTHS[+m.date.slice(5,7)-1]}`}
+function insRoster(games){const s=new Set(players.filter(p=>p.current).map(p=>p.name));games.forEach(m=>Object.keys(played(m)).forEach(n=>s.add(n)));
+  return [...s].sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b))}
+// did n play in m? a team sheet (apps) lists everyone; without one, scorers and the player of the match certainly played
+function insIn(m,n){const pl=played(m);return n in pl&&(m.apps!==false||+pl[n]>0)||m.potm===n}
+// share of the game n played (0 to 1), from the halves counter; null when it wasn't recorded for that game
+function insShare(m,n){const h=halvesOf(m);if(!Object.keys(h).length||!(n in played(m)))return null;return Math.min(1,(+h[n]||0)/(m.live&&m.live.noHt?1:2))}
+function insRate(m,n){if(!RT)return null;const r=rtOf(m.id)[n];return r==null?null:+r}
+function insAvg(a){a=a.filter(v=>v!=null);return a.length?a.reduce((s,v)=>s+v,0)/a.length:null}
+const insPct=v=>v==null?"–":Math.round(v*100)+"%";
+function insTabs(){return `<div class="seg ins-tabs" role="tablist">${INS_TABS.map(([k,t])=>`<button data-instab="${k}" role="tab" aria-pressed="${insTab===k}">${t}</button>`).join("")}</div>`}
+function insightsView(){
+  if(!canWrite)return `<div class="stack"><section class="card empty">Insights are for coaches only. Sign in as a coach to see them.</section></div>`;
+  const games=insGames();
+  const head=`<section class="card"><h2 style="margin-top:0">Coach insights · ${esc(season)}</h2><p class="hint">Your season as charts, worked out from what's already on the site. Only coaches can see this page. Tap any square, bar or dot to see its numbers.</p>${insTabs()}</section>`;
+  if(!games.length)return `<div class="stack">${head}<section class="card empty">No games played yet this season. Charts appear here once results are in.</section></div>`;
+  const body=insTab==="time"?insTime(games):insTab==="avail"?insAvail():insTab==="team"?insTeam(games):insPlayers(games);
+  return `<div class="stack ins">${head}${body}</div>`}
+
+// ---- players tab ----
+function insPlayers(games){const names=insRoster(games);if(!insPl||!names.includes(insPl))insPl=names[0];
+  return insGrid(games,names)+insForm(games,names)+insInvolve(games,names)}
+// season at a glance: one row per player, one column per game. Shade = coach rating when there is one.
+function insGrid(games,names){const rated=RT&&RT.length;
+  const cell=(m,n)=>{const on=insIn(m,n),g=+played(m)[n]||0,a=+assistsOf(m)[n]||0,gk=n in keepersOf(m),pom=m.potm===n,r=insRate(m,n),av=(AV[m.id]||{})[n];
+    if(!on){const t=`${n} v ${m.opp}, ${insDate(m)}: ${av==="no"?"said not available":"didn't play"}`;return `<td class="ig-off" title="${esc(t)}" aria-label="${esc(t)}">${av==="no"?"✕":""}</td>`}
+    const bits=[g?`${g} ${g===1?SP.goal:SP.goals}`:"",a?`${a} assist${a===1?"":"s"}`:"",pom?POTM:"",gk?"in goal":"",r!=null?`rated ${r}/10`:""].filter(Boolean),t=`${n} v ${m.opp}, ${insDate(m)}: played${bits.length?", "+bits.join(", "):""}`;
+    const alpha=r!=null?(.12+.7*(r/10)).toFixed(2):rated?".12":".22",dark=r!=null&&r>=7;
+    return `<td class="ig-on${dark?" ig-dk":""}" style="--a:${alpha}" title="${esc(t)}" aria-label="${esc(t)}">${g?`<b>${g}</b>`:""}${a?`<i class="ig-as">${a>1?a:""}a</i>`:""}${pom?`<i class="ig-pom">★</i>`:""}${gk&&!g&&!pom?`<i class="ig-gk">🧤</i>`:""}</td>`};
+  return `<section class="card"><h3>Season at a glance</h3><p class="hint">Each square is one game. ${rated?"Darker squares are higher coach ratings. ":""}A number is ${SP.goals}${SP.assists?", <b>a</b> is an assist":""}, ★ is ${esc(POTM)}${SP.keeper?", 🧤 played in goal":""}, ✕ said they couldn't play.</p>
+  <div class="ig-wrap"><table class="ig"><thead><tr><th></th>${games.map(m=>`<th title="${esc(m.opp)} ${esc(insDate(m))}"><span>${esc(oppIni(m.opp))}</span><small>${esc(m.date.slice(8,10))}/${esc(m.date.slice(5,7))}</small></th>`).join("")}<th>Played</th></tr></thead>
+  <tbody>${names.map(n=>{const p=games.filter(m=>insIn(m,n)).length;return `<tr><th class="click" data-player="${esc(n)}">${esc(n)}</th>${games.map(m=>cell(m,n)).join("")}<td class="ig-n">${p}/${games.length}</td></tr>`}).join("")}</tbody></table></div>
+  ${rated?`<div class="ig-key"><span>Rating</span>${[2,4,6,8,10].map(r=>`<i style="--a:${(.12+.7*(r/10)).toFixed(2)}"${r>=7?' class="ig-dk"':""}>${r}</i>`).join("")}</div>`:""}</section>`}
+// one player's form: their rating each game against the team average, and how much of each game they played
+function insForm(games,names){const n=insPl,mine=games.filter(m=>insIn(m,n)),rated=RT&&RT.length;
+  const rs=mine.map(m=>({m,r:insRate(m,n),avg:insAvg(Object.values(rtOf(m.id)).map(Number))})).filter(o=>o.r!=null);
+  const ps=playerStats(games)[n]||{goals:0,assists:0,potm:0},ra=insAvg(rs.map(o=>o.r)),last=insAvg(rs.slice(-3).map(o=>o.r));
+  const tile=(k,v,s)=>`<div><span>${k}</span><b>${v}</b>${s?`<small>${s}</small>`:""}</div>`;
+  const trend=ra!=null&&last!=null&&rs.length>3?(last-ra>=.5?"▲ up on their average":last-ra<=-.5?"▼ down on their average":"steady"):"";
+  let chart="";
+  if(rs.length){const W=340,H=150,L=26,R=8,T=10,B=26,x=i=>rs.length===1?(L+W-R)/2:L+i*(W-L-R)/(rs.length-1),y=v=>T+(10-v)*(H-T-B)/10;
+    const path=k=>rs.map((o,i)=>o[k]==null?"":`${i&&rs[i-1][k]!=null?"L":"M"}${x(i).toFixed(1)},${y(o[k]).toFixed(1)}`).join("");
+    chart=`<svg class="ins-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(n)}'s coach rating in each game">
+      ${[0,5,10].map(v=>`<line class="g" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join("")}
+      <path class="avg" d="${path("avg")}"/><path class="ln" d="${path("r")}"/>
+      ${rs.map((o,i)=>`<g class="pt"><circle cx="${x(i)}" cy="${y(o.r)}" r="5"/><circle class="hit" cx="${x(i)}" cy="${y(o.r)}" r="14"><title>${esc(`v ${o.m.opp}, ${insDate(o.m)}: ${o.r}/10 (team average ${o.avg.toFixed(1)})`)}</title></circle></g>`).join("")}
+      ${rs.map((o,i)=>i%Math.ceil(rs.length/6)===0||i===rs.length-1?`<text class="ax" x="${x(i)}" y="${H-8}" text-anchor="middle">${esc(oppIni(o.m.opp))}</text>`:"").join("")}
+    </svg><div class="ins-leg"><span><i class="sw ln"></i>${esc(n)}</span><span><i class="sw avg"></i>Team average that game</span></div>`}
+  else chart=`<p class="hint">${rated?`${esc(n)} hasn't been rated yet this season.`:`Rate ${esc(PL)} after each game on the <button class="mini" data-view="ratings">Player ratings</button> page and their form shows here.`}</p>`;
+  const sh=mine.map(m=>({m,s:insShare(m,n)})).filter(o=>o.s!=null);
+  const share=sh.length?`<h3 style="margin-top:16px">How much of each game</h3><div class="ins-cols" role="img" aria-label="Share of each game ${esc(n)} played">${sh.map(o=>`<div title="${esc(`v ${o.m.opp}, ${insDate(o.m)}: ${insPct(o.s)} of the game`)}"><span class="tk"><i style="height:${Math.max(3,o.s*100)}%"></i></span><small>${esc(oppIni(o.m.opp))}</small></div>`).join("")}</div>`:"";
+  return `<section class="card"><div class="ins-hd"><h3>Player form</h3><select id="insPl" aria-label="Pick a player">${names.map(x=>`<option${x===n?" selected":""}>${esc(x)}</option>`).join("")}</select></div>
+    <div class="kv ins-kv">${tile("Games",`${mine.length}/${games.length}`)}${tile(SP.Goals,ps.goals)}${SP.assists?tile("Assists",ps.assists):""}${tile(POTM_IC+" Awards",ps.potm)}${ra!=null?tile("Average rating",ra.toFixed(1),trend?`Last 3: ${last.toFixed(1)}, ${trend}`:""):""}</div>
+    <h3 style="margin-top:14px">Coach rating each game</h3>${chart}${share}</section>`}
+// who's involved in the goals: goals and assists stacked for each player
+function insInvolve(games,names){const ps=playerStats(games),useA=SP.assists&&assistsTracked(season);
+  const rows=names.map(n=>({n,g:(ps[n]||{}).goals||0,a:useA?(ps[n]||{}).assists||0:0})).filter(o=>o.g+o.a).sort((a,b)=>(b.g+b.a)-(a.g+a.a)||b.g-a.g);
+  if(!rows.length)return `<section class="card"><h3>${useA?"Goal involvements":SP.Goals}</h3><p class="hint">No ${SP.goals} recorded yet this season.</p></section>`;
+  const mx=Math.max(...rows.map(o=>o.g+o.a)),tot=rows.reduce((s,o)=>s+o.g,0);
+  return `<section class="card"><h3>${useA?`${SP.Goals} and assists`:SP.Goals}</h3><p class="hint">${rows.length} different ${rows.length===1?PL.replace(/s$/,""):PL} have ${useA?"scored or set up":"scored"} this season.${tot?` The top scorer has ${Math.round(rows.slice().sort((a,b)=>b.g-a.g)[0].g/tot*100)}% of the ${SP.goals}.`:""}</p>
+    ${useA?`<div class="ins-leg"><span><i class="sw c1"></i>${SP.Goals}</span><span><i class="sw c2"></i>Assists</span></div>`:""}
+    <div class="ins-hb">${rows.map(o=>`<div class="r"><span class="click" data-player="${esc(o.n)}">${esc(o.n)}</span><div class="b">${o.g?`<i class="c1" style="width:${o.g/mx*100}%" title="${esc(`${o.n}: ${o.g} ${o.g===1?SP.goal:SP.goals}`)}"></i>`:""}${o.a?`<i class="c2" style="width:${o.a/mx*100}%" title="${esc(`${o.n}: ${o.a} assist${o.a===1?"":"s"}`)}"></i>`:""}</div><b>${o.g}${useA?` + ${o.a}`:""}</b></div>`).join("")}</div></section>`}
+
+// ---- playing time tab ----
+function insTime(games){const names=insRoster(games),hv=games.filter(m=>Object.keys(halvesOf(m)).length);
+  const rows=names.map(n=>{const s=hv.map(m=>insShare(m,n)),got=s.filter(v=>v!=null),miss=hv.filter(m=>!insIn(m,n)).length;
+    const last=hv.slice(-3).map(m=>insShare(m,n)).filter(v=>v!=null);return {n,avg:insAvg(got),last:insAvg(last),g:got.length,miss}}).filter(o=>o.g||o.miss<hv.length);
+  const team=insAvg(rows.map(o=>o.avg));
+  let html="";
+  if(!hv.length)html=`<section class="card"><h3>Share of each game</h3><p class="hint">Use the halves counter on the match form (or ▶ Live match) and each ${esc(PL.replace(/s$/,""))}'s share of the games shows here.</p></section>`;
+  else{rows.sort((a,b)=>(a.avg??0)-(b.avg??0)||a.n.localeCompare(b.n));
+    const due=rows.filter(o=>o.avg!=null&&team!=null&&o.avg<team-.1).slice(0,3);
+    html=`<section class="card"><h3>Share of each game</h3><p class="hint">How much of the games they were at each ${esc(PL.replace(/s$/,""))} played, from the ${hv.length} game${hv.length===1?"":"s"} with halves recorded. The line is the squad average (${insPct(team)}). Lowest first.</p>
+    ${due.length?`<p class="ins-call">Due more time: <b>${due.map(o=>esc(o.n)).join(", ")}</b></p>`:""}
+    <div class="ins-hb ins-pt">${rows.map(o=>{const tr=o.avg!=null&&o.last!=null&&hv.length>3?(o.last-o.avg>=.15?"▲":o.last-o.avg<=-.15?"▼":""):"";
+      return `<div class="r"><span class="click" data-player="${esc(o.n)}">${esc(o.n)}</span><div class="b" title="${esc(`${o.n}: ${insPct(o.avg)} of the games they were at (${o.g} game${o.g===1?"":"s"}), last 3: ${insPct(o.last)}`)}"><i class="c1" style="width:${(o.avg||0)*100}%"></i>${team!=null?`<em style="left:${team*100}%"></em>`:""}</div><b>${insPct(o.avg)}${tr?` <small class="${tr==="▲"?"up":"dn"}" title="Last 3 games ${insPct(o.last)}">${tr}</small>`:""}</b></div>`}).join("")}</div>
+    <p class="hint" style="margin-top:8px">▲ or ▼ means their last 3 games were well above or below their season so far.</p></section>`}
+  return html+insPos(games,names)}
+// where they started: positions from the line-up at kick-off in games run in live match mode
+function insZone(lbl){lbl=String(lbl||"").toUpperCase();if(lbl==="GK")return 0;if(/WB|B$|CB|DEF/.test(lbl))return 1;if(/M$|CM|MID/.test(lbl))return 2;return 3}
+function insPos(games,names){const out={},zl=RUGBY?["Forwards","Backs"]:SP.keeper?["Goal","Defence","Midfield","Attack"]:["Defence","Midfield","Attack"];let n0=0;
+  games.forEach(m=>{const ko=m.live&&(m.live.events||[]).find(e=>e.k==="ko"&&e.line);if(!ko)return;n0++;const form=ko.form||m.live.form,F=FORMS[form]||FORMS[FORM0];
+    ko.line.forEach((n,i)=>{if(!n)return;const o=out[n]=out[n]||{z:Array(zl.length).fill(0),bench:0};
+      if(RUGBY){const fb=fwdBacks(form,ko.line);o.z[fb&&fb.fw.includes(n)?0:1]++}else{let z=insZone(F.label[i]);if(!SP.keeper)z=Math.max(0,z-1);o.z[z]++}});
+    (m.live.squad||[]).filter(n=>n&&!ko.line.includes(n)&&insIn(m,n)).forEach(n=>{const o=out[n]=out[n]||{z:Array(zl.length).fill(0),bench:0};o.bench++})});
+  if(!n0)return `<section class="card"><h3>Where they started</h3><p class="hint">Run a game in <b>▶ Live match</b> and each ${esc(PL.replace(/s$/,""))}'s starting position shows here.</p></section>`;
+  const list=names.filter(n=>out[n]),mx=Math.max(1,...list.map(n=>out[n].z.reduce((s,v)=>s+v,0)+out[n].bench));
+  return `<section class="card"><h3>Where they started</h3><p class="hint">Starting positions from the ${n0} game${n0===1?"":"s"} run in live match mode${RUGBY?"":", and how often they started on the bench"}. Positions changed during a game aren't counted.</p>
+    <div class="ins-leg">${zl.map((z,i)=>`<span><i class="sw c${i+1}"></i>${z}</span>`).join("")}<span><i class="sw cb"></i>Bench</span></div>
+    <div class="ins-hb">${list.map(n=>{const o=out[n];return `<div class="r"><span class="click" data-player="${esc(n)}">${esc(n)}</span><div class="b">${o.z.map((v,i)=>v?`<i class="c${i+1}" style="width:${v/mx*100}%" title="${esc(`${n}: started ${v} in ${zl[i].toLowerCase()}`)}"></i>`:"").join("")}${o.bench?`<i class="cb" style="width:${o.bench/mx*100}%" title="${esc(`${n}: started ${o.bench} on the bench`)}"></i>`:""}</div><b>${o.z.reduce((s,v)=>s+v,0)}/${o.z.reduce((s,v)=>s+v,0)+o.bench}</b></div>`}).join("")}</div></section>`}
+
+// ---- availability tab ----
+function insAvail(){const asked=seasonMatches().filter(m=>!m.postponed&&m.stage!=="placeholder"&&AV[m.id]&&Object.keys(AV[m.id]).length);
+  const at=ATT?attStats(season):null;
+  if(!asked.length&&!(at&&at.sessions))return `<section class="card"><h3>Availability</h3><p class="hint">Once parents (or coaches) start answering <b>Can you play?</b> for games, you'll see who's usually available and who never replies.</p></section>`;
+  const names=insRoster(asked),K=[["yes","Available","win"],["maybe","Maybe","draw"],["no","Can't play","loss"],["","No reply","none"]];let html="";
+  if(asked.length){const rows=names.map(n=>{const c={yes:0,maybe:0,no:0,"":0};asked.forEach(m=>{const v=(AV[m.id]||{})[n];c[v in c?v:""]++});return {n,c}}).sort((a,b)=>b.c[""]-a.c[""]||a.c.yes-b.c.yes);
+    const quiet=rows.filter(o=>o.c[""]/asked.length>=.5).map(o=>o.n);
+    html+=`<section class="card"><h3>Who's available</h3><p class="hint">Answers for the ${asked.length} game${asked.length===1?"":"s"} this season where availability was asked, most "no reply" first.</p>
+    ${quiet.length?`<p class="ins-call">Rarely reply: <b>${quiet.map(esc).join(", ")}</b>. Worth a word with their parents.</p>`:""}
+    <div class="ins-leg">${K.map(([,l,c])=>`<span><i class="sw st-${c}"></i>${l}</span>`).join("")}</div>
+    <div class="ins-hb">${rows.map(o=>`<div class="r"><span class="click" data-player="${esc(o.n)}">${esc(o.n)}</span><div class="b">${K.map(([k,l,c])=>o.c[k]?`<i class="st-${c}" style="width:${o.c[k]/asked.length*100}%" title="${esc(`${o.n}: ${l.toLowerCase()} for ${o.c[k]} of ${asked.length}`)}"></i>`:"").join("")}</div><b>${o.c.yes}/${asked.length}</b></div>`).join("")}</div></section>`;
+    const need=SIDE,cnt=asked.map(m=>({m,y:Object.values(AV[m.id]).filter(v=>v==="yes").length})),mx=Math.max(need+2,...cnt.map(o=>o.y));
+    html+=`<section class="card"><h3>${PL.charAt(0).toUpperCase()+PL.slice(1)} available each game</h3><p class="hint">How many said yes for each game. The dashed line is a full side (${need}).</p>
+    <div class="ins-cols ins-need" style="--need:${need/mx*100}%" role="img" aria-label="Players available each game">${cnt.map(o=>`<div title="${esc(`v ${o.m.opp}, ${insDate(o.m)}: ${o.y} available`)}"><b>${o.y}</b><span class="tk"><i class="${o.y<need?"short":""}" style="height:${Math.max(3,o.y/mx*100)}%"></i></span><small>${esc(oppIni(o.m.opp))}</small></div>`).join("")}</div>
+    ${cnt.some(o=>o.y<need)?`<p class="hint" style="margin-top:6px">⚠ Lighter bars are games where fewer than a full side said yes.</p>`:""}</section>`}
+  if(at&&at.sessions){const tn=insRoster([]).concat(Object.keys(at.out)).filter((n,i,a)=>a.indexOf(n)===i).map(n=>({n,c:at.out[n]||0})).sort((a,b)=>a.c-b.c||a.n.localeCompare(b.n));
+    html+=`<section class="card"><h3>Training attendance</h3><p class="hint">Sessions ticked off on the Training page this season (${at.sessions}). Lowest first.</p>
+    <div class="ins-hb">${tn.map(o=>`<div class="r"><span class="click" data-player="${esc(o.n)}">${esc(o.n)}</span><div class="b"><i class="c1" style="width:${o.c/at.sessions*100}%" title="${esc(`${o.n}: ${o.c} of ${at.sessions} sessions`)}"></i></div><b>${o.c}/${at.sessions}</b></div>`).join("")}</div></section>`}
+  return html}
+
+// ---- team tab ----
+function insTeam(games){const list=games.filter(result),U=RUGBY?"Points":SP.Goals;
+  if(!list.length)return `<section class="card"><h3>Team</h3><p class="hint">No results yet this season.</p></section>`;
+  const mx=Math.max(1,...list.map(m=>Math.max(+m.us,+m.them))),t=teamStats(list),ps=playerStats(list);
+  const scorers=Object.values(ps).filter(o=>o.goals>0).length,scoredIn=list.filter(m=>+m.us>0).length,cs=list.filter(m=>+m.them===0).length;
+  const tile=(k,v,s)=>`<div><span>${k}</span><b>${v}</b>${s?`<small>${s}</small>`:""}</div>`;
+  const chart=`<div class="ins-leg"><span><i class="sw c1"></i>${U} for</span><span><i class="sw c2"></i>${U} against</span></div>
+    <div class="ins-div" role="img" aria-label="${U} for and against each game">${list.map(m=>`<div title="${esc(`v ${m.opp}, ${insDate(m)}: ${m.us}–${m.them} (${result(m)})`)}"><span class="up">${+m.us?`<b>${m.us}</b>`:""}<i class="c1" style="height:${+m.us/mx*100}%"></i></span><span class="dn"><i class="c2" style="height:${+m.them/mx*100}%"></i>${+m.them?`<b>${m.them}</b>`:""}</span><small class="chip ${result(m)}">${result(m)}</small></div>`).join("")}</div>`;
+  const split=(lbl,f)=>{const s=teamStats(list.filter(f));return s.P?`<tr><td>${lbl}</td><td>${s.P}</td><td>${s.W}</td><td>${s.D}</td><td>${s.L}</td><td>${s.F}</td><td>${s.A}</td><td><b>${Math.round(s.W/s.P*100)}%</b></td></tr>`:""};
+  const comps=[...new Set(list.map(m=>m.tournament_id?"Tournament":compName(m.comp||"")||"Other"))];
+  const halfs=insHalves(list);
+  return `<section class="card"><h3>Every game</h3><div class="kv ins-kv">${tile("Played",t.P,`${t.W} won, ${t.D} drawn, ${t.L} lost`)}${tile(`${U} per game`,(t.F/t.P).toFixed(1),`${(t.A/t.P).toFixed(1)} against`)}${tile("Scored in",`${scoredIn}/${t.P}`,"games")}${SP.keeper?tile("Clean sheets",cs):""}${tile(`Different ${SP.goals==="goals"?"scorers":"try scorers"}`,scorers)}</div>${chart}</section>
+  <section class="card"><h3>Where we do best</h3><table class="lb"><thead><tr><th></th><th>P</th><th>W</th><th>D</th><th>L</th><th>F</th><th>A</th><th>Won</th></tr></thead><tbody>
+    ${split("Home",m=>m.ha==="H"&&!m.tournament_id)}${split("Away",m=>m.ha==="A"&&!m.tournament_id)}${comps.length>1?comps.map(c=>split(esc(c),m=>(m.tournament_id?"Tournament":compName(m.comp||"")||"Other")===c)).join(""):""}</tbody></table></section>${halfs}`}
+// first half v second half, only from games where the live clock was actually running (goals spread across the game)
+function insHalves(list){const ok=list.filter(m=>{const L=m.live;if(!L||L.noHt||!L.events)return false;const ev=L.events.filter(e=>e.k==="goal"||e.k==="them");return ev.length&&ev.some(e=>e.h===2)&&new Set(ev.map(e=>e.m)).size>1});
+  if(ok.length<2)return "";const c={f1:0,f2:0,a1:0,a2:0};ok.forEach(m=>m.live.events.forEach(e=>{if(e.k==="goal")c[e.h===2?"f2":"f1"]++;if(e.k==="them")c[e.h===2?"a2":"a1"]++}));
+  const mx=Math.max(1,c.f1,c.f2,c.a1,c.a2),bar=(v,cl,l)=>`<div class="r"><span>${l}</span><div class="b"><i class="${cl}" style="width:${v/mx*100}%" title="${esc(`${l}: ${v}`)}"></i></div><b>${v}</b></div>`;
+  return `<section class="card"><h3>First half or second half?</h3><p class="hint">From the ${ok.length} games run live with the clock going.</p><div class="ins-leg"><span><i class="sw c1"></i>For</span><span><i class="sw c2"></i>Against</span></div>
+  <div class="ins-hb">${bar(c.f1,"c1","1st half, for")}${bar(c.a1,"c2","1st half, against")}${bar(c.f2,"c1","2nd half, for")}${bar(c.a2,"c2","2nd half, against")}</div></section>`}
+document.addEventListener("click",e=>{if(view!=="insights")return;const b=e.target.closest("[data-instab]");if(b){insTab=b.dataset.instab;try{localStorage.setItem(SK+".instab",insTab)}catch(err){}render();return}
+  const t=e.target.closest(".ig td[title],.ins-cols>div[title],.ins-div>div[title],.ins-hb i[title],.ins-hb .b[title],.ins-svg .hit");if(t){const s=t.getAttribute("title")||(t.querySelector("title")||{}).textContent;if(s)toast(s)}});
+document.addEventListener("change",e=>{if(view==="insights"&&e.target.id==="insPl"){insPl=e.target.value;render()}});
+try{insTab=localStorage.getItem(SK+".instab")||"players";if(!INS_TABS.some(([k])=>k===insTab))insTab="players"}catch(e){}
 function kitView(){
   if(!canWrite)return `<div class="stack"><section class="card empty">Kit sizes are for coaches only. Sign in as a coach to see them.</section></div>`;
   if(KIT===null)return `<div class="stack"><section class="card"><h2 style="margin-top:0">Kit sizes</h2><p class="hint">Kit sizes aren't switched on for this team's database yet. Ask ${esc(TEAM.supportName||"Touchline Tales")} via Help and changes to turn them on.</p></section></div>`;
@@ -3697,7 +3840,7 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","birthdays","kit","cphotos","drills","design"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","insights","birthdays","kit","cphotos","drills","design"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
