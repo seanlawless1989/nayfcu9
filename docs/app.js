@@ -148,7 +148,7 @@ function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boo
 function appsTracked(list){return list.length>0}// scorers and PotM count as apps even without a team sheet
 
 // ---------- views ----------
-function setView(v){if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));if(v==="fund"){fSel=null;fundOpen()}render();window.scrollTo({top:0})}
+function setView(v){if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));if(v==="fund"){fSel=null;fundOpen()}if(v==="subs"){sPlan=null;sAmts=null;subsOpen()}render();window.scrollTo({top:0})}
 function render(){
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
@@ -158,10 +158,11 @@ function render(){
   if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   if(setupPending()&&!canWrite&&view!=="login"){main.innerHTML=settingUpView();document.body.classList.toggle("ro",true);return}
   renderTicker();
-  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+myBadgeStrip()+homeView();
+  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+subsHome()+myBadgeStrip()+homeView();
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
   else if(view==="fund")main.innerHTML=fundView();
+  else if(view==="subs")main.innerHTML=subsView();
   else if(view==="ratings")main.innerHTML=ratingsView();
   else if(view==="insights")main.innerHTML=insightsView();
   else if(view==="kit")main.innerHTML=kitView();
@@ -232,7 +233,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Shirt numbers and kits"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["insights","📊","Coach insights","Charts of the season, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["subs","🧾","Subs","Who's paid, and paying online"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["insights","📊","Coach insights","Charts of the season, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -569,12 +570,13 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
 let fPayEl=null;
 const F_LOOK={theme:"stripe",labels:"auto",inputs:"spaced",variables:{borderRadius:"4px",colorBackground:"#ffffff",colorDanger:"#df1b41",colorPrimary:"#0570de",colorSuccess:"#00c853",colorText:"#30313d",fontFamily:"default",fontSizeBase:"16px",spacingUnit:"4px"}};
 const fStripeJs=()=>window.Stripe?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement("script");s.src="https://js.stripe.com/dahlia/stripe.js";s.onload=ok;s.onerror=no;document.head.appendChild(s)});
-async function fPayOpen(r,total){fPayClose();
-  const el=document.createElement("div");el.className="fd-paysheet";el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");el.setAttribute("aria-label","Pay for your square");
-  el.innerHTML=`<div class="fd-paybox"><div class="fd-payhead"><b>Pay ${fMoney(total)} to ${esc(TEAM.name)}</b><button class="mini" id="fPayX" type="button">Cancel</button></div>
-    <p class="hint">A donation to the club, paid securely through Stripe. Card details never touch this site.</p><div id="checkout-form"><p class="hint">Loading the payment form…</p></div></div>`;
-  document.body.appendChild(el);document.body.classList.add("fd-paying");fPayEl={el,square:r.square,form:null};
-  el.querySelector("#fPayX").addEventListener("click",()=>fPayCancel());
+// opt (subs and other club payments): {head, note, cancel()}; without it, it's a fundraiser square
+async function fPayOpen(r,total,opt){fPayClose();opt=opt||{};
+  const el=document.createElement("div");el.className="fd-paysheet";el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");el.setAttribute("aria-label",opt.head||"Pay for your square");
+  el.innerHTML=`<div class="fd-paybox"><div class="fd-payhead"><b>${esc(opt.head||`Pay ${fMoney(total)} to ${TEAM.name}`)}</b><button class="mini" id="fPayX" type="button">Cancel</button></div>
+    <p class="hint">${esc(opt.note||"A donation to the club, paid securely through Stripe. Card details never touch this site.")}</p><div id="checkout-form"><p class="hint">Loading the payment form…</p></div></div>`;
+  document.body.appendChild(el);document.body.classList.add("fd-paying");fPayEl={el,square:r.square,form:null,cancel:opt.cancel||null};
+  el.querySelector("#fPayX").addEventListener("click",()=>fPayEl&&fPayEl.cancel?fPayEl.cancel():fPayCancel());
   try{await fStripeJs();if(!fPayEl||fPayEl.el!==el)return;
     const stripe=Stripe(r.pk,{stripeAccount:r.account});// a direct charge on the club's own Stripe account
     const checkout=stripe.initCheckoutFormSdk({clientSecret:r.client_secret,appearance:F_LOOK});
@@ -582,16 +584,169 @@ async function fPayOpen(r,total){fPayClose();
     const L=await checkout.loadActions();if(L.type!=="success")throw new Error("actions");
     form.on("confirm",async ev=>{try{const res=await L.actions.confirm({formConfirmEvent:ev});// on success Stripe goes to ?fund&paid=<session>
         if(res&&res.type==="error")toast((res.error&&res.error.message)||"That payment didn't go through. Try again.")}catch(e){toast("That payment didn't go through. Try again.")}})
-  }catch(e){if(fPayEl&&fPayEl.el===el)fPayCancel("Couldn't load the payment form. Check your signal and try again.")}}
+  }catch(e){if(fPayEl&&fPayEl.el===el){if(fPayEl.cancel){fPayClose();toast("Couldn't load the payment form. Check your signal and try again.")}else fPayCancel("Couldn't load the payment form. Check your signal and try again.")}}}
 function fPayClose(){if(!fPayEl)return;try{fPayEl.form&&fPayEl.form.unmount&&fPayEl.form.unmount()}catch(e){}fPayEl.el.remove();fPayEl=null;document.body.classList.remove("fd-paying")}
 async function fPayCancel(msg){const sq=fPayEl&&fPayEl.square;fPayClose();fBusy=false;if(sq)await fInvoke({action:"release",square:sq});
   toast(msg||"No payment was taken. Your square is free again.");await loadFund();render()}
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&fPayEl)fPayCancel()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&fPayEl){if(fPayEl.cancel)fPayEl.cancel();else fPayCancel()}});
 // back from Stripe: ?fund&paid=<session>, ?fund&cancelled=<square>, or ?fund&stripe=back (a coach linking the club's account)
 async function fundReturn(q){const paid=q.get("paid"),gone=q.get("cancelled");try{history.replaceState(null,"",location.pathname+"?fund")}catch(e){}
   if(paid){const r=await fInvoke({action:"confirm",session:paid});if(r.paid){fThanks={name:(r.square&&r.square.name)||""};fSel=null}else toast("Your payment hasn't come through yet. If Stripe took it, your square will show shortly.")}
   if(gone){await fInvoke({action:"release",square:gone});toast("No payment was taken. Your square is free again.")}
   await fundOpen()}
+
+// ---------- subs and payments (supabase/34_subs.sql + the "subs_" actions of the "fundraiser" edge function) ----------
+// Coaches set the monthly subs and one-off costs and tick off cash and bank transfers (free, no Stripe needed). Families
+// signed in with their family code see what their own child owes and can pay online: one month or a one-off cost by
+// card, or monthly by Direct Debit or card. Online payments go through Stripe straight to the club's own account (the
+// same link as the fundraiser); Touchline Tales never holds club money. Nothing here is public: visitors see nothing.
+let SUBS=null,SPLAYER={},SITEMS=[],SPAY=[],SMAND={},SINFO=null,SSTRIPE=null,sMonth=null,sFilter="all",sPlan=null,sAmts=null,sItemOpen=null,sItemNew=false,sBusy=false;
+const S_HOW={cash:"Cash",bank:"Bank transfer",card:"Card",dd:"Direct Debit",other:"Other",waived:"Let off"};
+const sKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-01`;
+const sNow=()=>sKey(new Date());
+const sMonthName=k=>new Date(k+"T12:00:00").toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+const sMonthShort=k=>new Date(k+"T12:00:00").toLocaleDateString("en-GB",{month:"long"});
+const sShift=(k,n)=>{const d=new Date(k+"T12:00:00");d.setDate(1);d.setMonth(d.getMonth()+n);return sKey(d)};
+const sNth=n=>n+(n%10===1&&n!==11?"st":n%10===2&&n!==12?"nd":n%10===3&&n!==13?"rd":"th");
+const sSquad=()=>players.filter(p=>p.current&&p.name).map(p=>p.name).sort((a,b)=>a.localeCompare(b));
+const sAmount=n=>{const o=SPLAYER[n];if(o&&o.exempt)return 0;return o&&o.amount!=null?o.amount:(SUBS&&SUBS.amount)||0};
+const sOn=()=>!!(SUBS&&SUBS.live&&SUBS.amount);
+const sReady=()=>!!(SINFO&&SINFO.ready);
+const sMandate=n=>{const m=SMAND[n];return m&&!["canceled","incomplete_expired","incomplete"].includes(m.status)?m:null};
+const sDue=k=>new Date(k.slice(0,8)+String((SUBS&&SUBS.day)||1).padStart(2,"0")+"T23:59:59");
+const sInvoke=fInvoke;
+async function loadSubs(){SUBS=null;SPLAYER={};SITEMS=[];SPAY=[];SMAND={};if(!sb||!(canWrite||myKids().length))return;
+  try{const [p,o,i,y,m]=await Promise.all([sb.from("subs_plan").select("*").maybeSingle(),sb.from("subs_player").select("*"),sb.from("pay_items").select("*").order("id",{ascending:false}),
+      sb.from("payments").select("*").order("created",{ascending:false}).limit(3000),sb.from("subs_mandates").select("*")]);
+    if(p.error)return;SUBS=p.data||{id:1,amount:null,day:1,dd:true,card:true,about:"",live:false,_new:true};
+    (o.data||[]).forEach(r=>SPLAYER[r.player]=r);SITEMS=i.data||[];SPAY=y.data||[];(m.data||[]).forEach(r=>SMAND[r.player]=r)}catch(e){SUBS=null}}
+async function subsOpen(){await loadSubs();if(SUBS){SINFO=await sInvoke({action:"subs_info"});if(canWrite)SSTRIPE=await sInvoke({action:"status"})}if(view==="subs"||view==="parents"||view==="home")render()}
+// one player's subs for one month: paid, clearing (a bank payment on its way), due, late, or doesn't pay
+function sStatus(n,k){if(!sAmount(n))return {s:"free",l:"Doesn't pay"};
+  const ps=SPAY.filter(p=>p.player===n&&p.month===k),f=st=>ps.find(p=>p.state===st);
+  let p=f("paid");if(p)return {s:"paid",l:p.method==="waived"?"Let off":"Paid",p};
+  p=f("pending");if(p)return {s:"pending",l:"Clearing",p};
+  const late=new Date()>sDue(k);p=f("failed");if(p)return {s:"late",l:"Payment failed",p};
+  if(sMandate(n)&&!late)return {s:"due",l:"Due "+sNth(SUBS.day)};
+  return late?{s:"late",l:"Late"}:{s:"due",l:"Due "+sNth(SUBS.day)}}
+const sItemPaid=(n,it)=>SPAY.find(p=>p.player===n&&p.item===it.id&&(p.state==="paid"||p.state==="pending"));
+const sPill=st=>`<span class="fd-pill sb-${st.s}">${esc(st.l)}</span>`;
+const sMandText=m=>m?`Monthly ${m.method==="dd"?"Direct Debit":"card payment"}${m.status==="past_due"?" (last payment failed)":""}`:"";
+function sHow(n,st){const m=sMandate(n);if(st.p&&st.s==="paid")return S_HOW[st.p.method]+(st.p.note?" · "+st.p.note:"");return sMandText(m)||"Not set up"}
+
+function subsView(){
+  if(!canWrite){const kids=myKids();if(kids.length)return `<div class="stack">${subsFamCard(true)||`<section class="card"><h2 style="margin-top:0">💷 Subs and payments</h2><p class="hint">There's nothing to pay at the moment.</p></section>`}</div>`;
+    parentNext="subs";return `<div class="stack"><section class="card stack"><h2 style="margin:0">💷 Subs and payments</h2>${PL_ON?joinBox("Sign in with your family code to see and pay your "+esc(PRN.kid)+"'s subs."):`<p class="hint">Ask the coach how to pay.</p>`}</section></div>`}
+  if(SUBS===null)return `<div class="stack"><section class="card"><h2 style="margin-top:0">💷 Subs and payments</h2><p class="hint">Subs aren't switched on for this team's database yet. Ask ${esc(TEAM.supportName||"Touchline Tales")} via Help and changes to turn them on.</p></section></div>`;
+  if(!sMonth)sMonth=sNow();if(!sPlan)sPlan=Object.assign({},SUBS);
+  const k=sMonth,names=sSquad(),fee=SINFO?+SINFO.fee_bps||0:100;
+  const rows=names.map(n=>({n,st:sStatus(n,k),a:sAmount(n)}));
+  const pay=rows.filter(r=>r.st.s!=="free"),paid=pay.filter(r=>r.st.s==="paid"),got=paid.reduce((t,r)=>t+(r.st.p.amount||0),0),exp=pay.reduce((t,r)=>t+r.a,0);
+  const late=pay.filter(r=>r.st.s==="late").length,due=pay.filter(r=>r.st.s==="due"||r.st.s==="pending").length,owe=pay.filter(r=>r.st.s==="late"||r.st.s==="due");
+  const shown=rows.filter(r=>sFilter==="all"||(sFilter==="paid"&&r.st.s==="paid")||(sFilter==="owe"&&(r.st.s==="due"||r.st.s==="late"))||(sFilter==="late"&&r.st.s==="late"));
+  const linked=SSTRIPE&&SSTRIPE.linked,ready=sReady();
+  const stripeCard=`<section class="card stack" style="gap:8px"><h3 style="margin:0">Online payments</h3>${ready?`<p style="margin:0">On. Families signed in with their family code can pay by ${[SUBS.dd&&"Direct Debit",SUBS.card&&"card, Apple Pay or Google Pay"].filter(Boolean).join(" or ")||"card"}, straight into the club's Stripe account. Stripe pays it into the club's bank every few days.</p><p class="hint" style="margin:0">Stripe's fees: card 1.5% + 20p, Direct Debit 1% (20p to £4). ${fee?`Touchline Tales adds ${fee/100}%.`:"No Touchline Tales fee for this team."} Refunds are done in the club's Stripe account.</p>`
+    :`<p style="margin:0">Off. You can still tick off cash and bank transfers below, free.</p><p class="hint" style="margin:0">To let families pay online, the club's treasurer links the club's own Stripe account once. Stripe asks for the club's details and bank account (Touchline Tales never sees them). It's the same link as the fundraiser, so one club account covers both.</p>
+    ${SINFO&&SINFO.error?"":`<div class="btns"><button class="btn" id="sConnect"${sBusy?" disabled":""}>${linked?"Finish linking the club's Stripe account":"Link the club's Stripe account"}</button></div>`}`}</section>`;
+  const planCard=`<section class="card stack" style="gap:10px"><h3 style="margin:0">Monthly subs</h3>
+    <div class="sb-grid"><label>Amount a month (£)<input type="number" id="sp-amount" min="1" max="1000" step="0.5" inputmode="decimal" value="${sPlan.amount?sPlan.amount/100:""}" placeholder="e.g. 15"></label>
+      <label>Due on the<select id="sp-day">${Array.from({length:28},(_,i)=>`<option value="${i+1}"${+sPlan.day===i+1?" selected":""}>${sNth(i+1)} of the month</option>`).join("")}</select></label></div>
+    <label>What it pays for (families see this)<input type="text" id="sp-about" maxlength="200" value="${esc(sPlan.about||"")}" placeholder="e.g. Training, pitch hire and referees"></label>
+    <label class="check"><input type="checkbox" id="sp-dd"${sPlan.dd?" checked":""}> Families can pay monthly by Direct Debit</label>
+    <label class="check"><input type="checkbox" id="sp-card"${sPlan.card?" checked":""}> Families can pay by card (monthly, or one month at a time)</label>
+    <label class="check"><input type="checkbox" id="sp-live"${sPlan.live?" checked":""}> Show families what they owe (signed-in families only, each sees just their own)</label>
+    <div class="btns"><button class="btn gold" id="sPlanSave"${sBusy?" disabled":""}>Save</button></div></section>`;
+  if(!SUBS.amount)return `<div class="stack"><section class="card"><h2 style="margin-top:0">💷 Subs and payments</h2><p>Keep track of who has paid their subs, and let families pay online by Direct Debit or card. Cash and bank transfers are ticked off here too, so it works even if nobody pays online.</p></section>${planCard}${stripeCard}${sItemsCard(names)}</div>`;
+  const pc=exp?Math.min(100,got/exp*100):0;
+  const remind=`Hi all! ${sMonthShort(k)} subs are due on the ${sNth(SUBS.day)}. You can pay on the team site: open ${siteUrl()}?subs and sign in with your family code${ready?" to pay by card or set up a monthly Direct Debit":""}. Or pay the coaches by cash or bank transfer. Thank you! ${TEAM.cheer||SP.ball}`;
+  return `<div class="stack">
+  <section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><button class="mini" data-smonth="-1" aria-label="Previous month">‹</button><h2 style="margin:0;flex:1;text-align:center">${esc(sMonthName(k))}</h2><button class="mini" data-smonth="1" aria-label="Next month">›</button></div>
+    <div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><b class="sb-big">${fMoney(got)}</b><span class="hint">of ${fMoney(exp)} for ${esc(sMonthShort(k))}</span></div>
+    <div class="fd-bar sb-bar"><i style="width:${pc}%"></i></div>
+    <p style="margin:0"><b>${paid.length}</b> paid · <b>${due}</b> due · <b${late?' class="sb-latex"':""}>${late}</b> late</p></section>
+  <div class="seg" role="group" aria-label="Show">${[["all","All"],["paid","Paid"],["owe","Still to pay"],["late","Late"]].map(([v,l])=>`<button data-sfilter="${v}" aria-pressed="${sFilter===v}">${l}</button>`).join("")}</div>
+  <section class="card">${shown.map(({n,st,a})=>`<div class="fd-row"><div style="flex:1 1 150px;min-width:0"><b>${esc(n)}</b><div class="hint">${esc(sHow(n,st))}${a&&a!==SUBS.amount?` · ${fMoney(a)}`:""}</div></div>${sPill(st)}
+      ${st.s==="due"||st.s==="late"?`<button class="mini" data-scash="${esc(n)}">Cash</button><button class="mini" data-sbank="${esc(n)}">Bank</button><button class="mini" data-swaive="${esc(n)}">Let off</button>`:""}${st.p&&!st.p.ref&&st.s==="paid"?`<button class="mini" data-sundo="${st.p.id}">Undo</button>`:""}</div>`).join("")||`<p class="hint">${names.length?"Nobody here.":`No ${esc(PL)} on the squad yet.`}</p>`}</section>
+  ${owe.length?`<section class="card stack" style="gap:8px"><h3 style="margin:0">Remind families</h3><p class="hint" style="margin:0">A friendly message for the team chat. It names nobody, so nobody is singled out. Signed-in families also see what they owe on the site.</p><div class="btns"><button class="btn ghost" id="sRemind" data-text="${esc(remind)}">📋 Copy reminder</button></div></section>`:""}
+  ${planCard}${sAmtsCard(names)}${sItemsCard(names)}${stripeCard}</div>`}
+// a different amount for some players (siblings, hardship), or "doesn't pay"
+function sAmtsCard(names){if(!names.length)return "";if(!sAmts){sAmts={};names.forEach(n=>{const o=SPLAYER[n]||{};sAmts[n]={amount:o.amount!=null?String(o.amount/100):"",exempt:!!o.exempt}})}
+  return `<section class="card stack" style="gap:8px"><h3 style="margin:0">Different amounts</h3><p class="hint" style="margin:0">Leave blank for the usual ${fMoney(SUBS.amount)}. Use it for a sibling discount, or tick "Doesn't pay". Families only see their own amount.</p>
+    ${names.map(n=>{const d=sAmts[n]||{amount:"",exempt:false};return `<div class="fd-row"><b style="flex:1 1 120px">${esc(n)}</b><input type="number" min="0" max="1000" step="0.5" inputmode="decimal" style="width:90px" aria-label="${esc(n)}'s amount in pounds" data-samt="${esc(n)}" value="${esc(d.amount)}" placeholder="${SUBS.amount/100}"${d.exempt?" disabled":""}><label class="check" style="margin:0"><input type="checkbox" data-sexempt="${esc(n)}"${d.exempt?" checked":""}> Doesn't pay</label></div>`}).join("")}
+    <div class="btns"><button class="btn" id="sAmtSave"${sBusy?" disabled":""}>Save amounts</button></div></section>`}
+// one-off costs: a party, a training top, a tournament entry
+function sItemsCard(names){const open=SITEMS.filter(i=>i.open),done=SITEMS.filter(i=>!i.open).slice(0,5);
+  const item=it=>{const c=names.filter(n=>sItemPaid(n,it)).length,ex=sItemOpen===it.id;
+    return `<div class="fd-row"><div style="flex:1 1 160px;min-width:0"><b>${esc(it.title)}</b><div class="hint">${fMoney(it.amount)}${it.due?" · due "+new Date(it.due+"T12:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"}):""} · ${c} of ${names.length} paid${it.open?"":" · finished"}</div></div><button class="mini" data-sitem="${it.id}">${ex?"Close":"Who's paid"}</button>${it.open?`<button class="mini" data-sitemend="${it.id}">Finish</button>`:""}</div>
+    ${ex?`<div class="sb-sub">${names.map(n=>{const p=sItemPaid(n,it);return `<div class="fd-row"><span style="flex:1 1 120px">${esc(n)}</span>${p?`<span class="fd-pill sb-paid">${esc(S_HOW[p.method])}</span>${p.ref?"":`<button class="mini" data-sundo="${p.id}">Undo</button>`}`:`<span class="fd-pill sb-due">To pay</span><button class="mini" data-sicash="${it.id}|${esc(n)}">Cash</button><button class="mini" data-sibank="${it.id}|${esc(n)}">Bank</button>`}</div>`}).join("")}</div>`:""}`};
+  return `<section class="card stack" style="gap:8px"><h3 style="margin:0">One-off costs</h3><p class="hint" style="margin:0">A party, a training top, a tournament entry. Each family sees it on the site until it's paid${sReady()?", and can pay by card":""}.</p>
+    ${open.map(item).join("")}${done.map(item).join("")}
+    ${sItemNew?`<div class="sb-grid"><label>What it's for<input type="text" id="si-title" maxlength="60" placeholder="e.g. Christmas party"></label><label>Amount per ${esc(PL.replace(/s$/,""))} (£)<input type="number" id="si-amount" min="0.5" max="1000" step="0.5" inputmode="decimal"></label><label>Due by (optional)<input type="date" id="si-due"></label></div>
+      <div class="btns"><button class="btn gold" id="sItemAdd"${sBusy?" disabled":""}>Add</button><button class="btn ghost" id="sItemX">Cancel</button></div>`:`<div class="btns"><button class="btn ghost" id="sItemNew">➕ Add a one-off cost</button></div>`}</section>`}
+
+// families: what their own child owes, and paying it (on the Parents page, the Subs page and the home page)
+function subsFamCard(full){const kids=myKids();if(!kids.length||!SUBS)return "";const k=sNow(),ready=sReady(),items=SITEMS.filter(i=>i.open);
+  const blocks=kids.map(n=>{const a=sAmount(n),st=sOn()?sStatus(n,k):null,m=sMandate(n),owe=st&&(st.s==="due"||st.s==="late"),its=items.filter(i=>!sItemPaid(n,i));
+    if(!st&&!its.length&&!full)return "";
+    const sub=st?`<div class="fd-row"><div style="flex:1 1 160px;min-width:0"><b>${esc(sMonthShort(k))} subs</b><div class="hint">${a?fMoney(a)+" a month":"Nothing to pay"}${m?" · "+sMandText(m):""}</div></div>${sPill(st)}</div>
+      ${owe&&ready&&SUBS.card?`<button class="btn gold" data-spaymonth="${esc(n)}"${sBusy?" disabled":""}>Pay ${esc(sMonthShort(k))} (${fMoney(a)}) by card</button>`:""}
+      ${a&&ready&&!m?`<div class="btns">${SUBS.dd?`<button class="btn" data-smonthly="dd|${esc(n)}"${sBusy?" disabled":""}>Pay monthly by Direct Debit</button>`:""}${SUBS.card?`<button class="btn ghost" data-smonthly="card|${esc(n)}"${sBusy?" disabled":""}>Pay monthly by card</button>`:""}</div><p class="hint" style="margin:0">Monthly payments start on the next ${sNth(SUBS.day)} and come out on the ${sNth(SUBS.day)} of each month. Stop them here any time.</p>`:""}
+      ${m&&full?`<div class="btns"><button class="mini" data-sstop="${esc(n)}">Stop monthly payments</button></div>`:""}`:"";
+    const its2=its.map(i=>`<div class="fd-row"><div style="flex:1 1 160px;min-width:0"><b>${esc(i.title)}</b><div class="hint">${fMoney(i.amount)}${i.due?" · due "+new Date(i.due+"T12:00").toLocaleDateString("en-GB",{day:"numeric",month:"short"}):""}</div></div>${ready&&SUBS.card!==false?`<button class="mini" data-spayitem="${i.id}|${esc(n)}"${sBusy?" disabled":""}>Pay</button>`:`<span class="fd-pill sb-due">To pay</span>`}</div>`).join("");
+    const hist=full?SPAY.filter(p=>p.player===n&&p.state!=="failed").slice(0,8).map(p=>{const it=p.item?SITEMS.find(i=>i.id===p.item):null;return `<div class="fd-row"><span style="flex:1 1 160px">${esc(it?it.title:p.month?sMonthShort(p.month)+" subs":"Payment")}</span><span class="hint">${p.state==="pending"?"Clearing":p.state==="refunded"?"Refunded":esc(S_HOW[p.method])} · ${fMoney(p.amount||0)}</span></div>`}).join(""):"";
+    return `<div class="stack" style="gap:8px">${kids.length>1?`<h3 style="margin:0">${esc(n)}</h3>`:""}${sub}${its2}${hist?`<h4 style="margin:6px 0 0">Paid</h4>${hist}`:""}</div>`}).filter(Boolean);
+  if(!blocks.length)return "";
+  return `<section class="card stack" style="gap:12px"><h2 style="margin:0">💷 ${full?"Subs and payments":"To pay"}</h2>${SUBS.about&&sOn()?`<p class="hint" style="margin:0">${esc(SUBS.about)}</p>`:""}${blocks.join("")}
+    <p class="hint" style="margin:0">${ready?"Paid securely through Stripe, straight to the club. Card and bank details never touch this site.":"Pay the coaches by cash or bank transfer, and they'll tick it off."}${full?"":` <button class="mini" data-view="subs">See all</button>`}</p></section>`}
+// on the home page, only when something is owed
+function subsHome(){const kids=myKids();if(!kids.length||!SUBS)return "";const k=sNow();
+  const owes=kids.some(n=>(sOn()&&["due","late"].includes(sStatus(n,k).s)&&!(sMandate(n)&&sStatus(n,k).s==="due"))||SITEMS.some(i=>i.open&&!sItemPaid(n,i)));
+  return owes?subsFamCard(false):""}
+async function sPay(body,head,note){if(sBusy)return;sBusy=true;render();
+  const r=await sInvoke(Object.assign({action:"subs_pay",site:siteUrl()},body));sBusy=false;
+  if(r.client_secret){render();fPayOpen(r,0,{head,note,cancel:()=>{fPayClose();toast("No payment was taken.")}});return}
+  toast(({not_ready:"Online payments aren't switched on for this team yet.",paid:"That's already paid. Thank you!",already:"Monthly payments are already set up.",closed:"That isn't open for payment any more.",exempt:"There's nothing to pay.",family:"Sign in with your family code first.",method:"The coaches have switched that way of paying off."})[r.error]||"Couldn't open the payment form. Try again.");render()}
+async function sTick(row){const {error}=await sb.from("payments").insert(row);if(error){toast("Couldn't save that. Try again.");return}await loadSubs();render()}
+document.addEventListener("input",e=>{const t=e.target;if(view!=="subs"||!canWrite)return;
+  if(t.id&&/^sp-/.test(t.id)&&sPlan){const f=t.id.slice(3);sPlan[f]=t.type==="checkbox"?t.checked:f==="amount"?(t.value?Math.round(+t.value*100):null):f==="day"?+t.value:t.value}
+  if(t.dataset&&t.dataset.samt!==undefined&&sAmts)(sAmts[t.dataset.samt]||(sAmts[t.dataset.samt]={})).amount=t.value});
+document.addEventListener("change",e=>{const t=e.target;if(view!=="subs"||!canWrite)return;
+  if(t.id&&/^sp-/.test(t.id)&&sPlan){const f=t.id.slice(3);sPlan[f]=t.type==="checkbox"?t.checked:f==="day"?+t.value:sPlan[f]}
+  if(t.dataset&&t.dataset.sexempt!==undefined&&sAmts){(sAmts[t.dataset.sexempt]||(sAmts[t.dataset.sexempt]={})).exempt=t.checked;render()}});
+document.addEventListener("click",async e=>{const b=e.target.closest("button");if(!b||!sb)return;const d=b.dataset;
+  if(view!=="subs"&&view!=="parents"&&view!=="home")return;
+  // families (and coaches) paying
+  if(d.spaymonth){const n=d.spaymonth,k=sNow();sPay({player:n,what:"month",month:k},`Pay ${fMoney(sAmount(n))} for ${n}'s ${sMonthShort(k)} subs`,"Paid securely through Stripe, straight to the club. Card details never touch this site.");return}
+  if(d.spayitem){const [id,n]=d.spayitem.split("|"),it=SITEMS.find(i=>i.id===+id);if(!it)return;sPay({player:n,what:"item",item:+id},`Pay ${fMoney(it.amount)} for ${it.title} (${n})`,"Paid securely through Stripe, straight to the club. Card details never touch this site.");return}
+  if(d.smonthly){const [m,n]=d.smonthly.split("|");sPay({player:n,what:"monthly",method:m},`${fMoney(sAmount(n))} a month for ${n}'s subs`,`${m==="dd"?"A Direct Debit from your bank account, protected by the Direct Debit Guarantee.":"Taken from your card each month."} Nothing is taken today: the first payment is on the ${sNth(SUBS.day)}. Stop it any time on the team site.`);return}
+  if(d.sstop){if(!confirm(`Stop ${d.sstop}'s monthly payments? Nothing more will be taken. You can set them up again any time.`))return;const r=await sInvoke({action:"subs_cancel",player:d.sstop});toast(r.ok?"Monthly payments stopped.":"Couldn't stop them. Try again, or ask the coach.");await loadSubs();render();return}
+  if(view!=="subs"||!canWrite)return;
+  if(d.smonth){sMonth=sShift(sMonth||sNow(),+d.smonth);render();return}
+  if(d.sfilter){sFilter=d.sfilter;render();return}
+  if(d.scash||d.sbank||d.swaive){const n=d.scash||d.sbank||d.swaive;sTick({player:n,month:sMonth,amount:d.swaive?0:sAmount(n),method:d.scash?"cash":d.sbank?"bank":"waived",state:"paid"});return}
+  if(d.sicash||d.sibank){const [id,n]=(d.sicash||d.sibank).split("|"),it=SITEMS.find(i=>i.id===+id);if(!it)return;sTick({player:n,item:it.id,amount:it.amount,method:d.sicash?"cash":"bank",state:"paid"});return}
+  if(d.sundo){const {error}=await sb.from("payments").delete().eq("id",+d.sundo);if(error){toast("Couldn't undo that. Try again.");return}await loadSubs();render();return}
+  if(d.sitem){sItemOpen=sItemOpen===+d.sitem?null:+d.sitem;render();return}
+  if(d.sitemend){if(!confirm("Finish this cost? Families who haven't paid stop being asked. Ticked-off payments stay."))return;await sb.from("pay_items").update({open:false}).eq("id",+d.sitemend);await loadSubs();render();return}
+  if(b.id==="sItemNew"){sItemNew=true;render();return}
+  if(b.id==="sItemX"){sItemNew=false;render();return}
+  if(b.id==="sItemAdd"){const t=($("#si-title").value||"").trim(),a=Math.round(+($("#si-amount").value||0)*100),du=$("#si-due").value||null;
+    if(!t||a<50){toast("Add what it's for and an amount.");return}sBusy=true;render();const {error}=await sb.from("pay_items").insert({title:t,amount:a,due:du});sBusy=false;
+    if(error){toast("Couldn't add that. Try again.");render();return}sItemNew=false;await loadSubs();toast("Added. Signed-in families see it on the site.");render();return}
+  if(b.id==="sRemind"){copyOut(d.text,"Reminder copied. Paste it into the team chat.");return}
+  if(b.id==="sPlanSave"){const p=sPlan;if(p.live&&!p.amount){toast("Add the amount first.");return}if(p.amount!=null&&(p.amount<100||p.amount>100000)){toast("The amount should be between £1 and £1,000.");return}
+    sBusy=true;render();const {error}=await sb.from("subs_plan").upsert({id:1,amount:p.amount||null,day:+p.day||1,dd:!!p.dd,card:!!p.card,about:(p.about||"").trim()||null,live:!!p.live,updated:new Date().toISOString()});sBusy=false;
+    if(error){toast("Couldn't save. Try again.");render();return}sPlan=null;await loadSubs();toast(SUBS.live?"Saved. Signed-in families can see what they owe.":"Saved. Families can't see it until you tick \"Show families\".");render();return}
+  if(b.id==="sAmtSave"){const up=[],gone=[];Object.entries(sAmts||{}).forEach(([n,v])=>{const amt=v.amount===""||v.amount==null?null:Math.round(+v.amount*100);if(amt===null&&!v.exempt){if(SPLAYER[n])gone.push(n)}else up.push({player:n,amount:v.exempt?null:amt,exempt:!!v.exempt,updated:new Date().toISOString()})});
+    sBusy=true;render();try{if(up.length){const {error}=await sb.from("subs_player").upsert(up,{onConflict:"player"});if(error)throw error}if(gone.length){const {error}=await sb.from("subs_player").delete().in("player",gone);if(error)throw error}toast("Amounts saved.")}catch(err){toast("Couldn't save the amounts. Try again.")}
+    sBusy=false;sAmts=null;await loadSubs();render();return}
+  if(b.id==="sConnect"){sBusy=true;render();const r=await sInvoke({action:"connect",site:siteUrl(),view:"subs"});sBusy=false;if(r.url){location.href=r.url;return}toast(r.error==="no_stripe"?"Online payments aren't set up on Touchline Tales' side yet. Ask "+(TEAM.supportName||"Touchline Tales")+".":"Couldn't open Stripe. Try again.");render();return}
+});
+// back from Stripe: ?subs&paid=<session> (a family paid or set up monthly payments), ?subs&stripe=back (a coach linked Stripe)
+async function subsReturn(q){const paid=q.get("paid");try{history.replaceState(null,"",location.pathname+"?subs")}catch(e){}
+  if(paid){const r=await sInvoke({action:"subs_confirm",session:paid});toast(r.ok?(r.kind==="monthly"?"All set. Monthly payments are set up. Thank you!":r.state==="pending"?"Thank you! The payment is on its way.":"Paid. Thank you!"):"Your payment hasn't come through yet. It will show here shortly.")}
+  await subsOpen()}
+async function subsBoot(){await loadSubs();if(SUBS)SINFO=await sInvoke({action:"subs_info"})}
 
 let SPON=[],SPON_ON=false,spEdit=null,spBusy=false;
 window.siteSponsors=()=>SPON.filter(s=>s.logo).map(s=>({id:String(s.id),name:s.name||"",logo:s.logo}));// the poster maker (gfx.js) offers these
@@ -796,10 +951,10 @@ async function parentJoin(){const el=$("#pCode"),code=(el&&el.value||"").replace
   const {data,error}=await sb.rpc("link_family",{p_code:code});
   if(error){toast(/too many/i.test(error.message)?"Too many tries. Wait an hour, or ask the coach to check the code.":"Couldn't check that code. Try again.");return}
   if(!data){toast("That code isn't right. Check it with the coach.");return}
-  await loadParent();await loadKit();kitDraft=null;await loadTav();logActive();await loadMyDays();await loadGallery();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
+  await loadParent();await loadKit();await subsBoot();kitDraft=null;await loadTav();logActive();await loadMyDays();await loadGallery();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
   const nx=parentNext;parentNext=null;if(nx)setView(nx);else render()}
 async function parentLeave(n){
-  if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();await loadKit();await loadGallery();kitDraft=null;authBox();render();toast(`${n} is no longer linked to this phone.`);return}
+  if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();await loadKit();await subsBoot();await loadGallery();kitDraft=null;authBox();render();toast(`${n} is no longer linked to this phone.`);return}
   if(!confirm("Sign this phone out? You'll need the family code to sign in again."))return;
   await sb.rpc("unlink_family",{p_player:null});KIDS=[];FAMV={};await sb.auth.signOut();toast("This phone is signed out.")}
 const coachToo=()=>`<p class="hint" style="margin:0">Are you one of the coaches? <button class="mini" id="signIn">Coach sign in</button> You'll see the coach view, and can answer for every ${esc(PL.replace(/s$/,""))}, your own included.</p>`;
@@ -812,7 +967,7 @@ function parentsView(){const kid=PRN.kid,kids=myKids();
     <div class="btns"><button class="btn gold" data-view="availall">Answer for the games coming up</button></div>
     <p class="hint" style="margin:0">Other parent or carer? They type the same family code on their own phone, and you'll both see the same answers.</p>
     <h3>Another ${kid} in the squad?</h3>${joinBox("Type their family code as well.")}
-    <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div>${coachToo()}</section>${kitFamCard()}`;
+    <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div>${coachToo()}</section>${subsFamCard(true)}${kitFamCard()}`;
   return `<section class="card stack"><h2>👪 Parents</h2><p>Sign in with the family code the coach sent you. You only do this once on each phone, and both parents (or any carer) can use the same code on their own phones. Then you can:</p>${what}${joinBox("")}
     <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p>${coachToo()}</section>`}
 // coaches: every player's code, how many phones use it, and the "parents must sign in" switch (on the Squad page)
@@ -1020,7 +1175,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
   ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos in a private store that only the team's signed-in coaches can open. These photos are never shown on the site and have no public links. Ask the coach to delete a photo at any time.</li><li>Match-day photos that families and coaches add on the Photos page. Only the team's signed-in coaches and families (a phone signed in with a family code) can see them: they're never public and have no public links. Any family can ask for a photo to come down, which hides it straight away, and coaches can delete any photo. The site takes the phone's location data out of each photo. The site keeps an anonymous code for the phone that added each photo, never a parent's name.</li></ul>`)}
-  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you buy a square on the club's pitch fundraiser: the name and message for your square and your email address for the receipt. Only the coaches see your email and what you paid, and messages show once a coach approves them. You pay through Stripe straight to the club; the site never sees your card.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
+  ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you're signed in with a family code and the team uses subs: which months and one-off costs your ${kid} has paid for, how (cash, bank transfer, card or Direct Debit) and how much. Only the coaches and your own family see this. Online payments go through Stripe straight to the club; the site never sees your card or bank details, and keeps only Stripe's reference for each payment.</li><li>If you buy a square on the club's pitch fundraiser: the name and message for your square and your email address for the receipt. Only the coaches see your email and what you paid, and messages show once a coach approves them. You pay through Stripe straight to the club; the site never sees your card.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
   ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts. Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
@@ -3851,7 +4006,7 @@ async function checkCoach(){
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
   await loadTav();alSync();
-  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadCoachPhotos();await loadGallery();await loadKit();await loadDrills();
+  await loadAvail();await loadPhotos();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadCoachPhotos();await loadGallery();await loadKit();await subsBoot();await loadDrills();
   authBox();render();
   if(canWrite)setTimeout(()=>ftAuto().catch(()=>{}),4000);
 }
@@ -3922,6 +4077,7 @@ document.addEventListener("submit",async e=>{
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
   for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos"])if(new URLSearchParams(location.search).has(v))setView(v);
   if(new URLSearchParams(location.search).has("fund")){view="fund";render();fundReturn(new URLSearchParams(location.search))}
+  if(new URLSearchParams(location.search).has("subs")){view="subs";render();subsReturn(new URLSearchParams(location.search))}
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
