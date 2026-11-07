@@ -660,17 +660,20 @@ function subsView(){
   const pc=exp?Math.min(100,got/exp*100):0;
   const remind=`Hi all! ${sMonthShort(k)} subs are due on the ${sNth(SUBS.day)}. You can pay on the team site: open ${siteUrl()}?subs and sign in with your family code${ready?" to pay by card or set up a monthly Direct Debit":""}. Or pay the coaches by cash or bank transfer. Thank you! ${TEAM.cheer||SP.ball}`;
   return `<div class="stack">
-  <section class="card stack" style="gap:10px"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><button class="mini" data-smonth="-1" aria-label="Previous month">‹</button><h2 style="margin:0;flex:1;text-align:center">${esc(sMonthName(k))}</h2><button class="mini" data-smonth="1" aria-label="Next month">›</button></div>
-    <div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><b class="sb-big">${fMoney(got)}</b><span class="hint">of ${fMoney(exp)} for ${esc(sMonthShort(k))}</span></div>
+  <section class="card stack" style="gap:10px"><div class="sb-mhead"><button class="mini" data-smonth="-1" aria-label="Previous month">‹</button><h2 style="margin:0;flex:1;text-align:center">${esc(sMonthName(k))}</h2><button class="mini" data-smonth="1" aria-label="Next month">›</button></div>
+    <div class="sb-mhead" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap"><b class="sb-big">${fMoney(got)}</b><span class="hint">of ${fMoney(exp)} for ${esc(sMonthShort(k))}</span></div>
     <div class="fd-bar sb-bar"><i style="width:${pc}%"></i></div>
     <p style="margin:0"><b>${paid.length}</b> paid · <b>${due}</b> due · <b${late?' class="sb-latex"':""}>${late}</b> late</p></section>
   <div class="seg" role="group" aria-label="Show">${[["all","All"],["paid","Paid"],["owe","Still to pay"],["late","Late"]].map(([v,l])=>`<button data-sfilter="${v}" aria-pressed="${sFilter===v}">${l}</button>`).join("")}</div>
   <section class="card">${shown.map(({n,st,a})=>`<div class="fd-row"><div style="flex:1 1 150px;min-width:0"><b>${esc(n)}</b><div class="hint">${esc(sHow(n,st))}${a&&a!==SUBS.amount?` · ${fMoney(a)}`:""}</div></div>${sPill(st)}
-      ${st.s==="due"||st.s==="late"?`<button class="mini" data-scash="${esc(n)}">Cash</button><button class="mini" data-sbank="${esc(n)}">Bank</button><button class="mini" data-swaive="${esc(n)}">Let off</button>`:""}${st.p&&!st.p.ref&&st.s==="paid"?`<button class="mini" data-sundo="${st.p.id}">Undo</button>`:""}</div>`).join("")||`<p class="hint">${names.length?"Nobody here.":`No ${esc(PL)} on the squad yet.`}</p>`}</section>
+      ${st.s==="due"||st.s==="late"?`<div class="sb-acts"><span class="hint">Paid by</span><button class="mini" data-scash="${esc(n)}">Cash</button><button class="mini" data-sbank="${esc(n)}">Bank transfer</button><button class="mini" data-swaive="${esc(n)}">Let off</button></div>`:""}${st.p&&!st.p.ref&&st.s==="paid"?`<button class="mini" data-sundo="${st.p.id}">Undo</button>`:""}</div>`).join("")||`<p class="hint">${names.length?"Nobody here.":`No ${esc(PL)} on the squad yet.`}</p>`}</section>
   ${owe.length?`<section class="card stack" style="gap:8px"><h3 style="margin:0">Remind families</h3><p class="hint" style="margin:0">A friendly message for the team chat. It names nobody, so nobody is singled out. Signed-in families also see what they owe on the site.</p><div class="btns"><button class="btn ghost" id="sRemind" data-text="${esc(remind)}">📋 Copy reminder</button></div></section>`:""}
   ${planCard}${sAmtsCard(names)}${sItemsCard(names)}${stripeCard}</div>`}
 // a different amount for some players (siblings, hardship), or "doesn't pay"
-function sAmtsCard(names){if(!names.length)return "";if(!sAmts){sAmts={};names.forEach(n=>{const o=SPLAYER[n]||{};sAmts[n]={amount:o.amount!=null?String(o.amount/100):"",exempt:!!o.exempt}})}
+let sAmtsOpen=false;
+function sAmtsCard(names){if(!names.length)return "";const n2=Object.values(SPLAYER).filter(o=>o.exempt||o.amount!=null).length;
+  if(!sAmtsOpen)return `<section class="card stack" style="gap:8px"><h3 style="margin:0">Different amounts</h3><p class="hint" style="margin:0">${n2?`${n2} ${esc(n2>1?PL:PL.replace(/s$/,""))} pay a different amount or nothing.`:`Everyone pays ${fMoney(SUBS.amount)}.`} For a sibling discount, or someone who doesn't pay.</p><div class="btns"><button class="btn ghost" id="sAmtOpen">Change amounts</button></div></section>`;
+  if(!sAmts){sAmts={};names.forEach(n=>{const o=SPLAYER[n]||{};sAmts[n]={amount:o.amount!=null?String(o.amount/100):"",exempt:!!o.exempt}})}
   return `<section class="card stack" style="gap:8px"><h3 style="margin:0">Different amounts</h3><p class="hint" style="margin:0">Leave blank for the usual ${fMoney(SUBS.amount)}. Use it for a sibling discount, or tick "Doesn't pay". Families only see their own amount.</p>
     ${names.map(n=>{const d=sAmts[n]||{amount:"",exempt:false};return `<div class="fd-row"><b style="flex:1 1 120px">${esc(n)}</b><input type="number" min="0" max="1000" step="0.5" inputmode="decimal" style="width:90px" aria-label="${esc(n)}'s amount in pounds" data-samt="${esc(n)}" value="${esc(d.amount)}" placeholder="${SUBS.amount/100}"${d.exempt?" disabled":""}><label class="check" style="margin:0"><input type="checkbox" data-sexempt="${esc(n)}"${d.exempt?" checked":""}> Doesn't pay</label></div>`}).join("")}
     <div class="btns"><button class="btn" id="sAmtSave"${sBusy?" disabled":""}>Save amounts</button></div></section>`}
@@ -729,6 +732,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(d.sitem){sItemOpen=sItemOpen===+d.sitem?null:+d.sitem;render();return}
   if(d.sitemend){if(!confirm("Finish this cost? Families who haven't paid stop being asked. Ticked-off payments stay."))return;await sb.from("pay_items").update({open:false}).eq("id",+d.sitemend);await loadSubs();render();return}
   if(b.id==="sItemNew"){sItemNew=true;render();return}
+  if(b.id==="sAmtOpen"){sAmtsOpen=true;sAmts=null;render();return}
   if(b.id==="sItemX"){sItemNew=false;render();return}
   if(b.id==="sItemAdd"){const t=($("#si-title").value||"").trim(),a=Math.round(+($("#si-amount").value||0)*100),du=$("#si-due").value||null;
     if(!t||a<50){toast("Add what it's for and an amount.");return}sBusy=true;render();const {error}=await sb.from("pay_items").insert({title:t,amount:a,due:du});sBusy=false;
@@ -739,7 +743,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     if(error){toast("Couldn't save. Try again.");render();return}sPlan=null;await loadSubs();toast(SUBS.live?"Saved. Signed-in families can see what they owe.":"Saved. Families can't see it until you tick \"Show families\".");render();return}
   if(b.id==="sAmtSave"){const up=[],gone=[];Object.entries(sAmts||{}).forEach(([n,v])=>{const amt=v.amount===""||v.amount==null?null:Math.round(+v.amount*100);if(amt===null&&!v.exempt){if(SPLAYER[n])gone.push(n)}else up.push({player:n,amount:v.exempt?null:amt,exempt:!!v.exempt,updated:new Date().toISOString()})});
     sBusy=true;render();try{if(up.length){const {error}=await sb.from("subs_player").upsert(up,{onConflict:"player"});if(error)throw error}if(gone.length){const {error}=await sb.from("subs_player").delete().in("player",gone);if(error)throw error}toast("Amounts saved.")}catch(err){toast("Couldn't save the amounts. Try again.")}
-    sBusy=false;sAmts=null;await loadSubs();render();return}
+    sBusy=false;sAmts=null;sAmtsOpen=false;await loadSubs();render();return}
   if(b.id==="sConnect"){sBusy=true;render();const r=await sInvoke({action:"connect",site:siteUrl(),view:"subs"});sBusy=false;if(r.url){location.href=r.url;return}toast(r.error==="no_stripe"?"Online payments aren't set up on Touchline Tales' side yet. Ask "+(TEAM.supportName||"Touchline Tales")+".":"Couldn't open Stripe. Try again.");render();return}
 });
 // back from Stripe: ?subs&paid=<session> (a family paid or set up monthly payments), ?subs&stripe=back (a coach linked Stripe)

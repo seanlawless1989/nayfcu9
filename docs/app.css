@@ -772,3 +772,5 @@ body.fd-paying{overflow:hidden}
 label.check input{margin-top:3px;width:18px;height:18px;flex:none}
 .mdl[data-mdid]{cursor:pointer}.mdl[data-mdid]:focus-visible{outline:2px solid var(--club);outline-offset:3px;border-radius:8px}
 .bp .mdl[data-mdid]{cursor:default}
+.sb-mhead{display:flex;align-items:center;gap:8px}
+.sb-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1 1 100%;justify-content:flex-end}
