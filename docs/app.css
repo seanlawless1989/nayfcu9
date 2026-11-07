@@ -770,3 +770,5 @@ body.fd-paying{overflow:hidden}
 .sb-latex{color:var(--loss)}
 .stack>label.check,label.check{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:15px}
 label.check input{margin-top:3px;width:18px;height:18px;flex:none}
+.mdl[data-mdid]{cursor:pointer}.mdl[data-mdid]:focus-visible{outline:2px solid var(--club);outline-offset:3px;border-radius:8px}
+.bp .mdl[data-mdid]{cursor:default}
