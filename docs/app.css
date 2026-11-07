@@ -756,3 +756,4 @@ body.fd-paying{overflow:hidden}
 .ig-key span{margin-right:6px}
 .ig-key i{display:inline-grid;place-items:center;width:24px;height:20px;border-radius:4px;background:rgb(var(--clubRGB)/var(--a));color:var(--ink);font-style:normal;font-weight:700}
 .ig-key i.ig-dk{color:#fff}
+.trkid{max-width:360px;margin:2px 0 4px}

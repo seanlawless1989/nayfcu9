@@ -2421,12 +2421,18 @@ async function ftImport(){const list=ftRows().filter(f=>FT.picks.has(f.key)&&f.s
 // Weekly training in the Fixtures list: one slim row per session for the next four weeks, so parents can say if their
 // child is coming right there (same answers as the Training page and ?tavail, public.training_availability).
 // Weeks off show as "No training". Hidden when a competition filter is on or another season is picked.
+// A coach who is also a parent picks their own child once on this phone, and gets that child's Yes/Maybe/No in each
+// training row as well as the counts (coaches sign in by email, so they have no family-code link to a child).
+const coachKid=()=>{let n=null;try{n=localStorage.getItem(SK+"-coachkid")}catch(e){}return n&&players.some(p=>p.current&&p.name===n)?n:null};
+document.addEventListener("change",e=>{if(e.target.id!=="coachKid")return;try{localStorage.setItem(SK+"-coachkid",e.target.value||"")}catch(err){}render()});
+function coachKidPick(){if(!canWrite||!TAV_ON||!TR||compFilter)return "";const n=coachKid();
+  return `<label class="f edit-only trkid">Your own ${esc(PRN.kid)} (to answer training here)<select id="coachKid"><option value="">None</option>${players.filter(p=>p.current).sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option${p.name===n?" selected":""}>${esc(p.name)}</option>`).join("")}</select></label>`}
 function trFixRows(){if(!TR||compFilter)return [];return trUpcoming(4).filter(x=>seasonOf(x.iso)===season).map(x=>({date:x.iso,pp:false,html:trFixRow(x)}))}
 function trFixRow(x){const d=new Date(x.iso+"T12:00:00"),day=`<div class="d"><b>${d.getDate()}</b>${MONTHS[d.getMonth()]}</div>`;
   if(x.off)return `<div class="trfix off">${day}<div class="o">🚫 No training this ${esc(TR.day)}</div></div>`;
   const when=`${clock(TR.start)} to ${clock(TR.finish)}${TR.venue?` · ${TR.venue.split(",")[0]}`:""}`;let body="";
-  if(TAV_ON){if(canWrite){const a=TAV[x.iso]||{},c={yes:0,maybe:0,no:0};Object.values(a).forEach(v=>c[v]!=null&&c[v]++);const w=players.filter(p=>p.current&&!a[p.name]).length;
-      body=`<div class="trsum">✅ ${c.yes} ❔ ${c.maybe} ❌ ${c.no}${w?` ⏳ ${w}`:""} <button class="mini" data-tavopen="${x.iso}">Set answers</button></div>`}
+  if(TAV_ON){if(canWrite){const a=TAV[x.iso]||{},c={yes:0,maybe:0,no:0};Object.values(a).forEach(v=>c[v]!=null&&c[v]++);const w=players.filter(p=>p.current&&!a[p.name]).length,mk=coachKid();
+      body=`<div class="trsum">✅ ${c.yes} ❔ ${c.maybe} ❌ ${c.no}${w?` ⏳ ${w}`:""} <button class="mini" data-tavopen="${x.iso}">Set answers</button></div>${mk?`<div class="trav">${avRow(mk,a[mk],"tav",(TAVBY[x.iso]||{})[mk],` data-day="${x.iso}"`)}</div>`:""}`}
     else{const kids=myKids();body=kids.length?`<div class="trav">${kids.map(n=>avRow(n,(TAV_MINE[x.iso]||{})[n],"tav",false,` data-day="${x.iso}"`,kids.length>1?"":`Coming?`)).join("")}</div>`
       :`<div class="trsum"><button class="mini" data-tavopen="${x.iso}">Say if your ${esc(PRN.kid)} is coming</button></div>`}}
   return `<div class="trfix">${day}<div style="min-width:0"><div class="o">🏃 Training <span>${esc(when)}</span></div>${body}</div></div>`}
@@ -2436,7 +2442,7 @@ function fixturesView(){
   if(!items.length)return `${calBtn}${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one${RUGBY?"":`, or <button class="mini" id="ftStart">📥 import league fixtures</button>`}.`:""}</div>`;
   const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
   const nx=nextFixture();
-  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 ${ftDue()?"Check league fixtures":"Import league fixtures"}</button>`}</div>${ftDue()?`<div class="note edit-only" style="margin-bottom:8px">📅 Has the league moved any games? Check Full-Time once a week: <button class="mini" id="ftStart2">check now</button></div>`:""}`:""}${CKEY()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
+  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 ${ftDue()?"Check league fixtures":"Import league fixtures"}</button>`}</div>${ftDue()?`<div class="note edit-only" style="margin-bottom:8px">📅 Has the league moved any games? Check Full-Time once a week: <button class="mini" id="ftStart2">check now</button></div>`:""}`:""}${CKEY()}${coachKidPick()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
 }
 function resultsView(){
   const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
