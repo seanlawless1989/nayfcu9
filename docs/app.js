@@ -124,6 +124,8 @@ function assistsTracked(s){return s>=ASSISTS_FROM}
 function sortMatches(a){return a.slice().sort((x,y)=>(x.date||"").localeCompare(y.date||""))}
 function seasonMatches(){return sortMatches(matches.filter(m=>!m.practice&&seasonOf(m.date)===season))}
 function pname(id){return id}
+// in the squad for games: not a training-only player (players.training, supabase/34_training_only.sql)
+const inGames=p=>!!p&&p.current&&!p.training,gameName=n=>inGames(players.find(p=>p.name===n));
 function numOf(name){const p=players.find(p=>p.name===name);return p&&p.num!=null&&p.num!==""?p.num:""}
 function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,3500)}
 function slug(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"match"}
@@ -735,9 +737,9 @@ function availAllView(){const kids=canWrite?[]:myKids();
   const games=avAllItems(),sess=TAV_ON&&TR?trUpcoming(8).filter(x=>!x.off).slice(0,4).map(x=>x.iso):[];
   const pick=names.length>1||!kids.length?`<label class="f">${canWrite?`Which ${PRN.kid}?`:`Your ${PRN.kid}`}<select id="avAllKid"><option value="">Choose…</option>${names.map(x=>`<option${x===n?" selected":""}>${esc(x)}</option>`).join("")}</select></label>`:"";
   const gm=m=>m.tourn?`<b>${esc(tDays(m.tourn).length>1?tRange(m.tourn):shortDay(m.date))}</b><br><span class="hint">🏆 ${esc(m.tourn.name||"Tournament")}</span>`:`<b>${esc(shortDay(m.date))}</b><br><span class="hint">${esc(m.ha==="A"?"at ":"v ")}${esc(m.opp)}${m.ko?` · ${esc(m.ko)}`:""}</span>`;
-  avAllCur=n;const open=n?games.filter(m=>!((canWrite?AV:AV_MINE)[m.id]||{})[n]).length:0;
+  avAllCur=n;const gOk=!n||gameName(n),open=n&&gOk?games.filter(m=>!((canWrite?AV:AV_MINE)[m.id]||{})[n]).length:0;
   const rows=!n?`<p class="hint">Choose ${canWrite?`a ${PRN.kid}`:`your ${PRN.kid}`} above.</p>`:`
-    <h3>Games</h3>${open>1?`<div class="btns"><button class="btn gold" id="avAllYes">✅ Yes to every game (${open})</button></div><p class="hint" style="margin:0">Fills in every game below that hasn't got an answer yet. Any No or Maybe stays as it is, and you can change any game after.</p>`:""}${games.length?`<div class="av">${games.map(m=>avRow(n,((canWrite?AV:AV_MINE)[m.id]||{})[n],"av",(AVBY[m.id]||{})[n],` data-mid="${esc(m.id)}"`,gm(m))).join("")}</div>`:`<p class="hint">No games coming up yet.</p>`}
+    <h3>Games</h3>${!gOk?`<p class="hint">${esc(n)} is training with us for now, so there are no games to answer yet. The coach will let you know when ${PRN.sh} can play.</p>`:""}${gOk&&open>1?`<div class="btns"><button class="btn gold" id="avAllYes">✅ Yes to every game (${open})</button></div><p class="hint" style="margin:0">Fills in every game below that hasn't got an answer yet. Any No or Maybe stays as it is, and you can change any game after.</p>`:""}${!gOk?"":games.length?`<div class="av">${games.map(m=>avRow(n,((canWrite?AV:AV_MINE)[m.id]||{})[n],"av",(AVBY[m.id]||{})[n],` data-mid="${esc(m.id)}"`,gm(m))).join("")}</div>`:`<p class="hint">No games coming up yet.</p>`}
     ${sess.length?`<h3>Training</h3><div class="av">${sess.map(d=>avRow(n,((canWrite?TAV:TAV_MINE)[d]||{})[n],"tav",(TAVBY[d]||{})[n],` data-day="${d}"`,`<b>${esc(shortDay(d))}</b><br><span class="hint">${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span>`)).join("")}</div>`:""}`;
   return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>
     <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${esc(n||kids[0])}.`:""} Say Yes, Maybe or No for every game and tournament coming up this season, or say yes to them all in one tap. You can change an answer any time. Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="availall">Sign in</button>`:""}</p>
@@ -746,7 +748,7 @@ const avCoachHint=()=>`You're a coach, so you can set the answer for any ${PRN.k
 function avSummary(id){const a=AV[id]||{};const set=`<button class="mini" data-avset="${esc(id)}">Set answers</button>`;if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask. ${set}`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
   return `Availability: ✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}${c.no.length?` (can't make it: ${c.no.map(esc).join(", ")})`:""}${w.length?`<br>Not answered yet: ${w.map(esc).join(", ")} <button class="mini" data-chase="${esc(id)}">Chase replies</button> ${set}`:` · Everyone has answered. ${set}`}`}
 // current players with no answer yet for this fixture, in shirt-number order
-function avWaiting(id){const a=AV[id]||{};return players.filter(p=>p.current&&!a[p.name]).sort((x,y)=>(+x.num||99)-(+y.num||99)).map(p=>p.name)}
+function avWaiting(id){const a=AV[id]||{};return players.filter(p=>inGames(p)&&!a[p.name]).sort((x,y)=>(+x.num||99)-(+y.num||99)).map(p=>p.name)}
 // A whole tournament gets one availability answer per player, stored with match_id "t:<tournament id>"
 // (supabase/29_tournament_availability.sql). Its games use the tournament's answers.
 const avKey=m=>m&&m.tournament_id?"t:"+m.tournament_id:m&&m.id;
@@ -762,10 +764,10 @@ function siteUrl(){return location.origin+location.pathname}
 function availView(){
   let m=avTarget(availMatch);if(m&&m.tournament_id&&!Object.keys(AV[m.id]||{}).length&&!AV_MINE[m.id]){const t=avTarget("t:"+m.tournament_id);if(t){m=t;availMatch=t.id}}
   if(!m)return `<div class="card empty">That fixture couldn't be found. Ask the coach for a new link.</div>`;
-  const kids=canWrite?[]:myKids();let roster=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99));
+  const kids=canWrite?[]:myKids();let roster=players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99));
   const head=`<h2>Can ${PRN.s} make it?</h2>
     <p><b>${esc(avWhat(m))}</b><br>${esc(avWhen(m))}${m.ko?` · ${esc(m.ko)} kick-off`:""}${m.venue?` · ${esc(m.venue)}`:""}</p>${m.tourn?`<p class="hint" style="margin:0">One answer for the whole tournament${tDays(m.tourn).length>1?", all days":""}.</p>`:""}`;
-  if(kids.length)roster=roster.filter(p=>kids.includes(p.name));
+  if(kids.length){roster=roster.filter(p=>kids.includes(p.name));if(!roster.length)return `<section class="card stack">${head}<p class="hint">${kids.map(esc).join(" and ")} ${kids.length>1?"are":"is"} training with us for now, so there's nothing to answer for this game. The coach will let you know when ${PRN.sh} can play.</p><div class="btns"><button class="btn ghost" data-view="training">Training</button></div></section>`}
   else if(PREQ&&!canWrite){parentNext="avail";return `<section class="card stack">${head}${joinBox(`To answer, type the family code the coach sent you. You only do this once on this phone.`)}</section>`}
   return `<section class="card stack">${head}
     <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="avail">Sign in</button>`:""}</p>
@@ -845,7 +847,7 @@ function pickList(roster,a,avk=PICK.id){const lab={yes:"✅ Can make it",maybe:"
 // answers that came in since the site was opened: reload them when Pick squad opens, or when the coach comes back to it.
 // Before the coach has saved a squad or touched a tick, the starting ticks follow the fresh answers.
 async function pickRefresh(){await loadAvail();if(view!=="pick")return;if(PICK&&!PICK.touched&&!PICK.saved)PICK=null;render()}
-function pickTView(t){const a=AV[pickMatch]||{};const roster=players.filter(p=>p.current).sort((x,y)=>(+x.num||99)-(+y.num||99));
+function pickTView(t){const a=AV[pickMatch]||{};const roster=players.filter(inGames).sort((x,y)=>(+x.num||99)-(+y.num||99));
   if(!PICK||PICK.id!==pickMatch)PICK={id:pickMatch,saved:tSquad(t).length>0,set:new Set(tSquad(t).length?tSquad(t):roster.filter(p=>a[p.name]!=="no").map(p=>p.name))};
   const d=new Date(t.date+"T12:00:00");
   return `<section class="card stack"><h2>Pick the tournament squad</h2><p><b>🏆 ${esc(t.name||"Tournament")}</b>, ${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}${t.venue?` · ${esc(t.venue)}`:""}</p>
@@ -862,7 +864,7 @@ async function pickTSave(t){const sq=[...PICK.set].sort((a,b)=>(+(players.find(p
   toast(`Squad saved: ${sq.length} players.${r==null?"":r>=0?" Parents with alerts on have been told.":" No change since the last alert, so none sent."}`);return t}
 function pickView(){const pt=pickTourn();if(pt)return pickTView(pt);if(String(pickMatch||"").startsWith("t:"))return `<div class="card empty">Tournament not found.</div>`;
   const m=matches.find(x=>x.id===pickMatch);if(!m)return `<div class="card empty">Fixture not found.</div>`;
-  const a=avFor(m),avk=Object.keys(AV[m.id]||{}).length?m.id:avKey(m);const roster=players.filter(p=>p.current).sort((x,y)=>(+x.num||99)-(+y.num||99));
+  const a=avFor(m),avk=Object.keys(AV[m.id]||{}).length?m.id:avKey(m);const roster=players.filter(inGames).sort((x,y)=>(+x.num||99)-(+y.num||99));
   const ts=m.tournament_id?tSquad(tournaments.find(t=>t.id===m.tournament_id)):[];
   if(!PICK||PICK.id!==m.id)PICK={id:m.id,saved:!!(m.squad&&m.squad.length||ts.length),set:new Set(m.squad&&m.squad.length?m.squad:ts.length?ts:roster.filter(p=>a[p.name]!=="no").map(p=>p.name))};
   const d=new Date(m.date+"T12:00:00");
@@ -1289,7 +1291,7 @@ function pollForm(){const k=pollNew.kind,lastMonth=(d=>{d.setDate(0);return d.to
     <div class="btns"><button class="btn gold" id="pfSave">Open the vote</button><button class="btn ghost" id="pfCancel">Cancel</button></div></section>`}
 function pollStart(kind){const d=new Date();d.setDate(d.getDate()+7);const lm=(x=>{x.setDate(0);return x})(new Date());
   pollNew={kind,closes:d.toISOString().slice(0,10),title:kind==="gotm"?`${RUGBY?"Try":"Goal"} of the month: ${LONGM[lm.getMonth()]}`:kind==="potss"?`Players' player of the season ${todaySeason()}`:"",
-    month:lm.toISOString().slice(0,7),opts:kind==="gotm"?monthGoals(lm.toISOString().slice(0,7)).join("\n"):kind==="potss"?players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name).join("\n"):""};setView("votes")}
+    month:lm.toISOString().slice(0,7),opts:kind==="gotm"?monthGoals(lm.toISOString().slice(0,7)).join("\n"):kind==="potss"?players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name).join("\n"):""};setView("votes")}
 async function pollSave(){const v=id=>($("#"+id)||{}).value||"";const title=v("pf-title").trim(),opts=[...new Set(v("pf-opts").split("\n").map(x=>x.trim()).filter(Boolean))],closes=v("pf-closes");
   if(!title||opts.length<2){toast("Add a title and at least two choices.");return}
   const row={id:`${Date.now().toString(36)}-${slug(title).slice(0,30)}`,kind:pollNew.kind,title,options:opts,closes:closes?new Date(closes+"T21:00:00").toISOString():null};
@@ -1739,7 +1741,7 @@ function todayLocal(){return new Date().toLocaleDateString("en-CA")}
 function liveStart(id){const m=matches.find(x=>x.id===id);if(!m)return;let saved=null;try{saved=JSON.parse(localStorage.getItem(liveKey(id))||"null")}catch(e){}
   const out=Object.entries(avFor(m)).filter(([,v])=>v==="no").map(([n])=>n);
   const tsq=m.tournament_id?tSquad(tournaments.find(t=>t.id===m.tournament_id)):[];
-  const sq=(m.squad&&m.squad.length)?m.squad.slice():tsq.length&&!Object.keys(played(m)).length?tsq.slice():Object.keys(played(m)).length?Object.keys(played(m)):players.filter(p=>p.current&&!out.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
+  const sq=(m.squad&&m.squad.length)?m.squad.slice():tsq.length&&!Object.keys(played(m)).length?tsq.slice():Object.keys(played(m)).length?Object.keys(played(m)):players.filter(p=>inGames(p)&&!out.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
   // another coach's phone may have started the game, or locked the line-up before kick-off
   const srv=m.live&&m.live.status&&(m.live.status!=="pre"||(m.live.events||[]).some(e=>e.k==="lu"))?m.live:null;
   // a game already finished on the server (by another phone, or fixed by hand) wins over this phone's copy
@@ -1764,7 +1766,7 @@ function minuteOf(L,at){if(!L||!L.halfStart)return "";const len=+L.halfLen||20;c
   const base=L.half===2?len:0;return el>len?`${base+len}+${el-len}'`:`${base+el}'`}
 function onPitch(){return LV.slots.filter(Boolean)}
 // current players who aren't in today's squad (a late arrival, or someone left off by mistake)
-function notInSquad(){return players.filter(p=>p.current&&!LV.squad.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name)}
+function notInSquad(){return players.filter(p=>inGames(p)&&!LV.squad.includes(p.name)).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name)}
 function lateAddHtml(){const r=notInSquad();return `${r.length?`<label class="f" style="max-width:320px">Late arrival: add to the squad<select id="lvAdd"><option value="">Choose…</option>${r.map(n=>`<option>${esc(n)}</option>`).join("")}</select></label>`:""}
   <div class="btns"><input type="text" id="lvNewName" placeholder="Not listed? First name" aria-label="Player not listed: first name" style="max-width:220px"><button class="btn ghost" id="lvNewAdd">Add to squad</button></div>`}
 // a player who isn't on the site yet (or was marked as left) joins today's squad, and the Squad page, from the live match screen
@@ -1943,7 +1945,7 @@ function tbOppCol(b){return TB_OPP.find(c=>c[0]===b.opp)||TB_OPP[0]}
 // a formation laid out for a full pitch: ours in the bottom half, theirs mirrored in the top half
 function tbShape(form){const F=FORMS[form]||FORMS[FORM0];return F.xy.map(([x,y],i)=>({x,y:Math.round((75+y*.75)*10)/10,gk:i===0&&SP.keeper}))}
 function tbThem(n){return tbShape(FORM0).slice(0,n).map(p=>({x:100-p.x,y:Math.round((150-p.y)*10)/10}))}
-function tbNew(mid){const m=mid&&matches.find(x=>x.id===mid),L=m&&m.live,cur=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
+function tbNew(mid){const m=mid&&matches.find(x=>x.id===mid),L=m&&m.live,cur=players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name);
   const squad=m&&m.squad&&m.squad.length?m.squad.slice():cur,form=L&&L.form&&FORMS[L.form]?L.form:FORM0;
   const names=L&&L.slots&&L.slots.filter(Boolean).length?L.slots.slice():squad.slice(0,SIDE);
   return {mid:mid||"",title:m?`v ${m.opp}`:"",form,kit:tbKits()[0][0],opp:TB_OPP[0][0],oppOn:true,ball:{x:50,y:75},
@@ -1951,7 +1953,7 @@ function tbNew(mid){const m=mid&&matches.find(x=>x.id===mid),L=m&&m.live,cur=pla
 function tbOpen(mid){const s=tbStore(),k=mid||"general";if(!s.boards[k])s.boards[k]=tbNew(mid);s.cur=k;tbSel=null;tbUndo=[];tbMode="move";tbSave();setView("tactics")}
 function tbPush(){const b=TB();if(!b)return;tbUndo.push(JSON.stringify(b));if(tbUndo.length>40)tbUndo.shift()}
 function tbChanged(){const b=TB();if(b)b.at=Date.now();tbSave();render()}
-function tbSquad(b){const sq=(b.squad&&b.squad.length?b.squad:players.filter(p=>p.current).map(p=>p.name));return sq.concat(b.us.map(p=>p.n).filter(n=>n&&!sq.includes(n)))}
+function tbSquad(b){const sq=(b.squad&&b.squad.length?b.squad:players.filter(inGames).map(p=>p.name));return sq.concat(b.us.map(p=>p.n).filter(n=>n&&!sq.includes(n)))}
 function tbBench(b){const on=b.us.map(p=>p.n);return tbSquad(b).filter(n=>!on.includes(n))}
 // the arrow's path: straight, or a wiggle for a dribble; it stops short so the arrowhead lands on the point
 function tbPath(a){const dx=a.x2-a.x1,dy=a.y2-a.y1,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,end=Math.max(0,L-2.4);
@@ -2739,7 +2741,7 @@ const BOOK_PH={};
 const bookMedals=(n,list)=>playerMedals(n,list).slice().sort((a,b)=>mdDef(b.id).tier-mdDef(a.id).tier||(a.date||"").localeCompare(b.date||""));// photos stay in this browser tab only; never uploaded
 function bookView(){
   const list=seasonMatches(),done=list.filter(result),t=teamStats(done),ps=playerStats(list),ts=seasonTournaments();
-  const roster=[...new Set([...Object.keys(ps).filter(n=>ps[n].apps||ps[n].goals||ps[n].potm),...(season===todaySeason()?players.filter(p=>p.current).map(p=>p.name):[])])]
+  const roster=[...new Set([...Object.keys(ps).filter(n=>ps[n].apps||ps[n].goals||ps[n].potm),...(season===todaySeason()?players.filter(inGames).map(p=>p.name):[])])]
     .sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b));
   const st=n=>Object.assign({apps:0,goals:0,assists:0,potm:0,pts:0},ps[n]||{});
   const pot=n=>ts.filter(x=>x.potm===n).length;
@@ -2807,7 +2809,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.live){liveStart(b.dataset.live)}
   if(b.dataset.tbmatch!=null)tbOpen(b.dataset.tbmatch);
   if(b.id==="practice"){try{localStorage.removeItem(liveKey("practice"))}catch(e){}matches=matches.filter(m=>!m.practice);
-    PRACTICE={id:"practice",practice:true,date:todayLocal(),opp:"Practice FC",ha:"H",comp:"Friendly",venue:"Practice",ko:"",us:0,them:0,played:{},assists:{},keepers:{},apps:false,squad:players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name)};
+    PRACTICE={id:"practice",practice:true,date:todayLocal(),opp:"Practice FC",ha:"H",comp:"Friendly",venue:"Practice",ko:"",us:0,them:0,played:{},assists:{},keepers:{},apps:false,squad:players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)).map(p=>p.name)};
     matches.push(PRACTICE);liveStart("practice");toast("Practice match: nothing is saved and parents won't see it.")}
   if(b.dataset.gmonth){setView("gfx");(await gfxReady()).loadMonth(new Date().toISOString().slice(0,7))}
   if(b.dataset.msg){msgMatch=b.dataset.msg;msgChase=false;setView("msg")}
@@ -2922,7 +2924,7 @@ function honoursView(){
 }
 function tFormView(){
   if(!T)T={id:null,name:"",date:new Date().toISOString().slice(0,10),venue:"",potm:"",trophy:"",notes:""};
-  const g=T.id?tGames(T):[];const names=[...new Set(g.flatMap(m=>Object.keys(played(m))))];const pool=names.length?names:players.filter(p=>p.current).map(p=>p.name);
+  const g=T.id?tGames(T):[];const names=[...new Set(g.flatMap(m=>Object.keys(played(m))))];const pool=names.length?names:players.filter(inGames).map(p=>p.name);
   const other=T.trophy&&!TROPHIES.includes(T.trophy);
   return `<form id="tform" class="stack" novalidate><h2>${T.id?"Edit tournament":"Add a tournament"}</h2>
   <section class="card stack" style="gap:12px">
@@ -2991,7 +2993,7 @@ function playersView(){
   const list=byComp(base),ps=playerStats(list),tracked=appsTracked(list),at=SP.assists&&(career||assistsTracked(season));
   const ts=(!compFilter||compFilter==="Tournament")?(career?tournaments:seasonTournaments()):[];const showPott=ts.some(t=>t.potm);
   const pms=compFilter?[]:career?POMS:pomSeason(season),showPom=pms.length>0;
-  const names=[...new Set([...players.filter(p=>p.current).map(p=>p.name),...Object.keys(ps).filter(n=>{const o=ps[n];return o.apps||o.goals||o.assists||o.potm}),...ts.map(t=>t.potm).filter(Boolean),...pms.map(x=>x.player)])];
+  const names=[...new Set([...players.filter(inGames).map(p=>p.name),...Object.keys(ps).filter(n=>{const o=ps[n];return o.apps||o.goals||o.assists||o.potm}),...ts.map(t=>t.potm).filter(Boolean),...pms.map(x=>x.player)])];
   const rows=names.map(n=>({n,o:ps[n]||{apps:0,goals:0,assists:0,potm:0},pt:pottCount(n,ts),pm:pms.filter(x=>x.player===n).length})).sort((a,b)=>(RUGBY?(b.o.pts||0)-(a.o.pts||0):0)||b.o.goals-a.o.goals||b.o.apps-a.o.apps||a.n.localeCompare(b.n));
   const what=(compFilter?compFilter.toLowerCase()+" ":"")+(career?"career stats, all seasons":`stats, ${season}`);
   const tot=rows.reduce((a,{o})=>({g:a.g+o.goals,a:a.a+o.assists,p:a.p+(o.pts||0)}),{g:0,a:0,p:0});const showCs=rows.some(r=>r.o.gk);
@@ -3084,7 +3086,7 @@ function rtTable(list){const ids=new Set(list.map(m=>m.id)),out={};
   return rows.sort(rtSort==="tot"?(x,y)=>y.t-x.t||y.a-x.a:(x,y)=>y.a-x.a||y.g-x.g||x.n.localeCompare(y.n))}
 // who to score for a game: the team sheet, or the whole squad when it wasn't written down
 function rtNames(m){const pl=Object.keys(played(m));const known=m.apps!==false&&pl.length;
-  const names=known?pl:players.filter(p=>p.current).map(p=>p.name);Object.keys(rtOf(m.id)).forEach(n=>{if(!names.includes(n))names.push(n)});
+  const names=known?pl:players.filter(inGames).map(p=>p.name);Object.keys(rtOf(m.id)).forEach(n=>{if(!names.includes(n))names.push(n)});
   return {known,names:names.sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b))}}
 const rtWho=m=>`${m.ha==="A"?"at":"v"} ${esc(m.opp||"Opponent")}`;
 const rtDate=m=>{const d=new Date(m.date+"T12:00:00");return d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})};
@@ -3181,7 +3183,7 @@ let insTab="players",insPl=null,insCa=null,insCb=null;
 const INS_TABS=[["players","Players"],["time","Game time"],["avail","Availability"],["team","Team"]];
 function insGames(){return seasonMatches().filter(m=>counted(m)&&(result(m)||Object.keys(played(m)).length||m.potm))}
 function insDate(m){return `${+m.date.slice(8,10)} ${MONTHS[+m.date.slice(5,7)-1]}`}
-function insRoster(games){const s=new Set(players.filter(p=>p.current).map(p=>p.name));games.forEach(m=>Object.keys(played(m)).forEach(n=>s.add(n)));
+function insRoster(games){const s=new Set(players.filter(inGames).map(p=>p.name));games.forEach(m=>Object.keys(played(m)).forEach(n=>s.add(n)));
   return [...s].sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b))}
 // did n play in m? a team sheet (apps) lists everyone; without one, scorers and the player of the match certainly played
 function insIn(m,n){const pl=played(m);return n in pl&&(m.apps!==false||+pl[n]>0)||m.potm===n}
@@ -3543,13 +3545,13 @@ document.addEventListener("keydown",e=>{if(!STORY)return;if(e.key==="Escape"){cl
 (()=>{let x0=null;document.addEventListener("touchstart",e=>{if(STORY)x0=e.touches[0].clientX},{passive:true});document.addEventListener("touchend",e=>{if(!STORY||x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>50)storyGo(dx<0?1:-1)},{passive:true})})();
 
 function squadView(){
-  const ps=players.slice().sort((a,b)=>(b.current-a.current)||((+a.num||99)-(+b.num||99))||a.name.localeCompare(b.name));
+  const ps=players.slice().sort((a,b)=>(b.current-a.current)||(!!a.training-!!b.training)||((+a.num||99)-(+b.num||99))||a.name.localeCompare(b.name));
   return `<div class="stack"><section class="card"><h2>Squad</h2>
-  <p class="hint" style="margin-bottom:12px">First names only. Players marked "Left" stay in the records but drop off the match form.</p>
+  <p class="hint" style="margin-bottom:12px">First names only. Players marked "Left" stay in the records but drop off the match form. "Training only" is for a new player who can't play games yet: they get a family code and training availability, but stay off game availability, Pick squad and the match screen.</p>
   <div class="stack" style="gap:8px">${ps.map(p=>`<div class="sq" data-pid="${esc(p.id)}">
     <input type="text" id="sqn-${esc(p.id)}" value="${esc(p.name)}" aria-label="Name" data-f="name" ${canWrite?"":"disabled"}>
     <input type="number" id="sqk-${esc(p.id)}" value="${esc(p.num??"")}" aria-label="Shirt number" data-f="num" ${canWrite?"":"disabled"}>
-    <div class="seg edit-only"><button data-cur="1" aria-pressed="${!!p.current}">In squad</button><button data-cur="0" aria-pressed="${!p.current}">Left</button></div>
+    <div class="seg edit-only"><button data-cur="1" aria-pressed="${inGames(p)}">In squad</button><button data-cur="t" aria-pressed="${!!(p.current&&p.training)}">Training only</button><button data-cur="0" aria-pressed="${!p.current}">Left</button></div>
   </div>`).join("")}</div>
   <div class="btns edit-only" style="margin-top:14px"><input type="text" id="newName" placeholder="New player's first name" style="max-width:240px"><input type="number" id="newNum" placeholder="No." style="max-width:90px"><button class="btn" id="addP">Add player</button></div>
   <p class="hint" style="margin-top:12px">Renaming here doesn't change old match records, so keep each name the same once ${PRN.sh} played.</p></section>${famCard()}</div>`;
@@ -3707,7 +3709,7 @@ function blankForm(){return {id:null,date:new Date().toISOString().slice(0,10),o
 function formView(){
   if(!F)F=blankForm();if(RUGBY)F.kicks=F.kicks||{};
   const opps=[...new Set(matches.map(m=>m.opp).filter(Boolean))].sort(), venues=[...new Set(matches.map(m=>m.venue).filter(Boolean))].sort();
-  const fs=F.date?seasonOf(F.date):season;const seasonNames=new Set(matches.filter(m=>seasonOf(m.date)===fs).flatMap(m=>Object.keys(played(m))));const roster=players.filter(p=>p.current||p.name in F.played||(fs!==todaySeason()&&seasonNames.has(p.name))).sort((a,b)=>(+a.num||99)-(+b.num||99));
+  const fs=F.date?seasonOf(F.date):season;const seasonNames=new Set(matches.filter(m=>seasonOf(m.date)===fs).flatMap(m=>Object.keys(played(m))));const roster=players.filter(p=>inGames(p)||p.name in F.played||(fs!==todaySeason()&&seasonNames.has(p.name))).sort((a,b)=>(+a.num||99)-(+b.num||99));
   const goalSum=formSum();
   const mism=F.us!==""&&F.us!=null&&+F.us!==goalSum;
   const playedNames=Object.keys(F.played);
@@ -3903,7 +3905,7 @@ document.addEventListener("click",async e=>{
     if(a&&!(n in F.played))F.played[n]=0;render();return}
   if(t.id==="delM"){if(t.dataset.sure){try{await db.collection("matches").doc(F.id).delete();toast("Match deleted.");F=null;setView("results")}catch(err){toast("Couldn't delete it. Try again.")}}
     else{t.dataset.sure="1";t.textContent="Tap again to delete";setTimeout(()=>{if(t.isConnected){delete t.dataset.sure;t.textContent="Delete match"}},4000)}return}
-  if(t.dataset.cur!=null){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);try{await db.collection("players").doc(p.id).update({current:t.dataset.cur==="1"})}catch(err){toast("Couldn't update. Try again.")}return}
+  if(t.dataset.cur!=null){const row=t.closest("[data-pid]");const p=players.find(p=>p.id===row.dataset.pid);const c=t.dataset.cur,up=c==="0"?{current:false}:{current:true,training:c==="t"};try{await db.collection("players").doc(p.id).update(up)}catch(err){toast(c==="t"?"Couldn't update. Ask Touchline Tales to switch on training-only players.":"Couldn't update. Try again.")}return}
   if(t.id==="addP"){FAM=null;const name=$("#newName").value.trim();if(!name){toast("Type a first name.");return}if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast(`${name} is already in the squad.`);return}
     const num=$("#newNum").value;try{await db.collection("players").doc(slug(name)).set({name,num:num===""?null:+num,current:true});toast(`${name} added.`)}catch(err){toast(`Couldn't add ${PRN.o}. Try again.`)}return}
 });
@@ -3955,7 +3957,7 @@ function authBox(){
 }
 // the graphics maker (gfx.js) is only for coaches, so it's fetched once one signs in
 function loadGfx(){if(window.GFX||document.getElementById("gfxjs"))return;const el=document.createElement("script");el.id="gfxjs";el.src="gfx.js";
-  el.onload=()=>{window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view==="gfx")render()};document.body.appendChild(el)}
+  el.onload=()=>{window.GFX&&GFX.setSquad(players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view==="gfx")render()};document.body.appendChild(el)}
 const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadGfx();document.getElementById("gfxjs").addEventListener("load",()=>ok(window.GFX),{once:true})});
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
@@ -4020,7 +4022,7 @@ document.addEventListener("submit",async e=>{
   if(window.SETUP_WAIT)suRefresh().catch(()=>{window.SETUP_WAIT=false;render()});
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
-  db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
+  db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
   const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit)||(view==="drills"&&!!drEdit)||view==="design";
   db.collection("matches").onSnapshot(s=>{RAW=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");matches=pubMatches();if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
