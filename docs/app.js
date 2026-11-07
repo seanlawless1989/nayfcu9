@@ -2604,8 +2604,24 @@ function recentMedals(days){const from=new Date(Date.now()-days*864e5).toISOStri
   Object.entries(medalsFor(seasonMatches()).won).forEach(([n,w])=>Object.values(w).forEach(x=>{if((x.date||"")>=from)out.push(Object.assign({n},x))}));
   return out.sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(mdDef(b.id).tier-mdDef(a.id).tier))}
 function medalHtml(d,o){o=o||{};const lock=o.locked;
-  return `<div class="mdl ${MD_TIER[d.tier]}${lock?" lock":""}${o.cls?" "+o.cls:""}" title="${esc(d.name)}: ${esc(d.how)}">${o.blank?`<span class="disc blank"></span>`:`<span class="rib"></span><span class="disc"><i>${d.ic}</i></span>`}
+  return `<div class="mdl ${MD_TIER[d.tier]}${lock?" lock":""}${o.cls?" "+o.cls:""}" title="${esc(d.name)}: ${esc(d.how)}" data-mdid="${esc(d.id)}"${d.group==="me"?' data-mdme="1"':""}${lock?' data-mdlock="1"':""}${o.sub!=null?` data-mdsub="${esc(o.sub)}"`:""} role="button" tabindex="0" aria-label="${esc(d.name)}: ${esc(d.how)}">${o.blank?`<span class="disc blank"></span>`:`<span class="rib"></span><span class="disc"><i>${d.ic}</i></span>`}
     <b>${esc(d.name)}</b>${o.sub!=null?`<span>${esc(o.sub)}</span>`:""}${o.prog!=null?`<span class="mprog"><i style="width:${Math.round(o.prog*100)}%"></i></span>`:""}</div>`}
+// tap any medal (not in the printed book or the pop-up) to see what it's for, its level, and who has won it
+function medalInfo(el){const me=!!el.dataset.mdme,id=el.dataset.mdid,d=me?myMedalDefs().find(x=>x.id===id):mdDef(id);if(!d)return;
+  const lock=!!el.dataset.mdlock,sub=el.dataset.mdsub||"";
+  let who=[];if(!me){const w=medalsFor(seasonMatches()).won;who=Object.keys(w).filter(n=>w[n][id]).sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b))}
+  const status=me?(lock?`Not yet${sub?`: ${sub}`:""}`:"You've earned this one"):lock?(sub&&sub!==d.how?`Not won yet: ${sub} so far`:"Not won yet"):(sub&&sub!=="Won"&&sub!==d.how?`Won ${sub}`:"");
+  const old=document.querySelector(".mdpop");if(old)old.remove();
+  const box=document.createElement("div");box.className="mdpop mdinfo-pop";box.setAttribute("role","dialog");box.setAttribute("aria-label",d.name);
+  box.innerHTML=`<div class="mdpop-in">${medalHtml(d,{cls:"xl",locked:lock})}
+    <p class="hint" style="margin-top:4px">${MD_TIERNAME[d.tier]} ${me?"badge":"medal"}${me?"":` · ${esc((MD_GROUPS.find(([g])=>g===d.group)||[,""])[1])}`}</p>
+    <p style="font-weight:700;font-size:16px">${esc(d.how)}.</p>${status?`<p class="hint">${esc(status)}</p>`:""}
+    ${me?"":`<p class="hint">${who.length?`Won this season by ${who.map(esc).join(", ")}`:"Nobody has won it yet this season. Who'll be first?"}</p>`}
+    <div class="btns" style="justify-content:center"><button class="btn gold" data-mdclose>Got it</button></div></div>`;
+  document.body.appendChild(box);box.addEventListener("click",e=>{if(e.target===box||e.target.closest("[data-mdclose]"))box.remove()});const b=box.querySelector("[data-mdclose]");b&&b.focus()}
+document.addEventListener("click",e=>{const el=e.target.closest&&e.target.closest(".mdl[data-mdid]");if(!el||el.closest(".bp,.mdpop"))return;e.stopPropagation();medalInfo(el)},true);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){const p=document.querySelector(".mdinfo-pop");if(p)p.remove();return}
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches(".mdl[data-mdid]")&&!e.target.closest(".bp,.mdpop")){e.preventDefault();medalInfo(e.target)}});
 const mdNice=d=>d?(x=>`${x.getDate()} ${MONTHS[x.getMonth()]}`)(new Date(d+"T12:00:00")):"";
 // progress towards the next counting medals a player hasn't won yet, closest first
 function nextMedals(n,k){const c=medalsFor(seasonMatches()),o=c.stat[n]||{},w=c.won[n]||{};const shown=new Set(mdShown().map(d=>d.id));
