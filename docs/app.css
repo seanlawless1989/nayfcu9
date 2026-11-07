@@ -757,5 +757,20 @@ body.fd-paying{overflow:hidden}
 .ig-key i{display:inline-grid;place-items:center;width:24px;height:20px;border-radius:4px;background:rgb(var(--clubRGB)/var(--a));color:var(--ink);font-style:normal;font-weight:700}
 .ig-key i.ig-dk{color:#fff}
 .trkid{max-width:360px;margin:2px 0 4px}
+/* subs and payments (app.js subsView / subsFamCard) */
+.sb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.sb-grid label,.stack>label{display:grid;gap:5px;font-weight:600;font-size:14px}
+.sb-big{font-family:var(--display);font-size:28px;font-variant-numeric:tabular-nums}
+.sb-bar i{background:var(--win)}
+.sb-sub{margin:0 0 8px 14px;padding-left:10px;border-left:3px solid var(--line)}
+.fd-pill.sb-paid{background:var(--win);color:#fff}
+.fd-pill.sb-due,.fd-pill.sb-pending{background:var(--warn);color:var(--warnInk)}
+.fd-pill.sb-late{background:#FBE3E1;color:#8C1D18}
+.fd-pill.sb-free{background:var(--field);color:var(--muted);border:1px solid var(--line)}
+.sb-latex{color:var(--loss)}
+.stack>label.check,label.check{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:15px}
+label.check input{margin-top:3px;width:18px;height:18px;flex:none}
 .mdl[data-mdid]{cursor:pointer}.mdl[data-mdid]:focus-visible{outline:2px solid var(--club);outline-offset:3px;border-radius:8px}
 .bp .mdl[data-mdid]{cursor:default}
+.sb-mhead{display:flex;align-items:center;gap:8px}
+.sb-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1 1 100%;justify-content:flex-end}

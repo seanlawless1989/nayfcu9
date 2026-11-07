@@ -99,3 +99,19 @@ Use a Stripe **test** (sandbox) key pair and a test connected account:
 - https://docs.stripe.com/mcp
 - https://docs.stripe.com/checkout/form/quickstart
 - https://docs.stripe.com/connect/direct-charges
+
+## Subs and payments (added 7 November 2026)
+
+The same function and the same club Stripe link now also take subs (`supabase/34_subs.sql`, the Subs page).
+
+- Families signed in with their family code pay one month or a one-off cost by card (`mode: "payment"`, our fee as
+  `application_fee_amount`), or start monthly payments by Direct Debit or card (`mode: "subscription"`,
+  `payment_method_types` `bacs_debit` or `card`, `subscription_data.application_fee_percent`, `billing_cycle_anchor` on the
+  next due day with `proration_behavior: "none"`, so nothing is taken on the day they sign up).
+- Our fee on subs: secret `SUBS_FEE_BPS` (default 100 = 1%). `FREE_SCHEMAS` teams pay nothing, as for the fundraiser.
+- **Add these events to the existing Connect webhook** (same URL): `checkout.session.async_payment_failed`,
+  `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`.
+- Direct Debit needs the club's Stripe account to have Bacs Direct Debit switched on (Stripe asks the club when it links,
+  or Settings > Payment methods in the club's own dashboard).
+- Run `34_subs.sql` on every team (given to Sean as `subs/sql/subs_all_teams.sql`), then redeploy the function.
+- Refunds of subs are done in the club's Stripe dashboard.

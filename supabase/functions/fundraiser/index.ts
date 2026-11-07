@@ -10,7 +10,18 @@
 //   POST {action:"connect", site}                 coaches: start (or carry on) linking the club's Stripe account
 //   POST {action:"status"}                        coaches: is the club's Stripe account ready yet
 //   POST {action:"refund", square}                coaches: refund a square; our fee goes back too
-//   Stripe webhook (Connect events)               checkout.session.completed / async_payment_succeeded / expired
+//   Stripe webhook (Connect events)               checkout.session.completed / async_payment_succeeded / expired, and for
+//                                                 subs also async_payment_failed, invoice.paid, invoice.payment_failed,
+//                                                 customer.subscription.updated / deleted
+//
+// Subs and payments (supabase/34_subs.sql), on the same club Stripe account:
+//   POST {action:"subs_pay", player, what, month?, item?, method, site}
+//                                                 the player's family (signed in with the family code) or a coach: pay one
+//                                                 month ("month"), a one-off cost ("item"), or start monthly payments
+//                                                 ("monthly", method "dd" for Direct Debit or "card"). Returns what the
+//                                                 page needs for Stripe's embedded form: {client_secret, account, pk}
+//   POST {action:"subs_confirm", session}         back from Stripe: records the payment or the subscription
+//   POST {action:"subs_cancel", player}           the family or a coach: stop the monthly payments
 // Add schema: "<schema>" for a team that shares this project in its own schema, as with the other functions.
 //
 // Secrets: STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY (Touchline Tales' platform account; the publishable key is
@@ -31,6 +42,8 @@ const WHSEC = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 const FEE_BPS = Math.max(0, Math.min(3000, +(Deno.env.get("FEE_BPS") ?? "500") || 0));
 // Sean, 4 Nov 2026: Newton Aycliffe teams pay no fee (the money goes back into the club anyway)
 const FREE = new Set((Deno.env.get("FREE_SCHEMAS") ?? "public,na_u11_pumas,na_u11_wildcats").split(",").map((s) => s.trim()).filter(Boolean));
+// our fee on subs and other club payments, in hundredths of a percent (default 100 = 1%; FREE_SCHEMAS pay nothing)
+const SUBS_FEE_BPS = Math.max(0, Math.min(3000, +(Deno.env.get("SUBS_FEE_BPS") ?? "100") || 0));
 // where Stripe may send people back to: our own team sites only
 const SITE_OK = /^https:\/\/((www\.)?touchlinetales\.club|(www\.)?nayfootball\.club|seanlawless1989\.github\.io)\/[A-Za-z0-9_\-\/.]*$/;
 const HOLD_MIN = 35;   // Stripe's checkout page lasts 30 minutes; the hold outlives it so a late payment still finds its square
@@ -42,6 +55,7 @@ type Client = ReturnType<typeof createClient<any, any, any>>;
 const clients: Record<string, Client> = {};
 const service = (schema: string) => clients[schema] ??= createClient(URL_, SERVICE, { db: { schema }, auth: { persistSession: false } });
 const feeBps = (schema: string) => FREE.has(schema) ? 0 : FEE_BPS;
+const subsFeeBps = (schema: string) => FREE.has(schema) ? 0 : SUBS_FEE_BPS;
 const SCHEMA_OK = /^[a-z][a-z0-9_]{0,40}$/;
 
 // ---------- Stripe, over plain HTTPS ----------
@@ -110,6 +124,50 @@ async function isCoach(req: Request, schema: string) {
   return data === true;
 }
 
+async function isParentOf(req: Request, schema: string, player: string) {
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!auth.startsWith("Bearer ")) return false;
+  const me = createClient(URL_, ANON, { db: { schema }, global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
+  const { data } = await me.rpc("is_parent_of", { p_player: player });
+  return data === true;
+}
+
+// ---------- subs ----------
+const MONTH_OK = /^\d{4}-(0[1-9]|1[0-2])-01$/;
+const monthOf = (t: number) => new Date(t * 1000).toISOString().slice(0, 8) + "01";
+// the next time subs fall due (9am on the plan's day), for the first monthly payment
+function nextDue(day: number) {
+  const now = new Date();
+  let d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), day, 9));
+  if (d.getTime() < now.getTime() + 3600e3) d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, day, 9));
+  return Math.floor(d.getTime() / 1000);
+}
+// deno-lint-ignore no-explicit-any
+async function savePayment(db: Client, row: Record<string, any>) {
+  const { error } = await db.from("payments").upsert(row, { onConflict: "ref" });
+  if (error) console.error("payment", error);
+}
+// a Checkout session for subs finished (or its bank payment cleared or failed): record it
+// deno-lint-ignore no-explicit-any
+async function subsSession(db: Client, s: any, failed = false) {
+  const m = s.metadata ?? {};
+  if (!m.player) return null;
+  if (s.mode === "subscription") {
+    if (s.status !== "complete" || !s.subscription) return null;
+    const sub = typeof s.subscription === "string" ? s.subscription : s.subscription.id;
+    await db.from("subs_mandates").upsert({ player: m.player, sub, method: m.method === "dd" ? "dd" : "card", status: "active",
+      amount: +(m.amount ?? 0) || null, started: new Date().toISOString(), updated: new Date().toISOString() });
+    return { kind: "monthly", player: m.player };
+  }
+  const ref = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? s.id;
+  const state = failed ? "failed" : s.payment_status === "paid" ? "paid" : "pending";
+  await savePayment(db, { player: m.player, month: m.kind === "sub" ? m.month : null, item: m.kind === "item" ? +m.item : null,
+    amount: s.amount_total ?? 0, method: "card", state, ref });
+  return { kind: m.kind, player: m.player, state };
+}
+// deno-lint-ignore no-explicit-any
+const invoiceMeta = (inv: any) => inv.parent?.subscription_details?.metadata ?? inv.subscription_details?.metadata ?? {};
+
 const clean = (s: unknown, n: number) => String(s ?? "").replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, n);
 
 Deno.serve(async (req) => {
@@ -123,8 +181,32 @@ Deno.serve(async (req) => {
     if (!(await verified(raw, sig))) return out({ error: "signature" }, 400);
     const ev = JSON.parse(raw);
     const s = ev.data?.object ?? {};
+    const t = String(ev.type ?? "");
+    // subs: monthly payments (invoices), subscriptions, and subs checkouts
+    const subsMeta = t.startsWith("invoice.") ? invoiceMeta(s) : t.startsWith("customer.subscription.") ? s.metadata ?? {} :
+      t.startsWith("checkout.session.") && ["sub", "item", "subs"].includes(s.metadata?.kind) ? s.metadata : null;
+    if (subsMeta) {
+      const sc = subsMeta.schema;
+      if (typeof sc !== "string" || !SCHEMA_OK.test(sc) || !subsMeta.player) return out({ ok: true, skipped: "meta" });
+      const db = service(sc);
+      const acct = await account(db);
+      if (!acct?.stripe || acct.stripe !== ev.account) return out({ ok: true, skipped: "account" });
+      if (t === "checkout.session.completed" || t === "checkout.session.async_payment_succeeded") await subsSession(db, s);
+      else if (t === "checkout.session.async_payment_failed") await subsSession(db, s, true);
+      else if (t === "invoice.paid" && (s.amount_paid ?? 0) > 0) {
+        await savePayment(db, { player: subsMeta.player, month: monthOf(s.period_end ?? s.created), item: null, amount: s.amount_paid,
+          method: subsMeta.method === "dd" ? "dd" : "card", state: "paid", ref: s.id });
+      } else if (t === "invoice.payment_failed") {
+        await savePayment(db, { player: subsMeta.player, month: monthOf(s.period_end ?? s.created), item: null, amount: s.amount_due ?? 0,
+          method: subsMeta.method === "dd" ? "dd" : "card", state: "failed", ref: s.id });
+      } else if (t.startsWith("customer.subscription.")) {
+        await db.from("subs_mandates").update({ status: t === "customer.subscription.deleted" ? "canceled" : s.status, updated: new Date().toISOString() })
+          .eq("player", subsMeta.player).eq("sub", s.id);
+      }
+      return out({ ok: true });
+    }
     const schema = s.metadata?.schema;
-    if (ev.type?.startsWith("checkout.session.") && typeof schema === "string" && SCHEMA_OK.test(schema)) {
+    if (t.startsWith("checkout.session.") && typeof schema === "string" && SCHEMA_OK.test(schema)) {
       const db = service(schema);
       const acct = await account(db);
       if (!acct?.stripe || acct.stripe !== ev.account) return out({ ok: true, skipped: "account" });
@@ -227,6 +309,92 @@ Deno.serve(async (req) => {
       return out({ ok: true });
     }
 
+    // ---------- subs: the player's own family, or a coach ----------
+    if (b.action === "subs_info") {
+      const a = await account(db);
+      return out({ ready: !!(STRIPE && STRIPE_PK && a?.stripe && a.ready), fee_bps: subsFeeBps(schema) });
+    }
+
+    if (b.action === "subs_pay" || b.action === "subs_cancel") {
+      const player = clean(b.player, 60);
+      if (!player) return out({ error: "player" }, 400);
+      if (!(await isCoach(req, schema)) && !(await isParentOf(req, schema, player))) return out({ error: "family" }, 403);
+      const a = await account(db);
+      if (b.action === "subs_cancel") {
+        const { data: m } = await db.from("subs_mandates").select("sub, status").eq("player", player).maybeSingle();
+        if (!m || !a?.stripe) return out({ error: "none" });
+        if (m.status !== "canceled") await stripe("DELETE", `subscriptions/${m.sub}`, undefined, a.stripe).catch((e) => console.error("cancel", e));
+        await db.from("subs_mandates").update({ status: "canceled", updated: new Date().toISOString() }).eq("player", player);
+        return out({ ok: true });
+      }
+      if (!STRIPE || !STRIPE_PK || !a?.stripe || !a.ready) return out({ error: "not_ready" });
+      const site = String(b.site ?? "");
+      if (!SITE_OK.test(site)) return out({ error: "site" }, 400);
+      const { data: pl } = await db.from("players").select("name").eq("name", player).limit(1);
+      if (!pl?.length) return out({ error: "player" }, 400);
+      const { data: plan } = await db.from("subs_plan").select("*").eq("id", 1).maybeSingle();
+      const { data: own } = await db.from("subs_player").select("amount, exempt").eq("player", player).maybeSingle();
+      const what = String(b.what ?? "");
+      let price = 0, title = "", meta: Record<string, string> = { schema, player };
+      if (what === "item") {
+        const { data: it } = await db.from("pay_items").select("*").eq("id", +b.item).maybeSingle();
+        if (!it || !it.open) return out({ error: "closed" });
+        const { data: done } = await db.from("payments").select("id").eq("player", player).eq("item", it.id).in("state", ["paid", "pending"]).limit(1);
+        if (done?.length) return out({ error: "paid" });
+        price = it.amount; title = it.title; meta = { ...meta, kind: "item", item: String(it.id) };
+      } else {
+        if (!plan?.live || !plan.amount) return out({ error: "closed" });
+        if (own?.exempt) return out({ error: "exempt" });
+        price = own?.amount ?? plan.amount;
+        if (!price) return out({ error: "exempt" });
+        if (what === "month") {
+          const month = String(b.month ?? "");
+          if (!MONTH_OK.test(month)) return out({ error: "month" }, 400);
+          const { data: done } = await db.from("payments").select("id").eq("player", player).eq("month", month).in("state", ["paid", "pending"]).limit(1);
+          if (done?.length) return out({ error: "paid" });
+          title = "Subs for " + new Date(month + "T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+          meta = { ...meta, kind: "sub", month };
+        } else if (what === "monthly") {
+          const { data: m } = await db.from("subs_mandates").select("status").eq("player", player).maybeSingle();
+          if (m && m.status !== "canceled" && m.status !== "incomplete_expired") return out({ error: "already" });
+          if (b.method === "dd" ? !plan.dd : !plan.card) return out({ error: "method" });
+          meta = { ...meta, kind: "subs", method: b.method === "dd" ? "dd" : "card", amount: String(price) };
+        } else return out({ error: "what" }, 400);
+      }
+      const fee = subsFeeBps(schema);
+      const back = site.split("?")[0].split("#")[0];
+      const base = { ui_mode: "form", integration_identifier: "custom_embedded_web_0001", billing_address_collection: "auto",
+        phone_number_collection: { enabled: false }, automatic_tax: { enabled: false }, metadata: meta,
+        return_url: `${back}?subs&paid={CHECKOUT_SESSION_ID}` };
+      let s;
+      if (what === "monthly") {
+        s = await stripe("POST", "checkout/sessions", { ...base, mode: "subscription", payment_method_collection: "always",
+          payment_method_types: { 0: meta.method === "dd" ? "bacs_debit" : "card" },
+          line_items: { 0: { quantity: 1, price_data: { currency: "gbp", unit_amount: price, recurring: { interval: "month" },
+            product_data: { name: `Monthly subs: ${player}`.slice(0, 120) } } } },
+          // the first payment is on the next due day, then every month on that day; nothing is taken today
+          subscription_data: { ...(fee > 0 ? { application_fee_percent: fee / 100 } : {}), billing_cycle_anchor: nextDue(plan.day),
+            proration_behavior: "none", description: `Subs for ${player}`.slice(0, 120), metadata: meta } }, a.stripe);
+      } else {
+        const ours = Math.round(price * fee / 10000);
+        s = await stripe("POST", "checkout/sessions", { ...base, mode: "payment", submit_type: "pay", payment_method_types: { 0: "card" },
+          line_items: { 0: { quantity: 1, price_data: { currency: "gbp", unit_amount: price, product_data: { name: `${title}: ${player}`.slice(0, 120) } } } },
+          payment_intent_data: { ...(ours > 0 ? { application_fee_amount: ours } : {}), description: `${title}: ${player}`.slice(0, 120), metadata: meta },
+          expires_at: Math.floor(Date.now() / 1000) + 30 * 60 + 30 }, a.stripe);
+      }
+      return out({ client_secret: s.client_secret, account: a.stripe, pk: STRIPE_PK });
+    }
+
+    if (b.action === "subs_confirm") {
+      const a = await account(db);
+      const id = String(b.session ?? "");
+      if (!a?.stripe || !/^cs_[A-Za-z0-9_]+$/.test(id)) return out({ error: "session" }, 400);
+      const s = await stripe("GET", `checkout/sessions/${id}`, undefined, a.stripe);
+      if (s.metadata?.schema !== schema || !["sub", "item", "subs"].includes(s.metadata?.kind)) return out({ error: "session" }, 400);
+      const r = await subsSession(db, s);
+      return out({ ok: !!r, ...(r ?? {}) });
+    }
+
     // ---------- coaches only from here ----------
     if (!(await isCoach(req, schema))) return out({ error: "coach" }, 403);
     if (!STRIPE) return out({ error: "no_stripe" });
@@ -245,7 +413,7 @@ Deno.serve(async (req) => {
       }
       const back = site.split("?")[0].split("#")[0];
       const link = await stripe("POST", "account_links", { account: a.stripe, type: "account_onboarding",
-        refresh_url: `${back}?fund&stripe=again`, return_url: `${back}?fund&stripe=back` });
+        refresh_url: `${back}?${b.view === "subs" ? "subs" : "fund"}&stripe=again`, return_url: `${back}?${b.view === "subs" ? "subs" : "fund"}&stripe=back` });
       return out({ url: link.url });
     }
 
