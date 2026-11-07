@@ -5,9 +5,10 @@
 -- current player). Visitors (anon), and anonymous phones that never typed a right code, have no rights at all.
 -- The storage bucket is PRIVATE: no public links, and the site opens each picture with a signed link that runs out after an hour.
 -- SAFEGUARDS:
---   * a parent's photo is 'waiting' until a coach approves it; until then only that phone and the coaches can see it
---   * any family can ask for an approved photo to come down (flag_team_photo): it goes back to 'waiting' straight away
---   * coaches can approve, caption and delete any photo; a parent can delete the ones their phone added
+--   * photos go straight on for the team's families (no coach approval, Sean 7 Nov 2026)
+--   * any family can ask for a photo to come down (flag_team_photo): it goes to 'waiting' straight away, so only the
+--     coaches and the phone that added it can see it, until a coach puts it back or deletes it
+--   * coaches can put back, caption and delete any photo; a parent can delete the ones their phone added
 --   * at most 40 photos a day from one parent's phone
 --   * no names are stored: uploader is the phone's anonymous sign-in id
 -- The site re-draws every photo before upload, which also strips the location data phones put in pictures.
@@ -24,7 +25,7 @@ create table if not exists public.team_photos(
   by_coach boolean not null default false,
   uploader uuid default auth.uid(),
   created  timestamptz not null default now(),
-  checked  timestamptz                                              -- when a coach last approved it
+  checked  timestamptz                                              -- when a coach last put it back
 );
 create index if not exists team_photos_match on public.team_photos(match_id);
 create index if not exists team_photos_uploader on public.team_photos(uploader, created);
@@ -72,7 +73,7 @@ create policy "coaches and families see team photos" on public.team_photos for s
 drop policy if exists "coaches and families add team photos" on public.team_photos;
 create policy "coaches and families add team photos" on public.team_photos for insert to authenticated
   with check (uploader = auth.uid() and (public.is_coach()
-    or (public.is_family() and status = 'waiting' and not by_coach and not flagged and checked is null)));
+    or (public.is_family() and not by_coach and not flagged and checked is null)));
 drop policy if exists "coaches change team photos" on public.team_photos;
 create policy "coaches change team photos" on public.team_photos for update to authenticated
   using (public.is_coach()) with check (public.is_coach());
