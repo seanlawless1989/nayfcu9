@@ -103,6 +103,8 @@ alter table public.tournaments add column if not exists teams jsonb not null def
 alter table public.tournaments add column if not exists squad jsonb;
 -- Added 2026-11-01: one report for the whole tournament, see 23_tournament_report.sql.
 alter table public.tournaments add column if not exists report text;
+-- Added 2026-11-08: details for parents (meet time, kit, what to bring...), see 35_tournament_details.sql.
+alter table public.tournaments add column if not exists matchday jsonb;
 alter table public.tournaments enable row level security;
 alter table public.honours enable row level security;
 drop policy if exists "read tournaments" on public.tournaments;

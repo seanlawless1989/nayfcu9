@@ -801,3 +801,6 @@ body.fd-paying{overflow:hidden}
 .ins-donut .dn-win{stroke:var(--win)}.ins-donut .dn-draw{stroke:var(--draw)}.ins-donut .dn-loss{stroke:var(--loss)}
 .ins-donut .dn-n{font:400 18px var(--display);fill:var(--ink)}.ins-donut .dn-s{font:600 9px var(--body);fill:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .ins-donut .ins-leg{font-size:14px;color:var(--ink)}.ins-donut .ins-leg b{margin-left:4px}
+/* tournament details for parents (tournaments.matchday) */
+.tinfo{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--field);font-weight:600;font-size:14px}
+.tinfo span{display:inline-block;width:24px}.tinfo .tnotice{color:var(--club)}.tinfo .mini{align-self:flex-start;margin-top:4px}
