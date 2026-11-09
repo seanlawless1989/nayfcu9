@@ -64,6 +64,7 @@
 </nav>
 <main id="main"><div class="empty">Loading the season…</div></main>
 <main id="gfxView" hidden>
+<div id="gWhen" class="whenbar" role="status" hidden></div>
 <nav class="gtabs" role="tablist">
     <button role="tab" id="tab-squad" aria-selected="true" data-mode="squad">Squad announcement</button>
     <button role="tab" id="tab-ft" aria-selected="false" data-mode="ft">Full time</button>
@@ -188,6 +189,7 @@
       <div class="gtoast" id="gtoast" role="status"></div>
       <section class="panel">
         <h2>Facebook caption</h2>
+        <p id="capWhen" class="capwhen" hidden></p>
         <textarea id="caption" aria-label="Caption"></textarea>
         <div class="btns"><button class="btn ghost" id="copyCap">Copy caption</button></div>
       </section>
