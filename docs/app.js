@@ -753,8 +753,19 @@ function availAllView(){const kids=canWrite?[]:myKids();
     <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${esc(n||kids[0])}.`:""} Say Yes, Maybe or No for every game and tournament coming up this season, or say yes to them all in one tap. You can change an answer any time. Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="availall">Sign in</button>`:""}</p>
     ${pick}${rows}</section>`}
 const avCoachHint=()=>`You're a coach, so you can set the answer for any ${PRN.kid}, for example when a parent tells you on WhatsApp. It counts just like the parent's own answer, and a parent signed in with their family code sees it too. Tap ✕ to clear an answer.`;
-function avSummary(id){const a=AV[id]||{};const set=`<button class="mini" data-avset="${esc(id)}">Set answers</button>`;if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask. ${set}`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
-  return `Availability: ✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}${c.no.length?` (can't make it: ${c.no.map(esc).join(", ")})`:""}${w.length?`<br>Not answered yet: ${w.map(esc).join(", ")} <button class="mini" data-chase="${esc(id)}">Chase replies</button> ${set}`:` · Everyone has answered. ${set}`}`}
+function avSummary(id){const a=AV[id]||{};const set=`<button class="mini" data-avset="${esc(id)}">Set answers</button>`;if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask. ${set} ${askBtn("avpush",id)}`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
+  return `Availability: ✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}${c.no.length?` (can't make it: ${c.no.map(esc).join(", ")})`:""}${w.length?`<br>Not answered yet: ${w.map(esc).join(", ")} <button class="mini" data-chase="${esc(id)}">Chase replies</button> ${askBtn("avpush",id)} ${set}`:` · Everyone has answered. ${set}`}`}
+// "Ask by push": a "can your child make it?" alert now, to the phones of parents still to answer (signed in with a family code,
+// alerts on), opening that game, tournament or training day. The notify function checks it's a coach, at most once an hour each.
+const askOk=()=>!!(sb&&CFG.vapidPublicKey&&!window.DEMO);
+const askBtn=(k,v)=>askOk()?`<button class="mini" data-${k}="${esc(v)}">📲 Ask by push</button>`:"";
+async function askPush(b){const lbl="📲 Ask by push";
+  if(!b.dataset.sure){b.dataset.sure="1";b.textContent="Tap again to send to parents' phones";setTimeout(()=>{if(b.dataset.sure){delete b.dataset.sure;b.textContent=lbl}},6000);return}
+  delete b.dataset.sure;b.disabled=true;b.textContent="Sending…";let r=null,at=null;
+  try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody({ask:b.dataset.avpush?{match:b.dataset.avpush}:{day:b.dataset.tavpush}})});
+    if(!error&&data&&typeof data.ask==="number"){r=data.ask;at=data.askedAt}}catch(e){}
+  b.disabled=false;b.textContent=lbl;const hm=at?clock(new Date(at).toTimeString().slice(0,5)):"";
+  toast(r==null?"Couldn't send it. Check your connection and try again.":r===-3?"Only a signed-in coach can send this. Sign in again, then try.":r===-2?`Parents were already asked by push at ${hm}. You can ask again an hour after that.`:r===-1?"That one has been played or isn't on any more, so there's nothing to ask.":r===0?"No phones to send it to: the parents still to answer haven't got alerts on with their family code. Use Chase replies for WhatsApp.":`Sent to ${r} phone${r===1?"":"s"} of parents still to answer.`)}
 // current players with no answer yet for this fixture, in shirt-number order
 function avWaiting(id){const a=AV[id]||{};return players.filter(p=>inGames(p)&&!a[p.name]).sort((x,y)=>(+x.num||99)-(+y.num||99)).map(p=>p.name)}
 // A whole tournament gets one availability answer per player, stored with match_id "t:<tournament id>"
@@ -949,7 +960,8 @@ function chaseView(){const m=avTarget(msgMatch);if(!m)return `<div class="card e
   if(!w.length)return `<section class="card stack"><h2>Chase replies</h2><p>Everyone has answered for this ${m.tourn?"tournament":"game"}. Nothing to chase.</p><div class="btns"><button class="btn ghost" data-view="fixtures">Back to fixtures</button></div></section>`;
   return `<section class="card stack"><h2>Chase replies</h2>${whenBar(m.date,m.tourn?m.tourn.name||"Tournament":`${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp||""}`)}<p class="hint">${w.length} ${w.length===1?"player hasn't":"players haven't"} answered yet. Send this to the parents' WhatsApp group. It names only first names, and the answers stay private to the coaches.</p>
   <textarea id="msgText" rows="10" style="width:100%;font:15px var(--body)">${esc(chaseText(m))}</textarea>
-  <div class="btns"><button class="btn" id="waMsg">Open in WhatsApp</button><button class="btn ghost" id="copyMsg">Copy message</button><button class="btn ghost" data-view="fixtures">Back to fixtures</button></div></section>`}
+  <div class="btns"><button class="btn" id="waMsg">Open in WhatsApp</button><button class="btn ghost" id="copyMsg">Copy message</button><button class="btn ghost" data-view="fixtures">Back to fixtures</button></div>
+  ${askOk()?`<p class="hint" style="margin:0">Or send a push to the phones of parents still to answer. It opens this ${m.tourn?"tournament":"game"} so they can tap Yes, Maybe or No. Only phones with alerts on and signed in with their family code get it.</p><div class="btns">${askBtn("avpush",m.id).replace('class="mini"','class="btn gold"')}</div>`:""}</section>`}
 
 // ---------- match alerts (phone notifications) ----------
 // Families turn these on per phone. The "notify" Supabase function sends kick-off reminders 10 and 2 minutes (not for tournament games)
@@ -1371,7 +1383,7 @@ function tavCard(){if(!TAV_ON||!TR)return "";const d=tavNext();if(!d)return "";
     <p style="margin:0">✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}</p>
     ${c.yes.length?`<p class="hint" style="margin:0"><b>Coming:</b> ${c.yes.map(esc).join(", ")}</p>`:""}${c.maybe.length?`<p class="hint" style="margin:0"><b>Maybe:</b> ${c.maybe.map(esc).join(", ")}</p>`:""}${c.no.length?`<p class="hint" style="margin:0"><b>Not coming:</b> ${c.no.map(esc).join(", ")}</p>`:""}${w.length?`<p class="hint" style="margin:0"><b>Not answered yet:</b> ${w.map(esc).join(", ")}</p>`:`<p class="hint" style="margin:0">Everyone has answered.</p>`}
     <p class="hint" style="margin:0">Parents who haven't answered get a reminder on their phone 24 hours before, if they have alerts on and have signed in with their family code. Only coaches see this.</p>
-    <div class="btns"><button class="btn ghost" data-tavcopy="${d}">Copy message for parents</button><button class="mini" data-tavopen="${d}">Set answers</button></div></section>`}
+    <div class="btns"><button class="btn ghost" data-tavcopy="${d}">Copy message for parents</button>${w.length?askBtn("tavpush",d):""}<button class="mini" data-tavopen="${d}">Set answers</button></div></section>`}
 function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answers aren't switched on for this team yet.</div>`;
   const ok=trUpcoming(8).filter(x=>!x.off).map(x=>x.iso);if(!tavDay||!ok.includes(tavDay))tavDay=ok[0]||null;
   if(!tavDay)return `<div class="card empty">There's no training coming up. Check the Training page for when it starts again.</div>`;
@@ -2467,7 +2479,7 @@ function trFixRow(x){const d=new Date(x.iso+"T12:00:00"),day=`<div class="d"><b>
   if(x.off)return `<div class="trfix off">${day}<div class="o">🚫 No training this ${esc(TR.day)}</div></div>`;
   const when=`${clock(TR.start)} to ${clock(TR.finish)}${TR.venue?` · ${TR.venue.split(",")[0]}`:""}`;let body="";
   if(TAV_ON){if(canWrite){const a=TAV[x.iso]||{},c={yes:0,maybe:0,no:0};Object.values(a).forEach(v=>c[v]!=null&&c[v]++);const w=players.filter(p=>p.current&&!a[p.name]).length,mk=coachKid();
-      body=`<div class="trsum">✅ ${c.yes} ❔ ${c.maybe} ❌ ${c.no}${w?` ⏳ ${w}`:""} <button class="mini" data-tavopen="${x.iso}">Set answers</button></div>${mk?`<div class="trav">${avRow(mk,a[mk],"tav",(TAVBY[x.iso]||{})[mk],` data-day="${x.iso}"`)}</div>`:""}`}
+      body=`<div class="trsum">✅ ${c.yes} ❔ ${c.maybe} ❌ ${c.no}${w?` ⏳ ${w}`:""} <button class="mini" data-tavopen="${x.iso}">Set answers</button>${w?` ${askBtn("tavpush",x.iso)}`:""}</div>${mk?`<div class="trav">${avRow(mk,a[mk],"tav",(TAVBY[x.iso]||{})[mk],` data-day="${x.iso}"`)}</div>`:""}`}
     else{const kids=myKids();body=kids.length?`<div class="trav">${kids.map(n=>avRow(n,(TAV_MINE[x.iso]||{})[n],"tav",false,` data-day="${x.iso}"`,kids.length>1?"":`Coming?`)).join("")}</div>`
       :`<div class="trsum"><button class="mini" data-tavopen="${x.iso}">Say if your ${esc(PRN.kid)} is coming</button></div>`}}
   return `<div class="trfix">${day}<div style="min-width:0"><div class="o">🏃 Training <span>${esc(when)}</span></div>${body}</div></div>`}
@@ -2847,6 +2859,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.gmonth){setView("gfx");(await gfxReady()).loadMonth(new Date().toISOString().slice(0,7))}
   if(b.dataset.msg){msgMatch=b.dataset.msg;msgChase=false;setView("msg")}
   if(b.dataset.chase){msgMatch=b.dataset.chase;msgChase=true;setView("msg")}
+  if((b.dataset.avpush||b.dataset.tavpush)&&canWrite){askPush(b);return}
   if(b.id==="waMsg"){const t=$("#msgText").value;window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank","noopener")}
   if(b.id==="copyMsg"){const ta=$("#msgText");try{navigator.clipboard.writeText(ta.value).then(()=>toast("Copied. Paste it into WhatsApp."),()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select()}}
   if(b.id==="avAllYes"){avAllYes();return}
