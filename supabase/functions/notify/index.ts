@@ -13,6 +13,9 @@
 //   POST {avail: {match, player}} from a parent's phone after answering availability: tells coaches who asked for it
 //                                 (match is "t:<tournament id>" for a whole tournament)
 //   POST {tavail: {day, player}}  the same for a training session
+//   POST {ask: {match} or {day}}  from a signed-in coach's phone: "can your child make it?" now, to the phones whose child
+//                                 hasn't answered for that game, tournament ("t:<id>") or training day. The same phones as the
+//                                 reminders below. Coaches only (checked from the sign-in), at most once an hour for each one.
 // The every-minute call also sends the reminders to answer availability: the Wednesday evening before a game or a tournament, and
 // 24 hours before training (supabase/16_availability_alerts.sql).
 // Add schema: "<schema>" to any of these for a team that shares this project in its own schema (tools/team_schema_sql.py).
@@ -315,6 +318,9 @@ async function availAlert(kind: "avail" | "tavail", ref: string, player: string)
 // remind the phones whose child hasn't answered; each phone's alert names its own children when it's signed in
 async function remindAnswer(key: string, p: { p_match: string | null; p_day: string | null }, make: (kids: string[]) => Alert) {
   const { data: claimed } = await db.rpc("push_claim_note", { p_key: key, p_value: "sent" }); if (!claimed) return 0;
+  return await toWaiting(p, make);
+}
+async function toWaiting(p: { p_match: string | null; p_day: string | null }, make: (kids: string[]) => Alert) {
   const { data, error } = await db.rpc("avail_reminder_targets", p); if (error) throw error;
   const groups = new Map<string, Sub[]>();
   for (const r of (data ?? []) as (Sub & { kids: string[] })[]) {
@@ -324,6 +330,49 @@ async function remindAnswer(key: string, p: { p_match: string | null; p_day: str
   let sent = 0;
   for (const [k, subs] of groups) sent += await send(null, make(JSON.parse(k)), undefined, subs);
   return sent;
+}
+
+// a coach tapped "Ask by push". ask = -3 not a coach, -2 asked less than an hour ago (askedAt says when), -1 nothing to ask about
+const ASK_GAP = 60 * 60e3;
+async function askAlert(req: Request, a: { match?: unknown; day?: unknown }): Promise<{ ask: number; askedAt?: string }> {
+  const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const { data: u } = jwt ? await pub.auth.getUser(jwt) : { data: null };
+  const email = u?.user?.email?.toLowerCase(); if (!email) return { ask: -3 };
+  const { data: coach } = await db.from("coaches").select("email").eq("email", email).maybeSingle(); if (!coach) return { ask: -3 };
+  let p: { p_match: string | null; p_day: string | null }, make: (kids: string[]) => Alert, ref: string;
+  const who = (kids: string[]) => kids.length ? names(kids) : "your child";
+  const today = londonDate(Date.now());
+  if (typeof a.match === "string" && a.match.startsWith("t:")) {
+    const { data: t } = await db.from("tournaments").select("id,name,date").eq("id", a.match.slice(2)).maybeSingle();
+    if (!t || (t.date && t.date < today)) return { ask: -1 };
+    const nm = (t.name || "tournament").replace(/^the /i, ""); ref = a.match;
+    const body = `The coaches are asking: ${US} at the ${nm}${t.date ? `, ${dayName(t.date)}` : ""}. Tap to answer yes, maybe or no.`;
+    p = { p_match: ref, p_day: null };
+    make = (kids) => ({ title: `🏆 Can ${who(kids)} make the ${nm}?`, body, url: `${SITE}?avail=${encodeURIComponent(ref)}`, tag: `avr-${ref}` });
+  } else if (typeof a.match === "string") {
+    const { data: m } = await db.from("matches").select("id,date,opp,ko,ha,us,postponed").eq("id", a.match).maybeSingle();
+    if (!m || m.postponed || m.us != null || m.date < today) return { ask: -1 };
+    ref = m.id;
+    const body = `The coaches are asking: ${US} ${m.ha === "A" ? "at" : "v"} ${m.opp || "TBC"}, ${dayName(m.date)}${/\d[:.]\d\d/.test(m.ko || "") ? `, ${m.ko.trim()} KO` : ""}. Tap to answer yes, maybe or no.`;
+    p = { p_match: ref, p_day: null };
+    make = (kids) => ({ title: `🗓️ Can ${who(kids)} make the game on ${dayName(m.date)}?`, body, url: `${SITE}?avail=${encodeURIComponent(ref)}`, tag: `avr-${ref}` });
+  } else if (typeof a.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(a.day) && a.day >= today) {
+    const { data: tr } = await db.from("training").select("day,start,finish,venue,until,off").eq("id", 1).maybeSingle();
+    const t = tr as Training | null; if (!t) return { ask: -1 };
+    ref = a.day; const date = a.day;
+    const body = `The coaches are asking: training ${dayName(date)}, ${clock(t.start)} to ${clock(t.finish)}${t.venue ? `, ${t.venue.split(",")[0]}` : ""}. Tap to answer yes, maybe or no.`;
+    p = { p_match: null, p_day: date };
+    make = (kids) => ({ title: `🏃 Training ${dayName(date)}: can ${who(kids)} come?`, body, url: `${SITE}?tavail=${date}`, tag: `trr-${date}` });
+  } else return { ask: -1 };
+  // at most once an hour for each one, so parents don't get a pile of them (push_log, like the other alerts; no new table)
+  const key = `ask:${ref}`;
+  const { data: last } = await db.from("push_log").select("note_sent").eq("match_id", key).maybeSingle();
+  const at = Date.parse(last?.note_sent ?? "");
+  if (at && Date.now() - at < ASK_GAP) return { ask: -2, askedAt: new Date(at).toISOString() };
+  const now = new Date().toISOString();
+  const { data: claimed } = await db.rpc("push_claim_note", { p_key: key, p_value: now });
+  if (!claimed) return { ask: -2, askedAt: now };
+  return { ask: await toWaiting(p, make), askedAt: now };
 }
 
 // every minute: is it time for a reminder to answer?
@@ -386,7 +435,10 @@ async function handle(req: Request) {
     await loadKeys();
     await useTeam(schema);
     const out: Record<string, number> = {};
-    if (typeof body.avail === "object" && body.avail) {
+    let askedAt: string | undefined;
+    if (typeof body.ask === "object" && body.ask) {
+      const r = await askAlert(req, body.ask); out.ask = r.ask; askedAt = r.askedAt;
+    } else if (typeof body.avail === "object" && body.avail) {
       out.avail = await availAlert("avail", body.avail.match, body.avail.player);
     } else if (typeof body.tavail === "object" && body.tavail) {
       out.avail = await availAlert("tavail", body.tavail.day, body.tavail.player);
@@ -426,7 +478,7 @@ async function handle(req: Request) {
         catch (e) { console.error(s, (e as Error).message); }   // e.g. a schema not exposed in the Data API yet
       }
     }
-    return new Response(JSON.stringify(out), { headers: { ...CORS, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(askedAt ? { ...out, askedAt } : out), { headers: { ...CORS, "Content-Type": "application/json" } });
   } catch (e) {
     console.error(e);
     return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers: { ...CORS, "Content-Type": "application/json" } });
