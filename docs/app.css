@@ -804,3 +804,18 @@ body.fd-paying{overflow:hidden}
 /* tournament details for parents (tournaments.matchday) */
 .tinfo{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--field);font-weight:600;font-size:14px}
 .tinfo span{display:inline-block;width:24px}.tinfo .tnotice{color:var(--club)}.tinfo .mini{align-self:flex-start;margin-top:4px}
+
+/* the game's date on the coaches' post and message screens, red when it's an old game */
+.whenbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:12px;margin:0 0 12px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+.whenbar[hidden]{display:none}
+.whenbar .wb-ic{font-size:26px;line-height:1;flex:none}
+.whenbar>span:not(.wb-ic){flex:1 1 180px;min-width:0}
+.whenbar b{font:800 19px var(--body)}
+.whenbar .wb-rel{display:inline-block;padding:2px 10px;border-radius:999px;font:800 13px var(--body);margin-left:4px;vertical-align:2px;background:var(--line);color:var(--ink)}
+.whenbar small{display:block;margin-top:3px;font:600 14px var(--body);color:var(--muted)}
+.whenbar.w-today{border-color:var(--win)}.whenbar.w-today .wb-rel{background:var(--win);color:#fff}
+.whenbar.w-future .wb-rel{background:var(--gold);color:var(--goldInk)}
+.whenbar.w-old{border-color:var(--loss);background:color-mix(in srgb,var(--loss) 9%,var(--card))}
+.whenbar.w-old .wb-rel{background:var(--loss);color:#fff}.whenbar.w-old small{color:var(--ink)}
+.whenbar .btn{margin-left:auto}
+.capwhen{margin:0;font:700 14px var(--body)}.capwhen.w-old{color:var(--loss)}.capwhen[hidden]{display:none}

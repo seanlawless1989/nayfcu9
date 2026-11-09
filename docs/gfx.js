@@ -459,8 +459,17 @@ function caption(){
   } else if(S.mode==="potm"){
     t=S.potmKind==="month"?`🏅 PLAYER OF THE MONTH 🏅\n\nCongratulations to ${S.potm||"…"}, our ${pomMonth().charAt(0)+pomMonth().slice(1).toLowerCase()} player of the month! 🌟${S.pomNote?`\n\n${S.pomNote}`:""}${sp}\n\n${TEAM.hashtags||""}`:S.potmKind==="tournament"?`⭐ PLAYER OF THE TOURNAMENT ⭐\n\nCongratulations to ${S.potm||"…"}, our player of the tournament${S.tname?` at the ${S.tname}`:""}! 🌟`:`${(TEAM.potm&&TEAM.potm.icon)||"🏆"} ${POTM_UP} ${(TEAM.potm&&TEAM.potm.icon)||"🏆"}\n\nCongratulations to ${S.potm||"…"}, our player of the match${S.opp?` against ${S.opp}`:""}! 🌟${TEAM.potm&&TEAM.potm.sponsor?`\n\nThanks to ${TEAM.potm.sponsor} for supporting the ${TEAM.ageGroup||"team"}.`:""}${sp}\n\n${TEAM.hashtags||""}`;
   }
-  $("caption").value=t;
+  $("caption").value=t;showWhen();
 }
+// the game's date, big at the top and above the caption, with a warning when it's an old game
+function whenNow(){const dated=S.mode==="squad"||S.mode==="ft"||(S.mode==="potm"&&S.potmKind!=="month");return dated&&window.dateWhen?window.dateWhen(S.date):null}
+function showWhen(){const w=whenNow(),b=$("gWhen"),c=$("capWhen");if(!b||!c)return;b.hidden=c.hidden=!w;if(!w)return;
+  const what=S.mode==="potm"&&S.potmKind==="tournament"?(S.tname||"Tournament"):S.tour?(S.opp||"Tournament"):`${S.ha==="A"?"Away at":"Home to"} ${S.opp||"…"}`;
+  b.className="whenbar w-"+w.cls;
+  b.innerHTML=`<span class="wb-ic">${w.old?"⚠️":"📅"}</span><span><b>${esc(w.full)}</b> <span class="wb-rel">${esc(w.rel)}</span><small>${esc(what)}${w.old?" · This is an old game. Check it's the one you want before you post.":""}</small></span>${w.old?`<button class="btn ghost" id="gPickGame">Choose another game</button>`:""}`;
+  c.className="capwhen w-"+w.cls;c.textContent=`${w.old?"⚠️ ":""}For ${w.full} (${w.rel.toLowerCase()}), ${what}`}
+function oldOk(){const w=whenNow();return !w||!w.old||confirm(`This post is for ${w.full}, ${w.rel.toLowerCase()}.\n\nUse it anyway?`)}
+ROOT.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("#gPickGame")&&window.setView)setView(S.mode==="squad"?"fixtures":"results")});
 
 // ---------- UI wiring ----------
 function playerOptions(sel,val,allowNone){sel.innerHTML=(allowNone?'<option value="">(none yet)</option>':"")+squad.map(p=>`<option>${esc(p.name)}</option>`).join("");sel.value=val||(allowNone?"":squad[0]?.name||"")}
@@ -568,6 +577,7 @@ function logThis(){const k=fileName();if(LOGGED.has(k))return;LOGGED.add(k);wind
 function postSponsors(){const k=KITS[S.pkit]||{};return [HAS_SP()?(S.sponsorName||(TEAM.sponsor&&TEAM.sponsor.name)):"",S.mode==="potm"&&TEAM.potm&&TEAM.potm.sponsor,S.mode==="squad"&&k.octopus&&TEAM.kitSponsor&&TEAM.kitSponsor.name]}
 $("saveBtn").addEventListener("click",async()=>{
   if(S.mode==="setup"){setMode("squad")}
+  if(!oldOk())return;
   logThis();
   const blob=await new Promise(r=>cv.toBlob(r,"image/png"));
   if(downloads){try{await downloads.save({filename:fileName(),data:blob});toast("Saved.");return}catch(e){if(e&&e.code==="declined"){toast("Not saved.");return}}}
@@ -576,7 +586,7 @@ $("saveBtn").addEventListener("click",async()=>{
 });
 function showImageFallback(){const url=cv.toDataURL("image/png");let im=$("fallbackImg");if(!im){im=document.createElement("img");im.id="fallbackImg";im.alt="Post image";cv.after(im)}im.src=url;cv.hidden=true;im.hidden=false;
   toast("Press and hold (or right-click) the image and choose Save image.");setTimeout(()=>{cv.hidden=false;im.hidden=true},20000)}
-$("copyCap").addEventListener("click",()=>{const ta=$("caption");const done=()=>toast("Caption copied.");logThis();
+$("copyCap").addEventListener("click",()=>{if(!oldOk())return;const ta=$("caption");const done=()=>toast("Caption copied.");logThis();
   try{navigator.clipboard.writeText(ta.value).then(done,()=>{ta.select();toast("Selected, now copy it.")})}catch(e){ta.select();toast("Selected, now copy it.")}});
 
 // ---------- portal hooks ----------
