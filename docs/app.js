@@ -1414,53 +1414,67 @@ function trRead(){if(!trEdit)return;const v=id=>{const el=$("#"+id);return el?el
 // Lives in the project's "club" schema (supabase/26_club_admin.sql), keyed by TEAM.club.id. Each team's own data stays in
 // its own schema; only drills are shared. A drill's diagram is a tactics board with the players' names taken out, kept
 // as the board (so it can be changed later) and as a picture (so the club admin page can show it).
+// Every team also gets the Touchline Tales drills pack (drills.js, loaded only for coaches), so the library is on every
+// site, club or not. Pack drills have ids starting "tt-" and can't be edited; a club coach can make their own version.
 const CLUB_ID=(TEAM.club&&TEAM.club.id)||"";
 const DR_FOCUS=RUGBY?["Warm-up","Handling","Passing","Running lines","Tackling","Contact","Kicking","Game"]:["Warm-up","Passing","Dribbling","Shooting","Defending","Goalkeeping","Fitness","Game"];
 let drQT=0,DRILLS=null,drOpen=null,drEdit=null,drFocus="",drAge="",drQ="",drBusy=false;
 function drClub(){return sb&&CLUB_ID?sb.schema("club"):null}
-async function loadDrills(){DRILLS=null;const c=drClub();if(!c||!canWrite)return;
-  try{const {data,error}=await c.from("drills").select("*").eq("club",CLUB_ID).order("updated",{ascending:false}).limit(500);if(!error)DRILLS=data||[]}catch(e){}}
+function drPackJs(){return window.TT_DRILLS?Promise.resolve():new Promise(ok=>{const el=document.createElement("script");el.src="drills.js";el.onload=ok;el.onerror=()=>ok();document.head.appendChild(el)})}
+function drPack(){const P=window.TT_DRILLS||{},L=(RUGBY?P.rugby:P.football)||[];
+  return L.filter(d=>!d.only||(d.only==="league")===!!SP.league).map(d=>Object.assign({},d,{age_from:(d.ages||[])[0]||null,age_to:(d.ages||[])[1]||null,video:d.video||"",tt:true,author_name:"Touchline Tales",author_team:"Drills pack"}))}
+async function loadDrills(){DRILLS=null;if(!canWrite)return;await drPackJs();let club=[];const c=drClub();
+  // the old starter rows in a club's library are now in the pack, so they're left out here
+  if(c){try{const {data,error}=await c.from("drills").select("*").eq("club",CLUB_ID).order("updated",{ascending:false}).limit(500);if(!error)club=(data||[]).filter(d=>d.author_email!=="touchlinetales@starter")}catch(e){}}
+  DRILLS=club.concat(drPack())}
+// a YouTube link plays inside the drill (youtube-nocookie, only after the coach taps play); other links just open
+function ytId(u){const m=String(u||"").match(/^https:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);return m?m[1]:""}
+let drPlay="";
 function drMine(d){return !!(me&&d&&(d.author_email||"")===(me.email||"").toLowerCase())}
 function drFavs(){try{return JSON.parse(localStorage.getItem(SK+".drillfavs")||"[]")}catch(e){return []}}
 function drFavSet(id,on){const f=drFavs().filter(x=>x!==id);if(on)f.unshift(id);try{localStorage.setItem(SK+".drillfavs",JSON.stringify(f.slice(0,200)))}catch(e){}}
 function drAges(d){return d.age_from&&d.age_to?(d.age_from===d.age_to?`U${d.age_from}`:`U${d.age_from} to U${d.age_to}`):d.age_from?`U${d.age_from}+`:d.age_to?`Up to U${d.age_to}`:"All ages"}
-function drMeta(d){return [drAges(d),d.players?`${d.players} players`:"",d.minutes?`${d.minutes} min`:""].filter(Boolean).join(" · ")}
+function drMeta(d){return [drAges(d),d.players?(/^[\d\s+\-–]+$/.test(d.players)?`${d.players} players`:d.players):"",d.minutes?`${d.minutes} min`:""].filter(Boolean).join(" · ")}
 // the picture is shown as an image, never put into the page as markup, so nothing in it can run
 function drPic(d,cls){const s=d&&d.diagram&&d.diagram.svg;return typeof s==="string"&&/^<svg[\s>]/.test(s)?`<img class="${cls||"drpic"}" alt="Drill diagram" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(s)}">`:""}
 // a board for sharing: no names, the players numbered 1, 2, 3...
 function drBoard(b){const c=JSON.parse(JSON.stringify(b));c.us=(c.us||[]).map(p=>Object.assign(p,{n:""}));delete c.squad;delete c.mid;c.title="";return c}
 function drDiagram(b){const c=drBoard(b);return {board:c,svg:tbSvg(c,false,false,true)}}
-function drillsCard(){if(!canWrite||!CLUB_ID||!DRILLS)return "";const n=DRILLS.length,fav=drFavs().filter(id=>DRILLS.some(d=>d.id===id)).length;
-  return `<section class="card stack"><h3>📚 ${esc(TEAM.club.name||"Club")} drills library</h3>
-    <p class="hint" style="margin:0">${n?`${n} drill${n===1?"":"s"} shared by coaches across ${esc(TEAM.club.name||"the club")}${fav?`, ${fav} in your favourites`:""}.`:`No drills yet. Add the first one and every coach at ${esc(TEAM.club.name||"the club")} will see it.`} Only coaches see the library.</p>
-    <div class="btns"><button class="btn gold" data-view="drills">Open the drills library</button><button class="btn ghost" id="drNew">Add a drill</button></div></section>`}
+function drillsCard(){if(!canWrite||!DRILLS)return "";const n=DRILLS.length,own=DRILLS.filter(d=>!d.tt).length,vids=DRILLS.filter(d=>ytId(d.video)).length,fav=drFavs().filter(id=>DRILLS.some(d=>d.id===id)).length,cn=esc((TEAM.club&&TEAM.club.name)||"the club");
+  return `<section class="card stack"><h3>📚 ${CLUB_ID?`${cn} drills library`:"Drills library"}</h3>
+    <p class="hint" style="margin:0">${n} drill${n===1?"":"s"}${vids?`, ${vids} with a video`:""}${CLUB_ID?`, ${own?`${own} shared by coaches across ${cn}`:`add your own and every coach at ${cn} will see them`}`:""}${fav?`, ${fav} in your favourites`:""}. Only coaches see the library.</p>
+    <div class="btns"><button class="btn gold" data-view="drills">Open the drills library</button>${CLUB_ID?`<button class="btn ghost" id="drNew">Add a drill</button>`:""}</div></section>`}
 function drillsView(){
   if(!canWrite)return `<div class="card empty">The drills library is for coaches. Sign in to use it.</div>`;
-  if(!CLUB_ID||!DRILLS)return `<div class="card empty">The club drills library isn't switched on for this team yet.</div>`;
+  if(!DRILLS)return `<div class="card empty">The drills library is loading. Check your connection if it doesn't appear.</div>`;
   if(drEdit)return drFormView();
   if(drOpen){const d=DRILLS.find(x=>x.id===drOpen);if(d)return drDetail(d);drOpen=null}
   const favs=drFavs(),q=drQ.trim().toLowerCase(),age=+drAge||0;
-  const list=DRILLS.filter(d=>(drFocus==="fav"?favs.includes(d.id):!drFocus||(d.focus||[]).includes(drFocus))&&(!age||((d.age_from||0)<=age&&(d.age_to||99)>=age))
+  const list=DRILLS.filter(d=>(drFocus==="fav"?favs.includes(d.id):drFocus==="club"?!d.tt:drFocus==="vid"?!!ytId(d.video):!drFocus||(d.focus||[]).includes(drFocus))&&(!age||((d.age_from||0)<=age&&(d.age_to||99)>=age))
     &&(!q||[d.title,d.setup,d.points,d.equipment].join(" ").toLowerCase().includes(q)));
   const chip=(k,l)=>`<button data-drfocus="${esc(k)}" aria-pressed="${drFocus===k}">${esc(l)}</button>`;
-  return `<div class="stack"><section class="card stack"><div class="tbhead"><h2>📚 Drills library</h2><button class="btn gold" id="drNew">Add a drill</button></div>
-    <p class="hint" style="margin:0">Shared by every coach at ${esc(TEAM.club.name||"the club")}. Parents and players don't see it.</p>
+  return `<div class="stack"><section class="card stack"><div class="tbhead"><h2>📚 Drills library</h2>${CLUB_ID?`<button class="btn gold" id="drNew">Add a drill</button>`:""}</div>
+    <p class="hint" style="margin:0">${CLUB_ID?`Your club's drills, shared by every coach at ${esc(TEAM.club.name||"the club")}, plus the Touchline Tales drills pack.`:"The Touchline Tales drills pack, with videos to watch."} Parents and players don't see it.</p>
     <div class="btns"><input type="text" id="drQ" placeholder="Search drills" enterkeyhint="search" value="${esc(drQ)}" style="flex:1;min-width:160px">
       <select id="drAge" aria-label="Age group"><option value="">Any age</option>${Array.from({length:14},(_,i)=>i+5).map(a=>`<option value="${a}"${+drAge===a?" selected":""}>U${a}</option>`).join("")}</select></div>
-    <div class="chips drchips">${chip("","All")}${chip("fav","★ Favourites")}${DR_FOCUS.map(f=>chip(f,f)).join("")}</div></section>
-    ${list.length?`<div class="drlist">${list.map(d=>`<button class="card drrow" data-drill="${esc(d.id)}">${drPic(d,"drthumb")||`<span class="drthumb drnone">📋</span>`}<span><b>${favs.includes(d.id)?"★ ":""}${esc(d.title)}</b><span class="hint">${esc(drMeta(d))}</span><span class="hint">${esc((d.focus||[]).join(", "))}</span></span></button>`).join("")}</div>`
+    <div class="chips drchips">${chip("","All")}${chip("fav","★ Favourites")}${chip("vid","▶ With video")}${CLUB_ID?chip("club","Our club's"):""}${DR_FOCUS.map(f=>chip(f,f)).join("")}</div></section>
+    ${list.length?`<div class="drlist">${list.map(d=>`<button class="card drrow" data-drill="${esc(d.id)}">${drPic(d,"drthumb")||`<span class="drthumb drnone">${ytId(d.video)?"▶":"📋"}</span>`}<span><b>${favs.includes(d.id)?"★ ":""}${esc(d.title)}</b><span class="hint">${esc(drMeta(d))}</span><span class="hint">${esc((d.focus||[]).join(", "))}</span></span></button>`).join("")}</div>`
       :`<div class="card empty">${DRILLS.length?"No drills match that. Try another filter.":"No drills yet. Tap Add a drill to share the first one."}</div>`}</div>`}
-function drDetail(d){const fav=drFavs().includes(d.id),yt=/^https:\/\//.test(d.video||"");
+function drDetail(d){const fav=drFavs().includes(d.id),yt=/^https:\/\//.test(d.video||""),yid=ytId(d.video);
   return `<div class="stack"><section class="card stack dr">
     <div class="btns"><button class="mini" id="drBack">← All drills</button></div>
     <h2>${esc(d.title)}</h2><p class="hint" style="margin:0">${esc(drMeta(d))}${(d.focus||[]).length?` · ${esc(d.focus.join(", "))}`:""}</p>
     ${drPic(d)}
+    ${yid?`<div class="drvid">${drPlay===d.id?`<iframe src="https://www.youtube-nocookie.com/embed/${yid}?rel=0&amp;playsinline=1&amp;autoplay=1" title="${esc(d.title)} video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
+      :`<button class="drplay" data-drplay="${esc(d.id)}"><span>▶</span>Play the video</button>`}</div>
+      <p class="hint" style="margin:0">Video from YouTube. <a href="${esc(d.video)}" target="_blank" rel="noopener">Open it on YouTube</a></p>`
+      :yt?`<p style="margin:0"><a href="${esc(d.video)}" target="_blank" rel="noopener">▶ Watch the video</a></p>`:""}
     ${d.equipment?`<p style="margin:0"><b>You'll need:</b> ${esc(d.equipment)}</p>`:""}
     ${d.setup?`<div><h3>Set-up</h3>${reportHtml(d.setup)}</div>`:""}
     ${d.points?`<div><h3>Coaching points</h3>${reportHtml(d.points)}</div>`:""}
-    ${yt?`<p style="margin:0"><a href="${esc(d.video)}" target="_blank" rel="noopener">▶ Watch the video</a></p>`:""}
-    <p class="hint" style="margin:0">Added by ${esc(d.author_name||"a coach")}${d.author_team?` (${esc(d.author_team)})`:""}.</p>
-    <div class="btns"><button class="btn ${fav?"ghost":"gold"}" data-drfav="${esc(d.id)}">${fav?"★ In your favourites":"☆ Add to favourites"}</button><button class="btn ghost" data-drshare="${esc(d.id)}">📤 Share</button>${d.diagram&&d.diagram.board?`<button class="btn ghost" data-drboard="${esc(d.id)}">Open on the tactics board</button>`:""}${drMine(d)?"":`<button class="btn ghost" data-drcopy="${esc(d.id)}">Make my own version</button>`}
+    ${d.tt?`<p class="hint" style="margin:0">From the Touchline Tales drills pack, written in our own words.${d.idea?` ${d.idea.url?`<a href="${esc(d.idea.url)}" target="_blank" rel="noopener">${esc(d.idea.text)}</a>`:esc(d.idea.text)}.`:""} Videos are free on YouTube and belong to the people who made them.</p>`
+      :`<p class="hint" style="margin:0">Added by ${esc(d.author_name||"a coach")}${d.author_team?` (${esc(d.author_team)})`:""}.</p>`}
+    <div class="btns"><button class="btn ${fav?"ghost":"gold"}" data-drfav="${esc(d.id)}">${fav?"★ In your favourites":"☆ Add to favourites"}</button><button class="btn ghost" data-drshare="${esc(d.id)}">📤 Share</button>${d.diagram&&d.diagram.board?`<button class="btn ghost" data-drboard="${esc(d.id)}">Open on the tactics board</button>`:""}${drMine(d)||!CLUB_ID?"":`<button class="btn ghost" data-drcopy="${esc(d.id)}">Make my own version</button>`}
       ${drMine(d)?`<button class="btn ghost" data-dredit="${esc(d.id)}">Edit</button><button class="btn ghost" data-drdel="${esc(d.id)}">Remove</button>`:""}</div></section></div>`}
 function drBlank(){const n=+((String(TEAM.ageGroup||"").match(/\d+/)||[])[0]||0);let name="";try{name=localStorage.getItem(SK+".coachname")||""}catch(e){}
   return {id:"",title:"",age_from:n||null,age_to:n||null,players:"",minutes:null,equipment:"",focus:[],setup:"",points:"",video:"",diagram:null,pick:"",author_name:name}}
@@ -1584,8 +1598,9 @@ async function drShare(d){const text=[`${d.title}`,drMeta(d),d.equipment?`You'll
 document.addEventListener("click",async e=>{if(view!=="drills"&&view!=="training")return;const t=e.target.closest("button");if(!t)return;const d=t.dataset;
   if(t.id==="drNew"){drEdit=drBlank();drOpen=null;if(view!=="drills")setView("drills");else render();return}
   if(view!=="drills")return;
-  if(d.drill){drOpen=d.drill;render();window.scrollTo({top:0});return}
-  if(t.id==="drBack"){drOpen=null;render();return}
+  if(d.drill){drOpen=d.drill;drPlay="";render();window.scrollTo({top:0});return}
+  if(t.id==="drBack"){drOpen=null;drPlay="";render();return}
+  if(d.drplay){drPlay=d.drplay;render();return}
   if(d.drfocus!==undefined){drFocus=drFocus===d.drfocus&&d.drfocus?"":d.drfocus;render();return}
   if(d.drfav){drFavSet(d.drfav,!drFavs().includes(d.drfav));render();return}
   if(d.drtag){drRead();const f=drEdit.focus;drEdit.focus=f.includes(d.drtag)?f.filter(x=>x!==d.drtag):f.concat(d.drtag);render();return}
@@ -1598,7 +1613,7 @@ document.addEventListener("click",async e=>{if(view!=="drills"&&view!=="training
   if(t.id==="drSave"){drSave();return}
   if(t.id==="ddOpenBtn"){ddOpen();return}
   if(d.drshare){const x=DRILLS.find(y=>y.id===d.drshare);if(x)drShare(x);return}
-  if(d.drcopy){const x=DRILLS.find(y=>y.id===d.drcopy);if(x){const b=drBlank();drEdit=Object.assign({},b,JSON.parse(JSON.stringify(x)),{id:"",title:(x.title+" (my version)").slice(0,80),author_name:b.author_name,pick:""});drOpen=null;render();window.scrollTo({top:0})}return}
+  if(d.drcopy){const x=DRILLS.find(y=>y.id===d.drcopy);if(x){const b=drBlank();drEdit=Object.assign({},b,JSON.parse(JSON.stringify(x)),{id:"",title:(x.title+" (my version)").slice(0,80),author_name:b.author_name,pick:""});delete drEdit.tt;delete drEdit.idea;delete drEdit.ages;delete drEdit.only;drOpen=null;render();window.scrollTo({top:0})}return}
   if(t.id==="drCancel"){drEdit=null;render();return}
 });
 document.addEventListener("input",e=>{if(view!=="drills")return;if(e.target.id==="drQ"){drQ=e.target.value;clearTimeout(drQT);const pos=e.target.selectionStart;drQT=setTimeout(()=>{render();const i=$("#drQ");if(i){i.focus();try{i.setSelectionRange(pos,pos)}catch(x){}}},250)}});
