@@ -1,5 +1,5 @@
 -- Added 2026-11-11: Coaches and managers on the Squad page, each with a name, a role and a photo, like the players. Safe to re-run.
--- Run it once on every team's database (for a team in its own schema: tools/team_schema_sql.py <schema> --only 36_team_staff.sql).
+-- Run it once on every team's database (for a team in its own schema: tools/team_schema_sql.py <schema> --only 38_team_staff.sql).
 -- Everyone can see this list (it's shown on the Squad and Players pages, the same as player photos). Only the team's
 -- signed-in coaches can add, change or remove people. It's a display list only: it doesn't give anyone a coach sign-in
 -- (that's the coaches table, from Team setup), and it never holds an email address.

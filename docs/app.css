@@ -833,3 +833,7 @@ body.fd-paying{overflow:hidden}
 .st-up{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:11px}.st-cap{color:var(--muted,#666)}
 .st-acts{display:flex;gap:4px}
 @media(max-width:560px){.st-row{grid-template-columns:64px minmax(0,1fr)}.st-row select{grid-column:2}.st-row .st-acts{grid-column:2;justify-self:start}}
+.cav{margin-top:6px;padding-top:5px;border-top:1px dashed var(--line,#ddd)}
+.cav .row{display:flex;justify-content:space-between;align-items:center;gap:8px;font:600 13px var(--body)}.cav .row>.seg{flex:none}
+.cav .seg button{padding:6px 11px;font-size:13px}
+.cavline{margin-top:3px;font-size:12px}
