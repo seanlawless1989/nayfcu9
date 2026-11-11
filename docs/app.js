@@ -714,7 +714,27 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
 function pface(n,cls){return PHOTOS[n]?`<img class="${cls}" src="${PHOTOS[n]}" alt="">`:""}
 function shrinkPhoto(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=300,c=document.createElement("canvas"),k=Math.min(im.width,im.height);c.width=c.height=S;c.getContext("2d").drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,0,0,S,S);ok(c.toDataURL("image/jpeg",.82))};im.onerror=bad;im.src=r.result};r.onerror=bad;r.readAsDataURL(file)})}
 async function savePhoto(n,file){try{const img=await shrinkPhoto(file);const {error}=await sb.from("player_photos").upsert({player:n,img});if(error)throw error;PHOTOS[n]=img;toast(`Photo saved for ${n}.`);render()}catch(e){toast("Couldn't save that photo. Try a JPG or PNG.")}}
-async function loadAvail(){if(!sb||!canWrite){AV={};AVBY={};return}const {data}=await sb.from("availability").select("*");AV={};AVBY={};(data||[]).forEach(r=>{(AV[r.match_id]=AV[r.match_id]||{})[r.player]=r.status;if(r.by_coach)(AVBY[r.match_id]=AVBY[r.match_id]||{})[r.player]=true})}
+async function loadAvail(){if(!sb||!canWrite){AV={};AVBY={};CAV={};CAV_ON=false;return}const {data}=await sb.from("availability").select("*");AV={};AVBY={};(data||[]).forEach(r=>{(AV[r.match_id]=AV[r.match_id]||{})[r.player]=r.status;if(r.by_coach)(AVBY[r.match_id]=AVBY[r.match_id]||{})[r.player]=true});await loadCav()}
+// ---------- coaches' own availability (public.coach_availability, supabase/36_coach_own_availability.sql) ----------
+// Each coach says if THEY can make a game ("<match id>"), tournament ("t:<id>") or training ("tr:<yyyy-mm-dd>"), and
+// sees the other coaches' answers. Coaches only; parents never see it. Switched off until the SQL has been run.
+let CAV={},CAV_ON=false,CTEAM=[];
+const myCoachEmail=()=>String((me&&me.email)||"").toLowerCase();
+async function loadCav(){if(!sb||!canWrite){CAV={};CAV_ON=false;return}try{
+  const {data,error}=await sb.rpc("coach_availability_list");if(error){CAV_ON=false;return}CAV_ON=true;CAV={};
+  (data||[]).forEach(r=>{(CAV[r.item]=CAV[r.item]||{})[r.email]=r.status});
+  const t=await sb.rpc("coach_team");CTEAM=t.error?[]:(t.data||[])}catch(e){CAV_ON=false}}
+function coachName(em){const c=CTEAM.find(x=>x.email===em);if(c&&c.name)return c.name;const l=String(em||"").split("@")[0].replace(/[._\d]+/g," ").trim().split(" ")[0]||em;return l.charAt(0).toUpperCase()+l.slice(1)}
+// coach-only box: your own Yes/Maybe/No, then who else is coming
+function cavBox(item){if(!canWrite||!CAV_ON||!item)return "";const a=CAV[item]||{},mine=a[myCoachEmail()],k=`data-item="${esc(item)}"`;
+  const others=Object.keys(a).filter(e=>e!==myCoachEmail()),g={yes:[],maybe:[],no:[]};others.forEach(e=>g[a[e]]&&g[a[e]].push(coachName(e)));
+  const wait=CTEAM.map(c=>c.email).filter(e=>e!==myCoachEmail()&&!a[e]).map(coachName);
+  const line=[g.yes.length?`✅ ${g.yes.map(esc).join(", ")}`:"",g.maybe.length?`❔ ${g.maybe.map(esc).join(", ")}`:"",g.no.length?`❌ ${g.no.map(esc).join(", ")}`:"",wait.length?`⏳ ${wait.map(esc).join(", ")}`:""].filter(Boolean).join(" · ");
+  return `<div class="cav edit-only"><div class="row"><span>🧢 You</span><div class="seg" role="group" aria-label="Can you make it?"><button data-cav="yes" ${k} aria-pressed="${mine==="yes"}">Yes</button><button data-cav="maybe" ${k} aria-pressed="${mine==="maybe"}">Maybe</button><button data-cav="no" ${k} aria-pressed="${mine==="no"}">No</button>${mine?`<button data-cavclr="1" ${k} aria-label="Clear your answer" title="Clear your answer">✕</button>`:""}</div></div>${others.length||wait.length?`<div class="hint cavline">Coaches: ${line}</div>`:""}</div>`}
+let cavNameEdit=false;
+function coachNamePick(){if(!canWrite||!CAV_ON||compFilter)return "";const c=CTEAM.find(x=>x.email===myCoachEmail());
+  if(c&&c.name&&!cavNameEdit)return `<p class="hint edit-only" style="margin:0 0 8px">🧢 The other coaches see your answers as <b>${esc(c.name)}</b>. <button class="mini" data-cavname="1">Change</button></p>`;
+  return `<label class="f edit-only trkid">Your name (the other coaches see it next to your answers)<input id="coachName" type="text" autocomplete="given-name" maxlength="40" placeholder="${esc(coachName(myCoachEmail()))}" value="${esc((c&&c.name)||"")}"></label>`}
 // Coaches answer for any player too (supabase/22_coach_availability.sql), e.g. when a parent tells them on WhatsApp.
 // AVBY / TAVBY mark the answers a coach set, so the coaches can tell them apart from the parents' own.
 let AVBY={},TAVBY={};
@@ -753,7 +773,9 @@ function availAllView(){const kids=canWrite?[]:myKids();
     <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${esc(n||kids[0])}.`:""} Say Yes, Maybe or No for every game and tournament coming up this season, or say yes to them all in one tap. You can change an answer any time. Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="availall">Sign in</button>`:""}</p>
     ${pick}${rows}</section>`}
 const avCoachHint=()=>`You're a coach, so you can set the answer for any ${PRN.kid}, for example when a parent tells you on WhatsApp. It counts just like the parent's own answer, and a parent signed in with their family code sees it too. Tap ✕ to clear an answer.`;
-function avSummary(id){const a=AV[id]||{};const set=`<button class="mini" data-avset="${esc(id)}">Set answers</button>`;if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask. ${set} ${askBtn("avpush",id)}`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
+// the coaches' own answers go under the players' answers (in Fixtures a game row already has them, from fixAv)
+function avSummary(id){return avSummary0(id)+(view==="fixtures"&&!String(id).startsWith("t:")?"":cavBox(id))}
+function avSummary0(id){const a=AV[id]||{};const set=`<button class="mini" data-avset="${esc(id)}">Set answers</button>`;if(!Object.keys(a).length)return `Availability: no answers yet. Send the Parents' message to ask. ${set} ${askBtn("avpush",id)}`;const c={yes:[],maybe:[],no:[]};Object.entries(a).forEach(([n,v])=>c[v]&&c[v].push(n));const w=avWaiting(id);
   return `Availability: ✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}${c.no.length?` (can't make it: ${c.no.map(esc).join(", ")})`:""}${w.length?`<br>Not answered yet: ${w.map(esc).join(", ")} <button class="mini" data-chase="${esc(id)}">Chase replies</button> ${askBtn("avpush",id)} ${set}`:` · Everyone has answered. ${set}`}`}
 // "Ask by push": a "can your child make it?" alert now, to the phones of parents still to answer (signed in with a family code,
 // alerts on), opening that game, tournament or training day. The notify function checks it's a coach, at most once an hour each.
@@ -1383,6 +1405,7 @@ function tavCard(){if(!TAV_ON||!TR)return "";const d=tavNext();if(!d)return "";
     <p style="margin:0">✅ ${c.yes.length} ❔ ${c.maybe.length} ❌ ${c.no.length}${w.length?` ⏳ ${w.length}`:""}</p>
     ${c.yes.length?`<p class="hint" style="margin:0"><b>Coming:</b> ${c.yes.map(esc).join(", ")}</p>`:""}${c.maybe.length?`<p class="hint" style="margin:0"><b>Maybe:</b> ${c.maybe.map(esc).join(", ")}</p>`:""}${c.no.length?`<p class="hint" style="margin:0"><b>Not coming:</b> ${c.no.map(esc).join(", ")}</p>`:""}${w.length?`<p class="hint" style="margin:0"><b>Not answered yet:</b> ${w.map(esc).join(", ")}</p>`:`<p class="hint" style="margin:0">Everyone has answered.</p>`}
     <p class="hint" style="margin:0">Parents who haven't answered get a reminder on their phone 24 hours before, if they have alerts on and have signed in with their family code. Only coaches see this.</p>
+    ${CAV_ON?`<h3 style="margin:6px 0 0">Coaches</h3>${cavBox("tr:"+d)}`:""}
     <div class="btns"><button class="btn ghost" data-tavcopy="${d}">Copy message for parents</button>${w.length?askBtn("tavpush",d):""}<button class="mini" data-tavopen="${d}">Set answers</button></div></section>`}
 function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answers aren't switched on for this team yet.</div>`;
   const ok=trUpcoming(8).filter(x=>!x.off).map(x=>x.iso);if(!tavDay||!ok.includes(tavDay))tavDay=ok[0]||null;
@@ -2471,6 +2494,8 @@ async function ftImport(){const list=ftRows().filter(f=>FT.picks.has(f.key)&&f.s
 // A coach who is also a parent picks their own child once on this phone, and gets that child's Yes/Maybe/No in each
 // training row as well as the counts (coaches sign in by email, so they have no family-code link to a child).
 const coachKid=()=>{let n=null;try{n=localStorage.getItem(SK+"-coachkid")}catch(e){}return n&&players.some(p=>p.current&&p.name===n)?n:null};
+document.addEventListener("change",e=>{if(e.target.id!=="coachName"||!canWrite)return;const v=e.target.value.trim().slice(0,40),c=CTEAM.find(x=>x.email===myCoachEmail());
+  sb.rpc("set_my_coach_name",{p_name:v}).then(({error})=>{if(error){toast("Couldn't save your name. Try again.");return}if(c)c.name=v;else CTEAM.push({email:myCoachEmail(),name:v});cavNameEdit=false;toast(v?`Saved. The other coaches will see "${v}".`:"Name cleared.");render()})});
 document.addEventListener("change",e=>{if(e.target.id!=="coachKid")return;try{localStorage.setItem(SK+"-coachkid",e.target.value||"")}catch(err){}render()});
 function coachKidPick(){if(!canWrite||compFilter)return "";const n=coachKid();
   return `<label class="f edit-only trkid">Your own ${esc(PRN.kid)} (to answer games${TAV_ON&&TR?" and training":""} here)<select id="coachKid"><option value="">None</option>${players.filter(p=>p.current).sort((a,b)=>a.name.localeCompare(b.name)).map(p=>`<option${p.name===n?" selected":""}>${esc(p.name)}</option>`).join("")}</select></label>`}
@@ -2478,7 +2503,7 @@ function coachKidPick(){if(!canWrite||compFilter)return "";const n=coachKid();
 // family code answers everything in one list instead of opening each game (U11s parents, 9 Nov 2026). Training-only
 // players are left out. A coach gets their own child's row (picked once above the list).
 function fixAv(id){if(view!=="fixtures")return "";const k=` data-mid="${esc(id)}"`;
-  if(canWrite){const mk=coachKid();return mk&&gameName(mk)?`<div class="trav fxav">${avRow(mk,(AV[id]||{})[mk],"av",(AVBY[id]||{})[mk],k)}</div>`:""}
+  if(canWrite){const mk=coachKid(),kid=mk&&gameName(mk)?avRow(mk,(AV[id]||{})[mk],"av",(AVBY[id]||{})[mk],k):"",cv=cavBox(id);return kid||cv?`<div class="trav fxav">${kid}${cv}</div>`:""}
   const all=myKids(),kids=all.filter(gameName);
   if(!all.length)return `<div class="fxav"><button class="mini" data-avset="${esc(id)}">Can your ${esc(PRN.kid)} make it?</button></div>`;
   return kids.length?`<div class="trav fxav">${kids.map(n=>avRow(n,(AV_MINE[id]||{})[n],"av",false,k,kids.length>1?"":"Can make it?")).join("")}</div>`:""}
@@ -2490,9 +2515,10 @@ function trFixRow(x){const d=new Date(x.iso+"T12:00:00"),day=`<div class="d"><b>
   if(x.off)return `<div class="trfix off">${day}<div class="o">🚫 No training this ${esc(TR.day)}</div></div>`;
   const when=`${clock(TR.start)} to ${clock(TR.finish)}${TR.venue?` · ${TR.venue.split(",")[0]}`:""}`;let body="";
   if(TAV_ON){if(canWrite){const a=TAV[x.iso]||{},c={yes:0,maybe:0,no:0};Object.values(a).forEach(v=>c[v]!=null&&c[v]++);const w=players.filter(p=>p.current&&!a[p.name]).length,mk=coachKid();
-      body=`<div class="trsum">✅ ${c.yes} ❔ ${c.maybe} ❌ ${c.no}${w?` ⏳ ${w}`:""} <button class="mini" data-tavopen="${x.iso}">Set answers</button>${w?` ${askBtn("tavpush",x.iso)}`:""}</div>${mk?`<div class="trav">${avRow(mk,a[mk],"tav",(TAVBY[x.iso]||{})[mk],` data-day="${x.iso}"`)}</div>`:""}`}
+      body=`<div class="trsum">✅ ${c.yes} ❔ ${c.maybe} ❌ ${c.no}${w?` ⏳ ${w}`:""} <button class="mini" data-tavopen="${x.iso}">Set answers</button>${w?` ${askBtn("tavpush",x.iso)}`:""}</div>${mk?`<div class="trav">${avRow(mk,a[mk],"tav",(TAVBY[x.iso]||{})[mk],` data-day="${x.iso}"`)}</div>`:""}${CAV_ON?`<div class="trav">${cavBox("tr:"+x.iso)}</div>`:""}`}
     else{const kids=myKids();body=kids.length?`<div class="trav">${kids.map(n=>avRow(n,(TAV_MINE[x.iso]||{})[n],"tav",false,` data-day="${x.iso}"`,kids.length>1?"":`Coming?`)).join("")}</div>`
       :`<div class="trsum"><button class="mini" data-tavopen="${x.iso}">Say if your ${esc(PRN.kid)} is coming</button></div>`}}
+  else if(canWrite&&CAV_ON)body=`<div class="trav">${cavBox("tr:"+x.iso)}</div>`;
   return `<div class="trfix">${day}<div style="min-width:0"><div class="o">🏃 Training <span>${esc(when)}</span></div>${body}</div></div>`}
 function fixturesView(){
   const items=listItems(byComp(seasonMatches().filter(isFixture)),tByComp(seasonTournaments().filter(tIsFixture))).concat(trFixRows()).sort((a,b)=>a.date.localeCompare(b.date));
@@ -2500,7 +2526,7 @@ function fixturesView(){
   if(!items.length)return `${calBtn}${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one${RUGBY?"":`, or <button class="mini" id="ftStart">📥 import league fixtures</button>`}.`:""}</div>`;
   const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
   const nx=nextFixture();
-  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 ${ftDue()?"Check league fixtures":"Import league fixtures"}</button>`}</div>${ftDue()?`<div class="note edit-only" style="margin-bottom:8px">📅 Has the league moved any games? Check Full-Time once a week: <button class="mini" id="ftStart2">check now</button></div>`:""}`:""}${fixAvAll()}${CKEY()}${coachKidPick()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
+  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 ${ftDue()?"Check league fixtures":"Import league fixtures"}</button>`}</div>${ftDue()?`<div class="note edit-only" style="margin-bottom:8px">📅 Has the league moved any games? Check Full-Time once a week: <button class="mini" id="ftStart2">check now</button></div>`:""}`:""}${fixAvAll()}${CKEY()}${coachKidPick()}${coachNamePick()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
 }
 function resultsView(){
   const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
@@ -2885,6 +2911,9 @@ sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{
   if(b.dataset.tav){const n=b.dataset.n,v=b.dataset.tav,day=b.dataset.day||tavDay;(TAV_MINE[day]=TAV_MINE[day]||{})[n]=v;if(canWrite){(TAV[day]=TAV[day]||{})[n]=v;(TAVBY[day]=TAVBY[day]||{})[n]=true}render();
     sb.rpc("set_training_availability",{p_day:day,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`${canWrite?"Saved":"Thanks"}, ${n}: ${v==="yes"?"coming to training":v==="no"?"not coming to training":"maybe coming to training"}.`);
       if(!error&&!canWrite)alSend({tavail:{day,player:n}})})}
+  if(b.dataset.cavname){cavNameEdit=true;render();const i=$("#coachName");if(i)i.focus();return}
+  if((b.dataset.cav||b.dataset.cavclr)&&canWrite){const it=b.dataset.item,em=myCoachEmail(),v=b.dataset.cav||"",was=(CAV[it]||{})[em];CAV[it]=CAV[it]||{};if(v)CAV[it][em]=v;else delete CAV[it][em];render();
+    sb.rpc("set_coach_availability",{p_item:it,p_status:v}).then(({error})=>{if(error){if(was)CAV[it][em]=was;else delete CAV[it][em];render();toast("Couldn't save that. Try again.")}else toast(v?`Saved: you ${v==="yes"?"can make it":v==="no"?"can't make it":"might make it"}.`:"Your answer is cleared.")});return}
   if(b.dataset.tavopen){tavDay=b.dataset.tavopen;setView("tavail");return}
   if(b.dataset.tavcopy){const d=b.dataset.tavcopy;copyOut(tavText(d),"Copied. Paste it into WhatsApp.")}
   if(b.dataset.msgfx){const [n,label]=b.dataset.msgfx.split("|");setView("gfx");(await gfxReady()).loadMilestone(n,label)}

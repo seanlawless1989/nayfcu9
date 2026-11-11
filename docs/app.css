@@ -824,3 +824,7 @@ body.fd-paying{overflow:hidden}
 .whenbar.w-old .wb-rel{background:var(--loss);color:#fff}.whenbar.w-old small{color:var(--ink)}
 .whenbar .btn{margin-left:auto}
 .capwhen{margin:0;font:700 14px var(--body)}.capwhen.w-old{color:var(--loss)}.capwhen[hidden]{display:none}
+.cav{margin-top:6px;padding-top:5px;border-top:1px dashed var(--line,#ddd)}
+.cav .row{display:flex;justify-content:space-between;align-items:center;gap:8px;font:600 13px var(--body)}.cav .row>.seg{flex:none}
+.cav .seg button{padding:6px 11px;font-size:13px}
+.cavline{margin-top:3px;font-size:12px}
