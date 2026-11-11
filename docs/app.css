@@ -824,6 +824,15 @@ body.fd-paying{overflow:hidden}
 .whenbar.w-old .wb-rel{background:var(--loss);color:#fff}.whenbar.w-old small{color:var(--ink)}
 .whenbar .btn{margin-left:auto}
 .capwhen{margin:0;font:700 14px var(--body)}.capwhen.w-old{color:var(--loss)}.capwhen[hidden]{display:none}
+/* coaches and managers (Squad + Players pages) */
+.st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px}
+.st{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px}.st b{line-height:1.2}.st small{color:var(--muted,#666);font-size:12px}
+.st-ph{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);background:var(--club);color:var(--clubInk,#fff);display:grid;place-items:center;font:800 22px var(--body)}
+.st-row{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,190px) auto;gap:8px;align-items:center}
+.st-row .st-ph{width:52px;height:52px;font-size:17px}
+.st-up{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:11px}.st-cap{color:var(--muted,#666)}
+.st-acts{display:flex;gap:4px}
+@media(max-width:560px){.st-row{grid-template-columns:64px minmax(0,1fr)}.st-row select{grid-column:2}.st-row .st-acts{grid-column:2;justify-self:start}}
 .cav{margin-top:6px;padding-top:5px;border-top:1px dashed var(--line,#ddd)}
 .cav .row{display:flex;justify-content:space-between;align-items:center;gap:8px;font:600 13px var(--body)}.cav .row>.seg{flex:none}
 .cav .seg button{padding:6px 11px;font-size:13px}
