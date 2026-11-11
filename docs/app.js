@@ -726,15 +726,22 @@ async function loadCav(){if(!sb||!canWrite){CAV={};CAV_ON=false;return}try{
   const t=await sb.rpc("coach_team");CTEAM=t.error?[]:(t.data||[])}catch(e){CAV_ON=false}}
 function coachName(em){const c=CTEAM.find(x=>x.email===em);if(c&&c.name)return c.name;const l=String(em||"").split("@")[0].replace(/[._\d]+/g," ").trim().split(" ")[0]||em;return l.charAt(0).toUpperCase()+l.slice(1)}
 // coach-only box: your own Yes/Maybe/No, then who else is coming
+// a login can say they're an admin (runs the site, doesn't come to games): no own answer and not chased (37_coach_roles.sql)
+const myCoachRow=()=>CTEAM.find(x=>x.email===myCoachEmail())||{},isCavAdmin=()=>myCoachRow().role==="admin";
 function cavBox(item){if(!canWrite||!CAV_ON||!item)return "";const a=CAV[item]||{},mine=a[myCoachEmail()],k=`data-item="${esc(item)}"`;
   const others=Object.keys(a).filter(e=>e!==myCoachEmail()),g={yes:[],maybe:[],no:[]};others.forEach(e=>g[a[e]]&&g[a[e]].push(coachName(e)));
-  const wait=CTEAM.map(c=>c.email).filter(e=>e!==myCoachEmail()&&!a[e]).map(coachName);
+  const wait=CTEAM.filter(c=>c.role!=="admin").map(c=>c.email).filter(e=>e!==myCoachEmail()&&!a[e]).map(coachName);
   const line=[g.yes.length?`✅ ${g.yes.map(esc).join(", ")}`:"",g.maybe.length?`❔ ${g.maybe.map(esc).join(", ")}`:"",g.no.length?`❌ ${g.no.map(esc).join(", ")}`:"",wait.length?`⏳ ${wait.map(esc).join(", ")}`:""].filter(Boolean).join(" · ");
+  if(isCavAdmin())return others.length||wait.length?`<div class="cav edit-only"><div class="hint cavline">Coaches: ${line}</div></div>`:"";
   return `<div class="cav edit-only"><div class="row"><span>🧢 You</span><div class="seg" role="group" aria-label="Can you make it?"><button data-cav="yes" ${k} aria-pressed="${mine==="yes"}">Yes</button><button data-cav="maybe" ${k} aria-pressed="${mine==="maybe"}">Maybe</button><button data-cav="no" ${k} aria-pressed="${mine==="no"}">No</button>${mine?`<button data-cavclr="1" ${k} aria-label="Clear your answer" title="Clear your answer">✕</button>`:""}</div></div>${others.length||wait.length?`<div class="hint cavline">Coaches: ${line}</div>`:""}</div>`}
 let cavNameEdit=false;
-function coachNamePick(){if(!canWrite||!CAV_ON||compFilter)return "";const c=CTEAM.find(x=>x.email===myCoachEmail());
-  if(c&&c.name&&!cavNameEdit)return `<p class="hint edit-only" style="margin:0 0 8px">🧢 The other coaches see your answers as <b>${esc(c.name)}</b>. <button class="mini" data-cavname="1">Change</button></p>`;
-  return `<label class="f edit-only trkid">Your name (the other coaches see it next to your answers)<input id="coachName" type="text" autocomplete="given-name" maxlength="40" placeholder="${esc(coachName(myCoachEmail()))}" value="${esc((c&&c.name)||"")}"></label>`}
+function coachNamePick(){if(!canWrite||!CAV_ON||compFilter)return "";const c=CTEAM.find(x=>x.email===myCoachEmail()),hasRole=CTEAM.length&&"role" in (CTEAM[0]||{}),role=(c&&c.role)||"";
+  const rb=(v,t)=>`<button data-cavrole="${v}" aria-pressed="${role===v}">${t}</button>`;
+  const rolePick=!hasRole?"":role?`<p class="hint edit-only" style="margin:0 0 8px">${role==="admin"?"🗂️ You're set as an <b>admin</b>, so you aren't asked if you can make games and training.":"🧢 You're set as a <b>coach</b> at games and training."} <button class="mini" data-cavrole="${role==="admin"?"coach":"admin"}">I'm ${role==="admin"?"a coach":"an admin"}</button></p>`
+    :`<div class="note edit-only" style="margin-bottom:8px"><b>Are you a coach or an admin?</b> Coaches say if they can make each game and training session. Admins look after the site but aren't asked.<div class="seg" style="margin-top:6px">${rb("coach","🧢 I'm a coach")}${rb("admin","🗂️ I'm an admin")}</div></div>`;
+  if(role==="admin")return rolePick;
+  if(c&&c.name&&!cavNameEdit)return rolePick+ `<p class="hint edit-only" style="margin:0 0 8px">The other coaches see your answers as <b>${esc(c.name)}</b>. <button class="mini" data-cavname="1">Change</button></p>`;
+  return rolePick+`<label class="f edit-only trkid">Your name (the other coaches see it next to your answers)<input id="coachName" type="text" autocomplete="given-name" maxlength="40" placeholder="${esc(coachName(myCoachEmail()))}" value="${esc((c&&c.name)||"")}"></label>`}
 // Coaches answer for any player too (supabase/22_coach_availability.sql), e.g. when a parent tells them on WhatsApp.
 // AVBY / TAVBY mark the answers a coach set, so the coaches can tell them apart from the parents' own.
 let AVBY={},TAVBY={};
@@ -2911,6 +2918,10 @@ sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{
   if(b.dataset.tav){const n=b.dataset.n,v=b.dataset.tav,day=b.dataset.day||tavDay;(TAV_MINE[day]=TAV_MINE[day]||{})[n]=v;if(canWrite){(TAV[day]=TAV[day]||{})[n]=v;(TAVBY[day]=TAVBY[day]||{})[n]=true}render();
     sb.rpc("set_training_availability",{p_day:day,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`${canWrite?"Saved":"Thanks"}, ${n}: ${v==="yes"?"coming to training":v==="no"?"not coming to training":"maybe coming to training"}.`);
       if(!error&&!canWrite)alSend({tavail:{day,player:n}})})}
+  if(b.dataset.cavrole&&canWrite){const v=b.dataset.cavrole,c=myCoachRow(),was=c.role;
+    sb.rpc("set_my_coach_role",{p_role:v}).then(({error})=>{if(error){toast("Couldn't save that. Try again.");return}
+      if(CTEAM.includes(c))c.role=v;else CTEAM.push({email:myCoachEmail(),name:"",role:v});if(v==="admin")Object.values(CAV).forEach(a=>delete a[myCoachEmail()]);
+      toast(v==="admin"?"Saved: you're an admin, so you won't be asked about games and training.":"Saved: you're a coach. Say if you can make each game and training below.");render()});return}
   if(b.dataset.cavname){cavNameEdit=true;render();const i=$("#coachName");if(i)i.focus();return}
   if((b.dataset.cav||b.dataset.cavclr)&&canWrite){const it=b.dataset.item,em=myCoachEmail(),v=b.dataset.cav||"",was=(CAV[it]||{})[em];CAV[it]=CAV[it]||{};if(v)CAV[it][em]=v;else delete CAV[it][em];render();
     sb.rpc("set_coach_availability",{p_item:it,p_status:v}).then(({error})=>{if(error){if(was)CAV[it][em]=was;else delete CAV[it][em];render();toast("Couldn't save that. Try again.")}else toast(v?`Saved: you ${v==="yes"?"can make it":v==="no"?"can't make it":"might make it"}.`:"Your answer is cleared.")});return}
