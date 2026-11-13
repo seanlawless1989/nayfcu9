@@ -763,12 +763,15 @@ function coachName(em){const c=CTEAM.find(x=>x.email===em);if(c&&c.name)return c
 // coach-only box: your own Yes/Maybe/No, then who else is coming
 // a login can say they're an admin (runs the site, doesn't come to games): no own answer and not chased (37_coach_roles.sql)
 const myCoachRow=()=>CTEAM.find(x=>x.email===myCoachEmail())||{},isCavAdmin=()=>myCoachRow().role==="admin";
-function cavBox(item){if(!canWrite||!CAV_ON||!item)return "";const a=CAV[item]||{},mine=a[myCoachEmail()],k=`data-item="${esc(item)}"`;
-  const others=Object.keys(a).filter(e=>e!==myCoachEmail()),g={yes:[],maybe:[],no:[]};others.forEach(e=>g[a[e]]&&g[a[e]].push(coachName(e)));
-  const wait=CTEAM.filter(c=>c.role!=="admin").map(c=>c.email).filter(e=>e!==myCoachEmail()&&!a[e]).map(coachName);
+// one person can sign in with two emails (e.g. a work and a personal one): logins that show the same name count as one
+// coach, so your other login never shows as "⏳ you" after you've answered, and nobody is listed twice
+const cavKey=e=>coachName(e).trim().toLowerCase();
+function cavBox(item){if(!canWrite||!CAV_ON||!item)return "";const a=CAV[item]||{},meK=cavKey(myCoachEmail()),own=a[myCoachEmail()],mine=own||a[Object.keys(a).find(e=>cavKey(e)===meK)],k=`data-item="${esc(item)}"`;
+  const seen=new Set([meK]),others=Object.keys(a).filter(e=>{const n=cavKey(e);if(seen.has(n))return false;seen.add(n);return true}),g={yes:[],maybe:[],no:[]};others.forEach(e=>g[a[e]]&&g[a[e]].push(coachName(e)));
+  const wait=CTEAM.filter(c=>c.role!=="admin").map(c=>c.email).filter(e=>{const n=cavKey(e);if(a[e]||seen.has(n))return false;seen.add(n);return true}).map(coachName);
   const line=[g.yes.length?`✅ ${g.yes.map(esc).join(", ")}`:"",g.maybe.length?`❔ ${g.maybe.map(esc).join(", ")}`:"",g.no.length?`❌ ${g.no.map(esc).join(", ")}`:"",wait.length?`⏳ ${wait.map(esc).join(", ")}`:""].filter(Boolean).join(" · ");
   if(isCavAdmin())return others.length||wait.length?`<div class="cav edit-only"><div class="hint cavline">Coaches: ${line}</div></div>`:"";
-  return `<div class="cav edit-only"><div class="row"><span>🧢 You</span><div class="seg" role="group" aria-label="Can you make it?"><button data-cav="yes" ${k} aria-pressed="${mine==="yes"}">Yes</button><button data-cav="maybe" ${k} aria-pressed="${mine==="maybe"}">Maybe</button><button data-cav="no" ${k} aria-pressed="${mine==="no"}">No</button>${mine?`<button data-cavclr="1" ${k} aria-label="Clear your answer" title="Clear your answer">✕</button>`:""}</div></div>${others.length||wait.length?`<div class="hint cavline">Coaches: ${line}</div>`:""}</div>`}
+  return `<div class="cav edit-only"><div class="row"><span>🧢 You</span><div class="seg" role="group" aria-label="Can you make it?"><button data-cav="yes" ${k} aria-pressed="${mine==="yes"}">Yes</button><button data-cav="maybe" ${k} aria-pressed="${mine==="maybe"}">Maybe</button><button data-cav="no" ${k} aria-pressed="${mine==="no"}">No</button>${own?`<button data-cavclr="1" ${k} aria-label="Clear your answer" title="Clear your answer">✕</button>`:""}</div></div>${others.length||wait.length?`<div class="hint cavline">Coaches: ${line}</div>`:""}</div>`}
 let cavNameEdit=false;
 function coachNamePick(){if(!canWrite||!CAV_ON||compFilter)return "";const c=CTEAM.find(x=>x.email===myCoachEmail()),hasRole=CTEAM.length&&"role" in (CTEAM[0]||{}),role=(c&&c.role)||"";
   const rb=(v,t)=>`<button data-cavrole="${v}" aria-pressed="${role===v}">${t}</button>`;
