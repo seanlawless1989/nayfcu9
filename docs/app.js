@@ -121,7 +121,13 @@ window.H2H=opp=>meetings(opp,new Date().toISOString().slice(0,10));
 function assistsOf(m){return m.assists||{}}
 const ASSISTS_FROM=TEAM.assistsFrom||"2000-01";
 function assistsTracked(s){return s>=ASSISTS_FROM}
-function sortMatches(a){return a.slice().sort((x,y)=>(x.date||"").localeCompare(y.date||""))}
+// games on the same day (tournaments) go in the order they were played: real kick-off time from the live game first,
+// then the kick-off time typed in, then group games before knockout games (final last)
+const STAGE_ORD=s=>Math.max(0,STAGES.indexOf(s||"Group stage"));
+function koOrder(m){const e=m.live&&(m.live.events||[]).find(e=>e.k==="ko"&&e.at);if(e)return +e.at;
+  const k=(m.ko||"").match(/^(\d{1,2}):(\d{2})/);if(k){const t=Date.parse(m.date+"T"+k[1].padStart(2,"0")+":"+k[2]);if(!isNaN(t))return t}return null}
+function sortMatches(a){return a.slice().sort((x,y)=>{const d=(x.date||"").localeCompare(y.date||"");if(d)return d;
+  const kx=koOrder(x),ky=koOrder(y);if(kx!=null&&ky!=null&&kx!==ky)return kx-ky;return STAGE_ORD(x.stage)-STAGE_ORD(y.stage)})}
 function seasonMatches(){return sortMatches(matches.filter(m=>!m.practice&&seasonOf(m.date)===season))}
 function pname(id){return id}
 // in the squad for games: not a training-only player (players.training, supabase/34_training_only.sql)
@@ -326,7 +332,7 @@ const byComp=ms=>compFilter?ms.filter(m=>m.comp===compFilter):ms;
 const tByComp=ts=>!compFilter||compFilter==="Tournament"?ts:[];
 const STAGES=["Group stage","Round of 16","Quarter final","Semi final","Final","3rd place play-off","Plate","Shield","Friendly game"];
 const TROPHIES=["Winners","Runners-up","Semi-finalists","Plate winners","Shield winners"];
-function tGames(t){return matches.filter(m=>m.tournament_id===t.id).sort((a,b)=>(a.date||"").localeCompare(b.date||"")||STAGES.indexOf(a.stage||"Group stage")-STAGES.indexOf(b.stage||"Group stage"))}
+function tGames(t){return sortMatches(matches.filter(m=>m.tournament_id===t.id))}
 // A tournament runs from date to end_date; end_date is blank for a one-day tournament.
 const tEnd=t=>t.end_date&&t.end_date>(t.date||"")?t.end_date:t.date||"";
 const nextDay=iso=>{const d=new Date(iso+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+1);return d.toISOString().slice(0,10)};
