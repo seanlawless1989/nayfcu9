@@ -236,11 +236,13 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Players, coaches and shirt numbers"]];
 const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
-  const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
+  const openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
   const fi=HOME_ITEMS.findIndex(x=>x[0]==="fund");if(fLive()){const t=["fund","💷","Fundraiser","Get your name on our pitch"];if(fi<0)HOME_ITEMS.splice(1,0,t)}else if(fi>=0)HOME_ITEMS.splice(fi,1);
   const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:`${RUGBY?"Try":"Goal"} of the month and more`;
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||(PHOTOS_ON&&GAL_DB))&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${galWaiting().length?`<section class="card" style="margin-top:12px"><b>⚑ ${galWaiting().length} photo${galWaiting().length>1?"s":""} to look at.</b> A family asked for ${galWaiting().length>1?"them":"it"} to come down. <button class="mini" data-view="gallery">Check now</button></section>`:""}${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${pics.length})</button></div>`:""}`}
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||(PHOTOS_ON&&GAL_DB))&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${galWaiting().length?`<section class="card" style="margin-top:12px"><b>⚑ ${galWaiting().length} photo${galWaiting().length>1?"s":""} to look at.</b> A family asked for ${galWaiting().length>1?"them":"it"} to come down. <button class="mini" data-view="gallery">Check now</button></section>`:""}`}
+// the newest photos, near the top of the home page
+function homePhotos(){const pics=GAL.filter(galOk);return pics.length?`<div><h2 class="sect">📸 Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${pics.length})</button></div></div>`:""}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -258,7 +260,7 @@ function homeView(){if(noScores())return homeNoScores();
   return `<div class="stack">
   ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
   ${homeLive()||heroHtml()}
-  ${homeMenu()}${pomHome()}
+  ${homePhotos()}${homeMenu()}${pomHome()}
   <h2 class="sect"><span class="ctag c-league">${LEAGUE_NAME}</span> ${season}</h2>
   <section class="card"><h3>${LEAGUE_NAME} record</h3>${REC(lt)}
       ${ldone.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${ldone.slice(-6).map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}</section>
@@ -289,7 +291,7 @@ function homeView(){if(noScores())return homeNoScores();
 function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
   const done=list.filter(m=>!isFixture(m)&&!m.postponed),upcoming=list.filter(isFixture).filter(m=>!m.postponed&&!isLive(m))[0];
   const potms=Object.entries(ps).filter(([,o])=>o.potm>0).sort((a,b)=>b[1].potm-a[1].potm||a[0].localeCompare(b[0]));
-  return `<div class="stack">${homeLive()||heroHtml()}${homeMenu()}${pomHome()}
+  return `<div class="stack">${homeLive()||heroHtml()}${homePhotos()}${homeMenu()}${pomHome()}
   <h2 class="sect">${esc(season)} season</h2>
   <div class="cols">
     <section class="card"><h3>Recent games</h3>${done.length?done.slice(-3).reverse().map(matchRow).join(""):`<p class="hint">No games played yet this season.</p>`}
@@ -1139,7 +1141,11 @@ async function loadGallery(){GAL=[];GAL_DB=false;if(!sb||!PHOTOS_ON||window.DEMO
     // a visitor isn't allowed to read it at all (42501), which still tells us it's set up
     if(!error){GAL_DB=true;GAL=galSee()?data||[]:[]}else if(error.code==="42501")GAL_DB=true}catch(e){}}
 const galOk=p=>p.status==="approved";
-const galOf=id=>GAL.filter(p=>p.match_id===id&&galOk(p));
+// newest photo first (GAL loads oldest first and new uploads go on the end)
+const galOf=id=>GAL.filter(p=>p.match_id===id&&galOk(p)).reverse();
+// games and tournament days with photos: the newest game first, then the one with the newest upload
+function galIds(){const last={};GAL.filter(galOk).forEach(p=>{const c=String(p.created||"");if(!(p.match_id in last)||c>last[p.match_id])last[p.match_id]=c});
+  return Object.keys(last).map(id=>({id,w:galWhat(id)})).sort((a,b)=>String(b.w.date||"").localeCompare(String(a.w.date||""))||last[b.id].localeCompare(last[a.id]))}
 const galWaiting=()=>canWrite?GAL.filter(p=>!galOk(p)):[];
 const galMine=()=>me&&!canWrite?GAL.filter(p=>!galOk(p)&&p.uploader===me.id):[];
 // signed links, made in batches and kept until ten minutes before they run out
@@ -1163,8 +1169,8 @@ function photosCard(m){if(!PHOTOS_ON||!GAL_DB)return "";const ps=galOf(m.id),can
   if(!ps.length&&!can)return "";
   return `<section class="card"><h3>Photos${ps.length>1?` (${ps.length})`:""}</h3>${ps.length?galGrid(ps):`<p class="hint">No photos from this game yet.</p>`}${can?`<div style="margin-top:10px">${galAdd(m.id)}</div>`:""}</section>`}
 // newest games with photos, each as an album card
-function albums(n){const shown=GAL.filter(galOk),ids=[...new Set(shown.slice().reverse().map(p=>p.match_id))].slice(0,n);galPaintSoon();
-  return `<div class="albs">${ids.map(id=>{const ps=galOf(id),w=galWhat(id),c=ps.find(p=>p.caption)||ps[0],rest=ps.filter(p=>p!==c),strip=rest.slice(0,3),more=ps.length-1-strip.length;
+function albums(n){const ids=galIds().slice(0,n).map(x=>x.id);galPaintSoon();
+  return `<div class="albs">${ids.map(id=>{const ps=galOf(id),w=galWhat(id),c=ps[0],rest=ps.filter(p=>p!==c),strip=rest.slice(0,3),more=ps.length-1-strip.length;
     return `<div class="alb">${galTh(c)}${strip.length?`<div class="alb-strip">${strip.map((p,i)=>i===strip.length-1&&more>0?`<div class="alb-more">${galTh(p)}<span>+${more}</span></div>`:galTh(p)).join("")}</div>`:""}
       <button class="alb-meta" ${w.attr} style="text-align:left;border:0;background:none;cursor:pointer"><b>${esc(w.label)}</b><small>${w.date?esc(shortDay(w.date))+" · ":""}${ps.length} photo${ps.length===1?"":"s"}</small>${c.caption?`<i>${esc(c.caption)}</i>`:""}</button></div>`}).join("")}</div>`}
 function galLabel(m){return `${shortDay(m.date)} · v ${esc(m.opp||"")}${result(m)?` · ${m.us}–${m.them}`:""}`}
@@ -1195,7 +1201,7 @@ function galleryView(){
   const ch=galChoices();if(!ch.some(c=>c.v===galMatch))galMatch=ch[0]?ch[0].v:"";
   const up=ch.length?`<section class="card"><h3>Add photos</h3><label class="f">Which game?<select id="galPick">${ch.map(c=>`<option value="${esc(c.v)}"${c.v===galMatch?" selected":""}>${c.label}</option>`).join("")}</select></label><div style="margin-top:10px">${galAdd(galMatch)}</div></section>`:"";
   const mine=galMine(),mineCard=mine.length?`<section class="card"><h3>⚑ Taken down (${mine.length})</h3><p class="hint">A family asked for these to come down, so only you and the coaches can see them now. Tap one to delete it.</p>${galGrid(mine)}</section>`:"";
-  const shown=GAL.filter(galOk),ids=[...new Set(shown.map(p=>p.match_id))].map(id=>({id,w:galWhat(id)})).sort((a,b)=>String(b.w.date||"").localeCompare(String(a.w.date||"")));
+  const ids=galIds();
   const body=ids.length?ids.map(({id,w})=>`<section class="card"><button class="gal-h" ${w.attr}>${w.date?esc(shortDay(w.date))+" · ":""}${esc(w.label)} <span>${w.attr?(id.startsWith("t:")?"Tournament page →":"Match page →"):""}</span></button>${galGrid(galOf(id))}</section>`).join("")
     :`<div class="card empty">No photos yet. Add the first ones above.</div>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">📸 Photos</h2><p class="hint">Match-day pictures from the team's families and coaches, newest game first. Tap a photo to see it full size. 🔒 Only signed-in families and coaches can see them.</p>${galCheckCard()}${up}${mineCard}${body}</div>`}
@@ -2336,7 +2342,7 @@ function trView(){const t=tournaments.find(x=>x.id===trTour);
     :has?`<section class="card report"><h3>Tournament report</h3>${reportHtml(t.report)}<div class="btns"><button class="btn ghost" data-tshare="${esc(t.id)}">📤 Share report</button>${canWrite?`<button class="mini edit-only" data-trep="${esc(t.id)}">Edit report</button>`:""}</div></section>`
     :canWrite?`<section class="card report edit-only"><h3>Tournament report</h3><p class="hint">No report yet. A tournament gets one report for all of its games.</p><button class="btn gold" data-trep="${esc(t.id)}">Write tournament report</button></section>`:`<div class="card empty">No report for this tournament yet.</div>`;
   const games=g.length?`<section class="card"><h3>The games</h3><div class="tgames" style="border:0;margin:0;padding:0">${g.map(tGameRow).join("")}</div><p class="hint" style="margin-top:8px">Tap a game for the team, the awards and how it went.</p></section>`:"";
-  const ph=g.flatMap(m=>galOf(m.id));
+  const ph=[...galOf("t:"+t.id),...g.flatMap(m=>galOf(m.id))];
   const photos=ph.length?`<section class="card"><h3>Photos (${ph.length})</h3>${galGrid(ph)}</section>`:"";
   const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3><div class="mg"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div></section>`:"";
   return `<div class="live md">${back}${head}${rep}${games}${photos}${coach}</div>`}
