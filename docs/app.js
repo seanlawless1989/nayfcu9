@@ -1062,7 +1062,7 @@ async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.s
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:fnBody({match:id})}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
 async function alSend(body){if(!sb||!CFG.vapidPublicKey)return null;   // alerts not switched on for this team
-try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament??data.avail??data.fixture;return typeof v==="number"?v:null}catch(e){return null}}
+try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament??data.treport??data.avail??data.fixture;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
@@ -2304,6 +2304,8 @@ function reportsView(){
 let trTour=null,trFrom="results",trWrite=false;
 const tournamentOf=m=>m&&m.tournament_id?tournaments.find(t=>t.id===m.tournament_id)||null:null;
 const hasTReport=t=>!!(t&&t.report&&String(t.report).trim());
+// the "report is out" alert: only when this team has alerts, and for a tournament that started in the last 14 days (notify checks the same)
+function tReportAlertable(t){if(!CFG.vapidPublicKey||!t||!t.date)return false;const d=new Date();d.setDate(d.getDate()-14);const ago=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;return t.date<=todayLocal()&&t.date>=ago}
 function openTour(id,write){trWrite=!!write&&canWrite;trFrom=view==="tr"?trFrom:view;trTour=id;setView("tr");try{history.replaceState(null,"",location.pathname+"?tour="+encodeURIComponent(id))}catch(e){}
   if(trWrite){const ta=$("#trReport");if(ta){ta.focus();ta.scrollIntoView({block:"center"})}}}
 // the report part of a match page: a tournament game shows the tournament's report (and its own, if an older game has one)
@@ -2330,7 +2332,7 @@ function trView(){const t=tournaments.find(x=>x.id===trTour);
   const head=`<section class="card"><div class="o" style="display:flex;align-items:center;gap:10px;font:400 24px var(--display)">${tLogo(t)?`<img class="badge" src="${tLogo(t)}" alt="">`:""}${esc(t.name||"Tournament")}</div>
     <div class="mdinfo" style="margin-top:8px">${[["📅",tRange(t,true)],...(tEnd(t)>=todayLocal()?tFacts(t,true):[["📍",t.venue||""]]),[t.trophy?trophyIcon(t.trophy):"",t.trophy||""],["⭐",t.potm?`Player of the tournament: ${t.potm}`:""],["⚽",st.P&&!noScores()?`Played ${st.P}, won ${st.W}, drew ${st.D}, lost ${st.L}`:g.length?`${g.length} game${g.length>1?"s":""}`:""]].filter(([,v])=>v).map(([i,v])=>`<div><span>${i}</span>${esc(v)}</div>`).join("")}</div>${tMaps(t)&&tEnd(t)>=todayLocal()?`<div class="btns" style="margin-top:10px"><a class="btn ghost" href="${tMaps(t)}" target="_blank" rel="noopener">🧭 Directions</a></div>`:""}${tEnd(t)>=todayLocal()&&!tHasInfo(t)&&canWrite?`<p class="hint edit-only" style="margin-top:8px">Add the meeting time, kit and what to bring with <b>Edit tournament</b>, and parents will see them here.</p>`:""}</section>`;
   const rep=canWrite&&trWrite?`<section class="card report"><h3>Tournament report</h3><textarea id="trReport" rows="14" placeholder="How did the tournament go? One report for every game. Everyone can read this once it's saved.">${esc(t.report||"")}</textarea>
-    <div class="btns"><button class="btn ghost" id="trReportDraft">✨ Start from the games</button></div><p class="hint">The starting point is built from the games, the awards and the player of the tournament. Change anything before you save. Use first names only. Leave a blank line between paragraphs.</p><div class="btns"><button class="btn gold" id="trReportSave">Save report</button><button class="btn ghost" id="trReportCancel">Cancel</button></div></section>`
+    <div class="btns"><button class="btn ghost" id="trReportDraft">✨ Start from the games</button></div><p class="hint">The starting point is built from the games, the awards and the player of the tournament. Change anything before you save. Use first names only. Leave a blank line between paragraphs.</p>${tReportAlertable(t)?`<label class="row" style="cursor:pointer"><span><input type="checkbox" id="trReportAlert" checked style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">📣 Tell parents' phones the report is out</span></label><p class="hint">Sent once per tournament, the first time you save a report. Later edits don't send another. The alert doesn't include any scores.</p>`:""}<div class="btns"><button class="btn gold" id="trReportSave">Save report</button><button class="btn ghost" id="trReportCancel">Cancel</button></div></section>`
     :has?`<section class="card report"><h3>Tournament report</h3>${reportHtml(t.report)}<div class="btns"><button class="btn ghost" data-tshare="${esc(t.id)}">📤 Share report</button>${canWrite?`<button class="mini edit-only" data-trep="${esc(t.id)}">Edit report</button>`:""}</div></section>`
     :canWrite?`<section class="card report edit-only"><h3>Tournament report</h3><p class="hint">No report yet. A tournament gets one report for all of its games.</p><button class="btn gold" data-trep="${esc(t.id)}">Write tournament report</button></section>`:`<div class="card empty">No report for this tournament yet.</div>`;
   const games=g.length?`<section class="card"><h3>The games</h3><div class="tgames" style="border:0;margin:0;padding:0">${g.map(tGameRow).join("")}</div><p class="hint" style="margin-top:8px">Tap a game for the team, the awards and how it went.</p></section>`:"";
@@ -4025,8 +4027,11 @@ document.addEventListener("click",async e=>{
   if("trback" in t.dataset){setView(trFrom||"results");return}
   if(t.id==="trReportCancel"){trWrite=false;render();return}
   if(t.id==="trReportDraft"){const x=tournaments.find(y=>y.id===trTour),ta=$("#trReport");if(!x||!ta)return;if(ta.value.trim()&&!confirm("Replace what's in the box with a starting point from the games?"))return;ta.value=draftTReport(x);ta.focus();return}
-  if(t.id==="trReportSave"){const x=tournaments.find(y=>y.id===trTour);if(!x||!canWrite)return;const txt=$("#trReport").value.trim();t.disabled=true;
-    try{await db.collection("tournaments").doc(x.id).update({report:txt||null});x.report=txt||null;trWrite=false;toast(txt?"Tournament report saved.":"Tournament report removed.");render()}
+  if(t.id==="trReportSave"){const x=tournaments.find(y=>y.id===trTour);if(!x||!canWrite)return;const txt=$("#trReport").value.trim(),tell=!!(txt&&$("#trReportAlert")&&$("#trReportAlert").checked);t.disabled=true;
+    try{await db.collection("tournaments").doc(x.id).update({report:txt||null});x.report=txt||null;trWrite=false;
+      // the function only sends the first time a tournament's report is saved
+      const r=tell?await alSend({treport:x.id}):null;
+      toast(txt?`Tournament report saved.${r==null?"":r>=0?" Parents with alerts on have been told.":" An alert was already sent for this tournament, so no new one."}`:"Tournament report removed.");render()}
     catch(e){t.disabled=false;toast(/report/.test(e&&e.message||"")?"The site's database needs a quick update before it can save a tournament report. Ask Touchline Tales.":"Couldn't save the report. Check your connection and try again.")}return}
   if(t.dataset.tshare){const x=tournaments.find(y=>y.id===t.dataset.tshare);if(!x)return;const text=`${String(x.report||"").trim()}\n\n${SITE}/?tour=${encodeURIComponent(x.id)}`;
     if(navigator.share){try{await navigator.share({text});return}catch(e){if(e&&e.name==="AbortError")return}}

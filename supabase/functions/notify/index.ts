@@ -10,6 +10,7 @@
 //   POST {preview: "<id>"} from a coach's phone after saving a match preview (once per game)
 //   POST {tsquad: "<id>"}  from a coach's phone after picking a tournament's squad (again only if it changed)
 //   POST {tournament: "<id>"} from a coach's phone when a tournament's groups and games are confirmed (once per tournament)
+//   POST {treport: "<id>"} from a coach's phone after saving a tournament report (once per tournament, no scores in the alert)
 //   POST {avail: {match, player}} from a parent's phone after answering availability: tells coaches who asked for it
 //                                 (match is "t:<tournament id>" for a whole tournament)
 //   POST {tavail: {day, player}}  the same for a training session
@@ -257,7 +258,7 @@ async function previewAlert(m: Match) {
 }
 
 // ---- tournament: groups and games confirmed (one alert instead of a countdown for every game) ----
-type Tournament = { id: string; name: string; date: string; end_date?: string | null; venue?: string; teams?: { name: string; group: string }[]; squad?: string[] | null };
+type Tournament = { id: string; name: string; date: string; end_date?: string | null; venue?: string; teams?: { name: string; group: string }[]; squad?: string[] | null; report?: string | null };
 
 // ---- tournament squad picked (before the games are on the site); push_log row "t:<id>", like tournamentAlert ----
 async function tSquadAlert(t: Tournament) {
@@ -282,6 +283,17 @@ async function tournamentAlert(t: Tournament) {
     first ? `First game ${first.ko.trim()}${first.opp ? ` v ${first.opp}` : ""}${first.date !== t.date ? ` on ${dayName(first.date)}` : ""}.` : "",
     "Tap for every game and kick-off time."].filter(Boolean).join(" ");
   return await send("reminders", { title: `🏆 ${t.name || "Tournament"}: groups and games are out`, body, url: `${SITE}?fixtures`, tag: `t-${t.id}` });
+}
+
+// ---- tournament report written: "📝 Tournament report" to Reminders phones, once per tournament (push_log row "tr:<id>",
+// no database change). Only for a tournament that started in the last 14 days, so a late edit to an old report stays quiet.
+// The alert never carries a score or a result, so it's fine for every age group.
+async function tReportAlert(t: Tournament) {
+  const today = londonDate(Date.now());
+  if (!String(t.report ?? "").trim() || t.date > today || t.date < londonDate(Date.now() - 14 * 864e5)) return -1;
+  const { data: claimed } = await db.rpc("push_claim_preview", { p_match: `tr:${t.id}` }); if (!claimed) return -1;
+  const nm = (t.name || "tournament").replace(/^the /i, "");
+  return await send("reminders", { title: `📝 Tournament report: ${t.name || "Tournament"}`, body: `How ${US} got on at the ${nm}. Tap to read it.`, url: `${SITE}?tour=${encodeURIComponent(t.id)}`, tag: `treport-${t.id}` });
 }
 
 // ---- availability ----
@@ -456,6 +468,9 @@ async function handle(req: Request) {
     } else if (typeof body.tournament === "string") {
       const { data } = await db.from("tournaments").select("*").eq("id", body.tournament).maybeSingle();
       out.tournament = data ? await tournamentAlert(data as Tournament) : -1;
+    } else if (typeof body.treport === "string") {
+      const { data } = await db.from("tournaments").select("*").eq("id", body.treport).maybeSingle();
+      out.treport = data ? await tReportAlert(data as Tournament) : -1;
     } else if (typeof body.preview === "string") {
       const { data } = await db.from("matches").select(COLS).eq("id", body.preview).maybeSingle();
       out.preview = data ? await previewAlert(data as Match) : -1;
