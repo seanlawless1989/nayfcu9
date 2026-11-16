@@ -1110,7 +1110,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos in a private store that only the team's signed-in coaches can open. These photos are never shown on the site and have no public links. Ask the coach to delete a photo at any time.</li><li>Match-day photos that families and coaches add on the Photos page. Only the team's signed-in coaches and families (a phone signed in with a family code) can see them: they're never public and have no public links. Any family can ask for a photo to come down, which hides it straight away, and coaches can delete any photo. The site takes the phone's location data out of each photo. The site keeps an anonymous code for the phone that added each photo, never a parent's name.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Coaches' termly development ratings (the FA's four corner model, 1 to 5, with an optional short note) and where each child can play, to help plan their development. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos in a private store that only the team's signed-in coaches can open. These photos are never shown on the site and have no public links. Ask the coach to delete a photo at any time.</li><li>Match-day photos that families and coaches add on the Photos page. Only the team's signed-in coaches and families (a phone signed in with a family code) can see them: they're never public and have no public links. Any family can ask for a photo to come down, which hides it straight away, and coaches can delete any photo. The site takes the phone's location data out of each photo. The site keeps an anonymous code for the phone that added each photo, never a parent's name.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you coach or manage the team: your name, your role and, if you agree, a photo, which the coaches add to the Squad and Players pages for everyone to see. Ask the coaches to change or remove them at any time.</li><li>If you buy a square on the club's pitch fundraiser: the name and message for your square and your email address for the receipt. Only the coaches see your email and what you paid, and messages show once a coach approves them. You pay through Stripe straight to the club; the site never sees your card.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed (if any) and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -2048,6 +2048,26 @@ const TB_BALL=(()=>{const R=3,P=(cx,cy,r,a0)=>Array.from({length:5},(_,k)=>{cons
 // a rugby ball: a white oval with a seam and stitches
 const TB_OVAL=`<g transform="rotate(-35)"><ellipse rx="4.2" ry="2.6" fill="#fff" stroke="#111" stroke-width=".3"/><path d="M-2.6 0H2.6" stroke="#111" stroke-width=".25"/>${[-1.6,-.5,.6,1.7].map(x=>`<path d="M${x} -.5V.5" stroke="#111" stroke-width=".2"/>`).join("")}</g>`;
 let TBS=null,tbMode="move",tbSel=null,tbUndo=[];
+// Steps: a set play as 2 to 8 moments (board.frames, board.step = the one showing). Moving things changes the step that's
+// showing; Play slides everyone from one step to the next so the team can see the move happen. Kept on the phone like boards.
+let tbPlaying=false;
+const tbSnap=b=>({us:b.us.map(p=>({x:p.x,y:p.y})),them:b.them.map(p=>({x:p.x,y:p.y})),ball:b.ball?{x:b.ball.x,y:b.ball.y}:null,arrows:JSON.parse(JSON.stringify(b.arrows||[]))});
+function tbApply(b,f){b.us.forEach((p,i)=>{const q=f.us[i];if(q){p.x=q.x;p.y=q.y}});b.them=f.them.map(p=>({x:p.x,y:p.y}));b.ball=f.ball?{x:f.ball.x,y:f.ball.y}:null;b.arrows=JSON.parse(JSON.stringify(f.arrows||[]))}
+const tbWait=ms=>new Promise(r=>setTimeout(r,ms));
+function tbSteps(b,fs){const f=b.frames||[],chips=f.map((x,i)=>`<button data-tbstep="${i}" aria-pressed="${b.step===i}">${i+1}</button>`).join("");
+  if(fs)return f.length>1?`<button id="tbPlay">${tbPlaying?"■ Stop":"▶ Play"}</button>${chips}`:"";
+  return `<div class="tbsteps"><b>🎬 Steps</b>${f.length?`<div class="seg" role="group" aria-label="Steps">${chips}</div>`:""}<button class="mini" id="tbStepAdd"${f.length>=8||tbPlaying?" disabled":""}>＋ ${f.length?"Next step":"Start steps"}</button>${f.length>1?`<button class="mini tbplay" id="tbPlay">${tbPlaying?"■ Stop":"▶ Play"}</button>`:""}${f.length&&!tbPlaying?`<button class="mini" id="tbStepDel">Delete step ${b.step+1}</button>`:""}</div>
+  <p class="hint" style="margin:0">${f.length?`Showing step ${b.step+1} of ${f.length}. Moving things changes this step. Tap <b>Next step</b>, then move ${esc(PL)} to where they go next. <b>Play</b> shows the move happening.`:`Show a set play moving: set up the start, tap <b>Start steps</b>, then move ${esc(PL)} and the ball for each next moment, up to 8 steps. Good for ${RUGBY?"lineouts, scrums and restarts":"corners, free kicks and kick-offs"}.`}</p>`}
+async function tbPlayRun(){const b=TB();if(!b||!b.frames||b.frames.length<2)return;tbPlaying=true;tbSel=null;tbMode="move";
+  b.step=0;tbApply(b,b.frames[0]);render();await tbWait(800);
+  for(let i=1;i<b.frames.length&&tbPlaying&&view==="tactics";i++){const A=b.frames[i-1],B=b.frames[i],ar=$("#tbArrows");if(ar)ar.style.opacity="0";
+    const at=(F,k)=>k==="ball"?F.ball:k[0]==="u"?F.us[+k.slice(1)]:F.them[+k.slice(1)];
+    const els=[...document.querySelectorAll("#tbPitch [data-tbtok]")].map(el=>({el,a:at(A,el.dataset.tbtok),b:at(B,el.dataset.tbtok)})).filter(o=>o.a&&o.b);
+    const t0=performance.now(),D=1200;
+    await new Promise(ok=>{const f=now=>{if(!tbPlaying||view!=="tactics"){ok();return}const t=Math.min(1,(now-t0)/D),e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+      els.forEach(o=>o.el.setAttribute("transform",`translate(${(o.a.x+(o.b.x-o.a.x)*e).toFixed(2)} ${(o.a.y+(o.b.y-o.a.y)*e).toFixed(2)})`));if(t<1)requestAnimationFrame(f);else ok()};requestAnimationFrame(f)});
+    if(!tbPlaying||view!=="tactics")break;b.step=i;tbApply(b,B);render();await tbWait(1000)}
+  tbPlaying=false;tbSave();if(view==="tactics")render()}
 function tbStore(){if(TBS)return TBS;try{TBS=JSON.parse(localStorage.getItem(SK+".tactics")||"null")}catch(e){}if(!TBS||!TBS.boards)TBS={cur:"",boards:{},saved:[]};return TBS}
 function tbSave(){const s=tbStore(),ks=Object.keys(s.boards).sort((a,b)=>(s.boards[b].at||0)-(s.boards[a].at||0));ks.slice(12).forEach(k=>{if(k!==s.cur)delete s.boards[k]});
   try{localStorage.setItem(SK+".tactics",JSON.stringify(s))}catch(e){toast("This phone's storage is full, so the board wasn't kept.")}}
@@ -2065,7 +2085,7 @@ function tbNew(mid){const m=mid&&matches.find(x=>x.id===mid),L=m&&m.live,cur=pla
     us:tbShape(form).map((p,i)=>Object.assign(p,{n:names[i]||""})),them:tbThem(SIDE),arrows:[],squad,at:Date.now()}}
 function tbOpen(mid){const s=tbStore(),k=mid||"general";if(!s.boards[k])s.boards[k]=tbNew(mid);s.cur=k;tbSel=null;tbUndo=[];tbMode="move";tbSave();setView("tactics")}
 function tbPush(){const b=TB();if(!b)return;tbUndo.push(JSON.stringify(b));if(tbUndo.length>40)tbUndo.shift()}
-function tbChanged(){const b=TB();if(b)b.at=Date.now();tbSave();render()}
+function tbChanged(){const b=TB();if(b){b.at=Date.now();if(b.frames&&b.frames.length&&b.step!=null)b.frames[b.step]=tbSnap(b)}tbSave();render()}
 function tbSquad(b){const sq=(b.squad&&b.squad.length?b.squad:players.filter(inGames).map(p=>p.name));return sq.concat(b.us.map(p=>p.n).filter(n=>n&&!sq.includes(n)))}
 function tbBench(b){const on=b.us.map(p=>p.n);return tbSquad(b).filter(n=>!on.includes(n))}
 // the arrow's path: straight, or a wiggle for a dribble; it stops short so the arrowhead lands on the point
@@ -2108,6 +2128,7 @@ function tacticsView(){if(!canWrite){if(tbFs)tbFsOff();return `<div class="card 
     <div class="tbwrap">${tbSvg(b,true)}</div>
     <p class="hint" style="margin:0">${hint}</p>
     ${selBar}
+    ${tbSteps(b)}
     <div class="btns"><button class="btn ghost" id="tbUndo"${tbUndo.length?"":" disabled"}>↶ Undo</button><button class="btn ghost" id="tbClearArrows"${b.arrows.length?"":" disabled"}>Clear arrows</button><button class="btn ghost" id="tbReset">Reset to ${esc(b.form)}</button><button class="btn gold" id="tbShare">📤 Save or share picture</button></div>
     <p class="hint" style="margin:0"><b>Subs:</b> ${bn.length?`<span class="chips">${bn.map(n=>`<button data-tbon="${esc(n)}">${esc(n)}</button>`).join("")}</span> <span>Tap one to put them on the pitch${sel?` in place of ${esc(sel.n||"the empty spot")}`:""}.</span>`:"everyone's on the pitch."}</p>
   </section>
@@ -2126,7 +2147,7 @@ function tacticsView(){if(!canWrite){if(tbFs)tbFsOff();return `<div class="card 
   <p class="hint">Only coaches see the tactics board, and boards stay on this phone. Share a picture in the team chat if you'd like the players to see it.</p></div>`}
 function tbPt(e){const sv=$("#tbPitch"),p=sv.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(($("#tbG")||sv).getScreenCTM().inverse());return {x:Math.round(q.x*10)/10,y:Math.round(q.y*10)/10}}
 let tbDrag=null;
-document.addEventListener("pointerdown",e=>{if(view!=="tactics"||!e.target.closest)return;const sv=e.target.closest("#tbPitch");if(!sv)return;const b=TB();if(!b)return;e.preventDefault();
+document.addEventListener("pointerdown",e=>{if(view!=="tactics"||!e.target.closest)return;const sv=e.target.closest("#tbPitch");if(!sv)return;const b=TB();if(!b)return;e.preventDefault();if(tbPlaying){tbPlaying=false;return}
   const p=tbPt(e),tk=e.target.closest("[data-tbtok]"),ar=e.target.closest("[data-tbarrow]");
   if(tbMode!=="move"){const g=document.createElementNS("http://www.w3.org/2000/svg","g");$("#tbArrows").appendChild(g);tbDrag={arrow:{t:tbMode,x1:p.x,y1:p.y,x2:p.x,y2:p.y},g};}
   else if(tk){tbDrag={tok:tk.dataset.tbtok,el:tk,p0:p,moved:false}}
@@ -2146,6 +2167,11 @@ function tbUp(){if(!tbDrag||view!=="tactics")return;const d=tbDrag,b=TB();tbDrag
 document.addEventListener("pointerup",tbUp);document.addEventListener("pointercancel",tbUp);
 document.addEventListener("change",e=>{if(e.target.id==="tbFor"){const v=e.target.value;tbOpen(v==="general"?"":v)}});
 document.addEventListener("click",async e=>{if(view!=="tactics")return;const t=e.target.closest("button");if(!t)return;const b=TB();if(!b)return;const d=t.dataset;
+  if(t.id==="tbPlay"){if(tbPlaying)tbPlaying=false;else tbPlayRun();return}
+  if(tbPlaying&&t.id!=="tbFsExit")tbPlaying=false;
+  if(t.id==="tbStepAdd"){tbPush();if(!b.frames||!b.frames.length){b.frames=[tbSnap(b),tbSnap(b)];b.step=1}else{b.frames.splice(b.step+1,0,tbSnap(b));b.step++}tbSel=null;tbChanged();toast(`Step ${b.step+1} added. Move ${PL} to where they go next.`);return}
+  if(d.tbstep){const i=+d.tbstep;if(!b.frames||!b.frames[i])return;b.step=i;tbApply(b,b.frames[i]);tbSel=null;tbSave();render();return}
+  if(t.id==="tbStepDel"&&b.frames&&b.frames.length){tbPush();b.frames.splice(b.step,1);if(b.frames.length<2){if(b.frames.length)tbApply(b,b.frames[0]);b.frames=[];b.step=null}else{b.step=Math.min(b.step,b.frames.length-1);tbApply(b,b.frames[b.step])}tbSel=null;tbChanged();return}
   if(d.tbmode){tbMode=d.tbmode;tbSel=null;render();return}
   if(d.tbform){tbPush();b.form=d.tbform;const sh=tbShape(b.form),names=b.us.map(p=>p.n);b.us=sh.map((p,i)=>Object.assign(p,{n:names[i]||""}));tbChanged();return}
   if(d.tbkit){b.kit=d.tbkit;tbChanged();return}
@@ -2185,7 +2211,7 @@ function tbFsView(b,selBar){tbRot=tbWide();
   <div class="tbfsbar">
     <button class="tbfsx" id="tbFsExit" aria-label="Exit full screen">✕ Exit</button>
     <div class="tbfsmodes" role="group" aria-label="What a finger does">${[["move","✋ Move"],["run","➜ Run"],["pass","⇢ Pass"],RUGBY?["kick","⤴ Kick"]:["drib","〰 Dribble"]].map(([k,l])=>`<button data-tbmode="${k}" aria-pressed="${tbMode===k}">${l}</button>`).join("")}</div>
-    ${btn("tbUndo","↶ Undo",!tbUndo.length)}${btn("tbClearArrows","Clear arrows",!b.arrows.length)}${btn("tbReset","Reset")}${btn("tbShare","📤 Share")}
+    ${btn("tbUndo","↶ Undo",!tbUndo.length)}${btn("tbClearArrows","Clear arrows",!b.arrows.length)}${btn("tbReset","Reset")}${btn("tbShare","📤 Share")}${tbSteps(b,true)}
   </div>
   <div class="tbfspitch">${tbSvg(b,true,tbRot)}${selBar?`<div class="tbfssel${tbFsSelTop(b)?" top":""}">${selBar}</div>`:""}</div></div>`}
 // the swap panel sits at the other end of the screen from whatever was tapped, so it never hides it
@@ -2376,7 +2402,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
   const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button>${rtMatchBtn(m)}<button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed&&(m.comp!=="Tournament"||m.tournament_id)?`<div class="avsum">${avSummary(avKey(m))}</div>`:""}</section>`:"";
-  return `<div class="live md">${back}${board}${info}${cheerCard(m)}${fx?previewCard(m)+mdReports(m,tn):mdReports(m,tn)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${nav}${coach}</div>`;
+  return `<div class="live md">${back}${board}${info}${cheerCard(m)}${fx?previewCard(m)+mdReports(m,tn):mdReports(m,tn)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${canWrite&&fx&&m.opp&&!m.postponed?oppPrep(m):""}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
@@ -2452,6 +2478,9 @@ function ftSave(){try{localStorage.setItem(FT_KEY,JSON.stringify({url:FT.url,nam
 // coaches: a nudge on the Fixtures page when nobody on this phone has checked Full-Time for a week (league fixtures only)
 function ftDue(){if(!canWrite||RUGBY)return false;let c="";try{c=(JSON.parse(localStorage.getItem(FT_KEY)||"{}")).checked||""}catch(e){}
   return !c||Date.now()-new Date(c)>6*864e5}
+document.addEventListener("click",async e=>{if(view!=="md"||!canWrite)return;const t=e.target.closest("#opSave,[data-optb]");if(!t)return;
+  if(t.dataset.optb){tbOpen(t.dataset.optb);return}
+  const v=($("#opNote").value||"").trim().slice(0,600);t.disabled=true;try{if(v)await cnSet("opp",t.dataset.k,{t:v,at:todayLocal()});else await cnDel("opp",t.dataset.k);toast(v?"Notes saved. Only coaches can see them.":"Notes cleared.")}catch(er){toast("Couldn't save the notes. Check your signal and try again.")}render()});
 // date|kick-off|venue: when these change on an upcoming game, parents with alerts on are told (notify: fixture)
 const fxSig=m=>[m.date||"",String(m.ko||"").trim(),String(m.venue||"").trim()].join("|");
 function fxTell(id,was){alSend({fixture:{match:id,was}}).then(r=>{if(r!=null&&r>0)toast(`Parents with alerts on have been told about the change.`)})}
@@ -3338,7 +3367,7 @@ const kitDatalists=()=>KIT_F.map(([f])=>`<datalist id="kit-${f}">${KIT_SIZES[f].
 // training attendance, player ratings). Nothing new is stored and parents never see it. Four tabs: players, playing time,
 // availability and team. Charts are plain SVG/HTML with a title on every mark, and every chart has the numbers beside it.
 let insTab="players",insPl=null,insCa=null,insCb=null;
-const INS_TABS=[["players","Players"],["time","Game time"],["avail","Availability"],["team","Team"]];
+const INS_TABS=[["players","Players"],["time","Game time"],["avail","Availability"],["team","Team"],["squad","Squad plan"],["corners","Four corners"]];
 function insGames(){return seasonMatches().filter(m=>counted(m)&&(result(m)||Object.keys(played(m)).length||m.potm))}
 function insDate(m){return `${+m.date.slice(8,10)} ${MONTHS[+m.date.slice(5,7)-1]}`}
 function insRoster(games){const s=new Set(players.filter(inGames).map(p=>p.name));games.forEach(m=>Object.keys(played(m)).forEach(n=>s.add(n)));
@@ -3356,7 +3385,7 @@ function insightsView(){
   const games=insGames();
   const head=`<section class="card"><h2 style="margin-top:0">📊 Data hub · ${esc(season)}</h2><p class="hint">Your season as charts, worked out from what's already on the site. Only coaches can see this page. Tap any square, bar or dot to see its numbers.</p>${insTabs()}</section>`;
   if(!games.length)return `<div class="stack">${head}<section class="card empty">No games played yet this season. Charts appear here once results are in.</section></div>`;
-  const body=insTab==="time"?insTime(games):insTab==="avail"?insAvail():insTab==="team"?insTeam(games):insPlayers(games);
+  const body=insTab==="time"?insTime(games):insTab==="avail"?insAvail():insTab==="team"?insTeam(games):insTab==="squad"?insSquad(games):insTab==="corners"?insCorners(games):insPlayers(games);
   return `<div class="stack ins">${head}${body}</div>`}
 
 // ---- players tab ----
@@ -3564,16 +3593,162 @@ function insTeam(games){const list=games.filter(result),U=RUGBY?"Points":SP.Goal
   const halfs=insHalves(list);
   return `<section class="card"><h3>Every game</h3><div class="kv ins-kv">${tile("Played",t.P,`${t.W} won, ${t.D} drawn, ${t.L} lost`)}${tile(`${U} per game`,(t.F/t.P).toFixed(1),`${(t.A/t.P).toFixed(1)} against`)}${tile("Scored in",`${scoredIn}/${t.P}`,"games")}${SP.keeper?tile("Clean sheets",cs):""}${tile(`Different ${SP.goals==="goals"?"scorers":"try scorers"}`,scorers)}</div>${chart}</section>
   ${insFormCard(list)}<section class="card"><h3>Where we do best</h3><table class="lb"><thead><tr><th></th><th>P</th><th>W</th><th>D</th><th>L</th><th>F</th><th>A</th><th>Won</th></tr></thead><tbody>
-    ${split("Home",m=>m.ha==="H"&&!m.tournament_id)}${split("Away",m=>m.ha==="A"&&!m.tournament_id)}${comps.length>1?comps.map(c=>split(esc(c),m=>(m.tournament_id?"Tournament":compName(m.comp||"")||"Other")===c)).join(""):""}</tbody></table></section>${insWith(list)}${halfs}`}
+    ${split("Home",m=>m.ha==="H"&&!m.tournament_id)}${split("Away",m=>m.ha==="A"&&!m.tournament_id)}${comps.length>1?comps.map(c=>split(esc(c),m=>(m.tournament_id?"Tournament":compName(m.comp||"")||"Other")===c)).join(""):""}</tbody></table></section>${insWith(list)}${insPairs(list)}${halfs}`}
 // first half v second half, only from games where the live clock was actually running (goals spread across the game)
 function insHalves(list){const ok=list.filter(m=>{const L=m.live;if(!L||L.noHt||!L.events)return false;const ev=L.events.filter(e=>e.k==="goal"||e.k==="them");return ev.length&&ev.some(e=>e.h===2)&&new Set(ev.map(e=>e.m)).size>1});
   if(ok.length<2)return "";const c={f1:0,f2:0,a1:0,a2:0};ok.forEach(m=>m.live.events.forEach(e=>{if(e.k==="goal")c[e.h===2?"f2":"f1"]++;if(e.k==="them")c[e.h===2?"a2":"a1"]++}));
   const mx=Math.max(1,c.f1,c.f2,c.a1,c.a2),bar=(v,cl,l)=>`<div class="r"><span>${l}</span><div class="b"><i class="${cl}" style="width:${v/mx*100}%" title="${esc(`${l}: ${v}`)}"></i></div><b>${v}</b></div>`;
   return `<section class="card"><h3>First half or second half?</h3><p class="hint">From the ${ok.length} games run live with the clock going.</p><div class="ins-leg"><span><i class="sw c1"></i>For</span><span><i class="sw c2"></i>Against</span></div>
   <div class="ins-hb">${bar(c.f1,"c1","1st half, for")}${bar(c.a1,"c2","1st half, against")}${bar(c.f2,"c1","2nd half, for")}${bar(c.a2,"c2","2nd half, against")}</div></section>`}
+// ---- coaches' own notes: four corner wheels, who can play where, notes on the opposition ----
+// public.coach_notes (supabase/39_coach_notes.sql): one row per (kind, k) with a small JSON body. COACHES ONLY: visitors
+// have no rights at all and family-code parents are refused by is_coach(). kind "fc" = four corner wheel
+// (k = player|term), "pos" = where a player can play (k = player), "opp" = notes on an opposition (k = oppKey).
+let CN=null;
+async function loadCoachNotes(){CN=null;if(!sb||!canWrite)return;try{const {data,error}=await sb.from("coach_notes").select("kind,k,data");if(!error){CN={};(data||[]).forEach(r=>{(CN[r.kind]=CN[r.kind]||{})[r.k]=r.data})}}catch(e){}}
+const cnGet=(kind,k)=>CN&&CN[kind]&&CN[kind][k]||null;
+async function cnSet(kind,k,data){const {error}=await sb.from("coach_notes").upsert({kind,k,data,updated:new Date().toISOString()},{onConflict:"kind,k"});if(error)throw error;(CN[kind]=CN[kind]||{})[k]=data}
+async function cnDel(kind,k){const {error}=await sb.from("coach_notes").delete().eq("kind",kind).eq("k",k);if(error)throw error;if(CN[kind])delete CN[kind][k]}
+const cnOff=what=>`<p class="hint">${what} isn't switched on for this team's database yet. Ask ${esc(TEAM.supportName||"Touchline Tales")} to turn it on.</p>`;
+// pitch zones: the same groups as "Where they started"
+const ZL=RUGBY?["Forwards","Backs"]:SP.keeper?["Goal","Defence","Midfield","Attack"]:["Defence","Midfield","Attack"];
+const ZS=RUGBY?ZL:SP.keeper?["GK","Def","Mid","Att"]:["Def","Mid","Att"];
+function slotZone(form,i){const F=FORMS[form]||FORMS[FORM0];if(RUGBY){const k=F.fwd,n=F.label.length;if(!k)return 1;return (k>0?i<k:i>=n+k)?0:1}
+  let z=insZone(F.label[i]);if(!SP.keeper)z=Math.max(0,z-1);return z}
+// how many of each zone the team's usual formation needs
+const zoneNeed=()=>{const F=FORMS[FORM0],c=ZL.map(()=>0);F.label.forEach((l,i)=>c[slotZone(FORM0,i)]++);return c};
+// starting spots from the kick-off line-ups of games run in live match mode
+function posStarts(games){const out={};let n=0;
+  games.forEach(m=>{const ko=m.live&&(m.live.events||[]).find(e=>e.k==="ko"&&e.line);if(!ko)return;n++;const form=ko.form||m.live.form,F=FORMS[form]||FORMS[FORM0],fm=FORMS[form]?form:FORM0;
+    ko.line.forEach((nm,i)=>{if(!nm||!F.xy[i])return;const o=out[nm]=out[nm]||{z:ZL.map(()=>0),at:{},n:0};o.n++;o.z[slotZone(fm,i)]++;
+      const key=F.label[i]+"@"+F.xy[i].join(",");(o.at[key]=o.at[key]||{l:F.label[i],x:F.xy[i][0],y:F.xy[i][1],c:0}).c++})});
+  return {out,n}}
+// where a player can play: what the coaches ticked, or (until they do) wherever they've started
+function canPlay(nm,starts){const s=cnGet("pos",nm);if(s&&Array.isArray(s.z))return {z:s.z.filter(i=>i<ZL.length),sug:false};
+  const o=starts[nm];return {z:o?o.z.map((v,i)=>v?i:-1).filter(i=>i>=0):[],sug:true}}
+
+// ---- squad plan tab: next game cover, depth chart, who can play where, position passport ----
+let insPp=null;
+function insSquad(games){const names=insRoster(games),{out,n}=posStarts(games);if(!insPp||!names.includes(insPp))insPp=names[0];
+  const nx=tbFixtures()[0];
+  return (nx?insCover(nx,names,out,true):"")+insDepth(names,out)+insCanPlay(names,out)+insPassport(names,out,n)}
+// next game: who's said yes, and is every part of the pitch covered?
+function insCover(m,names,starts,link){const av=AV[m.id]||{},c={yes:0,maybe:0,no:0};names.forEach(nm=>{const v=av[nm];if(v in c)c[v]++});
+  const need=zoneNeed(),asked=c.yes+c.maybe+c.no>0,pool=asked?names.filter(nm=>av[nm]==="yes"):names.filter(nm=>av[nm]!=="no");
+  const rows=ZL.map((z,i)=>{const yes=pool.filter(nm=>canPlay(nm,starts).z.includes(i)),may=asked?names.filter(nm=>av[nm]==="maybe"&&canPlay(nm,starts).z.includes(i)):[];
+    const st=yes.length<need[i]?"short":yes.length===need[i]?"just":"ok";
+    return `<div class="cv-r cv-${st}"><b>${z}</b><span>${yes.length?yes.map(esc).join(", "):"Nobody yet"}${may.length?` <i>(maybe: ${may.map(esc).join(", ")})</i>`:""}</span><em>${st==="short"?`⚠ need ${need[i]}`:st==="just"?"just enough":"✓"}</em></div>`}).join("");
+  const gaps=ZL.filter((z,i)=>pool.filter(nm=>canPlay(nm,starts).z.includes(i)).length<need[i]);
+  return `<section class="card"><h3>Cover for the next game</h3><p class="hint">${link?`<button class="mini" data-md="${esc(m.id)}">v ${esc(m.opp||"TBC")}, ${esc(insDate(m))}</button> `:""}${asked?`<b>${c.yes}</b> available, ${c.maybe} maybe, ${c.no} can't play, ${names.length-c.yes-c.maybe-c.no} not replied. A full side is ${SIDE}.`:`Nobody has answered <b>Can you play?</b> yet, so this counts everyone who hasn't said no.`}</p>
+    ${gaps.length?`<p class="ins-call">Short in ${gaps.map(z=>`<b>${z.toLowerCase()}</b>`).join(" and ")}. Worth asking who else could cover.</p>`:""}
+    <div class="cv">${rows}</div><p class="hint" style="margin-top:6px">"Need" is how many your usual ${RUGBY?"line-up":`formation (${esc(FORM0)})`} uses there. Where a ${esc(PL.replace(/s$/,""))} can play comes from <b>Who can play where</b> below.</p></section>`}
+// depth chart: everyone who can play in each part of the pitch
+function insDepth(names,starts){const need=zoneNeed(),cols=ZL.map((z,i)=>({z,i,l:names.filter(nm=>canPlay(nm,starts).z.includes(i))}));
+  return `<section class="card"><h3>Squad depth</h3><p class="hint">Who can play in each part of the pitch. <i>Slanted names</i> are worked out from where they've started, until you tick it below.</p>
+    <div class="dp" style="--n:${ZL.length}">${cols.map(o=>`<div class="dp-c${o.l.length<=need[o.i]?" thin":""}"><h4>${o.z}<small>&nbsp;${o.l.length}</small></h4>${o.l.length?o.l.map(nm=>{const s=canPlay(nm,starts);return `<span class="click${s.sug?" sug":""}" data-player="${esc(nm)}">${esc(nm)}</span>`}).join(""):`<span class="hint">Nobody</span>`}${o.l.length<=need[o.i]?`<em>⚠ ${o.l.length<need[o.i]?"not enough":"no cover"}</em>`:""}</div>`).join("")}</div></section>`}
+function insCanPlay(names,starts){if(CN===null)return `<section class="card"><h3>Who can play where</h3>${cnOff("Who can play where")}</section>`;
+  return `<section class="card"><h3>Who can play where</h3><p class="hint">Tick where each ${esc(PL.replace(/s$/,""))} can play. It saves as you tap, and only coaches see it.</p>
+    <div class="cp">${names.map(nm=>{const s=canPlay(nm,starts);return `<div class="cp-r"><span>${esc(nm)}${s.sug&&s.z.length?` <small class="hint">suggested</small>`:""}</span><div class="seg">${ZL.map((z,i)=>`<button data-cnpos="${esc(nm)}" data-z="${i}" aria-pressed="${s.z.includes(i)}" title="${esc(z)}">${esc(ZS[i])}</button>`).join("")}</div></div>`}).join("")}</div></section>`}
+// position passport: every spot a player has started in, on a pitch, so everyone gets a go
+function insPassport(names,starts,n){
+  if(!n)return `<section class="card"><h3>Position passport</h3><p class="hint">Run a game in <b>▶ Live match</b> and every ${esc(PL.replace(/s$/,""))}'s starting spots show here on a pitch.</p></section>`;
+  const o=starts[insPp]||{z:ZL.map(()=>0),at:{},n:0},spots=Object.values(o.at),F=FORMS[FORM0],mx=Math.max(1,...spots.map(s=>s.c));
+  const ghost=F.xy.map(([x,y],i)=>spots.some(s=>Math.abs(s.x-x)<4&&Math.abs(s.y-y)<4)?"":`<g class="pp-g"><circle cx="${x}" cy="${y}" r="4.2"/><text x="${x}" y="${y+1.3}" text-anchor="middle">${esc(F.label[i])}</text></g>`).join("");
+  const line='stroke="rgba(255,255,255,.8)" stroke-width=".5" fill="none"';
+  const pitch=`<svg class="pp" viewBox="0 0 100 100" role="img" aria-label="${esc(`Where ${insPp} has started`)}"><rect width="100" height="100" fill="#2E8B3E"/>${[0,2,4,6,8].map(i=>`<rect y="${i*10+10}" width="100" height="10" fill="#33963F"/>`).join("")}
+    <rect x="3" y="3" width="94" height="94" ${line}/><line x1="3" y1="3" x2="97" y2="3" ${line}/>${RUGBY?"":`<circle cx="50" cy="3" r="9" ${line}/><rect x="21" y="79" width="58" height="18" ${line}/><rect x="36" y="91" width="28" height="6" ${line}/>`}
+    ${ghost}${spots.map(s=>{const r=4.2+3*s.c/mx;return `<g class="pp-s"><circle cx="${s.x}" cy="${s.y}" r="${r.toFixed(1)}"><title>${esc(`${s.l}: started ${s.c} time${s.c===1?"":"s"}`)}</title></circle><text x="${s.x}" y="${s.y+1.6}" text-anchor="middle">${s.c}</text><text class="pp-l" x="${s.x}" y="${(s.y+r+3.6).toFixed(1)}" text-anchor="middle">${esc(s.l)}</text></g>`}).join("")}</svg>`;
+  const tried=ZL.map((z,i)=>o.z[i]?`${z} ${o.z[i]}`:"").filter(Boolean),not=ZL.filter((z,i)=>!o.z[i]);
+  const never=ZL.map((z,i)=>({z,l:names.filter(nm=>!(starts[nm]&&starts[nm].z[i]))}));
+  return `<section class="card"><div class="ins-hd"><h3>Position passport</h3><select id="insPp" aria-label="Pick a player">${names.map(x=>`<option${x===insPp?" selected":""}>${esc(x)}</option>`).join("")}</select></div>
+    <p class="hint">Every spot ${esc(insPp)} has started in, from the ${n} game${n===1?"":"s"} run live. Bigger circles are more starts. Faint circles are spots in your ${RUGBY?"line-up":esc(FORM0)} they haven't tried.</p>
+    <div class="pp-wrap">${pitch}</div>
+    <p style="margin:8px 0 0">${o.n?`Started ${o.n} game${o.n===1?"":"s"}: ${tried.map(esc).join(", ")}.`:`${esc(insPp)} hasn't started a game run live yet.`}${not.length&&o.n?` <b>Not tried yet:</b> ${not.map(z=>esc(z.toLowerCase())).join(", ")}.`:""}</p>
+    <h3 style="margin-top:14px">Not tried yet</h3><p class="hint">${RUGBY?"It's good for":"The FA encourages"} young ${esc(PL)} to try every position. These haven't started in each part of the pitch yet.</p>
+    <div class="cv">${never.map(x=>`<div class="cv-r"><b>${x.z}</b><span>${x.l.length?x.l.map(nm=>`<span class="click" data-pp="${esc(nm)}">${esc(nm)}</span>`).join(", "):"Everyone has had a go ✓"}</span></div>`).join("")}</div></section>`}
+
+// ---- four corners tab: the FA's four corner model, rated each term by the coaches ----
+const FC=[["tech","Technical",RUGBY?"Handling, passing, tackling technique, kicking":"Ball control, first touch, passing, dribbling"],["phys","Physical","Agility, balance, coordination, speed"],["psych","Psychological","Confidence, focus, decisions, bouncing back"],["soc","Social","Teamwork, communication, encouraging others"]];
+const FC_LV=["Just starting","Developing","Getting there","Confident","Excellent"];
+// terms: Autumn (Aug to Dec), Spring (Jan to Mar), Summer (Apr to Jul), named by the season they're in
+function fcTerm(iso){const y=+iso.slice(0,4),mo=+iso.slice(5,7),s=mo>=8?y:y-1,ss=`${s}-${String((s+1)%100).padStart(2,"0")}`;return `${mo>=8?"Autumn":mo<=3?"Spring":"Summer"} ${ss}`}
+function fcPrev(t){const [n,ss]=t.split(" "),s=+ss.slice(0,4),p=`${s-1}-${String(s%100).padStart(2,"0")}`;return n==="Summer"?`Spring ${ss}`:n==="Spring"?`Autumn ${ss}`:`Summer ${p}`}
+let insFc=null,insFt=null,fcDraft=null,fcBusy=false;
+function fcOf(nm,t){return cnGet("fc",`${nm}|${t}`)}
+function fcRadar(cur,prev){const W=300,H=230,cx=W/2,cy=H/2+2,R=82,n=FC.length,pt=(i,r)=>[cx+r*Math.sin(2*Math.PI*i/n),cy-r*Math.cos(2*Math.PI*i/n)];
+  const poly=o=>FC.map(([k],i)=>pt(i,R*(+o[k]||0)/5).map(v=>v.toFixed(1)).join(",")).join(" ");
+  return `<svg class="ins-svg ins-radar" viewBox="0 0 ${W} ${H}" role="img" aria-label="Four corner wheel">
+    ${[1,2,3,4,5].map(r=>`<polygon class="g" points="${FC.map((x,i)=>pt(i,R*r/5).join(",")).join(" ")}"/>`).join("")}
+    ${FC.map((x,i)=>{const [x1,y1]=pt(i,R),[lx,ly]=pt(i,R+14);return `<line class="g" x1="${cx}" y1="${cy}" x2="${x1}" y2="${y1}"/><text class="ax" x="${lx}" y="${ly+4}" text-anchor="${Math.abs(lx-cx)<8?"middle":lx>cx?"start":"end"}">${x[1]}</text>`}).join("")}
+    ${prev?`<polygon class="rd b fc-prev" points="${poly(prev)}"><title>${esc("Last term: "+FC.map(([k,l])=>`${l} ${prev[k]||"–"}`).join(", "))}</title></polygon>`:""}
+    ${cur?`<polygon class="rd a" points="${poly(cur)}"><title>${esc("This term: "+FC.map(([k,l])=>`${l} ${cur[k]||"–"}`).join(", "))}</title></polygon>${FC.map(([k],i)=>cur[k]?(([x,y])=>`<circle class="rdp a" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"/>`)(pt(i,R*cur[k]/5)):"").join("")}`:""}
+  </svg>`}
+function insCorners(games){const names=insRoster(games),now=fcTerm(todayLocal());if(!insFc||!names.includes(insFc))insFc=names[0];if(!insFt)insFt=now;
+  if(CN===null)return `<section class="card"><h3>Four corner wheel</h3>${cnOff("The four corner wheel")}</section>`;
+  const terms=[...new Set([now,fcPrev(now),...Object.keys(CN.fc||{}).map(k=>k.split("|")[1])])].sort((a,b)=>fcSortKey(b).localeCompare(fcSortKey(a)));
+  if(!fcDraft||fcDraft.n!==insFc||fcDraft.t!==insFt){const s=fcOf(insFc,insFt)||{};fcDraft={n:insFc,t:insFt,v:Object.assign({},s),dirty:false}}
+  const prev=fcOf(insFc,fcPrev(insFt)),cur=FC.some(([k])=>fcDraft.v[k])?fcDraft.v:null;
+  const rated=names.filter(nm=>fcOf(nm,insFt)).length;
+  const wheel=`<section class="card"><div class="ins-hd"><h3>Four corner wheel</h3><select id="insFc" aria-label="Pick a player">${names.map(x=>`<option${x===insFc?" selected":""}>${esc(x)}</option>`).join("")}</select></div>
+    <p class="hint">The FA's four corner model: rate each ${esc(PL.replace(/s$/,""))} from 1 to 5 once a term and see how they're growing. <select id="insFt" aria-label="Term" class="fc-t">${terms.map(t=>`<option${t===insFt?" selected":""}>${esc(t)}</option>`).join("")}</select></p>
+    ${fcRadar(cur,prev)}<div class="ins-leg"><span><i class="sw c1"></i>${esc(insFt)}</span>${prev?`<span><i class="sw c2"></i>${esc(fcPrev(insFt))}</span>`:`<span>No wheel for ${esc(fcPrev(insFt))} to compare with</span>`}</div>
+    <div class="fc">${FC.map(([k,l,d])=>`<div class="fc-r"><div><b>${l}</b><small>${d}</small></div><div class="seg">${[1,2,3,4,5].map(v=>`<button data-fcset="${k}" data-v="${v}" aria-pressed="${+fcDraft.v[k]===v}" title="${FC_LV[v-1]}">${v}</button>`).join("")}</div>${fcDraft.v[k]?`<em>${FC_LV[fcDraft.v[k]-1]}${prev&&prev[k]&&prev[k]!==fcDraft.v[k]?` <span class="${fcDraft.v[k]>prev[k]?"up":"dn"}">${fcDraft.v[k]>prev[k]?"▲":"▼"} from ${prev[k]}</span>`:""}</em>`:""}</div>`).join("")}</div>
+    <label class="f" style="margin-top:10px">Next steps for ${esc(insFc)} (optional)<textarea id="fcNote" rows="2" maxlength="300" placeholder="e.g. use the weaker foot more, talk to teammates">${esc(fcDraft.v.note||"")}</textarea></label>
+    <div class="btns"><button class="btn gold" id="fcSave"${fcBusy?" disabled":""}>${fcBusy?"Saving…":`Save ${esc(insFc)}'s wheel`}</button>${fcOf(insFc,insFt)?`<button class="btn ghost" id="fcDel">Clear this term</button>`:""}</div>
+    <p class="hint" style="margin-top:8px">1 just starting, 2 developing, 3 getting there, 4 confident, 5 excellent. Only coaches see this. It's for spotting what each child needs next, not for picking teams, so keep notes kind and factual: parents can ask to see what's kept about their child.</p></section>`;
+  const cell=(o,p,k)=>{const v=o&&+o[k];return v?`<td class="fc-c" style="--a:${(.12+.14*v).toFixed(2)}"${v>=4?' data-dk="1"':""}>${v}${p&&p[k]&&p[k]!==v?`<i class="${v>p[k]?"up":"dn"}">${v>p[k]?"▲":"▼"}</i>`:""}</td>`:`<td class="fc-c none">–</td>`};
+  const avg=FC.map(([k])=>insAvg(names.map(nm=>{const o=fcOf(nm,insFt);return o&&+o[k]||null})));
+  const table=`<section class="card"><h3>Whole squad, ${esc(insFt)}</h3><p class="hint">${rated} of ${names.length} rated this term. ▲ and ▼ show a change since last term. Tap a name to open their wheel.</p>
+    <div class="ig-wrap"><table class="ig fc-tb"><thead><tr><th></th>${FC.map(([,l])=>`<th>${({Technical:"Tech",Physical:"Phys",Psychological:"Psych",Social:"Social"})[l]}</th>`).join("")}</tr></thead><tbody>
+    ${names.map(nm=>{const o=fcOf(nm,insFt),p=fcOf(nm,fcPrev(insFt));return `<tr><th class="click" data-fcpick="${esc(nm)}">${esc(nm)}</th>${FC.map(([k])=>cell(o,p,k)).join("")}</tr>`}).join("")}</tbody>
+    ${rated?`<tfoot><tr><th>Squad average</th>${avg.map(v=>`<td class="ig-n">${v==null?"–":v.toFixed(1)}</td>`).join("")}</tr></tfoot>`:""}</table></div>
+    ${rated>=3?(()=>{const lo=FC.map(([,l],i)=>({l,v:avg[i]})).filter(x=>x.v!=null).sort((a,b)=>a.v-b.v)[0];return lo?`<p class="ins-call">The squad's lowest corner this term is <b>${esc(lo.l.toLowerCase())}</b> (${lo.v.toFixed(1)}). A good one to build into training.</p>`:""})():""}</section>`;
+  return wheel+table}
+const fcSortKey=t=>{const [n,ss]=t.split(" ");return ss+({Autumn:"1",Spring:"2",Summer:"3"}[n]||"0")};
+
+// ---- partnerships: which players have played together most, and how those games went (team sheets only) ----
+let insPa=null;
+function insPairs(list){const sheets=list.filter(m=>result(m)&&m.apps!==false&&Object.keys(played(m)).length);
+  if(sheets.length<3)return `<section class="card"><h3>Partnerships</h3><p class="hint">Needs at least 3 results with a team sheet (who played). ${sheets.length} so far.</p></section>`;
+  const names=insRoster(sheets);if(!insPa||!names.includes(insPa))insPa=names[0];
+  const pts=m=>({W:3,D:1,L:0})[result(m)],pair=(a,b)=>{const g=sheets.filter(m=>insIn(m,a)&&insIn(m,b));return {g:g.length,ppg:g.length?g.reduce((s,m)=>s+pts(m),0)/g.length:null}};
+  const mine=names.filter(nm=>nm!==insPa).map(nm=>Object.assign({nm},pair(insPa,nm))).filter(o=>o.g).sort((a,b)=>b.g-a.g||(b.ppg??0)-(a.ppg??0));
+  const all=[];names.forEach((a,i)=>names.slice(i+1).forEach(b=>{const p=pair(a,b);if(p.g)all.push(Object.assign({a,b},p))}));
+  const most=all.slice().sort((x,y)=>y.g-x.g||(y.ppg??0)-(x.ppg??0)).slice(0,5),best=all.filter(o=>o.g>=3).sort((x,y)=>y.ppg-x.ppg||y.g-x.g).slice(0,5);
+  const mg=Math.max(1,...mine.map(o=>o.g)),pp=v=>v==null?"–":v.toFixed(1);
+  const li=o=>`<div class="pr"><span><span class="click" data-player="${esc(o.a)}">${esc(o.a)}</span> + <span class="click" data-player="${esc(o.b)}">${esc(o.b)}</span></span><b>${o.g} game${o.g===1?"":"s"}</b><small>${pp(o.ppg)} pts a game</small></div>`;
+  return `<section class="card"><div class="ins-hd"><h3>Partnerships</h3><select id="insPa" aria-label="Pick a player">${names.map(x=>`<option${x===insPa?" selected":""}>${esc(x)}</option>`).join("")}</select></div>
+    <p class="hint">Who ${esc(insPa)} has played alongside most, from ${sheets.length} results with a team sheet, and the points a game the team got when they played together (a win is 3, a draw 1).</p>
+    <div class="ins-hb">${mine.map(o=>`<div class="r"><span class="click" data-player="${esc(o.nm)}">${esc(o.nm)}</span><div class="b" title="${esc(`${insPa} and ${o.nm}: ${o.g} game${o.g===1?"":"s"} together, ${pp(o.ppg)} points a game`)}"><i class="c1" style="width:${o.g/mg*100}%"></i></div><b>${o.g} <small>${pp(o.ppg)}</small></b></div>`).join("")}</div>
+    <h3 style="margin-top:14px">Played together most</h3><div class="prs">${most.map(li).join("")}</div>
+    ${best.length?`<h3 style="margin-top:14px">Best partnerships</h3><p class="hint">Highest points a game together, from pairs with at least 3 games together.</p><div class="prs">${best.map(li).join("")}</div>`:""}
+    <p class="hint" style="margin-top:8px">It shows a pattern, not the reason for it. Small numbers of games can mislead.</p></section>`}
+
+// ---- opposition prep: on an upcoming game's page, coaches only ----
+function oppPrep(m){const h=meetings(m.opp,m.date).slice(0,3),key=oppKey(m.opp),note=cnGet("opp",key);
+  const last=h.map(x=>{const sc=Object.entries(played(x)).filter(([,g])=>+g>0).map(([n,g])=>`${n}${+g>1?` ×${g}`:""}`);
+    return `<div class="op-m"><button class="sc-btn" data-md="${esc(x.id)}">${scChip(x)}</button> <span>${esc(insDate(x))} ${esc(x.date.slice(0,4))}${x.ha==="H"?", home":x.ha==="A"?", away":""}</span>${sc.length?`<div class="hint">${SP.ball} ${esc(sc.join(", "))}</div>`:""}${x.notes?`<div class="hint">Your notes then: ${esc(x.notes)}</div>`:""}</div>`}).join("");
+  const names=insRoster(insGames()),{out}=posStarts(insGames());
+  return `<section class="card edit-only op-prep"><h3>🔎 Opposition prep</h3><p class="hint">Only coaches see this.</p>
+    <h4>Last time${h.length>1?"s":""} we played them</h4>${h.length?last:`<p class="hint">First time we've played ${esc(m.opp)}.</p>`}
+    <h4>Your notes on ${esc(m.opp)}</h4>${CN===null?cnOff("Opposition notes"):`<textarea id="opNote" rows="3" maxlength="600" placeholder="e.g. quick number 9, long throws, they press high">${esc(note&&note.t||"")}</textarea>
+    <div class="btns"><button class="btn ghost" id="opSave" data-k="${esc(key)}">Save notes</button>${note&&note.at?`<span class="hint">Last saved ${esc(insDate({date:note.at}))}. Kept for every game against them.</span>`:""}</div>`}
+    <div class="btns" style="margin-top:8px"><button class="btn gold" data-optb="${esc(m.id)}">📋 Plan it on the tactics board</button></div></section>${names.length?insCover(m,names,out,false):""}`}
+
 document.addEventListener("click",e=>{if(view!=="insights")return;const b=e.target.closest("[data-instab]");if(b){insTab=b.dataset.instab;try{localStorage.setItem(SK+".instab",insTab)}catch(err){}render();return}
   const t=e.target.closest(".iw-r[title],.ig td[title],.ins-cols>div[title],.ins-div>div[title],.ins-hb i[title],.ins-hb .b[title],.ins-svg .hit,.ins-svg .rdot,.ins-svg .rd,.ins-donut circle");if(t){const s=t.getAttribute("title")||(t.querySelector("title")||{}).textContent;if(s)toast(s)}});
-document.addEventListener("change",e=>{if(view!=="insights")return;const id=e.target.id;if(id==="insPl")insPl=e.target.value;else if(id==="insCa")insCa=e.target.value;else if(id==="insCb")insCb=e.target.value;else return;render()});
+document.addEventListener("change",e=>{if(view!=="insights")return;const id=e.target.id;if(id==="insPl")insPl=e.target.value;else if(id==="insCa")insCa=e.target.value;else if(id==="insCb")insCb=e.target.value;else if(id==="insPp")insPp=e.target.value;else if(id==="insPa")insPa=e.target.value;else if(id==="insFc"||id==="insFt"){if(fcDraft&&fcDraft.dirty&&!confirm("Leave without saving this wheel?")){e.target.value=id==="insFc"?insFc:insFt;return}if(id==="insFc")insFc=e.target.value;else insFt=e.target.value}else return;render()});
+document.addEventListener("input",e=>{if(view==="insights"&&e.target.id==="fcNote"&&fcDraft){fcDraft.v.note=e.target.value;fcDraft.dirty=true}});
+document.addEventListener("click",async e=>{if(view!=="insights")return;const t=e.target.closest("[data-cnpos],[data-fcset],#fcSave,#fcDel,[data-fcpick],[data-pp]");if(!t)return;const d=t.dataset;
+  if(d.pp){insPp=d.pp;render();setTimeout(()=>{const el=$("#insPp");el&&el.closest(".card").scrollIntoView({behavior:"smooth"})},30);return}
+  if(d.fcpick){if(fcDraft&&fcDraft.dirty&&!confirm("Leave without saving this wheel?"))return;insFc=d.fcpick;render();setTimeout(()=>{const el=$("#insFc");el&&el.closest(".card").scrollIntoView({behavior:"smooth"})},30);return}
+  if(d.fcset){fcDraft.v[d.fcset]=+d.v;fcDraft.dirty=true;render();return}
+  if(d.cnpos){const games=insGames(),{out}=posStarts(games),cur=canPlay(d.cnpos,out).z.slice(),z=+d.z,i=cur.indexOf(z);if(i>=0)cur.splice(i,1);else cur.push(z);cur.sort();
+    t.disabled=true;try{await cnSet("pos",d.cnpos,{z:cur})}catch(er){toast("Couldn't save that. Check your signal and try again.")}render();return}
+  if(t.id==="fcSave"&&!fcBusy){const v={};FC.forEach(([k])=>{if(fcDraft.v[k])v[k]=+fcDraft.v[k]});const note=(fcDraft.v.note||"").trim().slice(0,300);if(note)v.note=note;
+    if(!FC.some(([k])=>v[k])){toast("Pick a score for at least one corner first.");return}
+    fcBusy=true;render();try{await cnSet("fc",`${fcDraft.n}|${fcDraft.t}`,v);fcDraft.dirty=false;toast(`${fcDraft.n}'s wheel saved. Only coaches can see it.`)}catch(er){toast("Couldn't save the wheel. Check your signal and try again.")}fcBusy=false;fcDraft=null;render();return}
+  if(t.id==="fcDel"&&confirm(`Clear ${insFc}'s wheel for ${insFt}?`)){try{await cnDel("fc",`${insFc}|${insFt}`)}catch(er){toast("Couldn't clear it. Try again.");return}fcDraft=null;render();return}});
 try{insTab=localStorage.getItem(SK+".instab")||"players";if(!INS_TABS.some(([k])=>k===insTab))insTab="players"}catch(e){}
 function kitView(){
   if(!canWrite)return `<div class="stack"><section class="card empty">Kit sizes are for coaches only. Sign in as a coach to see them.</section></div>`;
@@ -4131,7 +4306,7 @@ async function checkCoach(){
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
   await loadTav();alSync();
-  await loadAvail();await loadPhotos();await loadStaff();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadBirthdays();await loadCoachPhotos();await loadGallery();await loadKit();await loadDrills();
+  await loadAvail();await loadPhotos();await loadStaff();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadCoachNotes();await loadBirthdays();await loadCoachPhotos();await loadGallery();await loadKit();await loadDrills();
   authBox();render();
   if(canWrite)setTimeout(()=>ftAuto().catch(()=>{}),4000);
 }
