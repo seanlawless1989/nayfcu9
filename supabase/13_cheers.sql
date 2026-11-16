@@ -40,6 +40,7 @@ declare d date; today date := (now() at time zone 'Europe/London')::date;
         new_id bigint;
 begin
   if (select muted from public.cheer_settings where id = 1) then raise exception 'Cheers are off for this team'; end if;
+  if n = '' then raise exception 'Add your first name'; end if;
   if p_cheer is null or p_cheer < 0 or p_cheer > 49 then raise exception 'Pick a cheer'; end if;
   if p_voter is null or length(p_voter) not between 8 and 64 then raise exception 'This phone can''t send cheers'; end if;
   select date into d from public.matches where id = p_match;
