@@ -927,3 +927,7 @@ body.rp-on{overflow:hidden}
 .rp-ctl button{flex:1;min-height:52px;border-radius:14px;border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font:800 16px var(--body);cursor:pointer}
 .rp-ctl .rp-main{flex:2;background:var(--gold,#FFD200);border-color:var(--gold,#FFD200);color:#14182E}
 .rp-go{width:100%}
+
+.spk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px}.spk small{color:var(--muted);font-size:13px;flex:1;min-width:150px}
+.spk .mini.on{background:var(--club);color:#fff;border-color:var(--club)}
+input.need{outline:3px solid #E53935;outline-offset:1px}
