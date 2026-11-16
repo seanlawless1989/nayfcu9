@@ -758,6 +758,10 @@ body.fd-paying{overflow:hidden}
 .ig td .ig-as{position:absolute;bottom:1px;right:2px}
 .ig-gk{font-size:11px!important}
 .ig td.ig-n{background:none;cursor:default;font-weight:700;color:var(--muted);padding-left:6px;white-space:nowrap}
+.ig td.ig-cs{color:var(--ink)}
+.ig td.ig-cs small{font-size:10px;color:var(--muted)}
+.ig tfoot th{position:sticky;left:0;z-index:1;background:var(--card);text-align:left;font:700 11px var(--body);color:var(--muted);padding:4px 8px 0 0;white-space:nowrap}
+.ig td.ig-ft{background:none;cursor:default;height:22px;font-size:13px}
 .ig-key{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted);margin-top:8px}
 .ig-key span{margin-right:6px}
 .ig-key i{display:inline-grid;place-items:center;width:24px;height:20px;border-radius:4px;background:rgb(var(--clubRGB)/var(--a));color:var(--ink);font-style:normal;font-weight:700}
