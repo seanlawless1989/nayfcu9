@@ -150,7 +150,7 @@ function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boo
 function appsTracked(list){return list.length>0}// scorers and PotM count as apps even without a team sheet
 
 // ---------- views ----------
-function setView(v){if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));if(v==="fund"){fSel=null;fundOpen()}render();window.scrollTo({top:0})}
+function setView(v){rpClose();if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));if(v==="fund"){fSel=null;fundOpen()}render();window.scrollTo({top:0})}
 function render(){
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
@@ -2394,7 +2394,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const lu=ko||[...ev].reverse().find(e=>e.k==="lu");
   const lineup=lu&&lu.line?`<section class="card"><h3>${ko?"Starting line-up":"Line-up confirmed"}${lu.form?` (${esc(lu.form)})`:""}</h3>${pitchHtml({form:lu.form,slots:lu.line},false)}${(b=>b.length?`<p class="hint">Subs: ${b.map(esc).join(", ")}</p>`:"")((ko?(L.squad||[]):(lu.bench||[])).filter(n=>!lu.line.includes(n)))}</section>`
     :fx&&!m.postponed&&m.squad&&m.squad.length?`<section class="card"><h3>Squad</h3><p>${m.squad.map(esc).join(", ")}</p></section>`:"";
-  const story=ev.length?`<section class="card"><h3>How the game went</h3>${timelineHtml(L,m,!isLive(m))}</section>`:!fx&&r?`<section class="card"><h3>How the game went</h3><p class="hint">There's no minute-by-minute story for this game. Games run with Live match mode will show one here.</p></section>`:"";
+  const story=ev.length?`<section class="card"><h3>How the game went</h3>${rpCan(m)?`<button class="btn gold rp-go" data-rp="${esc(m.id)}">▶ Replay the game</button><p class="hint" style="margin:6px 0 10px">Watch the match alerts come in again, one after another, with the score ticking over.</p>`:""}${timelineHtml(L,m,!isLive(m))}</section>`:!fx&&r?`<section class="card"><h3>How the game went</h3><p class="hint">There's no minute-by-minute story for this game. Games run with Live match mode will show one here.</p></section>`:"";
   const ms=milestones().filter(x=>x.id===m.id);
   const msHtml=ms.length?`<section class="card"><h3>Milestones in this game</h3>${ms.map(x=>`<div class="ms"><span>🎉 <b>${esc(x.n)}</b>: ${esc(x.label)}</span></div>`).join("")}</section>`:"";
   const h=m.opp?meetings(m.opp).filter(x=>x.id!==m.id):[];
@@ -2410,6 +2410,55 @@ function renderTicker(){const el=document.getElementById("ticker");if(!el)return
   const items=L.map(m=>{const g=(m.live.events||[]).filter(e=>e.k==="goal"&&(!RUGBY||e.t==="try")).map(e=>`${e.n} ${e.m}`).join(", ");const st=m.live.status==="live"?`🔴 LIVE ${minuteOf(m.live)}`:m.live.status==="ht"?"⏸ HALF TIME":"🏁 FULL TIME";
     return `<button class="tk" data-tl="${esc(m.id)}">${m.practice?"PRACTICE · ":""}${st} · ${esc(TEAM.name)} ${m.hidden?"v":`${m.us??0}–${m.them??0}`} ${esc(m.opp)}${g?` · ${SP.ball} ${esc(g)}`:""} · Tap to follow</button>`}).join("");
   const h=`<div class="tkin">${items}${items}</div>`;el.hidden=false;if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
+// ---------- replay a game: the match alerts again, one after another, with the score ticking over ----------
+// Built from the game's live events, worded the same as the alerts the notify function sends phones. Anyone can watch it.
+// When scores are kept back (TEAM.publicScores=false and not a coach) the goals are already gone from the events, so
+// the replay has no score in it either.
+let RP=null;
+function rpAlert(e,m,sc){const US=TEAM.shortName||TEAM.name,opp=m.opp||"the opposition",show=!m.hidden&&sc!=null,score=show?`${US} ${sc} ${opp}`:`${US} v ${opp}`;
+  if(RUGBY){const R={con:"Conversion",pen:"Penalty",drop:"Drop goal",pt:"Penalty try",try:"Try"};switch(e.k){
+    case "goal":return {t:e.t==="pt"?"🏉 Penalty try!":e.t&&e.t!=="try"?`🎯 ${R[e.t]||"Kick"}${e.n?`: ${e.n}`:""}`:`🏉 TRY! ${e.n||US} scores`,b:score,us:1};
+    case "them":return {t:`${R[e.t||""]||"Score"} for ${opp}`,b:score,them:1};
+    case "sub":return e.on?{t:"🔁 Replacement",b:`${e.on} comes on for ${e.off||"a teammate"}${e.m?` (${e.m})`:""}.`}:null}}
+  switch(e.k){
+    case "lu":return e.line&&e.line.length?{t:e.re?"🔁 Line-up change":"✅ Line-up confirmed",b:`${US} v ${opp}${e.form?` (${e.form})`:""}: ${e.line.filter(Boolean).join(", ")}.${e.bench&&e.bench.length?` ${RUGBY?"Replacements":"Subs"}: ${e.bench.join(", ")}.`:""}`}:null;
+    case "ko":return {t:"🟢 Kick-off!",b:`${US} v ${opp} is under way.`};
+    case "goal":return {t:`⚽ GOAL! ${e.n||US} scores`,b:score+(e.a?`. Set up by ${e.a}.`:""),us:1};
+    case "sub":return e.on?{t:"🔁 Substitution",b:`${e.on} comes on for ${e.off||"a teammate"}${e.m?` (${e.m})`:""}.`}:null;
+    case "them":return {t:`Goal for ${opp}`,b:score,them:1};
+    case "ht":return {t:"⏸ Half time",b:score};
+    case "ft":return {t:"🏁 Full time",b:score}}
+  return null}
+// the alerts for a game, each with the score at that moment
+function rpList(m){const ev=(m.live&&m.live.events)||[];let u=0,t=0;const out=[];
+  ev.forEach(e=>{if(e.k==="goal"&&!RUGBY)u++;if(e.k==="them"&&!RUGBY)t++;const sc=e.s||(RUGBY?null:`${u}–${t}`);const a=rpAlert(e,m,sc);if(a)out.push(Object.assign(a,{m:e.k==="ht"?"HT":e.k==="ft"?"FT":e.m||"",sc,n:e.n,k:e.k,tt:e.t}))});
+  if(m.potm&&out.length)out.push({t:`${POTM_IC} ${POTM.charAt(0).toUpperCase()+POTM.slice(1)}: ${m.potm}`,b:`Well done ${m.potm}!`,m:"",sc:out[out.length-1].sc,k:"potm"});
+  return out}
+const rpCan=m=>!!m&&!isLive(m)&&rpList(m).length>=2;
+function rpOpen(id){const m=matches.find(x=>x.id===id);if(!m)return;rpClose();const list=rpList(m);if(!list.length)return;
+  RP={m,list,i:0,speed:1,paused:false,timer:null};const d=document.createElement("div");d.id="rp";d.className="rp";d.setAttribute("role","dialog");d.setAttribute("aria-label","Replay of the game");
+  d.innerHTML=`<div class="rp-in"><div class="rp-top"><b>▶ Replay</b><span>${esc(longDate(m.date))}</span><button id="rpX" aria-label="Close the replay">✕</button></div>
+    <div class="rp-board"><div><img src="${CREST}" alt=""><span>${esc(TEAM.shortName||TEAM.name)}</span></div><div class="rp-sc" id="rpSc">${m.hidden?"v":"0 – 0"}</div><div>${badge(m.opp)}<span>${esc(m.opp||"")}</span></div><small id="rpMin">Before kick-off</small></div>
+    <div class="rp-bar"><i id="rpBar"></i></div>
+    <div class="rp-list" id="rpList" aria-live="polite"></div>
+    <div class="rp-ctl"><button id="rpBack" aria-label="Start again">⏮</button><button id="rpPlay" class="rp-main">⏸ Pause</button><button id="rpSpd" aria-label="Speed">1×</button><button id="rpEnd" aria-label="Skip to the end">⏭</button></div></div>`;
+  document.body.appendChild(d);document.body.classList.add("rp-on");rpTick()}
+function rpClose(){if(!RP)return;clearTimeout(RP.timer);RP=null;const d=$("#rp");if(d)d.remove();document.body.classList.remove("rp-on");document.querySelectorAll(".gflash").forEach(x=>x.remove())}
+function rpCard(a,fresh){return `<div class="rp-n${fresh?" new":""}${a.us?" us":a.them?" them":""}"><img src="icon-192.png" alt=""><div><div class="rp-h"><b>${esc(APP)}</b><small>${esc(a.m)}</small></div><strong>${esc(a.t)}</strong><span>${esc(a.b)}</span></div></div>`}
+function rpShow(){const {list,i,m}=RP,a=list[i-1];$("#rpList").innerHTML=list.slice(0,i).reverse().map((x,k)=>rpCard(x,k===0)).join("");
+  if(a){if(!m.hidden&&a.sc)$("#rpSc").textContent=a.sc.replace("–"," – ");$("#rpMin").textContent=a.k==="ft"?"Full time":a.k==="ht"?"Half time":a.m?`${a.m}`:a.k==="potm"?"Full time":"";
+    if(a.us||a.them){const s=$("#rpSc");s.classList.remove("pop");void s.offsetWidth;s.classList.add("pop")}}
+  $("#rpBar").style.width=`${i/list.length*100}%`;$("#rpPlay").textContent=i>=list.length?"↻ Watch again":RP.paused?"▶ Play":"⏸ Pause"}
+function rpTick(){if(!RP)return;clearTimeout(RP.timer);if(RP.i>=RP.list.length){rpShow();return}RP.i++;rpShow();const a=RP.list[RP.i-1];
+  if(a.us&&RP.speed===1&&!RP.m.hidden)goalFlash(a.n,`${TEAM.shortName||TEAM.name} ${a.sc||""} ${RP.m.opp||""}`.trim(),a.tt);
+  if(!RP.paused&&RP.i<RP.list.length)RP.timer=setTimeout(rpTick,(a.us?3800:a.them?2800:2300)/RP.speed)}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-rp]");if(b){rpOpen(b.dataset.rp);return}if(!RP)return;const t=e.target.closest("button");if(!t||!t.closest("#rp"))return;
+  if(t.id==="rpX"){rpClose();return}
+  if(t.id==="rpPlay"){if(RP.i>=RP.list.length){RP.i=0;RP.paused=false;rpTick();return}RP.paused=!RP.paused;if(RP.paused){clearTimeout(RP.timer);rpShow()}else rpTick();return}
+  if(t.id==="rpSpd"){RP.speed=RP.speed===1?2:RP.speed===2?4:1;t.textContent=RP.speed+"×";if(!RP.paused&&RP.i<RP.list.length){clearTimeout(RP.timer);RP.timer=setTimeout(rpTick,1200/RP.speed)}return}
+  if(t.id==="rpBack"){clearTimeout(RP.timer);RP.i=0;$("#rpSc").textContent=RP.m.hidden?"v":"0 – 0";$("#rpMin").textContent="Before kick-off";RP.paused=false;rpTick();return}
+  if(t.id==="rpEnd"){clearTimeout(RP.timer);RP.i=RP.list.length;rpShow();return}});
+document.addEventListener("keydown",e=>{if(RP&&e.key==="Escape")rpClose()});
 window.goalFlash=goalFlash;function goalFlash(n,score,t){document.querySelectorAll(".gflash").forEach(x=>x.remove());const d=document.createElement("div");d.className="gflash";d.innerHTML=`<div class="gf-in"><b>${RUGBY?({pen:"PENALTY!",drop:"DROP GOAL!",pt:"PENALTY TRY!",con:"CONVERTED!"})[t]||"TRY!":"GOAL!"}</b>${n?`<span>${esc(n)}</span>`:""}${score?`<em>${esc(score)}</em>`:""}</div>`;d.onclick=()=>d.remove();document.body.appendChild(d);try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}setTimeout(()=>d.remove(),3600)}
 async function pollLive(){if(!sb||!matches.length)return;const t=todayLocal();if(!matches.some(m=>m.date===t||(m.live&&(m.live.status==="live"||m.live.status==="ht"))))return;
   try{const {data}=await sb.from("matches").select("id,us,them,live,played,assists,keepers,date"+(RUGBY?",kicks":"")).eq("date",t);
