@@ -2581,7 +2581,7 @@ function ftParse(cells,name){cells=cells.map(c=>String(c||"").trim());const dc=c
 function ftName(rows,name){const c=[...new Set([name,TEAM.fullTimeName,TEAM.club&&TEAM.club.name,TEAM.name,String(TEAM.name||"").split(" ").slice(0,2).join(" ")].filter(Boolean))];return c.find(n=>rows.some(r=>ftParse(r,n)))||name}
 function ftRows(rows,name){rows=rows||(FT&&FT.rows);name=name||(FT&&FT.name);if(!rows)return [];name=ftName(rows,name);if(FT&&rows===FT.rows&&FT.name!==name){FT.name=name}const seen=new Set();return rows.map(r=>ftParse(r,name)).filter(Boolean).filter(f=>{const k=f.date+"|"+oppKey(f.opp);if(seen.has(k))return false;seen.add(k);return true})
   .map(f=>{const ex=matches.find(m=>m.date===f.date&&ftSame(m.opp,f.opp))||matches.find(m=>!result(m)&&ftSame(m.opp,f.opp)&&m.comp===f.comp&&Math.abs(new Date(m.date)-new Date(f.date))<15*864e5&&m.date!==f.date);
-    const change=ex&&!result(ex)?[ex.date!==f.date?"date":"",f.ko&&ex.ko!==f.ko?"kick-off":"",f.venue&&ex.venue!==f.venue?"venue":"",f.opp&&ex.opp!==f.opp?"name":""].filter(Boolean):[];
+    const change=ex&&!result(ex)?[ex.date!==f.date?"date":"",f.ko&&ex.ko!==f.ko?"kick-off":"",f.venue&&!sameVenue(ex.venue,f.venue)?"venue":"",f.opp&&ex.opp!==f.opp?"name":""].filter(Boolean):[];
     return Object.assign(f,{key:f.date+"|"+oppKey(f.opp),ex,change,state:!ex?"new":change.length?"changed":"same"})}).filter(f=>f.date>=todayLocal()||f.state!=="same")}
 // Full-Time's own code snippet (TEAM.fullTimeSnippet, the lrcode a league or club Full-Time admin makes for club websites).
 // It loads in this browser exactly as it would on any club website, inside a hidden frame, and the fixtures table it
@@ -2598,17 +2598,23 @@ function ftSnippet(code){return new Promise((res,rej)=>{code=String(code||"");if
       if(rows.length||n>16)return done({rows,text:text.slice(0,3000)})}
     if(n>40)done(null,new Error("Full-Time didn't answer."))},500);
   document.body.appendChild(f)})}
-// a coach's phone checks the team's snippet by itself (at most every 3 hours): changed dates, kick-offs and venues of
-// games already on the site are updated straight away and parents told; new games wait for a coach to tick them
+// every phone with the site open (parents too, not only coaches) checks the team's snippet by itself, at most every 2 hours,
+// and hands what Full-Time shows to the ftwatch function, which updates moved dates, kick-offs and venues of games already
+// on the site and tells parents (a coach's phone at once, otherwise once two phones agree). So a game moved on Full-Time
+// is put right even when no coach signs in. New games still wait for a coach to tick them in Import.
 // what an import changes on a game we already have: date, kick-off, venue, and the opponent's name as Full-Time writes it
 // (Sean, 5 Nov: always use the Full-Time name). The opponent's logo carries over (badge() matches similar names).
-function ftUpd(f){const b={date:f.date};if(f.ko)b.ko=f.ko;if(f.venue)b.venue=f.venue;if(f.opp&&f.opp!==f.ex.opp)b.opp=f.opp;return b}
-async function ftAuto(){const code=TEAM.fullTimeSnippet;if(!canWrite||RUGBY||!code||!db)return;let last=0;try{last=+localStorage.getItem(FT_KEY+".auto")||0}catch(e){}
-  if(Date.now()-last<3*36e5)return;try{localStorage.setItem(FT_KEY+".auto",String(Date.now()))}catch(e){}
-  let r;try{r=await ftSnippet(code)}catch(e){return}if(!r.rows.length||!canWrite)return;
+const sameVenue=(a,b)=>String(a||"").toLowerCase().replace(/[^a-z0-9]/g,"")===String(b||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+function ftUpd(f){const b={date:f.date};if(f.ko)b.ko=f.ko;if(f.venue&&!sameVenue(f.venue,f.ex.venue))b.venue=f.venue;if(f.opp&&f.opp!==f.ex.opp)b.opp=f.opp;return b}
+async function ftAuto(){const code=TEAM.fullTimeSnippet;if(RUGBY||!code||!sb||window.DEMO)return;let last=0;try{last=+localStorage.getItem(FT_KEY+".auto")||0}catch(e){}
+  if(Date.now()-last<2*36e5)return;try{localStorage.setItem(FT_KEY+".auto",String(Date.now()))}catch(e){}
+  let r;try{r=await ftSnippet(code)}catch(e){return}if(!r.rows.length)return;
   let saved={};try{saved=JSON.parse(localStorage.getItem(FT_KEY)||"{}")}catch(e){}const name=saved.name||TEAM.fullTimeName||TEAM.name||"";
-  const list=ftRows(r.rows,name),ch=list.filter(f=>f.state==="changed"),nw=list.filter(f=>f.state==="new").length;let n=0;
-  for(const f of ch){try{const b=ftUpd(f);await db.collection("matches").doc(f.ex.id).update(b);if(!f.ex.postponed&&fxSig(Object.assign({},f.ex,b))!==fxSig(f.ex))fxTell(f.ex.id,fxSig(f.ex));n++}catch(e){}}
+  const names=[...new Set([name,TEAM.fullTimeName,TEAM.club&&TEAM.club.name,TEAM.name,String(TEAM.name||"").split(" ").slice(0,2).join(" ")].filter(Boolean))];
+  let srv=null;try{const {data,error}=await sb.functions.invoke("ftwatch",{body:fnBody({names,rows:r.rows})});if(!error&&data&&!data.error)srv=data}catch(e){}
+  if(!canWrite)return;   // a parent's phone: the server does the rest, and the change arrives on the page by itself
+  const list=ftRows(r.rows,name),nw=list.filter(f=>f.state==="new").length;let n=srv?srv.changed||0:0;
+  if(!srv)for(const f of list.filter(f=>f.state==="changed")){try{const b=ftUpd(f);await db.collection("matches").doc(f.ex.id).update(b);if(!f.ex.postponed&&fxSig(Object.assign({},f.ex,b))!==fxSig(f.ex))fxTell(f.ex.id,fxSig(f.ex));n++}catch(e){}}
   try{saved.checked=new Date().toISOString();saved.newOnFT=nw;localStorage.setItem(FT_KEY,JSON.stringify(saved))}catch(e){}
   if(n||nw){toast([n?`Full-Time: ${n} game${n>1?"s":""} moved, now updated on the site.`:"",nw?`${nw} new fixture${nw>1?"s":""} on Full-Time to add (Fixtures > Import).`:""].filter(Boolean).join(" "));if(view==="fixtures"||view==="home")render()}}
 async function ftFromSnippet(){FT.name=$("#ft-name").value.trim();FT.busy=true;FT.msg="";render();
@@ -2618,7 +2624,7 @@ async function ftFromSnippet(){FT.name=$("#ft-name").value.trim();FT.busy=true;F
 function ftView(){if(!canWrite||!FT)return `<div class="card empty">Coaches only.</div>`;const list=ftRows();
   return `<section class="card stack"><h2>📥 Import league fixtures</h2>
     <p class="hint" style="margin:0">Use this whenever the league moves a game. 1. Open your team's <b>Fixtures</b> page on FA Full-Time. 2. Select the whole fixtures table and copy it. 3. Paste it below. New games are added, and any date, venue or kick-off that changed is updated. Parents with alerts on get told about changes.</p>
-    ${TEAM.fullTimeSnippet?`<div class="btns"><button class="btn gold" id="ftSnip"${FT.busy?" disabled":""}>${FT.busy?"Reading Full-Time…":"Get fixtures from Full-Time"}</button></div><p class="hint" style="margin:0">This phone also checks Full-Time by itself every few hours while a coach is signed in, and updates moved games straight away.</p>`:""}
+    ${TEAM.fullTimeSnippet?`<div class="btns"><button class="btn gold" id="ftSnip"${FT.busy?" disabled":""}>${FT.busy?"Reading Full-Time…":"Get fixtures from Full-Time"}</button></div><p class="hint" style="margin:0">The site also checks Full-Time by itself every couple of hours whenever anyone has it open, parents included, and updates moved games and tells parents straight away.</p>`:""}
     ${FT.url?`<div class="btns"><a class="btn ghost" href="${esc(FT.url)}" target="_blank" rel="noopener">Open our Full-Time fixtures ↗</a></div>`:""}
     <label class="f">Your team's name on Full-Time<input type="text" id="ft-name" value="${esc(FT.name)}"></label>
     <textarea id="ft-paste" rows="6" style="width:100%" placeholder="Paste the fixtures table here"></textarea><div class="btns" style="margin-top:6px"><button class="btn gold" id="ftPaste">Check for changes</button></div>
@@ -4383,7 +4389,7 @@ async function checkCoach(){
   await loadTav();alSync();
   await loadAvail();await loadPhotos();await loadStaff();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadCoachNotes();await loadBirthdays();await loadCoachPhotos();await loadGallery();await loadKit();await loadDrills();
   authBox();render();
-  if(canWrite)setTimeout(()=>ftAuto().catch(()=>{}),4000);
+  setTimeout(()=>ftAuto().catch(()=>{}),4000);
 }
 document.addEventListener("click",async e=>{
   const b=e.target.closest("button");if(!b)return;
