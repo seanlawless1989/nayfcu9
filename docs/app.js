@@ -1415,7 +1415,7 @@ function trPast(){const out=new Set(Object.keys(ATT||{}));if(TR){const di=WEEKDA
   return [...out].sort().reverse().slice(0,10)}
 function attCard(){if(!canWrite||!ATT)return "";const days=trPast();if(!attDay||!days.includes(attDay))attDay=days[0]||todayLocal();
   const here=new Set(ATT[attDay]||[]),roster=players.filter(p=>p.current).sort((a,b)=>(+a.num||99)-(+b.num||99));
-  return `<section class="card stack edit-only"><h3>Who came to training</h3><p class="hint" style="margin:0">Only coaches see this. It shows next to playing time on the Review page.</p>
+  return `<section class="card stack edit-only"><h3>Who came to training</h3><p class="hint" style="margin:0">Only coaches see this. It builds the training report in the 📊 Data hub and shows next to playing time on the Review page.</p>
     <label class="f">Session<select id="attDay">${days.map(d=>`<option value="${d}"${d===attDay?" selected":""}>${esc(shortDay(d))}${ATT[d]?` · ${ATT[d].length} came`:""}</option>`).join("")}</select></label>
     <div class="av">${roster.map(p=>`<label class="row" style="cursor:pointer"><span><input type="checkbox" data-att="${esc(p.name)}"${here.has(p.name)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">${esc(p.name)}</span></label>`).join("")}</div>
     <div class="btns"><button class="btn gold" id="attSave">Save attendance</button><button class="mini" id="attAll">Tick everyone</button></div></section>`}
@@ -3448,7 +3448,7 @@ const kitDatalists=()=>KIT_F.map(([f])=>`<datalist id="kit-${f}">${KIT_SIZES[f].
 // training attendance, player ratings). Nothing new is stored and parents never see it. Four tabs: players, playing time,
 // availability and team. Charts are plain SVG/HTML with a title on every mark, and every chart has the numbers beside it.
 let insTab="players",insPl=null,insCa=null,insCb=null;
-const INS_TABS=[["players","Players"],["time","Game time"],["avail","Availability"],["team","Team"],["squad","Squad plan"],["corners","Four corners"]];
+const INS_TABS=[["players","Players"],["time","Game time"],["avail","Availability"],["training","Training"],["team","Team"],["squad","Squad plan"],["corners","Four corners"]];
 function insGames(){return seasonMatches().filter(m=>counted(m)&&(result(m)||Object.keys(played(m)).length||m.potm))}
 function insDate(m){return `${+m.date.slice(8,10)} ${MONTHS[+m.date.slice(5,7)-1]}`}
 function insRoster(games){const s=new Set(players.filter(inGames).map(p=>p.name));games.forEach(m=>Object.keys(played(m)).forEach(n=>s.add(n)));
@@ -3465,7 +3465,8 @@ function insightsView(){
   if(!canWrite)return `<div class="stack"><section class="card empty">The data hub is for coaches only. Sign in as a coach to see it.</section></div>`;
   const games=insGames();
   const head=`<section class="card"><h2 style="margin-top:0">📊 Data hub · ${esc(season)}</h2><p class="hint">Your season as charts, worked out from what's already on the site. Only coaches can see this page. Tap any square, bar or dot to see its numbers.</p>${insTabs()}</section>`;
-  if(!games.length)return `<div class="stack">${head}<section class="card empty">No games played yet this season. Charts appear here once results are in.</section></div>`;
+  if(insTab==="training")return `<div class="stack ins">${head}${insTraining()}</div>`;
+  if(!games.length)return `<div class="stack">${head}<section class="card empty">No games played yet this season. Charts appear here once results are in. The <b>Training</b> tab works already.</section></div>`;
   const body=insTab==="time"?insTime(games):insTab==="avail"?insAvail():insTab==="team"?insTeam(games):insTab==="squad"?insSquad(games):insTab==="corners"?insCorners(games):insPlayers(games);
   return `<div class="stack ins">${head}${body}</div>`}
 
@@ -3643,8 +3644,7 @@ function insPos(games,names){const out={},zl=RUGBY?["Forwards","Backs"]:SP.keepe
 
 // ---- availability tab ----
 function insAvail(){const asked=seasonMatches().filter(m=>!m.postponed&&m.stage!=="placeholder"&&AV[m.id]&&Object.keys(AV[m.id]).length);
-  const at=ATT?attStats(season):null;
-  if(!asked.length&&!(at&&at.sessions))return `<section class="card"><h3>Availability</h3><p class="hint">Once parents (or coaches) start answering <b>Can you play?</b> for games, you'll see who's usually available and who never replies.</p></section>`;
+  if(!asked.length)return `<section class="card"><h3>Availability</h3><p class="hint">Once parents (or coaches) start answering <b>Can you play?</b> for games, you'll see who's usually available and who never replies.</p></section>`;
   const names=insRoster(asked),K=[["yes","Available","win"],["maybe","Maybe","draw"],["no","Can't play","loss"],["","No reply","none"]];let html="";
   if(asked.length){const rows=names.map(n=>{const c={yes:0,maybe:0,no:0,"":0};asked.forEach(m=>{const v=(AV[m.id]||{})[n];c[v in c?v:""]++});return {n,c}}).sort((a,b)=>b.c[""]-a.c[""]||a.c.yes-b.c.yes);
     const quiet=rows.filter(o=>o.c[""]/asked.length>=.5).map(o=>o.n);
@@ -3656,10 +3656,69 @@ function insAvail(){const asked=seasonMatches().filter(m=>!m.postponed&&m.stage!
     html+=`<section class="card"><h3>${PL.charAt(0).toUpperCase()+PL.slice(1)} available each game</h3><p class="hint">How many said yes for each game. The dashed line is a full side (${need}).</p>
     <div class="ins-cols ins-need" style="--need:${need/mx*100}%" role="img" aria-label="Players available each game">${cnt.map(o=>`<div title="${esc(`v ${o.m.opp}, ${insDate(o.m)}: ${o.y} available`)}"><b>${o.y}</b><span class="tk"><i class="${o.y<need?"short":""}" style="height:${Math.max(3,o.y/mx*100)}%"></i></span><small>${esc(oppIni(o.m.opp))}</small></div>`).join("")}</div>
     ${cnt.some(o=>o.y<need)?`<p class="hint" style="margin-top:6px">⚠ Lighter bars are games where fewer than a full side said yes.</p>`:""}</section>`}
-  if(at&&at.sessions){const tn=insRoster([]).concat(Object.keys(at.out)).filter((n,i,a)=>a.indexOf(n)===i).map(n=>({n,c:at.out[n]||0})).sort((a,b)=>a.c-b.c||a.n.localeCompare(b.n));
-    html+=`<section class="card"><h3>Training attendance</h3><p class="hint">Sessions ticked off on the Training page this season (${at.sessions}). Lowest first.</p>
-    <div class="ins-hb">${tn.map(o=>`<div class="r"><span class="click" data-player="${esc(o.n)}">${esc(o.n)}</span><div class="b"><i class="c1" style="width:${o.c/at.sessions*100}%" title="${esc(`${o.n}: ${o.c} of ${at.sessions} sessions`)}"></i></div><b>${o.c}/${at.sessions}</b></div>`).join("")}</div></section>`}
+  html+=`<section class="card"><h3>Training</h3><p class="hint">Who came to training is on the <button class="mini" data-instab="training">Training</button> tab.</p></section>`;
   return html}
+
+// ---- training tab: who came to training (public.training_attendance, ticked off on the Training page) ----
+// Parents' answers beforehand (training_availability) are loaded for past sessions the first time the tab opens, so
+// coaches can see who said yes but didn't come. Coaches only, nothing new is stored.
+let TAVP=null,tavpBusy=false;
+async function loadTavPast(){if(TAVP||tavpBusy||!sb||!canWrite)return;tavpBusy=true;TAVP={};
+  try{const {data,error}=await sb.from("training_availability").select("day,player,status").lt("day",todayLocal());if(!error)(data||[]).forEach(r=>{(TAVP[r.day]=TAVP[r.day]||{})[r.player]=r.status})}catch(e){}
+  tavpBusy=false;if(view==="insights"&&insTab==="training"&&Object.keys(TAVP).length)render()}
+// weekly sessions since the first one ticked this season that nobody has ticked off yet
+function trUnticked(days){if(!TR||!days.length)return [];const di=WEEKDAYS.indexOf(TR.day);if(di<0)return [];
+  const have=new Set(days),out=[],t=todayLocal(),hm=new Date().toTimeString().slice(0,5),d=new Date(days[0]+"T12:00:00");
+  for(let i=0;i<400;i++,d.setDate(d.getDate()+1)){const iso=d.toLocaleDateString("en-CA");if(iso>t||(iso===t&&hm<(TR.finish||"23:59"))||(TR.until&&iso>TR.until))break;
+    if(d.getDay()===di&&!(TR.off||[]).includes(iso)&&!have.has(iso))out.push(iso)}return out}
+function insTrainingData(){const days=Object.keys(ATT||{}).filter(d=>seasonOf(d)===season).sort(),N=days.length;
+  const names=players.filter(p=>p.current).map(p=>p.name);days.forEach(d=>ATT[d].forEach(n=>{if(!names.includes(n))names.push(n)}));
+  names.sort((a,b)=>(+numOf(a)||99)-(+numOf(b)||99)||a.localeCompare(b));
+  const rows=names.map(n=>{const went=days.filter(d=>ATT[d].includes(n)),l4=days.slice(-4),c4=l4.filter(d=>ATT[d].includes(n)).length;
+    let miss=0;for(let i=N-1;i>=0&&!ATT[days[i]].includes(n);i--)miss++;
+    return {n,c:went.length,pct:N?went.length/N:0,l4:l4.length?c4/l4.length:null,miss,last:went[went.length-1]||null}});
+  return {days,N,rows}}
+function insTraining(){
+  if(!ATT)return `<section class="card"><h3>Training attendance</h3>${cnOff("Training attendance")}</section>`;
+  const {days,N,rows}=insTrainingData(),goBtn=`<button class="btn ghost" data-view="training">🏃 Tick who came on the Training page</button>`;
+  if(!N)return `<section class="card"><h3>Who's been to training</h3><p class="hint">Nothing ticked off yet this season. After each session, tick who came on the Training page (it takes a few seconds) and the report builds up here: who comes most, who's missed the last few, and who said yes but didn't turn up.</p><div class="btns">${goBtn}</div></section>`;
+  loadTavPast();
+  const P1=PL.replace(/s$/,""),tile=(k,v,s)=>`<div><span>${k}</span><b>${v}</b>${s?`<small>${s}</small>`:""}</div>`,dm=d=>`${+d.slice(8,10)}/${+d.slice(5,7)}`;
+  const per=days.map(d=>({d,c:ATT[d].length})),avg=per.reduce((s,o)=>s+o.c,0)/N,best=per.reduce((a,o)=>o.c>a.c?o:a,per[0]),squad=players.filter(p=>p.current).length;
+  const every=rows.filter(o=>o.c===N),gone=N>=2?rows.filter(o=>o.miss>=Math.min(3,N)).sort((a,b)=>b.miss-a.miss):[],unt=trUnticked(days);
+  let html=`<section class="card"><h3>Who's been to training</h3><p class="hint">From the ${N} session${N===1?"":"s"} ticked off on the Training page this season, ${esc(shortDay(days[0]))} to ${esc(shortDay(days[N-1]))}.</p>
+    <div class="kv ins-kv">${tile("Sessions",N)}${tile("Average turnout",avg.toFixed(1),squad?`of ${squad} (${Math.round(avg/squad*100)}%)`:"")}${tile("Best turnout",best.c,esc(shortDay(best.d)))}${tile("Been to every one",every.length,every.length&&every.length<=3?every.map(o=>esc(o.n)).join(", "):"")}</div>
+    ${gone.length?`<p class="ins-call">Missed the last ${Math.min(3,N)} or more: ${gone.map(o=>`<b>${esc(o.n)}</b> (${o.last?`last came ${esc(shortDay(o.last))}`:"not been yet this season"})`).join(", ")}. Worth checking in with their parents.</p>`:""}
+    ${unt.length?`<p class="hint">⚠ Not ticked off yet: ${unt.slice(-4).map(d=>esc(shortDay(d))).join(", ")}${unt.length>4?` and ${unt.length-4} more`:""}. If training was on, tick who came so the numbers stay right.</p>`:""}
+    <div class="btns"><button class="btn ghost" id="insAttCopy">📋 Copy report</button>${unt.length?goBtn:""}</div></section>`;
+  const mx=Math.max(squad,...per.map(o=>o.c),1);
+  html+=`<section class="card"><h3>Turnout each session</h3><p class="hint">How many ${esc(PL)} came to each session. The dashed line is the average (${avg.toFixed(1)}).</p>
+    <div class="ins-cols ins-need" style="--need:${avg/mx*100}%" role="img" aria-label="${esc(PL)} at each training session">${per.map(o=>`<div title="${esc(`${shortDay(o.d)}: ${o.c} came`)}"><b>${o.c}</b><span class="tk"><i style="height:${Math.max(3,o.c/mx*100)}%"></i></span><small>${dm(o.d)}</small></div>`).join("")}</div></section>`;
+  const TA=TAVP||{},said=(d,n)=>(TA[d]||{})[n];
+  const cell=(d,n)=>{const on=ATT[d].includes(n),a=said(d,n),t=`${n}, ${shortDay(d)}: ${on?"came":"didn't come"}${a==="yes"?on?"":" (said yes)":a==="no"?" (said they couldn't)":a==="maybe"?" (said maybe)":""}`;
+    return on?`<td class="ig-on" style="--a:.55" title="${esc(t)}" aria-label="${esc(t)}">✓</td>`:`<td class="ig-off${a==="yes"?" ig-ny":""}" title="${esc(t)}" aria-label="${esc(t)}">${a==="no"?"✕":a==="yes"?"!":""}</td>`};
+  const anyTa=days.some(d=>TA[d]),rdays=days.slice().reverse();
+  html+=`<section class="card"><h3>Session by session</h3><p class="hint">✓ came${anyTa?`, ✕ said they couldn't come, <b>!</b> said yes but didn't come`:""}. Newest session first. Tap a square for details, and scroll sideways for older ones.</p>
+    <div class="ig-wrap"><table class="ig"><thead><tr><th></th>${rdays.map(d=>`<th title="${esc(shortDay(d))}"><span>${esc(shortDay(d).slice(0,2))}</span><small>${dm(d)}</small></th>`).join("")}<th>Came</th></tr></thead>
+    <tbody>${rows.map(o=>`<tr><th class="click" data-player="${esc(o.n)}">${esc(o.n)}</th>${rdays.map(d=>cell(d,o.n)).join("")}<td class="ig-n">${o.c}/${N}</td></tr>`).join("")}</tbody>
+    <tfoot><tr><th>Total</th>${per.slice().reverse().map(o=>`<td class="ig-ft" title="${esc(`${shortDay(o.d)}: ${o.c} came`)}"><b>${o.c}</b></td>`).join("")}<td></td></tr></tfoot></table></div></section>`;
+  const sorted=rows.slice().sort((a,b)=>a.pct-b.pct||a.n.localeCompare(b.n));
+  html+=`<section class="card"><h3>Attendance by ${esc(P1)}</h3><p class="hint">Share of the ${N} session${N===1?"":"s"} each ${esc(P1)} came to, lowest first.${N>4?" ▲ or ▼ means the last 4 sessions were well above or below their season so far.":""}</p>
+    <div class="ins-hb">${sorted.map(o=>{const tr=N>4&&o.l4!=null?(o.l4-o.pct>=.2?"▲":o.l4-o.pct<=-.2?"▼":""):"";
+      return `<div class="r"><span class="click" data-player="${esc(o.n)}">${esc(o.n)}</span><div class="b" title="${esc(`${o.n}: ${o.c} of ${N} sessions (${Math.round(o.pct*100)}%)${N>4?`, last 4: ${Math.round(o.l4*4)} of 4`:""}`)}"><i class="c1" style="width:${o.pct*100}%"></i></div><b>${o.c}/${N}${tr?` <small class="${tr==="▲"?"up":"dn"}">${tr}</small>`:""}</b></div>`}).join("")}</div></section>`;
+  const asked=days.filter(d=>TA[d]&&Object.keys(TA[d]).length);
+  if(asked.length){const cmp=rows.map(o=>{let y=0,yc=0,yn=0,nc=0;asked.forEach(d=>{const a=said(d,o.n),on=ATT[d].includes(o.n);if(a==="yes"){y++;on?yc++:yn++}else if(on&&!a)nc++});return {n:o.n,y,yc,yn,nc}}).filter(o=>o.y||o.nc);
+    const flaky=cmp.filter(o=>o.yn>=2).sort((a,b)=>b.yn-a.yn);
+    html+=`<section class="card"><h3>Said yes v came</h3><p class="hint">For the ${asked.length} session${asked.length===1?"":"s"} where families answered <b>Coming to training?</b> beforehand.</p>
+      ${flaky.length?`<p class="ins-call">Said yes but didn't come more than once: ${flaky.map(o=>`<b>${esc(o.n)}</b> (${o.yn})`).join(", ")}</p>`:""}
+      <div class="ig-wrap"><table class="lb ins-yc"><thead><tr><th></th><th>Said yes</th><th>Came</th><th>Didn't come</th><th>Came, no answer</th></tr></thead><tbody>
+      ${cmp.map(o=>`<tr><td>${esc(o.n)}</td><td>${o.y}</td><td>${o.yc}</td><td>${o.yn?`<b>${o.yn}</b>`:0}</td><td>${o.nc}</td></tr>`).join("")}</tbody></table></div></section>`}
+  return html}
+function insTrainingText(){const {days,N,rows}=insTrainingData();if(!N)return "";
+  const out=[`${TEAM.name||"Team"}: training attendance ${season}`,`${N} session${N===1?"":"s"}, ${shortDay(days[0])} to ${shortDay(days[N-1])}`,""];
+  rows.slice().sort((a,b)=>b.c-a.c||a.n.localeCompare(b.n)).forEach(o=>out.push(`${o.n}: ${o.c}/${N} (${Math.round(o.pct*100)}%)${o.miss>=3&&N>=3?`, missed the last ${o.miss}`:""}`));
+  return out.join("\n")}
+document.addEventListener("click",e=>{if(view==="insights"&&e.target.closest("#insAttCopy"))copyOut(insTrainingText(),"Report copied. Paste it into WhatsApp or an email.")});
 
 // ---- team tab ----
 function insTeam(games){const list=games.filter(result),U=RUGBY?"Points":SP.Goals;

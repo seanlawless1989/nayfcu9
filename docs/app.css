@@ -693,7 +693,7 @@ body.fd-paying{overflow:hidden}
 :root[data-theme="dark"]{--c2:#d95926;--c3:#199e70;--c4:#c98500;--cb:#4A5272}
 .ins-tabs{margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);width:100%}
 .ins-tabs button{padding:9px 4px;font-size:13px;white-space:nowrap}
-.ins-tabs button:nth-child(-n+3){border-bottom:1.5px solid var(--line)}
+.ins-tabs button:nth-child(-n+6){border-bottom:1.5px solid var(--line)}
 .ins-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.ins-hd h3{margin:0}
 .ins-hd select{font:600 14px var(--body);padding:8px 10px;border-radius:9px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);max-width:60%}
 .ins-kv{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));margin-top:10px;gap:6px}
@@ -753,6 +753,8 @@ body.fd-paying{overflow:hidden}
 .ig td.ig-on{background:rgb(var(--clubRGB)/var(--a));color:var(--ink)}
 .ig td.ig-dk{color:#fff}
 .ig td.ig-off{background:var(--field);color:var(--muted);font-size:11px}
+.ins-yc thead th{font-size:10px!important;line-height:1.15;white-space:normal!important;text-align:center}.ins-yc td{text-align:center}.ins-yc td:first-child{text-align:left}.ins-yc td,.ins-yc th{padding:6px 5px}
+.ig td.ig-ny{color:var(--loss);font-weight:800}
 .ig td b{font:800 12px var(--body)}
 .ig td i{font-style:normal;font-size:9px;font-weight:800}
 .ig td .ig-pom{position:absolute;top:0;right:2px;color:var(--gold);text-shadow:0 0 2px rgba(0,0,0,.5)}
