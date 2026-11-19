@@ -191,6 +191,7 @@ function render(){
   else if(view==="training")main.innerHTML=trainingView();
   else if(view==="tactics")main.innerHTML=tacticsView();
   else if(view==="drills")main.innerHTML=drillsView();
+  else if(view==="formation")main.innerHTML=fmView();
   else if(view==="design")main.innerHTML=ddD?designerView():(view="drills",drillsView());
   else if(view==="votes")main.innerHTML=votesView();
   else if(view==="parents")main.innerHTML=parentsView();
@@ -1833,7 +1834,7 @@ function backupCsv(){const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const ro
 // line-ups for each match format; TEAM.format picks one (5v5 for U7-U10, 7v7 U9-U10, 9v9 U11-U12, 11v11 U13+)
 const FORMATS={
   "5v5":{"1-2-1":{label:["GK","DEF","LM","RM","FWD"],xy:[[50,88],[50,66],[24,44],[76,44],[50,20]]},"2-2":{label:["GK","LB","RB","LF","RF"],xy:[[50,88],[28,62],[72,62],[28,28],[72,28]]}},
-  "7v7":{"2-3-1":{label:["GK","LB","RB","LM","CM","RM","FWD"],xy:[[50,90],[30,72],[70,72],[18,48],[50,50],[82,48],[50,22]]},"3-2-1":{label:["GK","LB","CB","RB","LM","RM","FWD"],xy:[[50,90],[20,70],[50,72],[80,70],[32,46],[68,46],[50,22]]},"2-1-2-1":{label:["GK","LB","RB","CM","LW","RW","FWD"],xy:[[50,90],[30,74],[70,74],[50,56],[20,40],[80,40],[50,20]]}},
+  "7v7":{"2-3-1":{label:["GK","LB","RB","LM","CM","RM","FWD"],xy:[[50,90],[30,72],[70,72],[18,48],[50,50],[82,48],[50,22]]},"3-2-1":{label:["GK","LB","CB","RB","LM","RM","FWD"],xy:[[50,90],[20,70],[50,72],[80,70],[32,46],[68,46],[50,22]]},"2-1-2-1":{label:["GK","LB","RB","CM","LW","RW","FWD"],xy:[[50,90],[30,74],[70,74],[50,56],[20,40],[80,40],[50,20]]},"2-2-2":{label:["GK","LB","RB","LM","RM","LF","RF"],xy:[[50,90],[30,72],[70,72],[24,48],[76,48],[34,24],[66,24]]}},
   "9v9":{"3-3-2":{label:["GK","LB","CB","RB","LM","CM","RM","LF","RF"],xy:[[50,91],[20,74],[50,76],[80,74],[18,52],[50,54],[82,52],[34,26],[66,26]]},"3-4-1":{label:["GK","LB","CB","RB","LM","LCM","RCM","RM","FWD"],xy:[[50,91],[20,74],[50,76],[80,74],[14,50],[38,54],[62,54],[86,50],[50,22]]},"2-4-2":{label:["GK","LB","RB","LM","LCM","RCM","RM","LF","RF"],xy:[[50,91],[32,76],[68,76],[14,52],[38,56],[62,56],[86,52],[34,26],[66,26]]}},
   "11v11":{"4-4-2":{label:["GK","LB","LCB","RCB","RB","LM","LCM","RCM","RM","LF","RF"],xy:[[50,92],[14,74],[38,78],[62,78],[86,74],[14,50],[38,54],[62,54],[86,50],[36,24],[64,24]]},"4-3-3":{label:["GK","LB","LCB","RCB","RB","LCM","CM","RCM","LW","FWD","RW"],xy:[[50,92],[14,74],[38,78],[62,78],[86,74],[28,54],[50,56],[72,54],[18,28],[50,22],[82,28]]},"3-5-2":{label:["GK","LCB","CB","RCB","LWB","LCM","CM","RCM","RWB","LF","RF"],xy:[[50,92],[28,78],[50,80],[72,78],[10,52],[32,56],[50,58],[68,56],[90,52],[36,24],[64,24]]}}};
 // rugby line-ups: union 15s and league 13s by shirt number (attacking up the page, forwards in front); other sizes in two lines
@@ -1848,6 +1849,91 @@ function rugbyForms(fmt){const n=+String(fmt||"").replace(/\D/g,"")||7,known=(RF
 const FORMS=RUGBY?rugbyForms(TEAM.format||SP.formats[0]):FORMATS[TEAM.format]||FORMATS["5v5"],FORM0=Object.keys(FORMS)[0],SIDE=FORMS[FORM0].label.length;
 // forwards and backs for the line-up alert: fwd = the first n spots are forwards, or -n = the last n are
 function fwdBacks(form,line){const F=FORMS[form]||FORMS[FORM0],k=F.fwd;if(!k)return null;const fw=k>0?line.slice(0,k):line.slice(k),bk=k>0?line.slice(k):line.slice(0,k);return {fw:fw.filter(Boolean),bk:bk.filter(Boolean)}}
+// ---------- coaches' own formations ----------
+// public.formations (supabase/42_formations.sql): one row per formation, data = {label:[...], xy:[[x,y]...]} with the
+// keeper first. Everyone can read them (parents' match pages draw the line-up in them); only coaches can write.
+// They're added to FORMS after the built-in ones; only ones with the team's number of players are used.
+// A game run live in one also carries its layout (live.fd), so it still draws right if the formation is deleted later.
+let FM_ON=null,FM_CUSTOM=[],FE=null,fmDrag=null;
+const FM_BUILT=new Set(Object.keys(FORMS)),FM_MAX=12;
+function fmValid(d){return !!(d&&Array.isArray(d.label)&&Array.isArray(d.xy)&&d.label.length===SIDE&&d.xy.length===SIDE&&d.xy.every(p=>Array.isArray(p)&&p.length===2&&p.every(v=>typeof v==="number"&&v>=0&&v<=100)))}
+const fmLbl=s=>String(s||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,4);
+const fmName=s=>String(s||"").replace(/[^A-Za-z0-9 +\-]/g,"").replace(/\s+/g," ").trim().slice(0,18);
+function fmApply(rows){FM_CUSTOM.forEach(n=>{delete FORMS[n]});FM_CUSTOM=[];
+  rows.forEach(r=>{const n=fmName(r.name);if(!n||n!==r.name||FM_BUILT.has(n)||!fmValid(r.data))return;FORMS[n]={label:r.data.label.map(l=>fmLbl(l)||"?"),xy:r.data.xy.map(p=>p.slice()),own:1};FM_CUSTOM.push(n)})}
+async function loadFormations(){if(!sb)return;try{const {data,error}=await sb.from("formations").select("name,data").order("name");if(error){FM_ON=false;fmApply([]);return}FM_ON=true;fmApply(data||[])}catch(e){FM_ON=false}}
+// the formation a line-up is drawn in: the named one, else the layout the game carried, else the team's usual one
+function formOf(L){return FORMS[L&&L.form]||(L&&fmValid(L.fd)?L.fd:null)||FORMS[FORM0]}
+// the formation buttons, plus "Make your own" for coaches (own=false hides it, e.g. mid-game)
+function fmSeg(attr,cur,dis,own){const ks=Object.keys(FORMS),btn=own&&canWrite&&!dis;if(RUGBY&&ks.length<2&&!btn)return "";
+  return `${ks.length>1||!RUGBY?`<div class="seg" role="group" aria-label="Formation">${ks.map(f=>`<button data-${attr}="${esc(f)}" aria-pressed="${cur===f}"${dis?" disabled":""}>${esc(f)}</button>`).join("")}</div>`:""}${btn?`<button class="mini" data-fmopen="1">✏️ Make your own</button>`:""}`}
+// lines from the back, e.g. "2-2-2" (not counting the keeper), laid out evenly with position names
+const FM_NAMES={D:{1:["CB"],2:["LB","RB"],3:["LB","CB","RB"],4:["LB","LCB","RCB","RB"],5:["LWB","LCB","CB","RCB","RWB"]},
+  M:{1:["CM"],2:["LM","RM"],3:["LM","CM","RM"],4:["LM","LCM","RCM","RM"],5:["LM","LCM","CM","RCM","RM"]},
+  A:{1:["AM"],2:["LAM","RAM"],3:["LW","AM","RW"]},F:{1:["FWD"],2:["LF","RF"],3:["LW","FWD","RW"]}};
+const fmOut=()=>SIDE-(SP.keeper?1:0);
+function fmRows(shape){return String(shape||"").split(/[^0-9]+/).filter(Boolean).map(Number)}
+function fmLayout(shape){const rows=fmRows(shape),R=rows.length;if(!R||rows.some(n=>n<1||n>6)||rows.reduce((a,b)=>a+b,0)!==fmOut())return null;
+  const label=SP.keeper?["GK"]:[],xy=SP.keeper?[[50,90]]:[],top=22,bot=SP.keeper?72:80;
+  rows.forEach((n,r)=>{const y=R===1?50:Math.round(bot-(bot-top)*r/(R-1)),k=R===1?"M":r===0?"D":r===R-1?"F":R>3&&r===R-2?"A":"M",nm=FM_NAMES[k][n],gap=n>1?Math.min(36,76/(n-1)):0;
+    for(let i=0;i<n;i++){xy.push([Math.round(50+(i-(n-1)/2)*gap),y]);label.push(RUGBY?String(label.length+1):nm?nm[i]:{D:"DEF",M:"MID",A:"MID",F:"FWD"}[k])}});
+  return {label,xy}}
+// "2-3-1" from a layout: outfield players grouped into lines by height on the pitch
+function fmShapeOf(F){if(RUGBY)return "";const ys=[];F.xy.forEach(([,y],i)=>{if(i===0&&SP.keeper)return;const g=ys.find(o=>Math.abs(o.y-y)<=6);if(g)g.n++;else ys.push({y,n:1})});return ys.sort((a,b)=>b.y-a.y).map(o=>o.n).join("-")}
+function fmNew(from){const F=FORMS[from]||FORMS[FORM0];
+  return {orig:F.own?from:null,name:F.own?from:"",shape:fmShapeOf(F),label:F.label.slice(),xy:F.xy.map(p=>p.slice()),del:false}}
+function fmPitch(F,edit){return `<div class="pitch${RUGBY?" rugby":""}${edit?" fm-ed":""}"${edit?` id="fmPitch"`:""}>${F.xy.map(([x,y],i)=>`<div class="spot${i===0&&SP.keeper?" gk":""}" data-fmi="${i}" style="left:${x}%;top:${y}%"><b>${i+1}</b><span>${esc(F.label[i]||"?")}</span></div>`).join("")}</div>`}
+// the part of the editor that changes as the coach types the lines: the hint, the pitch and the position names
+function fmLayHtml(){const lay=fmLayout(FE.shape),sum=fmRows(FE.shape).reduce((a,b)=>a+b,0);
+  return `${RUGBY?`<p class="hint">Drag each player to where you want them, and type a short name for each position below.</p>`:`<p class="hint">Type how many players are in each line, starting from the back${SP.keeper?" and not counting the keeper":""}. They add up to ${fmOut()} for ${SIDE}-a-side. ${FE.shape&&!lay?`<b>${esc(FE.shape)} adds up to ${sum}, not ${fmOut()}.</b> `:""}Then drag anyone to fine-tune and change position names below.</p>`}
+    ${fmPitch(FE,true)}
+    <div class="grid2" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr))">${FE.label.map((l,i)=>`<label class="f">${i+1}${i===0&&SP.keeper?" (keeper)":""}<input type="text" data-fml="${i}" maxlength="4" style="text-transform:uppercase" value="${esc(l)}"></label>`).join("")}</div>`}
+function fmView(){
+  const own=FM_CUSTOM.slice(),back=FE&&FE.back||"tactics",side=`${SIDE}-a-side`,editing=FE&&FE.on;
+  const off=FM_ON===false?`<div class="note"><b>Not switched on yet.</b> Your own formations need a small update to the team's database first. The built-in ones all work as normal.</div>`:"";
+  const list=own.length?`<div class="stack" style="gap:8px">${own.map(n=>`<div class="btns" style="justify-content:space-between;align-items:center"><b>${esc(n)}</b>${editing?"":`<button class="mini" data-fmedit="${esc(n)}">Edit</button>`}</div>`).join("")}</div>`:`<p class="hint">You haven't made any yet.</p>`;
+  const ed=editing?`<section class="card stack" style="gap:12px"><h3>${FE.orig?`Edit ${esc(FE.orig)}`:"New formation"}</h3>
+    <div class="grid2"><label class="f">Name<input type="text" id="fmName" maxlength="18" value="${esc(FE.name)}" placeholder="${esc(FE.shape||"e.g. 2-2-2")}"></label>
+    ${RUGBY?"":`<label class="f">Lines from the back<input type="text" id="fmShape" inputmode="numeric" value="${esc(FE.shape)}" placeholder="e.g. 2-2-2"></label>`}</div>
+    <div id="fmLay" class="stack" style="gap:12px">${fmLayHtml()}</div>
+    <div class="btns"><button class="btn gold" id="fmSave"${FM_ON===false?" disabled":""}>Save formation</button><button class="btn ghost" id="fmCancel">Cancel</button>${FE.orig?`<button class="btn ghost" id="fmDel">${FE.del?"Tap again to delete":"Delete"}</button>`:""}</div></section>`:"";
+  return `<div class="stack">${off}<section class="card stack"><h2>Your own formations</h2>
+    <p class="hint">Make formations of your own for ${side}. They sit next to the built-in ones in Live match and on the tactics board, and parents see them on the line-up.</p>
+    ${list}<div class="btns">${editing?"":`<button class="btn gold" id="fmNewBtn"${own.length>=FM_MAX||FM_ON===false?" disabled":""}>+ New formation</button>`}<button class="btn ghost" data-view="${esc(back)}">Back</button></div>
+    ${own.length>=FM_MAX?`<p class="hint">That's the most a team can keep (${FM_MAX}). Delete one to make another.</p>`:""}</section>${ed}</div>`}
+async function fmSave(){const name=fmName(FE.name)||fmName(FE.shape);
+  if(!name){toast("Give the formation a name.");return}
+  if(FM_BUILT.has(name)){toast(`${name} is already a built-in formation. Pick it from the list, or give yours another name.`);return}
+  if(name!==FE.orig&&FM_CUSTOM.includes(name)){toast(`You already have one called ${name}.`);return}
+  const data={label:FE.label.map(l=>fmLbl(l)||"?"),xy:FE.xy.map(([x,y])=>[Math.round(x),Math.round(y)])};if(!fmValid(data)){toast("Something's not right with that layout. Try typing the lines again.");return}
+  const b=$("#fmSave");if(b)b.disabled=true;
+  try{const {error}=await sb.from("formations").upsert({name,data,updated:new Date().toISOString()},{onConflict:"name"});if(error)throw error;
+    if(FE.orig&&FE.orig!==name)await sb.from("formations").delete().eq("name",FE.orig);
+    await loadFormations();const back=FE.back,orig=FE.orig;FE={back};
+    if(LV&&LV.status==="pre"&&!LV.locked&&(back==="live"||(orig&&LV.form===orig))){LV.form=name;liveSaveLocal()}
+    toast(`Saved. ${name} is in the formation list now.`);if(back==="live"&&LV||back==="tactics")setView(back);else render()}
+  catch(er){if(b)b.disabled=false;toast(/formations|schema cache|does not exist/i.test(er&&er.message||"")?"Your own formations aren't switched on for this team yet.":"Couldn't save. Check your connection and try again.")}}
+document.addEventListener("click",async e=>{const t=e.target.closest&&e.target.closest("button");if(!t)return;
+  if(t.dataset.fmopen){FE={back:view};setView("formation");return}
+  if(view!=="formation")return;
+  if(t.id==="fmNewBtn"){const back=FE&&FE.back;FE=Object.assign(fmNew(back==="live"&&LV?LV.form:FORM0),{back,on:true,orig:null,name:""});render();return}
+  if(t.dataset.fmedit){FE=Object.assign(fmNew(t.dataset.fmedit),{back:FE&&FE.back,on:true});render();return}
+  if(t.id==="fmCancel"){FE={back:FE&&FE.back};render();return}
+  if(t.id==="fmSave"){fmSave();return}
+  if(t.id==="fmDel"){if(!FE.del){FE.del=true;render();return}
+    try{const {error}=await sb.from("formations").delete().eq("name",FE.orig);if(error)throw error;await loadFormations();toast(`${FE.orig} deleted.`);FE={back:FE.back};render()}catch(er){toast("Couldn't delete. Try again.")}return}
+});
+document.addEventListener("input",e=>{if(view!=="formation"||!FE||!FE.on)return;const t=e.target;
+  if(t.id==="fmName"){FE.name=t.value;return}
+  // typing the lines lays the players out again as soon as they add up (the box itself isn't redrawn, so typing carries on)
+  if(t.id==="fmShape"){FE.shape=t.value.trim();const lay=fmLayout(FE.shape);if(lay){FE.label=lay.label;FE.xy=lay.xy}const w=$("#fmLay");if(w)w.innerHTML=fmLayHtml();return}
+  if(t.dataset&&t.dataset.fml!=null){const i=+t.dataset.fml;FE.label[i]=fmLbl(t.value);const sp=document.querySelector(`#fmPitch [data-fmi="${i}"] span`);if(sp)sp.textContent=FE.label[i]||"?"}
+});
+document.addEventListener("pointerdown",e=>{if(view!=="formation"||!e.target.closest)return;const sp=e.target.closest("#fmPitch .spot");if(!sp)return;e.preventDefault();fmDrag={i:+sp.dataset.fmi,el:sp}});
+document.addEventListener("pointermove",e=>{if(!fmDrag||view!=="formation")return;const pc=$("#fmPitch");if(!pc)return;const r=pc.getBoundingClientRect();
+  const x=Math.round(Math.max(6,Math.min(94,(e.clientX-r.left)/r.width*100))),y=Math.round(Math.max(6,Math.min(94,(e.clientY-r.top)/r.height*100)));
+  FE.xy[fmDrag.i]=[x,y];fmDrag.el.style.left=x+"%";fmDrag.el.style.top=y+"%"});
+document.addEventListener("pointerup",()=>{fmDrag=null});document.addEventListener("pointercancel",()=>{fmDrag=null});
 let LV=null,PRACTICE=null;// PRACTICE = a pretend fixture that only lives on this phone; nothing is saved or shown to parents
 function liveKey(id){return SK+".live3."+id}
 function todayLocal(){return new Date().toLocaleDateString("en-CA")}
@@ -1869,7 +1955,7 @@ function liveDefaults(m){const len=+TEAM.halfLength||20;if(!m.tournament_id)retu
 function gameLen(L){return (+L.halfLen||20)*(L.noHt?1:2)}
 function htMin(L){return L.noHt?-1:+L.halfLen||20}
 function liveSaveLocal(){try{localStorage.setItem(liveKey(LV.id),JSON.stringify(LV))}catch(e){}}
-function livePublic(){return {locked:!!LV.locked,status:LV.status,half:LV.half,halfStart:LV.halfStart,halfLen:LV.halfLen,noHt:!!LV.noHt,form:LV.form,slots:LV.sin?LV.slots.map((n,i)=>n||(Object.entries(LV.sin).find(([,v])=>v.slot===i)||[""])[0]):LV.slots,squad:LV.squad,events:LV.events,mins:LV.mins}}
+function livePublic(){return {locked:!!LV.locked,status:LV.status,half:LV.half,halfStart:LV.halfStart,halfLen:LV.halfLen,noHt:!!LV.noHt,form:LV.form,...(FORMS[LV.form]&&FORMS[LV.form].own?{fd:{label:FORMS[LV.form].label,xy:FORMS[LV.form].xy}}:{}),slots:LV.sin?LV.slots.map((n,i)=>n||(Object.entries(LV.sin).find(([,v])=>v.slot===i)||[""])[0]):LV.slots,squad:LV.squad,events:LV.events,mins:LV.mins}}
 async function livePush(extra){const m=matches.find(x=>x.id===LV.id);if(!m)return;if(m.practice){m.live=livePublic();return}
   const body=Object.assign({played:m.played||{},assists:m.assists||{},us:m.us??0,them:m.them??0,keepers:m.keepers||{},live:livePublic(),check:""},RUGBY?{kicks:m.kicks||{}}:{},extra||{});
   const id=LV.id,last=(LV.events[LV.events.length-1]||{}).k;
@@ -1951,9 +2037,9 @@ function planDueHtml(){const d=planDue();if(!d)return "";
 function clockOn(n,now){LV.onSince[n]=now;const t=LV.touched[LV.half]=LV.touched[LV.half]||[];if(!t.includes(n))t.push(n)}
 function clockOff(n,now){if(LV.onSince[n]){LV.mins[n]=Math.round(((LV.mins[n]||0)+(now-LV.onSince[n])/60000)*10)/10;delete LV.onSince[n]}}
 function addEv(e){const m=matches.find(x=>x.id===LV.id);e.m=minuteOf(LV);e.h=LV.half;e.s=`${m.us??0}–${m.them??0}`;e.at=Date.now();LV.events.push(e)}
-function pitchHtml(L,editable){const F=FORMS[L.form]||FORMS[FORM0];
+function pitchHtml(L,editable){const F=formOf(L);
   return `<div class="pitch${RUGBY?" rugby":""}">${F.xy.map(([x,y],i)=>{const n=L.slots[i]||"";
-    return `<div class="spot${i===0&&SP.keeper?" gk":""}" style="left:${x}%;top:${y}%">${editable?`<select data-slot="${i}" aria-label="${F.label[i]}"><option value="">${F.label[i]}</option>${L.squad.map(p=>`<option${p===n?" selected":""}>${esc(p)}</option>`).join("")}</select>`:`<b>${esc(numOf(n)||"")}</b><span>${esc(n||F.label[i])}</span>`}</div>`}).join("")}</div>`}
+    return `<div class="spot${i===0&&SP.keeper?" gk":""}" style="left:${x}%;top:${y}%">${editable?`<select data-slot="${i}" aria-label="${esc(F.label[i])}"><option value="">${esc(F.label[i])}</option>${L.squad.map(p=>`<option${p===n?" selected":""}>${esc(p)}</option>`).join("")}</select>`:`<b>${esc(numOf(n)||"")}</b><span>${esc(n||F.label[i])}</span>`}</div>`}).join("")}</div>`}
 function commentary(e,m){const opp=esc(m.opp||"the opposition");if(RUGBY){const r=rugbyCommentary(e,opp);if(r!=null)return r}
   switch(e.k){case "lu":return `<b>${e.re?"Line-up change":"Line-up confirmed"}</b> (${esc(e.form)}): ${esc(e.line[0])} in goal, ${e.line.slice(1).map(esc).join(", ")}.${e.bench&&e.bench.length?` Subs: ${e.bench.map(esc).join(", ")}.`:""}`;
     case "ko":return `<b>Kick-off!</b> ${esc(TEAM.name)} line up in a ${esc(e.form)}: ${e.line.map(esc).join(", ")}.`;
@@ -2008,7 +2094,7 @@ function liveView(){
   const pr=m.practice?`<div class="note"><b>Practice match.</b> Try anything: nothing is saved and parents can't see it. Tap "Practice live match" on Fixtures to start again.</div>`:"";
   if(LV.status==="pre")return `<div class="live">${pr}${liveBoard(m,LV)}
     <section class="card stack"><h3>Starting line-up</h3>
-    <div class="btns">${RUGBY&&Object.keys(FORMS).length<2?"":`<span class="hint">Formation</span><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}"${LV.locked?" disabled":""}>${f}</button>`).join("")}</div>`}
+    <div class="btns">${(h=>h?`<span class="hint">Formation</span>${h}`:"")(fmSeg("lvform",LV.form,LV.locked,true))}
       <span class="hint">Half time</span><div class="seg" role="group" aria-label="Half time"><button data-lvnoht="0" aria-pressed="${!LV.noHt}">Yes</button><button data-lvnoht="1" aria-pressed="${!!LV.noHt}">No, straight through</button></div>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px">${LV.noHt?"Minutes in the game":"Minutes each half"}<input type="number" id="lvLen" min="5" max="${LV.noHt?90:45}" value="${LV.halfLen}" style="width:70px"></label></div>
     ${LV.noHt?`<p class="hint">Played straight through: just kick-off and full time, and minutes count as one ${LV.halfLen}-minute game.</p>`:""}
@@ -2016,13 +2102,13 @@ function liveView(){
     <p class="hint">Subs: ${bench().map(esc).join(", ")||"none"}. ${LV.locked?`🔒 Line-up locked${m.practice?"":" and sent to parents"}. Unlock it to make a change; locking it again tells parents what changed.`:`Pick a player for each position.${SP.keeper?" The keeper is the GK spot.":""} Lock the line-up when it's final${m.practice?"":" and parents with alerts on get \"Line-up confirmed\""}.`}</p>
     ${lateAddHtml()}
     <div class="btns">${LV.locked?`<button class="btn gold bigbtn" id="lvKo">Kick off</button><button class="btn ghost" id="lvUnlock">🔓 Unlock line-up</button>`:`<button class="btn gold bigbtn" id="lvLock"${onPitch().length<SIDE?" disabled":""}>🔒 Lock line-up</button><button class="btn ghost" id="lvKo"${onPitch().length<5?" disabled":""}>Kick off</button>`}${m.practice?"":`<button class="btn ghost" data-tbmatch="${esc(m.id)}">📋 Tactics board</button>`}<button class="btn ghost" data-view="fixtures">Back</button></div></section>${planCard()}${fairNudge()}</div>`;
-  const pl=played(m),as=assistsOf(m),on=onPitch(),F=FORMS[LV.form];
+  const pl=played(m),as=assistsOf(m),on=onPitch(),F=formOf(LV);
   return `<div class="live">${pr}${liveBoard(m,LV)}${planDueHtml()}
   <div class="btns">${LV.status==="live"&&LV.half===1&&!LV.noHt?`<button class="btn" id="lvHt">Half time</button>`:""}${LV.status==="ht"?`<button class="btn gold" id="lv2h">Start 2nd half</button>`:""}
     <button class="btn ghost" id="lvOther">${RUGBY?"🏉 Try by someone else":"⚽ Someone else scored"}</button><button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" id="lvUndo">Undo last</button>
-    ${RUGBY&&Object.keys(FORMS).length<2?"":`<div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-lvform="${f}" aria-pressed="${LV.form===f}">${f}</button>`).join("")}</div>`}</div>${RUGBY?rugbyLiveExtras(m):""}
+    ${fmSeg("lvform",LV.form,false,false)}</div>${RUGBY?rugbyLiveExtras(m):""}
   ${pitchHtml(LV,false)}
-  <div class="lp">${LV.slots.map((n,i)=>n?`<div class="pl on"><div class="nm"><span>${esc(n)}</span><span class="tag">${F.label[i]}</span></div>
+  <div class="lp">${LV.slots.map((n,i)=>n?`<div class="pl on"><div class="nm"><span>${esc(n)}</span><span class="tag">${esc(F.label[i])}</span></div>
     <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">${RUGBY?`🏉 Try ${pl[n]||0}`:`⚽ ${pl[n]||0}`}</button><button data-lvsub="${i}">🔁 Sub</button>${RUGBY?`<button data-lvsin="${i}" aria-label="Sin bin ${esc(n)}">🟨</button>`:""}</div></div>`:"").join("")}</div>
   <p class="hint"><b>Subs bench:</b> ${bench().map(esc).join(", ")||"none"}. Rolling subs: tap 🔁 on the player coming off.</p>
   ${lateAddHtml()}
@@ -2123,7 +2209,7 @@ function tacticsView(){if(!canWrite){if(tbFs)tbFsOff();return `<div class="card 
   return `<div class="stack tb">
   <section class="card stack"><div class="tbhead"><h2>📋 Tactics board</h2><button class="btn gold" id="tbFsBtn">⛶ Full screen</button></div>
     <div class="btns"><label class="f" style="flex:1;min-width:200px">Board for<select id="tbFor"><option value="general"${s.cur==="general"?" selected":""}>Training and general</option>${fx.map(m=>`<option value="${esc(m.id)}"${s.cur===m.id?" selected":""}>v ${esc(m.opp)}, ${esc(new Date(m.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}))}</option>`).join("")}${s.cur!=="general"&&!fx.some(m=>m.id===s.cur)?`<option value="${esc(s.cur)}" selected>${esc(b.title||"This match")}</option>`:""}</select></label>
-      ${RUGBY&&Object.keys(FORMS).length<2?"":`<div><span class="hint">Formation</span><div class="seg" role="group" aria-label="Formation">${Object.keys(FORMS).map(f=>`<button data-tbform="${f}" aria-pressed="${b.form===f}">${f}</button>`).join("")}</div></div>`}</div>
+      ${(h=>h?`<div><span class="hint">Formation</span>${h}</div>`:"")(fmSeg("tbform",b.form,false,true))}</div>
     <div class="seg tbmodes" role="group" aria-label="What a finger does">${[["move","✋ Move"],["run","➜ Run"],["pass","⇢ Pass"],RUGBY?["kick","⤴ Kick"]:["drib","〰 Dribble"]].map(([k,l])=>`<button data-tbmode="${k}" aria-pressed="${tbMode===k}">${l}</button>`).join("")}</div>
     <div class="tbwrap">${tbSvg(b,true)}</div>
     <p class="hint" style="margin:0">${hint}</p>
@@ -2392,7 +2478,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const awards=!fx&&(m.potm||Object.keys(ks).length)?`<section class="card"><h3>Awards</h3>${m.potm?`<div class="potm">${POTM_IC} ${esc(POTM.charAt(0).toUpperCase()+POTM.slice(1))}: <b>${esc(m.potm)}</b></div>`:""}${Object.entries(ks).map(([n,c])=>`<div class="meta">🧤 ${esc(n)} in goal${+c?", clean sheet":""}</div>`).join("")}</section>`:"";
   // before kick-off, the line-up the coaches locked in; the picked squad before that
   const lu=ko||[...ev].reverse().find(e=>e.k==="lu");
-  const lineup=lu&&lu.line?`<section class="card"><h3>${ko?"Starting line-up":"Line-up confirmed"}${lu.form?` (${esc(lu.form)})`:""}</h3>${pitchHtml({form:lu.form,slots:lu.line},false)}${(b=>b.length?`<p class="hint">Subs: ${b.map(esc).join(", ")}</p>`:"")((ko?(L.squad||[]):(lu.bench||[])).filter(n=>!lu.line.includes(n)))}</section>`
+  const lineup=lu&&lu.line?`<section class="card"><h3>${ko?"Starting line-up":"Line-up confirmed"}${lu.form?` (${esc(lu.form)})`:""}</h3>${pitchHtml({form:lu.form,slots:lu.line,fd:lu.form===L.form?L.fd:null},false)}${(b=>b.length?`<p class="hint">Subs: ${b.map(esc).join(", ")}</p>`:"")((ko?(L.squad||[]):(lu.bench||[])).filter(n=>!lu.line.includes(n)))}</section>`
     :fx&&!m.postponed&&m.squad&&m.squad.length?`<section class="card"><h3>Squad</h3><p>${m.squad.map(esc).join(", ")}</p></section>`:"";
   const story=ev.length?`<section class="card"><h3>How the game went</h3>${rpCan(m)?`<button class="btn gold rp-go" data-rp="${esc(m.id)}">▶ Replay the game</button><p class="hint" style="margin:6px 0 10px">Watch the match alerts come in again, one after another, with the score ticking over.</p>`:""}${timelineHtml(L,m,!isLive(m))}</section>`:!fx&&r?`<section class="card"><h3>How the game went</h3><p class="hint">There's no minute-by-minute story for this game. Games run with Live match mode will show one here.</p></section>`:"";
   const ms=milestones().filter(x=>x.id===m.id);
@@ -4441,11 +4527,11 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","insights","birthdays","kit","cphotos","drills","design"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","insights","birthdays","kit","cphotos","drills","design","formation"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
-  await loadTav();alSync();
+  await loadTav();alSync();await loadFormations();
   await loadAvail();await loadPhotos();await loadStaff();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadCoachNotes();await loadBirthdays();await loadCoachPhotos();await loadGallery();await loadKit();await loadDrills();
   authBox();render();
   setTimeout(()=>ftAuto().catch(()=>{}),4000);
