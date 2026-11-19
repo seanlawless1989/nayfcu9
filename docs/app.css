@@ -933,3 +933,4 @@ body.rp-on{overflow:hidden}
 .spk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px}.spk small{color:var(--muted);font-size:13px;flex:1;min-width:150px}
 .spk .mini.on{background:var(--club);color:#fff;border-color:var(--club)}
 input.need{outline:3px solid #E53935;outline-offset:1px}
+.fm-ed .spot{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
