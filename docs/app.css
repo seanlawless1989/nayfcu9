@@ -244,6 +244,9 @@ body.lb-on{overflow:hidden}
 .lb-x{background:none;border:0;color:#fff;font-size:24px;cursor:pointer;padding:6px 12px}
 .lb-img{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 8px}
 .lb-img img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+.lb-img video{max-width:100%;max-height:100%;border-radius:6px;background:#000}
+.gal-th{position:relative}.gal-th.vid::after{content:"▶";position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:34px;text-align:center;padding-left:3px;box-sizing:border-box;pointer-events:none}
+.vbadge{position:absolute;right:5px;bottom:5px;background:rgba(0,0,0,.65);color:#fff;font:700 11px/1.5 var(--body);padding:0 6px;border-radius:6px;pointer-events:none}
 .lb-cap{text-align:center;margin:10px 16px 0;font-size:15px}
 .lb-bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:12px 12px 16px}
 .lb-bar .btn.ghost{color:#fff;border-color:rgba(255,255,255,.4);text-decoration:none}

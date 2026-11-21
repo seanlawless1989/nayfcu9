@@ -234,8 +234,8 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day pictures"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Players, coaches and shirt numbers"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photo store, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day photos and videos"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Players, coaches and shirt numbers"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -1111,7 +1111,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Coaches' termly development ratings (the FA's four corner model, 1 to 5, with an optional short note) and where each child can play, to help plan their development. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos in a private store that only the team's signed-in coaches can open. These photos are never shown on the site and have no public links. Ask the coach to delete a photo at any time.</li><li>Match-day photos that families and coaches add on the Photos page. Only the team's signed-in coaches and families (a phone signed in with a family code) can see them: they're never public and have no public links. Any family can ask for a photo to come down, which hides it straight away, and coaches can delete any photo. The site takes the phone's location data out of each photo. The site keeps an anonymous code for the phone that added each photo, never a parent's name.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Coaches' termly development ratings (the FA's four corner model, 1 to 5, with an optional short note) and where each child can play, to help plan their development. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos and videos in a private store that only the team's signed-in coaches can open. These are never shown on the site and have no public links. Ask the coach to delete a photo or video at any time.</li><li>Match-day photos and videos that families and coaches add on the Photos page. Only the team's signed-in coaches and families (a phone signed in with a family code) can see them: they're never public and have no public links. Any family can ask for a photo or video to come down, which hides it straight away, and coaches can delete any of them. The site takes the phone's location data out of each photo and video. The site keeps an anonymous code for the phone that added each photo, never a parent's name.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you coach or manage the team: your name, your role and, if you agree, a photo, which the coaches add to the Squad and Players pages for everyone to see. Ask the coaches to change or remove them at any time.</li><li>If you buy a square on the club's pitch fundraiser: the name and message for your square and your email address for the receipt. Only the coaches see your email and what you paid, and messages show once a coach approves them. You pay through Stripe straight to the club; the site never sees your card.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -1119,6 +1119,64 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   ${sec("How long we keep it",`<p>Results and stats stay as the team's history while the club uses the site. A coach can remove a player at any time. If the club stops using Touchline Tales, everything is deleted within 30 days.</p>`)}
   ${sec("Your rights",`<p>You can ask to see, correct or delete your child's information, or object to it being shown. Speak to the team's coach or the club's ${WELFARE}, or email <a href="mailto:hello@touchlinetales.club">hello@touchlinetales.club</a> and we'll pass it on to the club.</p><p>If you're unhappy, you can complain to the Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">ico.org.uk/make-a-complaint</a> or on 0303 123 1113.</p>`)}
   <div class="btns"><button class="btn ghost" data-view="home">Back to the home page</button></div></div>`}
+
+// ---------- videos, for team photos and coach photos ----------
+// Phones' own video files (MP4 from Android, MOV from iPhone) up to 50 MB go up as they are, so they keep their quality.
+// Before upload the site blanks out the file's metadata boxes (udta / meta / uuid), where phones keep the place a video
+// was filmed and the phone's make. Each box keeps its size, so nothing else in the file moves and it plays exactly as before.
+// A small picture from the video (or a plain ▶ card if the phone can't show a frame) is the thumbnail.
+const VID_MAX=50*1048576,VID_TYPES={mov:"video/quicktime",mp4:"video/mp4",m4v:"video/mp4","3gp":"video/3gpp"};
+const isVidFile=f=>/^video\//.test(f.type||"")||/\.(mov|mp4|m4v|3gp)$/i.test(f.name||"");
+const isVid=p=>p&&p.kind==="video";
+function vidExt(f){const e=((f.name||"").match(/\.([a-z0-9]+)$/i)||[])[1];const x=e&&e.toLowerCase();
+  return VID_TYPES[x]?x:f.type==="video/quicktime"?"mov":f.type==="video/3gpp"?"3gp":"mp4"}
+const vidLen=s=>s==null?"":`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+const fileExt=p=>((p&&p.path||"").match(/\.([a-z0-9]+)$/i)||[,"jpg"])[1];
+// "3 photos · 1 video"
+function galCount(ps){const v=ps.filter(isVid).length,f=ps.length-v;
+  return [f?`${f} photo${f===1?"":"s"}`:"",v?`${v} video${v===1?"":"s"}`:""].filter(Boolean).join(" · ")||"0 photos"}
+// blank out where-and-what metadata, in place. Refuses anything that isn't an MP4 / MOV file.
+async function vidClean(file){const size=file.size,patches=[];
+  const head=async o=>{const b=new DataView(await file.slice(o,Math.min(size,o+16)).arrayBuffer());if(b.byteLength<8)return null;
+    let len=b.getUint32(0),hl=8;const typ=String.fromCharCode(b.getUint8(4),b.getUint8(5),b.getUint8(6),b.getUint8(7));
+    if(len===1){if(b.byteLength<16)return null;len=Number(b.getBigUint64(8));hl=16}else if(len===0)len=size-o;return {len,hl,typ}};
+  const WIPE=["udta","meta","uuid","XMP_"];
+  // walks boxes inside buf[a,b): wipes metadata boxes, and looks inside tracks too
+  const walk=(buf,a,b)=>{const dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);let o=a;
+    while(o+8<=b){let len=dv.getUint32(o),hl=8;const typ=String.fromCharCode(buf[o+4],buf[o+5],buf[o+6],buf[o+7]);
+      if(len===1){len=Number(dv.getBigUint64(o+8));hl=16}else if(len===0)len=b-o;if(len<hl||o+len>b)break;
+      if(WIPE.includes(typ)){buf.set([102,114,101,101],o+4);buf.fill(0,o+hl,o+len)}
+      else if(typ==="trak")walk(buf,o+hl,o+len);
+      o+=len}};
+  let o=0,first=true,moov=false;
+  while(o<size){const h=await head(o);if(!h||h.len<h.hl)throw new Error("type");
+    if(first&&h.typ!=="ftyp")throw new Error("type");first=false;
+    if(h.typ==="moov"||WIPE.includes(h.typ)){if(h.len>64*1048576)throw new Error("type");
+      const buf=new Uint8Array(await file.slice(o,o+h.len).arrayBuffer());
+      if(h.typ==="moov"){moov=true;walk(buf,h.hl,buf.length)}else{buf.set([102,114,101,101],4);buf.fill(0,h.hl)}
+      patches.push([o,buf])}
+    o+=h.len}
+  if(!moov)throw new Error("type");
+  const parts=[];let at=0;patches.forEach(([po,buf])=>{parts.push(file.slice(at,po),buf);at=po+buf.length});parts.push(file.slice(at));
+  return new Blob(parts,{type:VID_TYPES[vidExt(file)]})}
+// a 480px picture from about a second in, plus the video's size and length. Falls back to a plain ▶ card.
+function vidPoster(blob){return new Promise(ok=>{const url=URL.createObjectURL(blob),v=document.createElement("video");let done=false,info={};
+  const card=()=>{const c=document.createElement("canvas");c.width=480;c.height=270;const x=c.getContext("2d");x.fillStyle="#1d2733";x.fillRect(0,0,480,270);
+    x.fillStyle="rgba(255,255,255,.9)";x.beginPath();x.moveTo(205,95);x.lineTo(205,175);x.lineTo(275,135);x.closePath();x.fill();return c};
+  const fin=c=>{if(done)return;done=true;clearTimeout(t);URL.revokeObjectURL(url);try{v.removeAttribute("src");v.load()}catch(e){}
+    c.toBlob(b=>ok(Object.assign({b,tw:c.width,th:c.height},info)),"image/jpeg",.75)};
+  const t=setTimeout(()=>fin(card()),9000);
+  v.muted=true;v.playsInline=true;v.setAttribute("playsinline","");v.preload="auto";
+  v.onloadedmetadata=()=>{info={w:v.videoWidth||null,h:v.videoHeight||null,secs:isFinite(v.duration)?Math.round(v.duration):null};
+    try{v.currentTime=Math.min(1,(v.duration||3)/3)}catch(e){fin(card())}};
+  v.onseeked=()=>{try{const W=v.videoWidth,H=v.videoHeight;if(!W||!H){fin(card());return}const k=Math.min(1,480/Math.max(W,H)),c=document.createElement("canvas");
+    c.width=Math.round(W*k);c.height=Math.round(H*k);c.getContext("2d").drawImage(v,0,0,c.width,c.height);fin(c)}catch(e){fin(card())}};
+  v.onerror=()=>fin(card());v.src=url})}
+// a video ready to upload: {big, ext, type, sm:{b}, w, h, secs}, or throws "big" / "type"
+async function vidPrep(f){if(f.size>VID_MAX)throw new Error("big");const big=await vidClean(f),pv=await vidPoster(big),ext=vidExt(f);
+  return {big,ext,type:VID_TYPES[ext],sm:pv.b,w:pv.w,h:pv.h,secs:pv.secs}}
+const vidSkipMsg=(big,bad)=>[big?`${big} video${big>1?"s were":" was"} over 50 MB. Trim ${big>1?"them":"it"} on your phone (or pick a shorter clip) and try again.`:"",bad?`${bad} video${bad>1?"s":""} couldn't be read. Use the phone's own camera video (MP4 or MOV).`:""].filter(Boolean).join(" ");
+const vidBadge=p=>isVid(p)?`<span class="vbadge">▶${p.secs!=null?" "+vidLen(p.secs):""}</span>`:"";
 
 // ---------- team photos: families and coaches share match-day pictures ----------
 // public.team_photos (supabase/33_team_photos.sql) plus the PRIVATE "team-photos" storage bucket. Only the team's signed-in
@@ -1154,20 +1212,20 @@ const galPaintSoon=()=>{clearTimeout(galPaintSoon.t);galPaintSoon.t=setTimeout(g
 // a game (matches.id) or a whole tournament day ("t:" + tournaments.id)
 function galWhat(id){if(String(id).startsWith("t:")){const t=tournaments.find(x=>x.id===id.slice(2));return t?{label:t.name||"Tournament",date:t.date,attr:`data-tour="${esc(t.id)}"`}:{label:"Tournament",date:"",attr:""}}
   const m=matches.find(x=>x.id===id);return m?{label:`${m.ha==="A"?"at ":"v "}${m.opp||""}`,date:m.date,attr:`data-md="${esc(m.id)}"`,m}:{label:"Match photos",date:"",attr:""}}
-const galTh=p=>`<button class="gal-th" data-photo="${esc(p.id)}" aria-label="${esc(p.caption||"Open photo")}"><img data-galimg="${esc(p.thumb)}" src="${galSrc(p.thumb)}" alt="${esc(p.caption||"")}" loading="lazy"></button>`;
+const galTh=p=>`<button class="gal-th${isVid(p)?" vid":""}" data-photo="${esc(p.id)}" aria-label="${esc(p.caption||(isVid(p)?"Play video":"Open photo"))}"><img data-galimg="${esc(p.thumb)}" src="${galSrc(p.thumb)}" alt="${esc(p.caption||"")}" loading="lazy">${vidBadge(p)}</button>`;
 function galGrid(list){galPaintSoon();return `<div class="gal">${list.map(galTh).join("")}</div>`}
 function galAdd(id,big){if(!id||!galSee()||!GAL_DB)return "";const coach=canWrite;
-  return `<div class="stack" style="gap:8px">    <div class="btns"><label class="btn gold galadd">📷 Add photos<input type="file" accept="image/*" multiple data-galup="${esc(id)}" hidden></label></div>
-    <p class="hint" style="margin:0">Photos go straight on for the team's families.${coach?" Only add photos the club has parents' consent for.":""} Only signed-in coaches and families can see them. They're never public.</p></div>`}
+  return `<div class="stack" style="gap:8px">    <div class="btns"><label class="btn gold galadd">📷 Add photos or videos<input type="file" accept="image/*,video/*" multiple data-galup="${esc(id)}" hidden></label></div>
+    <p class="hint" style="margin:0">Photos and videos go straight on for the team's families.${coach?" Only add ones the club has parents' consent for.":""} Only signed-in coaches and families can see them. They're never public. Videos up to 50 MB (about a minute), so short clips work best.</p></div>`}
 function photosCard(m){if(!PHOTOS_ON||!GAL_DB)return "";const ps=galOf(m.id),can=galSee()&&!isFixture(m);
   if(!galSee())return `<section class="card"><h3>Photos</h3><p class="hint" style="margin:0">Photos from our games are for the team's families. <button class="mini" data-view="parents">Sign in with your family code</button> to see them and add your own.</p></section>`;
   if(!ps.length&&!can)return "";
-  return `<section class="card"><h3>Photos${ps.length>1?` (${ps.length})`:""}</h3>${ps.length?galGrid(ps):`<p class="hint">No photos from this game yet.</p>`}${can?`<div style="margin-top:10px">${galAdd(m.id)}</div>`:""}</section>`}
+  return `<section class="card"><h3>Photos${ps.length>1?` (${ps.length})`:""}</h3>${ps.length?galGrid(ps):`<p class="hint">No photos or videos from this game yet.</p>`}${can?`<div style="margin-top:10px">${galAdd(m.id)}</div>`:""}</section>`}
 // newest games with photos, each as an album card
 function albums(n){const shown=GAL.filter(galOk),ids=[...new Set(shown.slice().reverse().map(p=>p.match_id))].slice(0,n);galPaintSoon();
   return `<div class="albs">${ids.map(id=>{const ps=galOf(id),w=galWhat(id),c=ps.find(p=>p.caption)||ps[0],rest=ps.filter(p=>p!==c),strip=rest.slice(0,3),more=ps.length-1-strip.length;
     return `<div class="alb">${galTh(c)}${strip.length?`<div class="alb-strip">${strip.map((p,i)=>i===strip.length-1&&more>0?`<div class="alb-more">${galTh(p)}<span>+${more}</span></div>`:galTh(p)).join("")}</div>`:""}
-      <button class="alb-meta" ${w.attr} style="text-align:left;border:0;background:none;cursor:pointer"><b>${esc(w.label)}</b><small>${w.date?esc(shortDay(w.date))+" · ":""}${ps.length} photo${ps.length===1?"":"s"}</small>${c.caption?`<i>${esc(c.caption)}</i>`:""}</button></div>`}).join("")}</div>`}
+      <button class="alb-meta" ${w.attr} style="text-align:left;border:0;background:none;cursor:pointer"><b>${esc(w.label)}</b><small>${w.date?esc(shortDay(w.date))+" · ":""}${galCount(ps)}</small>${c.caption?`<i>${esc(c.caption)}</i>`:""}</button></div>`}).join("")}</div>`}
 function galLabel(m){return `${shortDay(m.date)} · v ${esc(m.opp||"")}${result(m)?` · ${m.us}–${m.them}`:""}`}
 // how long ago (or until) a game is, shown big on the coaches' post and message screens so nobody posts an old game's words by mistake
 function dateWhen(iso){const d=new Date((iso||"")+"T12:00:00");if(isNaN(d))return null;const t=new Date();t.setHours(12,0,0,0);const n=Math.round((d-t)/864e5);
@@ -1194,56 +1252,65 @@ function galleryView(){
   if(!galSee())return `<div class="stack"><section class="card"><h2 style="margin-top:0">📸 Photos</h2><p>Match-day photos are just for the team's families and coaches, so they're never public.</p><p>Sign in with your family code to see them and add your own.</p><div class="btns"><button class="btn gold" data-view="parents">Sign in with your family code</button></div><p class="hint">No code? Ask the coach for your ${PRN.kid}'s family code.</p></section></div>`;
   galPaintSoon();
   const ch=galChoices();if(!ch.some(c=>c.v===galMatch))galMatch=ch[0]?ch[0].v:"";
-  const up=ch.length?`<section class="card"><h3>Add photos</h3><label class="f">Which game?<select id="galPick">${ch.map(c=>`<option value="${esc(c.v)}"${c.v===galMatch?" selected":""}>${c.label}</option>`).join("")}</select></label><div style="margin-top:10px">${galAdd(galMatch)}</div></section>`:"";
+  const up=ch.length?`<section class="card"><h3>Add photos or videos</h3><label class="f">Which game?<select id="galPick">${ch.map(c=>`<option value="${esc(c.v)}"${c.v===galMatch?" selected":""}>${c.label}</option>`).join("")}</select></label><div style="margin-top:10px">${galAdd(galMatch)}</div></section>`:"";
   const mine=galMine(),mineCard=mine.length?`<section class="card"><h3>⚑ Taken down (${mine.length})</h3><p class="hint">A family asked for these to come down, so only you and the coaches can see them now. Tap one to delete it.</p>${galGrid(mine)}</section>`:"";
   const shown=GAL.filter(galOk),ids=[...new Set(shown.map(p=>p.match_id))].map(id=>({id,w:galWhat(id)})).sort((a,b)=>String(b.w.date||"").localeCompare(String(a.w.date||"")));
   const body=ids.length?ids.map(({id,w})=>`<section class="card"><button class="gal-h" ${w.attr}>${w.date?esc(shortDay(w.date))+" · ":""}${esc(w.label)} <span>${w.attr?(id.startsWith("t:")?"Tournament page →":"Match page →"):""}</span></button>${galGrid(galOf(id))}</section>`).join("")
     :`<div class="card empty">No photos yet. Add the first ones above.</div>`;
-  return `<div class="stack"><h2 style="margin:6px 0 -6px">📸 Photos</h2><p class="hint">Match-day pictures from the team's families and coaches, newest game first. Tap a photo to see it full size. 🔒 Only signed-in families and coaches can see them.</p>${galCheckCard()}${up}${mineCard}${body}</div>`}
+  return `<div class="stack"><h2 style="margin:6px 0 -6px">📸 Photos</h2><p class="hint">Match-day photos and videos from the team's families and coaches, newest game first. Tap one to see it full size or play it. 🔒 Only signed-in families and coaches can see them.</p>${galCheckCard()}${up}${mineCard}${body}</div>`}
 function galShrink(file,max,q){return new Promise((ok,bad)=>{const url=URL.createObjectURL(file),im=new Image();
   im.onload=()=>{const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);
     c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(b=>b?ok({b,w:c.width,h:c.height}):bad(new Error("encode")),"image/jpeg",q)};
   im.onerror=()=>{URL.revokeObjectURL(url);bad(new Error("decode"))};im.src=url})}
 async function galUpload(mid,files){files=[...files];if(!files.length||!galSee()||!GAL_DB||!mid||galBusy)return;
   const coach=canWrite;
-  if(files.length>20){toast("Add up to 20 photos at a time.");files=files.slice(0,20)}
-  galBusy=true;let ok=0,limit=false;const folder=new Date().toISOString().slice(0,7);
-  for(let i=0;i<files.length&&!limit;i++){toast(`Adding photo ${i+1} of ${files.length}…`);
-    try{const id=crypto.randomUUID(),big=await galShrink(files[i],2000,.86),sm=await galShrink(files[i],480,.75),path=`${folder}/${id}.jpg`,thumb=`${folder}/${id}_t.jpg`;
-      for(const [p,b] of [[path,big.b],[thumb,sm.b]]){const {error}=await sb.storage.from(galBucket()).upload(p,b,{contentType:"image/jpeg",cacheControl:"3600"});if(error)throw error}
-      const row={id,match_id:mid,path,thumb,w:big.w,h:big.h,uploader:me.id,by_coach:coach,status:"approved"};
+  if(files.length>20){toast("Add up to 20 at a time.");files=files.slice(0,20)}
+  galBusy=true;let ok=0,limit="",big=0,bad=0;const folder=new Date().toISOString().slice(0,7),nv=files.filter(isVidFile).length;
+  for(let i=0;i<files.length&&!limit;i++){const f=files[i],vid=isVidFile(f);
+    toast(vid?`Adding video ${i+1} of ${files.length}… videos can take a minute, keep this page open.`:`Adding photo ${i+1} of ${files.length}…`);
+    try{const id=crypto.randomUUID();let row,ups;
+      if(vid){const v=await vidPrep(f),path=`${folder}/${id}.${v.ext}`,thumb=`${folder}/${id}_t.jpg`;
+        ups=[[path,v.big,v.type],[thumb,v.sm,"image/jpeg"]];row={id,match_id:mid,path,thumb,w:v.w,h:v.h,secs:v.secs,kind:"video"}}
+      else{const b=await galShrink(f,2000,.86),sm=await galShrink(f,480,.75),path=`${folder}/${id}.jpg`,thumb=`${folder}/${id}_t.jpg`;
+        ups=[[path,b.b,"image/jpeg"],[thumb,sm.b,"image/jpeg"]];row={id,match_id:mid,path,thumb,w:b.w,h:b.h}}
+      for(const [p,b,t] of ups){const {error}=await sb.storage.from(galBucket()).upload(p,b,{contentType:t,cacheControl:"3600"});if(error){sb.storage.from(galBucket()).remove(ups.map(u=>u[0])).catch(()=>{});throw error}}
+      Object.assign(row,{uploader:me.id,by_coach:coach,status:"approved"});
       const {data,error}=await sb.from("team_photos").insert(row).select().single();
-      if(error){sb.storage.from(galBucket()).remove([path,thumb]).catch(()=>{});if(/most photos/i.test(error.message||""))limit=true;throw error}
+      if(error){sb.storage.from(galBucket()).remove(ups.map(u=>u[0])).catch(()=>{});const m=error.message||"";if(/most (photos|videos)/i.test(m))limit=/videos/i.test(m)?"videos":"photos";throw error}
       GAL.push(data);ok++}
-    catch(e){console.warn("photo upload",e)}}
-  galBusy=false;
-  toast(limit?`${ok?ok+" added. ":""}That's the most photos one phone can add in a day. Try the rest tomorrow.`:ok===files.length?`${ok} photo${ok>1?"s":""} added.`:ok?`${ok} of ${files.length} photos added. Try the others again.`:"Couldn't add those photos. Check your signal and try again.");render()}
+    catch(e){if(e&&e.message==="big")big++;else if(e&&e.message==="type")bad++;console.warn("photo upload",e)}}
+  galBusy=false;const what=nv===files.length?(nv>1?"videos":"video"):nv?"":files.length>1?"photos":"photo",skip=vidSkipMsg(big,bad);
+  toast(limit?`${ok?ok+" added. ":""}That's the most ${limit} one phone can add in a day. Try the rest tomorrow.`
+    :ok===files.length?`${ok} ${what||"added"}${what?" added":""}.`
+    :ok?`${ok} of ${files.length} added. ${skip||"Try the others again."}`
+    :skip||"Couldn't add those. Check your signal and try again.");render()}
 // full-screen viewer: arrows or swipe for the next photo, Esc or ✕ to close
 function lbOpen(id){const p=GAL.find(x=>x.id===id);if(!p)return;const list=galOk(p)?galOf(p.match_id):(canWrite?galWaiting():galMine());LB={list,i:Math.max(0,list.indexOf(p))};lbDraw()}
 function lbClose(){LB=null;document.querySelectorAll(".lb-ov:not(.cp)").forEach(x=>x.remove());document.body.classList.remove("lb-on")}
 function lbStep(n){if(!LB||LB.list.length<2)return;LB.i=(LB.i+n+LB.list.length)%LB.list.length;lbDraw()}
 async function lbDraw(){const p=LB&&LB.list[LB.i];if(!p){lbClose();return}
-  if(!galSrc(p.path))await galSign([p.path]);if(!LB||LB.list[LB.i]!==p)return;
+  if(!galSrc(p.path)||(isVid(p)&&!galSrc(p.thumb)))await galSign([p.path,p.thumb]);if(!LB||LB.list[LB.i]!==p)return;
   document.querySelectorAll(".lb-ov:not(.cp)").forEach(x=>x.remove());
   const w=galWhat(p.match_id),many=LB.list.length>1,src=galSrc(p.path),mine=me&&p.uploader===me.id,d=document.createElement("div");d.className="lb-ov";d.setAttribute("role","dialog");d.setAttribute("aria-label","Photo");
-  const save=src?`<a class="btn ghost" href="${esc(src)}&download=${encodeURIComponent(fileTag+"-"+p.id.slice(0,8)+".jpg")}">Save</a>`:"";
+  const save=src?`<a class="btn ghost" href="${esc(src)}&download=${encodeURIComponent(fileTag+"-"+p.id.slice(0,8)+"."+fileExt(p))}">Save</a>`:"";
   const acts=canWrite?`${!galOk(p)?`<button class="btn gold" data-lb="ok">Put back</button>`:""}<button class="btn ghost" data-lb="cap">${p.caption?"Edit caption":"Add caption"}</button><button class="btn ghost" data-lb="del">${galOk(p)?"Delete":"Remove"}</button>`
     :mine?`<button class="btn ghost" data-lb="del">Delete</button>`:galOk(p)?`<button class="btn ghost" data-lb="flag">Ask to take down</button>`:"";
   d.innerHTML=`<div class="lb-top"><span>${many?`${LB.i+1} of ${LB.list.length} · `:""}${esc(w.label)}${w.date?", "+esc(shortDay(w.date)):""}${!galOk(p)?" · ⚑ a family asked to take this down":""}${canWrite&&!p.by_coach?" · added by a parent":""}</span><button class="lb-x" data-lb="x" aria-label="Close">✕</button></div>
-    <div class="lb-img"><img src="${esc(src)}" alt="${esc(p.caption||"Match photo")}"></div>${p.caption?`<p class="lb-cap">${esc(p.caption)}</p>`:""}
-    <div class="lb-bar">${many?`<button class="btn ghost" data-lb="prev" aria-label="Previous photo">←</button>`:""}${save}${acts}${many?`<button class="btn ghost" data-lb="next" aria-label="Next photo">→</button>`:""}</div>`;
-  let sx=null;d.addEventListener("touchstart",e=>{sx=e.touches[0].clientX},{passive:true});d.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)lbStep(dx<0?1:-1)});
+    <div class="lb-img">${isVid(p)?`<video src="${esc(src)}" poster="${esc(galSrc(p.thumb))}" controls playsinline preload="metadata" aria-label="${esc(p.caption||"Match video")}"></video>`:`<img src="${esc(src)}" alt="${esc(p.caption||"Match photo")}">`}</div>${p.caption?`<p class="lb-cap">${esc(p.caption)}</p>`:""}
+    <div class="lb-bar">${many?`<button class="btn ghost" data-lb="prev" aria-label="Previous">←</button>`:""}${save}${acts}${many?`<button class="btn ghost" data-lb="next" aria-label="Next">→</button>`:""}</div>`;
+  // swipes on the video itself are its own scrubbing, so they don't change photo
+  let sx=null;d.addEventListener("touchstart",e=>{sx=e.target.tagName==="VIDEO"?null:e.touches[0].clientX},{passive:true});d.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)lbStep(dx<0?1:-1)});
   document.body.appendChild(d);document.body.classList.add("lb-on")}
 function lbDrop(p){GAL=GAL.filter(x=>x.id!==p.id);LB.list.splice(LB.i,1);if(LB.i>=LB.list.length)LB.i=0;lbDraw();render()}
 async function lbAction(a){const p=LB&&LB.list[LB.i];if(a==="x"||a==="bg"){lbClose();return}if(a==="prev"){lbStep(-1);return}if(a==="next"){lbStep(1);return}if(!p||!me)return;
   if(a==="ok"&&canWrite){const {error}=await sb.from("team_photos").update({status:"approved",flagged:false,checked:new Date().toISOString()}).eq("id",p.id);if(error){toast("Couldn't put it back. Try again.");return}
     p.status="approved";p.flagged=false;LB.list.splice(LB.i,1);if(LB.i>=LB.list.length)LB.i=0;toast("Put back. The team's families can see it again.");lbDraw();render();return}
   if(a==="cap"&&canWrite){const c=prompt("Caption (first names only)",p.caption||"");if(c==null)return;const {error}=await sb.from("team_photos").update({caption:c.trim().slice(0,200)}).eq("id",p.id);if(error){toast("Couldn't save the caption.");return}p.caption=c.trim().slice(0,200);lbDraw();return}
-  if(a==="flag"&&!canWrite){if(!confirm("Ask the coaches to take this photo down? It's hidden from everyone straight away until a coach looks at it."))return;
-    const {error}=await sb.rpc("flag_team_photo",{p_id:p.id});if(error){toast("Couldn't do that. Try again.");return}toast("Thanks. The photo is hidden and the coaches will look at it.");lbDrop(p);return}
-  if(a==="del"&&(canWrite||p.uploader===me.id)){if(!confirm(canWrite&&!galOk(p)?"Remove this photo? The parent who added it won't see it again.":"Delete this photo for everyone?"))return;
+  if(a==="flag"&&!canWrite){if(!confirm(`Ask the coaches to take this ${isVid(p)?"video":"photo"} down? It's hidden from everyone straight away until a coach looks at it.`))return;
+    const {error}=await sb.rpc("flag_team_photo",{p_id:p.id});if(error){toast("Couldn't do that. Try again.");return}toast(`Thanks. The ${isVid(p)?"video":"photo"} is hidden and the coaches will look at it.`);lbDrop(p);return}
+  if(a==="del"&&(canWrite||p.uploader===me.id)){const nm=isVid(p)?"video":"photo";if(!confirm(canWrite&&!galOk(p)?`Remove this ${nm}? The parent who added it won't see it again.`:`Delete this ${nm} for everyone?`))return;
     const {error}=await sb.from("team_photos").delete().eq("id",p.id);if(error){toast("Couldn't delete it. Try again.");return}
-    sb.storage.from(galBucket()).remove([p.path,p.thumb]).catch(()=>{});toast("Photo deleted.");lbDrop(p)}}
+    sb.storage.from(galBucket()).remove([p.path,p.thumb]).catch(()=>{});toast(nm==="video"?"Video deleted.":"Photo deleted.");lbDrop(p)}}
 document.addEventListener("keydown",e=>{if(!LB)return;if(e.key==="Escape")lbClose();else if(e.key==="ArrowRight")lbStep(1);else if(e.key==="ArrowLeft")lbStep(-1)});
 // ---------- coach photos: a private photo store only the team's signed-in coaches can open ----------
 // public.coach_photos (supabase/29_coach_photos.sql) plus the PRIVATE "coach-photos" storage bucket. Nothing here is ever
@@ -1266,19 +1333,19 @@ const cpSrc=p=>CPU[p]&&CPU[p].exp>Date.now()?CPU[p].url:"";
 // after the page is drawn, fill in any pictures that still need a signed link
 async function cpPaint(){const imgs=[...document.querySelectorAll("img[data-cpimg]")];if(!imgs.length)return;await cpSign(imgs.map(i=>i.dataset.cpimg));
   imgs.forEach(i=>{const u=cpSrc(i.dataset.cpimg);if(u&&i.getAttribute("src")!==u)i.src=u})}
-const cpTh=(p,cls="")=>`<button class="gal-th${cls}" data-cpph="${esc(p.id)}" aria-label="${esc(p.caption||"Open photo")}"><img data-cpimg="${esc(p.thumb)}" src="${cpSrc(p.thumb)}" alt="" loading="lazy"></button>`;
+const cpTh=(p,cls="")=>`<button class="gal-th${cls}${isVid(p)?" vid":""}" data-cpph="${esc(p.id)}" aria-label="${esc(p.caption||(isVid(p)?"Play video":"Open photo"))}"><img data-cpimg="${esc(p.thumb)}" src="${cpSrc(p.thumb)}" alt="" loading="lazy">${vidBadge(p)}</button>`;
 // where new photos go: a recent game, Training, Team photos, an album already made, or a new one
 function cpChoices(){const recent=sortMatches(matches.filter(m=>!m.practice&&!m.postponed&&(m.date||"")<=todayLocal())).reverse().slice(0,12);
   const games=recent.map(m=>({v:"m:"+m.id,label:`v ${m.opp||""}, ${shortDay(m.date)}`,mid:m.id}));
   const named=["Training","Team photos",...cpAlbums().map(a=>a.name)].filter((x,i,a)=>a.indexOf(x)===i&&!games.some(g=>g.label===x));
   return [...games,...named.map(n=>({v:"a:"+n,label:n}))]}
 function cpAddCard(fixed){
-  if(fixed)return `<div class="btns" style="margin-top:10px"><label class="btn gold galadd">📷 Add photos to this album<input type="file" accept="image/*" multiple data-cpup="1" hidden></label></div>`;
+  if(fixed)return `<div class="btns" style="margin-top:10px"><label class="btn gold galadd">📷 Add photos or videos to this album<input type="file" accept="image/*,video/*" multiple data-cpup="1" hidden></label></div>`;
   const ch=cpChoices();if(!cpAlbum||(cpAlbum!=="new"&&!ch.some(c=>c.v===cpAlbum)))cpAlbum=ch.length?ch[0].v:"new";
-  return `<section class="card"><h3>Add photos</h3><label class="f">Which album?<select id="cpPick">${ch.map(c=>`<option value="${esc(c.v)}"${c.v===cpAlbum?" selected":""}>${esc(c.label)}</option>`).join("")}<option value="new"${cpAlbum==="new"?" selected":""}>New album…</option></select></label>
+  return `<section class="card"><h3>Add photos or videos</h3><label class="f">Which album?<select id="cpPick">${ch.map(c=>`<option value="${esc(c.v)}"${c.v===cpAlbum?" selected":""}>${esc(c.label)}</option>`).join("")}<option value="new"${cpAlbum==="new"?" selected":""}>New album…</option></select></label>
     ${cpAlbum==="new"?`<label class="f">Album name<input id="cpNewName" maxlength="80" placeholder="e.g. Presentation night 2027"></label>`:""}
-    <div class="btns" style="margin-top:10px"><label class="btn gold galadd">📷 Add photos<input type="file" accept="image/*" multiple data-cpup="1" hidden></label></div>
-    <p class="hint" style="margin-top:8px">Pick several at once. Each photo is resized to save space and the phone's location data is taken out. Only add photos the club has parents' consent for.</p></section>`}
+    <div class="btns" style="margin-top:10px"><label class="btn gold galadd">📷 Add photos or videos<input type="file" accept="image/*,video/*" multiple data-cpup="1" hidden></label></div>
+    <p class="hint" style="margin-top:8px">Pick several at once. Each photo is resized to save space, and the phone's location data is taken out of photos and videos. Videos up to 50 MB (about a minute). Only add ones the club has parents' consent for.</p></section>`}
 function coachPhotosView(){
   if(!canWrite)return `<div class="stack"><section class="card empty">Coach photos are for coaches only. Sign in as a coach to see them.</section></div>`;
   if(window.DEMO)return `<div class="stack"><section class="card"><h2 style="margin-top:0">🔒 Coach photos</h2><p>On your own site, coaches keep match, training and team photos here in a private store that only signed-in coaches can open. Photos aren't part of the demo, so nothing is uploaded here.</p></section></div>`;
@@ -1286,13 +1353,13 @@ function coachPhotosView(){
   setTimeout(cpPaint,0);
   const albs=cpAlbums(),open=cpOpen&&albs.find(a=>a.name===cpOpen);if(cpOpen&&!open)cpOpen="";
   if(open)return `<div class="stack"><div class="btns"><button class="btn ghost" id="cpBack">← All albums</button></div>
-    <section class="card"><h2 style="margin-top:0">${esc(open.name)}</h2><p class="hint">${open.ps.length} photo${open.ps.length===1?"":"s"}. Tap one to see it full size, save it to your phone or delete it.</p>
+    <section class="card"><h2 style="margin-top:0">${esc(open.name)}</h2><p class="hint">${galCount(open.ps)}. Tap one to see it full size or play it, save it to your phone or delete it.</p>
     <div class="gal" style="margin-top:10px">${open.ps.slice().reverse().map(p=>cpTh(p)).join("")}</div>${cpAddCard(true)}${CP_LOCK}</section></div>`;
   return `<div class="stack"><section class="card"><h2 style="margin-top:0">🔒 Coach photos</h2><p>A private place for the coaches to keep match, training and team photos, and share them with each other. Save one to your phone to use it in a post or a graphic.</p>${CP_LOCK}</section>
     ${cpAddCard(false)}
     ${albs.length?`<div class="albs">${albs.map(a=>{const ps=a.ps.slice().reverse(),strip=ps.slice(1,4),more=ps.length-1-strip.length;
       return `<div class="alb">${cpTh(ps[0])}${strip.length?`<div class="alb-strip">${strip.map((p,i)=>i===strip.length-1&&more>0?`<div class="alb-more">${cpTh(p)}<span>+${more}</span></div>`:cpTh(p)).join("")}</div>`:""}
-        <button class="alb-meta" data-cpalb="${esc(a.name)}" style="text-align:left;border:0;background:none;cursor:pointer"><b>${esc(a.name)}</b><small>${shortDay(String(a.last).slice(0,10))} · ${a.ps.length} photo${a.ps.length===1?"":"s"}</small></button></div>`}).join("")}</div>`
+        <button class="alb-meta" data-cpalb="${esc(a.name)}" style="text-align:left;border:0;background:none;cursor:pointer"><b>${esc(a.name)}</b><small>${shortDay(String(a.last).slice(0,10))} · ${galCount(a.ps)}</small></button></div>`}).join("")}</div>`
       :`<div class="card empty">No photos yet. Add the first ones above.</div>`}</div>`}
 async function cpUpload(files){files=[...files];if(!files.length||!canWrite||CP===null||cpBusy)return;
   let album,mid=null;
@@ -1300,34 +1367,39 @@ async function cpUpload(files){files=[...files];if(!files.length||!canWrite||CP=
   else if(cpAlbum==="new"){album=(($("#cpNewName")||{}).value||"").trim().slice(0,80);if(!album){toast("Give the new album a name first.");return}}
   else if(cpAlbum.startsWith("m:")){const c=cpChoices().find(x=>x.v===cpAlbum);album=c?c.label:"Match photos";mid=cpAlbum.slice(2)}
   else album=cpAlbum.slice(2);
-  cpBusy=true;let ok=0;const folder=new Date().toISOString().slice(0,7);
-  for(let i=0;i<files.length;i++){toast(`Adding photo ${i+1} of ${files.length}…`);
-    try{const id=crypto.randomUUID(),big=await galShrink(files[i],2400,.88),sm=await galShrink(files[i],480,.75),path=`${folder}/${id}.jpg`,thumb=`${folder}/${id}_t.jpg`;
-      for(const [p,b] of [[path,big.b],[thumb,sm.b]]){const {error}=await sb.storage.from(cpBucket()).upload(p,b,{contentType:"image/jpeg",cacheControl:"3600"});if(error)throw error}
-      const {data,error}=await sb.from("coach_photos").insert({id,album,match_id:mid,path,thumb,w:big.w,h:big.h}).select().single();if(error)throw error;CP.push(data);ok++}
-    catch(e){console.warn("coach photo upload",e)}}
-  cpBusy=false;if(ok&&!cpOpen&&cpAlbum==="new")cpAlbum="a:"+album;
-  toast(ok===files.length?`${ok} photo${ok>1?"s":""} added. Only coaches can see ${ok>1?"them":"it"}.`:ok?`${ok} of ${files.length} photos added. Try the others again.`:"Couldn't add those photos. Check your signal and try again.");
+  cpBusy=true;let ok=0,big=0,bad=0;const folder=new Date().toISOString().slice(0,7);
+  for(let i=0;i<files.length;i++){const f=files[i],vid=isVidFile(f);
+    toast(vid?`Adding video ${i+1} of ${files.length}… videos can take a minute, keep this page open.`:`Adding photo ${i+1} of ${files.length}…`);
+    try{const id=crypto.randomUUID();let row,ups;
+      if(vid){const v=await vidPrep(f),path=`${folder}/${id}.${v.ext}`,thumb=`${folder}/${id}_t.jpg`;
+        ups=[[path,v.big,v.type],[thumb,v.sm,"image/jpeg"]];row={id,album,match_id:mid,path,thumb,w:v.w,h:v.h,secs:v.secs,kind:"video"}}
+      else{const b=await galShrink(f,2400,.88),sm=await galShrink(f,480,.75),path=`${folder}/${id}.jpg`,thumb=`${folder}/${id}_t.jpg`;
+        ups=[[path,b.b,"image/jpeg"],[thumb,sm.b,"image/jpeg"]];row={id,album,match_id:mid,path,thumb,w:b.w,h:b.h}}
+      for(const [p,b,t] of ups){const {error}=await sb.storage.from(cpBucket()).upload(p,b,{contentType:t,cacheControl:"3600"});if(error){sb.storage.from(cpBucket()).remove(ups.map(u=>u[0])).catch(()=>{});throw error}}
+      const {data,error}=await sb.from("coach_photos").insert(row).select().single();if(error){sb.storage.from(cpBucket()).remove(ups.map(u=>u[0])).catch(()=>{});throw error}CP.push(data);ok++}
+    catch(e){if(e&&e.message==="big")big++;else if(e&&e.message==="type")bad++;console.warn("coach photo upload",e)}}
+  cpBusy=false;if(ok&&!cpOpen&&cpAlbum==="new")cpAlbum="a:"+album;const skip=vidSkipMsg(big,bad);
+  toast(ok===files.length?`${ok} added. Only coaches can see ${ok>1?"them":"it"}.`:ok?`${ok} of ${files.length} added. ${skip||"Try the others again."}`:skip||"Couldn't add those. Check your signal and try again.");
   if(view==="cphotos")render()}
 // full-screen viewer, the same look as the old gallery's
 function cpLbOpen(id){const p=(CP||[]).find(x=>x.id===id);if(!p)return;const list=CP.filter(x=>cpName(x)===cpName(p)).reverse();CPL={list,i:list.indexOf(p)};cpLbDraw()}
 function cpLbClose(){CPL=null;document.querySelectorAll(".lb-ov.cp").forEach(x=>x.remove());document.body.classList.remove("lb-on")}
 function cpLbStep(n){if(!CPL||CPL.list.length<2)return;CPL.i=(CPL.i+n+CPL.list.length)%CPL.list.length;cpLbDraw()}
 async function cpLbDraw(){const p=CPL&&CPL.list[CPL.i];if(!p){cpLbClose();return}const many=CPL.list.length>1;
-  await cpSign([p.path]);let dl="";try{const {data}=await sb.storage.from(cpBucket()).createSignedUrl(p.path,600,{download:`${fileTag}-${p.id.slice(0,8)}.jpg`});dl=data&&data.signedUrl||""}catch(e){}
+  await cpSign([p.path,p.thumb]);let dl="";try{const {data}=await sb.storage.from(cpBucket()).createSignedUrl(p.path,600,{download:`${fileTag}-${p.id.slice(0,8)}.${fileExt(p)}`});dl=data&&data.signedUrl||""}catch(e){}
   if(!CPL||CPL.list[CPL.i]!==p)return;
-  document.querySelectorAll(".lb-ov.cp").forEach(x=>x.remove());const d=document.createElement("div");d.className="lb-ov cp";d.setAttribute("role","dialog");d.setAttribute("aria-label","Photo");
+  document.querySelectorAll(".lb-ov.cp").forEach(x=>x.remove());const d=document.createElement("div");d.className="lb-ov cp";d.setAttribute("role","dialog");d.setAttribute("aria-label",isVid(p)?"Video":"Photo");
   d.innerHTML=`<div class="lb-top"><span>${many?`${CPL.i+1} of ${CPL.list.length} · `:""}${esc(cpName(p))} · 🔒 coaches only</span><button class="lb-x" data-cpl="x" aria-label="Close">✕</button></div>
-    <div class="lb-img" data-cpl="bg"><img src="${cpSrc(p.path)}" alt="${esc(p.caption||"Photo")}"></div>${p.caption?`<p class="lb-cap">${esc(p.caption)}</p>`:""}
+    <div class="lb-img" data-cpl="bg">${isVid(p)?`<video src="${esc(cpSrc(p.path))}" poster="${esc(cpSrc(p.thumb))}" controls playsinline preload="metadata" aria-label="${esc(p.caption||"Video")}"></video>`:`<img src="${cpSrc(p.path)}" alt="${esc(p.caption||"Photo")}">`}</div>${p.caption?`<p class="lb-cap">${esc(p.caption)}</p>`:""}
     <div class="lb-bar">${many?`<button class="btn ghost" data-cpl="prev" aria-label="Previous photo">←</button>`:""}${dl?`<a class="btn ghost" href="${esc(dl)}">Save</a>`:""}<button class="btn ghost" data-cpl="cap">${p.caption?"Edit caption":"Add caption"}</button><button class="btn ghost" data-cpl="del">Delete</button>${many?`<button class="btn ghost" data-cpl="next" aria-label="Next photo">→</button>`:""}</div>`;
-  let sx=null;d.addEventListener("touchstart",e=>{sx=e.touches[0].clientX},{passive:true});d.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)cpLbStep(dx<0?1:-1)});
+  let sx=null;d.addEventListener("touchstart",e=>{sx=e.target.tagName==="VIDEO"?null:e.touches[0].clientX},{passive:true});d.addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)cpLbStep(dx<0?1:-1)});
   document.body.appendChild(d);document.body.classList.add("lb-on")}
 async function cpAction(a){const p=CPL&&CPL.list[CPL.i];if(a==="x"||a==="bg"){cpLbClose();return}if(a==="prev"){cpLbStep(-1);return}if(a==="next"){cpLbStep(1);return}if(!p||!canWrite)return;
   if(a==="cap"){const c=prompt("Caption (first names only)",p.caption||"");if(c==null)return;const {error}=await sb.from("coach_photos").update({caption:c.trim().slice(0,200)}).eq("id",p.id);if(error){toast("Couldn't save the caption.");return}p.caption=c.trim().slice(0,200);cpLbDraw();return}
-  if(a==="del"){if(!confirm("Delete this photo for all the coaches? It can't be brought back."))return;const {error}=await sb.from("coach_photos").delete().eq("id",p.id);if(error){toast("Couldn't delete it. Try again.");return}
+  if(a==="del"){if(!confirm(`Delete this ${isVid(p)?"video":"photo"} for all the coaches? It can't be brought back.`))return;const {error}=await sb.from("coach_photos").delete().eq("id",p.id);if(error){toast("Couldn't delete it. Try again.");return}
     sb.storage.from(cpBucket()).remove([p.path,p.thumb]).catch(()=>{});CP=CP.filter(x=>x.id!==p.id);CPL.list.splice(CPL.i,1);if(CPL.i>=CPL.list.length)CPL.i=0;toast("Photo deleted.");if(CPL.list.length)cpLbDraw();else cpLbClose();render()}}
 document.addEventListener("click",e=>{const t=e.target.closest("[data-cpl],[data-cpph],[data-cpalb],#cpBack");if(!t)return;
-  if(t.dataset.cpl){if(t.dataset.cpl==="bg"&&e.target.tagName==="IMG")return;cpAction(t.dataset.cpl);return}
+  if(t.dataset.cpl){if(t.dataset.cpl==="bg"&&(e.target.tagName==="IMG"||e.target.tagName==="VIDEO"))return;cpAction(t.dataset.cpl);return}
   if(t.dataset.cpph){cpLbOpen(t.dataset.cpph);return}
   if(t.dataset.cpalb){cpOpen=t.dataset.cpalb;render();window.scrollTo({top:0});return}
   if(t.id==="cpBack"){cpOpen="";render();window.scrollTo({top:0})}});
