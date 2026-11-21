@@ -24,10 +24,18 @@ create policy "coaches only coach photos" on public.coach_photos for all to auth
 revoke all on public.coach_photos from anon, public;
 grant select, insert, update, delete on public.coach_photos to authenticated;
 
--- the files: a private bucket (public = false), JPEGs up to 10 MB
+-- videos (added 2026-11-21): the phone's own MP4 / MOV file, up to 50 MB, with a JPEG thumbnail made from it.
+-- The site blanks out the file's metadata (where it was filmed) before upload. Photos have kind 'photo'.
+alter table public.coach_photos add column if not exists kind text not null default 'photo';
+alter table public.coach_photos add column if not exists secs int;                -- a video's length in seconds
+alter table public.coach_photos drop constraint if exists coach_photos_kind_check;
+alter table public.coach_photos add constraint coach_photos_kind_check check (kind in ('photo', 'video'));
+
+-- the files: a private bucket (public = false), JPEG photos and phone videos up to 50 MB
+-- (the project's Storage > Settings > Global file size limit must be at least 50 MB too)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('coach-photos', 'coach-photos', false, 10485760, array['image/jpeg'])
-on conflict (id) do update set public = false, file_size_limit = 10485760, allowed_mime_types = array['image/jpeg'];
+values ('coach-photos', 'coach-photos', false, 52428800, array['image/jpeg', 'video/mp4', 'video/quicktime', 'video/3gpp'])
+on conflict (id) do update set public = false, file_size_limit = 52428800, allowed_mime_types = array['image/jpeg', 'video/mp4', 'video/quicktime', 'video/3gpp'];
 drop policy if exists "coaches see coach-photos" on storage.objects;
 create policy "coaches see coach-photos" on storage.objects for select to authenticated
   using (bucket_id = 'coach-photos' and public.is_coach());

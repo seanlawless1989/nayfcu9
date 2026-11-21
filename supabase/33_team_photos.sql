@@ -9,7 +9,7 @@
 --   * any family can ask for a photo to come down (flag_team_photo): it goes to 'waiting' straight away, so only the
 --     coaches and the phone that added it can see it, until a coach puts it back or deletes it
 --   * coaches can put back, caption and delete any photo; a parent can delete the ones their phone added
---   * at most 40 photos a day from one parent's phone
+--   * at most 40 photos a day from one parent's phone, of which at most 10 videos
 --   * no names are stored: uploader is the phone's anonymous sign-in id
 -- The site re-draws every photo before upload, which also strips the location data phones put in pictures.
 -- The old public "gallery" (match_photos, public bucket) is separate and stays archived.
@@ -45,13 +45,18 @@ language sql stable security definer set search_path = public as $$
       and (f.status = 'approved' or f.uploader = auth.uid())));
 $$;
 
--- at most 40 photos a day from one parent's phone
+-- at most 40 a day from one parent's phone, at most 10 of them videos
 create or replace function public.team_photos_limit() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if not public.is_coach() and (select count(*) from public.team_photos
        where uploader = auth.uid() and created > now() - interval '1 day') >= 40 then
     raise exception 'That is the most photos one phone can add in a day';
+  end if;
+  -- videos are bigger, so at most 10 a day from one parent's phone (within the 40)
+  if new.kind = 'video' and not public.is_coach() and (select count(*) from public.team_photos
+       where uploader = auth.uid() and kind = 'video' and created > now() - interval '1 day') >= 10 then
+    raise exception 'That is the most videos one phone can add in a day';
   end if;
   return new;
 end $$;
@@ -85,10 +90,18 @@ grant select, insert, update, delete on public.team_photos to authenticated;
 revoke execute on function public.is_family(), public.can_see_team_photo(text), public.team_photos_limit(), public.flag_team_photo(uuid) from public, anon;
 grant execute on function public.is_family(), public.can_see_team_photo(text), public.flag_team_photo(uuid) to authenticated;
 
--- the files: a private bucket (public = false), JPEGs up to 10 MB
+-- videos (added 2026-11-21): the phone's own MP4 / MOV file, up to 50 MB, with a JPEG thumbnail made from it.
+-- The site blanks out the file's metadata (where it was filmed) before upload. Photos have kind 'photo'.
+alter table public.team_photos add column if not exists kind text not null default 'photo';
+alter table public.team_photos add column if not exists secs int;                -- a video's length in seconds
+alter table public.team_photos drop constraint if exists team_photos_kind_check;
+alter table public.team_photos add constraint team_photos_kind_check check (kind in ('photo', 'video'));
+
+-- the files: a private bucket (public = false), JPEG photos and phone videos up to 50 MB
+-- (the project's Storage > Settings > Global file size limit must be at least 50 MB too)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('team-photos', 'team-photos', false, 10485760, array['image/jpeg'])
-on conflict (id) do update set public = false, file_size_limit = 10485760, allowed_mime_types = array['image/jpeg'];
+values ('team-photos', 'team-photos', false, 52428800, array['image/jpeg', 'video/mp4', 'video/quicktime', 'video/3gpp'])
+on conflict (id) do update set public = false, file_size_limit = 52428800, allowed_mime_types = array['image/jpeg', 'video/mp4', 'video/quicktime', 'video/3gpp'];
 drop policy if exists "families see team-photos" on storage.objects;
 create policy "families see team-photos" on storage.objects for select to authenticated
   using (bucket_id = 'team-photos' and public.can_see_team_photo(name));
