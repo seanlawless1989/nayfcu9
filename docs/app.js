@@ -2536,6 +2536,7 @@ function rpShow(){const {list,i,m}=RP,a=list[i-1];$("#rpList").innerHTML=list.sl
     if(a.us||a.them){const s=$("#rpSc");s.classList.remove("pop");void s.offsetWidth;s.classList.add("pop")}}
   $("#rpBar").style.width=`${i/list.length*100}%`;$("#rpPlay").textContent=i>=list.length?"↻ Watch again":RP.paused?"▶ Play":"⏸ Pause"}
 function rpTick(){if(!RP)return;clearTimeout(RP.timer);if(RP.i>=RP.list.length){rpShow();return}RP.i++;rpShow();const a=RP.list[RP.i-1];
+  if(RP.speed===1)sndPlay(a.k==="sub"?"sub":sndKind({k:a.k,t:a.tt}));
   if(a.us&&RP.speed===1&&!RP.m.hidden)goalFlash(a.n,`${TEAM.shortName||TEAM.name} ${a.sc||""} ${RP.m.opp||""}`.trim(),a.tt);
   if(!RP.paused&&RP.i<RP.list.length)RP.timer=setTimeout(rpTick,(a.us?3800:a.them?2800:2300)/RP.speed)}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-rp]");if(b){rpOpen(b.dataset.rp);return}if(!RP)return;const t=e.target.closest("button");if(!t||!t.closest("#rp"))return;
@@ -2545,9 +2546,56 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-rp]");if(b
   if(t.id==="rpBack"){clearTimeout(RP.timer);RP.i=0;$("#rpSc").textContent=RP.m.hidden?"v":"0 – 0";$("#rpMin").textContent="Before kick-off";RP.paused=false;rpTick();return}
   if(t.id==="rpEnd"){clearTimeout(RP.timer);RP.i=RP.list.length;rpShow();return}});
 document.addEventListener("keydown",e=>{if(RP&&e.key==="Escape")rpClose()});
+// ---------- match sounds: whistles for kick-off, half time and full time, a fanfare and crowd roar for our goals (switched on per phone) ----------
+// Every sound is made on the phone with Web Audio, from plain tones and hiss. No recordings, so nothing to download and nothing borrowed.
+// Played on the live page and Home while a game is live, and in replays at normal speed. Never on the coach's own live match screen.
+const SND_OK=typeof window!=="undefined"&&!!(window.AudioContext||window.webkitAudioContext);
+let SND=false,SND_CTX=null,SND_NOISE=null,SND_SEEN={};try{SND=SND_OK&&localStorage.getItem(SK+".sounds")==="1"}catch(e){}
+function sndCtx(){if(!SND_OK)return null;if(!SND_CTX){try{SND_CTX=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return null}}
+  if(SND_CTX.state!=="running")try{SND_CTX.resume().catch(()=>{})}catch(e){}return SND_CTX}
+// phones only let a page make sound after a tap: the first tap anywhere wakes it up
+function sndUnlock(){const c=sndCtx();if(!c)return;try{const b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0)}catch(e){}}
+function sndHiss(c){if(SND_NOISE&&SND_NOISE.sampleRate===c.sampleRate)return SND_NOISE;const n=c.sampleRate*2,b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);let p=0;
+  for(let i=0;i<n;i++){const w=Math.random()*2-1;p=(p+.02*w)/1.02;d[i]=w*.5+p*3}return SND_NOISE=b}
+function sndEnv(c,t,a,h,r,v){const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+a);g.gain.setValueAtTime(v,t+a+h);g.gain.exponentialRampToValueAtTime(.0001,t+a+h+r);return g}
+function sndTone(c,out,f,t,dur,o){o=o||{};const s=c.createOscillator(),g=sndEnv(c,t,o.a||.01,Math.max(0,dur-(o.a||.01)-(o.r||.2)),o.r||.2,o.v||.1);s.type=o.type||"sine";s.frequency.setValueAtTime(f,t);
+  if(o.to)s.frequency.exponentialRampToValueAtTime(o.to,t+dur);let n=s;if(o.lp){const l=c.createBiquadFilter();l.type="lowpass";l.frequency.value=o.lp;s.connect(l);n=l}n.connect(g);g.connect(out);s.start(t);s.stop(t+dur+.05)}
+// a referee's pea whistle: a high tone warbling fast, with a little breath
+function sndWhistle(c,out,t,dur){const s=c.createOscillator(),l=c.createOscillator(),lg=c.createGain(),g=sndEnv(c,t,.02,dur-.07,.05,.16);s.frequency.value=2900;l.frequency.value=27;lg.gain.value=170;
+  l.connect(lg);lg.connect(s.frequency);s.connect(g);g.connect(out);s.start(t);l.start(t);s.stop(t+dur+.05);l.stop(t+dur+.05);
+  const n=c.createBufferSource(),bp=c.createBiquadFilter(),ng=sndEnv(c,t,.02,dur-.07,.05,.035);n.buffer=sndHiss(c);bp.type="bandpass";bp.frequency.value=2900;bp.Q.value=6;n.connect(bp);bp.connect(ng);ng.connect(out);n.start(t);n.stop(t+dur+.05)}
+// the crowd: soft hiss through a low filter that swells up and fades away
+function sndCrowd(c,out,t,dur,v){const n=c.createBufferSource(),lp=c.createBiquadFilter(),bp=c.createBiquadFilter(),g=sndEnv(c,t,.35,dur*.35,dur*.65-.35,v);n.buffer=sndHiss(c);n.loop=true;
+  lp.type="lowpass";lp.frequency.value=1500;bp.type="peaking";bp.frequency.value=700;bp.gain.value=8;n.connect(lp);lp.connect(bp);bp.connect(g);g.connect(out);n.start(t);n.stop(t+dur+.1)}
+function sndBrass(c,out,f,t,dur,v){sndTone(c,out,f,t,dur,{type:"sawtooth",lp:2400,a:.02,r:.15,v});sndTone(c,out,f/2,t,dur,{type:"triangle",a:.02,r:.15,v:v*.8})}
+// each sound returns how long it lasts, so spoken updates can wait for it
+const SND_FX={
+  ko:(c,o,t)=>{sndWhistle(c,o,t,.75);return .9},
+  ht:(c,o,t)=>{sndWhistle(c,o,t,.28);sndWhistle(c,o,t+.42,.7);return 1.25},
+  ft:(c,o,t)=>{sndWhistle(c,o,t,.26);sndWhistle(c,o,t+.38,.26);sndWhistle(c,o,t+.76,.9);return 1.8},
+  goal:(c,o,t)=>{sndCrowd(c,o,t+.1,2.8,.22);[392,523.25,659.25].forEach((f,i)=>sndBrass(c,o,f,t+i*.13,.16,.13));
+    [523.25,659.25,783.99].forEach(f=>sndBrass(c,o,f,t+.42,.95,.09));sndTone(c,o,1567.98,t+.42,.5,{v:.04,r:.4});return 2.4},
+  kick:(c,o,t)=>{sndCrowd(c,o,t,1.6,.18);sndBrass(c,o,523.25,t,.14,.06);[659.25,783.99].forEach(f=>sndBrass(c,o,f,t+.16,.55,.05));return 1.3},
+  them:(c,o,t)=>{sndTone(c,o,523.25,t,.35,{type:"triangle",v:.08,r:.3});sndTone(c,o,440,t+.28,.55,{type:"triangle",v:.07,r:.45});return .9},
+  sub:(c,o,t)=>{sndTone(c,o,659.25,t,.5,{v:.1,r:.45});sndTone(c,o,987.77,t+.16,.6,{v:.09,r:.55});return .8},
+  cheer:(c,o,t)=>{sndTone(c,o,700,t,.12,{v:.13,to:1300,r:.1});sndTone(c,o,1300,t+.09,.25,{v:.07,r:.22});return .35},
+  on:(c,o,t)=>{sndTone(c,o,523.25,t,.25,{v:.09});sndTone(c,o,783.99,t+.12,.35,{v:.09,r:.3});return .5}};
+function sndPlay(k){if(!SND)return 0;const c=sndCtx(),fx=SND_FX[k];if(!c||!fx||c.state!=="running")return 0;
+  try{const o=c.createGain(),cp=c.createDynamicsCompressor();o.gain.value=1.4;o.connect(cp);cp.connect(c.destination);return fx(c,o,c.currentTime+.03)}catch(e){return 0}}
+// which sound an event makes (rugby kicks get a shorter fanfare than a try)
+function sndKind(e){if(e.k==="goal")return RUGBY&&e.t&&e.t!=="try"&&e.t!=="pt"?"kick":"goal";if(e.k==="sub")return e.on?"sub":null;return ["ko","ht","ft","them"].includes(e.k)?e.k:null}
+const SND_RANK={goal:6,ft:5,ht:4,kick:3,ko:3,them:2,sub:1};
+// new events since the last look, on today's games: one sound for the biggest moment, then the spoken words after it
+function liveNewsCheck(){if((!SPK&&!SND)||view==="live")return;const td=todayLocal();
+  matches.forEach(m=>{const ev=(m.live&&m.live.events)||[];if(!(m.id in SND_SEEN)){SND_SEEN[m.id]=ev.length;return}const from=SND_SEEN[m.id];SND_SEEN[m.id]=ev.length;
+    if(m.date!==td||ev.length<=from)return;let u=0,t=0,top=null;const say=[];
+    ev.forEach((e,i)=>{if(e.k==="goal"&&!RUGBY)u++;if(e.k==="them"&&!RUGBY)t++;if(i<from)return;const k=sndKind(e);if(k&&(!top||SND_RANK[k]>SND_RANK[top]))top=k;
+      if(!SPK||!SPK_KINDS.includes(e.k))return;const sc=e.s||(RUGBY?null:`${u}–${t}`);const a=rpAlert(e,m,sc);if(a)say.push(spkText(a,m,sc))});
+    const d=top?sndPlay(top):0;if(say.length)setTimeout(()=>say.forEach(spkSay),d*1000)})}
+function sndMark(){matches.forEach(m=>{SND_SEEN[m.id]=((m.live&&m.live.events)||[]).length})}
 // ---------- spoken updates: the live page reads kick-off, goals, subs, half and full time out loud (switched on per phone) ----------
 const SPK_OK=typeof window!=="undefined"&&"speechSynthesis" in window&&typeof SpeechSynthesisUtterance!=="undefined";
-let SPK=false,SPK_SEEN={},SPK_LOCK=null,SPK_UNLOCKED=false;try{SPK=SPK_OK&&localStorage.getItem(SK+".speak")==="1"}catch(e){}
+let SPK=false,SPK_LOCK=null,SPK_UNLOCKED=false;try{SPK=SPK_OK&&localStorage.getItem(SK+".speak")==="1"}catch(e){}
 const SPK_KINDS=["ko","goal","them","sub","ht","ft"];
 // words for the voice: no emoji, no minute marks, the score said as "Team 2, Opposition 1", nothing about the score when scores are kept back
 function spkText(a,m,sc){const US=TEAM.shortName||TEAM.name,opp=m.opp||"the opposition";let t=a.t||"",b=a.b||"";
@@ -2555,26 +2603,26 @@ function spkText(a,m,sc){const US=TEAM.shortName||TEAM.name,opp=m.opp||"the oppo
   const clean=x=>x.replace(/[\u{1F000}-\u{1FFFF}\u{2300}-\u{23FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu,"").replace(/\s*\([^)]*\)/g,"").replace(/\bGOAL\b/g,"Goal").replace(/\bTRY\b/g,"Try").replace(/ v /g," versus ").replace(/\s+/g," ").trim();
   t=clean(t);b=clean(b);return t+(b?(/[.!?]$/.test(t)?" ":". ")+b:"")}
 function spkSay(txt){if(!SPK_OK||!txt)return;try{const u=new SpeechSynthesisUtterance(txt);u.lang="en-GB";u.rate=1;const v=speechSynthesis.getVoices().find(x=>/^en[-_]GB/i.test(x.lang));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
-function spkMark(){matches.forEach(m=>{SPK_SEEN[m.id]=((m.live&&m.live.events)||[]).length})}
-// say anything new since the last look (today's games only; never on the coach's own live screen)
-function spkCheck(){if(!SPK||view==="live")return;const td=todayLocal();
-  matches.forEach(m=>{const ev=(m.live&&m.live.events)||[];if(!(m.id in SPK_SEEN)){SPK_SEEN[m.id]=ev.length;return}const from=SPK_SEEN[m.id];SPK_SEEN[m.id]=ev.length;
-    if(m.date!==td||ev.length<=from)return;let u=0,t=0;
-    ev.forEach((e,i)=>{if(e.k==="goal"&&!RUGBY)u++;if(e.k==="them"&&!RUGBY)t++;if(i<from||!SPK_KINDS.includes(e.k))return;const sc=e.s||(RUGBY?null:`${u}–${t}`);const a=rpAlert(e,m,sc);if(a)spkSay(spkText(a,m,sc))})})}
-async function spkWake(){try{if(SPK&&navigator.wakeLock&&!SPK_LOCK&&!document.hidden){SPK_LOCK=await navigator.wakeLock.request("screen");SPK_LOCK.addEventListener("release",()=>{SPK_LOCK=null})}}catch(e){}}
-function spkBtn(m){if(!SPK_OK||!m.live||m.live.status==="ft"||m.date!==todayLocal())return "";
-  return `<div class="spk"><button class="mini${SPK?" on":""}" data-spk aria-pressed="${SPK}">${SPK?"🔊 Reading updates out loud":"🔈 Read updates out loud"}</button><small>${SPK?"On. Tap to stop. Keep this page open.":"Hear goals and subs without looking at your phone."}</small></div>`}
+async function spkWake(){try{if((SPK||SND)&&navigator.wakeLock&&!SPK_LOCK&&!document.hidden){SPK_LOCK=await navigator.wakeLock.request("screen");SPK_LOCK.addEventListener("release",()=>{SPK_LOCK=null})}}catch(e){}}
+function spkBtn(m){if(!m.live||m.live.status==="ft"||m.date!==todayLocal()||(!SPK_OK&&!SND_OK))return "";
+  const on=SPK||SND,hint=on?`On. Tap a button again to turn it off. Keep this page open.${SND?" On iPhone, turn silent mode off to hear the sounds.":""}`:"Hear the whistle and every goal without looking at your phone.";
+  return `<div class="spk">${SND_OK?`<button class="mini${SND?" on":""}" data-snd aria-pressed="${SND}">${SND?"🔔 Match sounds on":"🔕 Match sounds"}</button>`:""}${SPK_OK?`<button class="mini${SPK?" on":""}" data-spk aria-pressed="${SPK}">${SPK?"🔊 Reading updates out loud":"🔈 Read updates out loud"}</button>`:""}<small>${hint}</small></div>`}
 document.addEventListener("click",e=>{if(SPK&&!SPK_UNLOCKED&&SPK_OK){SPK_UNLOCKED=true;try{speechSynthesis.speak(new SpeechSynthesisUtterance(" "))}catch(x){}}// iPhones only allow speech after a tap
+  if(SND&&!(SND_CTX&&SND_CTX.state==="running"))sndUnlock();
   if(!e.target.closest("[data-spk]"))return;SPK=!SPK;try{SPK?localStorage.setItem(SK+".speak","1"):localStorage.removeItem(SK+".speak")}catch(x){}
-  if(SPK){SPK_UNLOCKED=true;spkMark();try{speechSynthesis.cancel()}catch(x){}spkSay("Spoken updates are on. You'll hear goals and subs as they happen.");spkWake();toast("🔊 Updates will be read out loud. Keep this page open.")}
-  else{try{speechSynthesis.cancel()}catch(x){}if(SPK_LOCK){SPK_LOCK.release().catch(()=>{});SPK_LOCK=null}toast("Spoken updates off.")}
+  if(SPK){SPK_UNLOCKED=true;sndMark();try{speechSynthesis.cancel()}catch(x){}spkSay("Spoken updates are on. You'll hear goals and subs as they happen.");spkWake();toast("🔊 Updates will be read out loud. Keep this page open.")}
+  else{try{speechSynthesis.cancel()}catch(x){}if(SPK_LOCK&&!SND){SPK_LOCK.release().catch(()=>{});SPK_LOCK=null}toast("Spoken updates off.")}
+  if(view==="home")refreshHomeLive();else render()});
+document.addEventListener("click",e=>{if(!e.target.closest("[data-snd]"))return;SND=!SND;try{SND?localStorage.setItem(SK+".sounds","1"):localStorage.removeItem(SK+".sounds")}catch(x){}
+  if(SND){sndUnlock();sndMark();const c=sndCtx();if(c&&c.state!=="running")c.resume().then(()=>sndPlay("on")).catch(()=>{});else sndPlay("on");spkWake();toast("🔔 Match sounds on: a whistle for kick-off, half time and full time, and a big cheer for every goal.")}
+  else{if(SPK_LOCK&&!SPK){SPK_LOCK.release().catch(()=>{});SPK_LOCK=null}toast("Match sounds off.")}
   if(view==="home")refreshHomeLive();else render()});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)spkWake()});
 window.goalFlash=goalFlash;function goalFlash(n,score,t){document.querySelectorAll(".gflash").forEach(x=>x.remove());const d=document.createElement("div");d.className="gflash";d.innerHTML=`<div class="gf-in"><b>${RUGBY?({pen:"PENALTY!",drop:"DROP GOAL!",pt:"PENALTY TRY!",con:"CONVERTED!"})[t]||"TRY!":"GOAL!"}</b>${n?`<span>${esc(n)}</span>`:""}${score?`<em>${esc(score)}</em>`:""}</div>`;d.onclick=()=>d.remove();document.body.appendChild(d);try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}setTimeout(()=>d.remove(),3600)}
 async function pollLive(){if(!sb||!matches.length)return;const t=todayLocal();if(!matches.some(m=>m.date===t||(m.live&&(m.live.status==="live"||m.live.status==="ht"))))return;
   try{const {data}=await sb.from("matches").select("id,us,them,live,played,assists,keepers,date"+(RUGBY?",kicks":"")).eq("date",t);
     (data||[]).forEach(r=>{if(LV&&LV.id===r.id&&view==="live")return;const raw=RAW.find(x=>x.id===r.id);if(raw)Object.assign(raw,r);if(noScores())r=maskScore(r);const m=matches.find(x=>x.id===r.id);if(m){if(m.us!=null&&+r.us>+m.us&&r.live&&r.live.status!=="ft"){const g=((r.live.events||[]).filter(e=>e.k==="goal").pop()||{});goalFlash(g.n,`${TEAM.shortName||TEAM.name} ${r.us}-${r.them} ${m.opp}`,g.t)}Object.assign(m,r)}});}catch(e){}
-  renderTicker();if(view==="tl")render();else refreshHomeLive();spkCheck()}
+  renderTicker();if(view==="tl")render();else refreshHomeLive();liveNewsCheck()}
 // ---------- supporter cheers: anyone with the link picks a ready-made cheer for the team (supabase/13_cheers.sql) ----------
 // The words come from this list only (no typing), so nothing needs checking; the sender can add their own first name.
 // Only ever add to the end: the database keeps each cheer's place in the list. TEAM.cheers=false turns the feature off.
@@ -2600,7 +2648,7 @@ function refreshCheerCard(id){const el=document.getElementById("cheers-"+id);if(
 // pop new cheers up one at a time; the first load of a game just catches up quietly
 let CH_Q=[];
 function cheerPop(c){CH_Q.push(c);if(CH_Q.length===1)cheerNext()}
-function cheerNext(){const c=CH_Q[0];if(!c)return;document.querySelectorAll(".cheerpop").forEach(x=>x.remove());const d=document.createElement("div");d.className="cheerpop";d.innerHTML=cheerLine(c);d.onclick=()=>d.remove();document.body.appendChild(d);
+function cheerNext(){const c=CH_Q[0];if(!c)return;document.querySelectorAll(".cheerpop").forEach(x=>x.remove());const d=document.createElement("div");d.className="cheerpop";d.innerHTML=cheerLine(c);d.onclick=()=>d.remove();document.body.appendChild(d);sndPlay("cheer");
   setTimeout(()=>{d.remove();CH_Q.shift();cheerNext()},CH_Q.length>3?2200:4000)}
 async function loadCheers(id,pop){if(!sb||!CH_ON)return;try{const {data,error}=await sb.rpc("cheers_for",{p_match:id});if(error)return;const list=data||[],seen=CH_SEEN[id];
   if(pop&&seen!=null)list.filter(c=>c.id>seen).forEach(cheerPop);CH_SEEN[id]=list.length?Math.max(seen||0,...list.map(c=>c.id)):(seen||0);
