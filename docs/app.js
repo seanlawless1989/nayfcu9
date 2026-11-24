@@ -197,6 +197,7 @@ function render(){
   else if(view==="parents")main.innerHTML=parentsView();
   else if(view==="matchday")main.innerHTML=matchdayView();
   else if(view==="ftimport")main.innerHTML=ftView();
+  else if(view==="ssimport")main.innerHTML=ssView();
   else if(view==="help")main.innerHTML=helpView();
   else if(view==="book")main.innerHTML=bookView();
   else if(view==="medals")main.innerHTML=medalsView();
@@ -2851,6 +2852,116 @@ async function ftImport(){const list=ftRows().filter(f=>FT.picks.has(f.key)&&f.s
   for(const f of list){try{if(f.ex){const b=ftUpd(f);await db.collection("matches").doc(f.ex.id).update(b);if(!result(f.ex)&&!f.ex.postponed&&fxSig(Object.assign({},f.ex,b))!==fxSig(f.ex))fxTell(f.ex.id,fxSig(f.ex))}
     else{const b=Object.assign({},(({id,...x})=>x)(blankForm()),{date:f.date,ko:f.ko,opp:f.opp,ha:f.ha,venue:f.venue,comp:f.comp,us:null,them:null,potm:null,check:"",updated:new Date().toISOString()});delete b.saves;delete b.gk;b.postponed=false;await db.collection("matches").doc(`${f.date}-${slug(f.opp)}-${Math.random().toString(36).slice(2,6)}`).set(b)}n++}catch(e){}}
   toast(n===list.length?`Done: ${n} fixture${n>1?"s":""} added or updated.`:`${n} of ${list.length} saved. Try the rest again.`);FT=null;setView("fixtures")}
+// ---------- import results (and fixtures) from a spreadsheet (coaches) ----------
+// Sean, 24 Nov 2026: coaches who kept their season in Excel, Google Sheets or Numbers bring it in themselves. They pick a
+// file (.xlsx, .xls, .csv, or the site's own "results as a spreadsheet" backup) or copy the cells and paste them. Each column
+// is matched to a field by its heading (the coach can change any of them), every row is shown with what will happen, and
+// only the ticked rows are saved. A game already on the site (same date, same opponent) gets its score and scorers
+// filled in; anything else becomes a new game. Scorers ("Daisy 2, Chloe") go in as goals; appearances are marked as not
+// recorded (apps=false), because a spreadsheet rarely says who played. Nothing is ever deleted.
+let SS=null;// {rows:[[cells]], head:bool, map:{field:col}, picks:Set, msg, busy, file}
+const SS_FIELDS=[["date","Date",1],["opp","Opponent",1],["ha","Home or away"],["score","Score (e.g. 3-1, ours first)"],["us","Our goals"],["them","Their goals"],["comp","Competition"],["scorers","Scorers"],["potm",POTM.replace(/^./,c=>c.toUpperCase())],["ko","Kick-off"],["venue","Venue"],["notes","Notes"]];
+const SS_GUESS={date:/^(date|day|match date|when)$/,opp:/^(opp|opponent|opponents|opposition|vs|v|versus|against team|team played|played against|teams?)$/,ha:/^(h\/a|ha|home\/away|home or away|h or a|venue type|where)$/,
+  score:/^(score|result|final score|ft|full time|scoreline)$/,us:/^(us|for|our goals|our score|scored|gf|goals for|f|home goals|we scored)$/,them:/^(them|agst|against|their goals|their score|conceded|ga|goals against|a|opp goals|they scored)$/,
+  comp:/^(comp|competition|type|league\/cup|match type|game type)$/,scorers:/^(scorers?|goalscorers?|goals|who scored|goal scorers?)$/,potm:/^(potm|player of the match|motm|man of the match|star player|player of the game|pom)$/,
+  ko:/^(ko|kick ?off|kick-off|time)$/,venue:/^(venue|ground|pitch|location)$/,notes:/^(notes?|comments?|report|match notes)$/};
+const ssNorm=s=>String(s??"").trim();
+// dd/mm/yyyy, d/m/yy, yyyy-mm-dd, "Sat 12 Oct 2026", "12 October", "12-Oct-26" and Excel day numbers -> yyyy-mm-dd
+function ssDate(v){const s=ssNorm(v);if(!s)return null;let m;
+  if(m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s))return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+  if(m=/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/.exec(s)){const y=m[3].length===2?"20"+m[3]:m[3];if(+m[2]>12||+m[1]>31)return null;return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`}
+  if(/^\d{5}(\.\d+)?$/.test(s)&&+s>40000&&+s<60000){const d=new Date(Date.UTC(1899,11,30)+Math.floor(+s)*864e5);return d.toISOString().slice(0,10)}
+  if(m=/(\d{1,2})(?:st|nd|rd|th)?[\s\-]+([A-Za-z]{3,9})\.?(?:[\s\-,]+(\d{2,4}))?/.exec(s)){const mo=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"].indexOf(m[2].slice(0,3).toLowerCase());if(mo<0)return null;
+    let y=m[3]?(m[3].length===2?"20"+m[3]:m[3]):null;if(!y){const s0=+String(season||seasonOf(todayLocal())).slice(0,4);y=String(mo>=6?s0:s0+1)}
+    return `${y}-${String(mo+1).padStart(2,"0")}-${m[1].padStart(2,"0")}`}
+  return null}
+const ssScore=s=>{const m=/(\d+)\s*[-–:]\s*(\d+)/.exec(ssNorm(s));return m?[+m[1],+m[2]]:null};
+const ssNum=s=>{const t=ssNorm(s);return /^\d{1,2}$/.test(t)?+t:null};
+// "Daisy 2, Chloe; Amara (2)" or "Daisy x2" or "Daisy, Daisy, Chloe" -> {Daisy:2, Chloe:1, Amara:2}, names matched to the squad
+function ssScorers(s){const out={},squad=players.map(p=>p.name);ssNorm(s).split(/[,;&+\n]|\band\b/i).map(x=>x.trim()).filter(Boolean).forEach(x=>{
+  let n=1;const m=/^(.*?)[\s(x×]*(\d{1,2})\)?$/i.exec(x);let name=x;if(m&&m[1].trim()){name=m[1].trim();n=+m[2]}
+  name=name.replace(/\(.*?\)|\bpen(alty)?\b|\bog\b/gi,"").trim();if(!name||/^(none|-|n\/a|og|own goal)$/i.test(name))return;
+  const k=name.toLowerCase(),hit=squad.find(p=>p.toLowerCase()===k)||squad.find(p=>p.toLowerCase().split(" ")[0]===k.split(" ")[0]);name=hit||name.replace(/\b\w/g,c=>c.toUpperCase());
+  out[name]=(out[name]||0)+n});return out}
+function ssGuess(rows){const head=rows[0]||[],h=head.map(c=>ssNorm(c).toLowerCase().replace(/[?:.]/g,"").replace(/\s+/g," ")),map={};
+  const isHead=h.filter(x=>x&&!ssDate(x)&&!/^\d/.test(x)).length>=2&&!head.some(c=>ssDate(c));
+  if(isHead)Object.entries(SS_GUESS).forEach(([f,re])=>{const i=h.findIndex((x,j)=>re.test(x)&&!Object.values(map).includes(j));if(i>=0)map[f]=i});
+  const body=isHead?rows.slice(1):rows,col=i=>body.slice(0,30).map(r=>ssNorm(r[i]));const n=Math.max(...rows.map(r=>r.length),0);
+  const free=i=>!Object.values(map).includes(i);
+  if(map.date==null){for(let i=0;i<n;i++)if(free(i)&&col(i).filter(ssDate).length>=Math.max(1,col(i).filter(Boolean).length*.6)){map.date=i;break}}
+  if(map.score==null&&map.us==null){for(let i=0;i<n;i++)if(free(i)&&col(i).filter(c=>/^\d+\s*[-–:]\s*\d+$/.test(c)).length>=Math.max(1,col(i).filter(Boolean).length*.6)){map.score=i;break}}
+  if(map.ha==null){for(let i=0;i<n;i++)if(free(i)&&col(i).filter(Boolean).length&&col(i).filter(Boolean).every(c=>/^(h|a|n|home|away|neutral)$/i.test(c))){map.ha=i;break}}
+  if(map.opp==null){let best=-1,bl=0;for(let i=0;i<n;i++){if(!free(i))continue;const c=col(i).filter(Boolean);const ok=c.filter(x=>/[a-z]{3}/i.test(x)&&!ssDate(x)&&!/^(h|a|home|away|w|d|l|win|draw|loss|lost|won|league|cup|friendly)$/i.test(x));
+    const len=ok.reduce((a,x)=>a+x.length,0)/(ok.length||1);if(ok.length>=c.length*.6&&ok.length&&len>bl&&len<45){best=i;bl=len}}if(best>=0)map.opp=best}
+  return {head:isHead,map}}
+function ssRow(r){const g=f=>SS.map[f]==null?"":ssNorm(r[SS.map[f]]);const date=ssDate(g("date"));let opp=g("opp").replace(/^(v|vs|v\.|versus)\s+/i,"").replace(/\s+/g," ");if(!date||!opp)return null;
+  let ha=g("ha");ha=/^a/i.test(ha)?"A":/^n/i.test(ha)?"N":/^h/i.test(ha)?"H":"";
+  // "(A)" or "away" written in the opponent cell
+  const hm=/\s*[\[(](h|a|home|away)[\])]\s*$/i.exec(opp);if(hm){if(!ha)ha=/^a/i.test(hm[1])?"A":"H";opp=opp.slice(0,hm.index).trim()}
+  let us=null,them=null;const sc=ssScore(g("score"));if(sc)[us,them]=sc;if(SS.map.us!=null&&ssNum(g("us"))!=null)us=ssNum(g("us"));if(SS.map.them!=null&&ssNum(g("them"))!=null)them=ssNum(g("them"));if(us==null||them==null)us=them=null;
+  let comp=g("comp");comp=/cup|trophy|shield|plate|vase/i.test(comp)?"Cup":/friend/i.test(comp)?"Friendly":/tourn|festival/i.test(comp)?"Friendly":comp||!g("comp")?"League":"League";
+  const goals=ssScorers(g("scorers")),ko=ftTime(g("ko"));
+  const ex=matches.find(m=>m.date===date&&sameOpp(m.opp,opp));
+  let state="new",what=[];if(ex){if(us!=null&&(ex.us!==us||ex.them!==them))what.push(result(ex)?"change score":"add score");
+    if(Object.keys(goals).length&&!Object.keys(played(ex)).some(n=>played(ex)[n]>0))what.push("add scorers");if(g("potm")&&!ex.potm)what.push(POTM||"POTM");if(g("notes")&&!ex.notes)what.push("notes");
+    state=what.length?"update":"same"}
+  return {key:date+"|"+oppKey(opp),date,opp,ha:ha||"H",us,them,comp,goals,potm:g("potm").slice(0,40),ko,venue:g("venue").slice(0,120),notes:g("notes").slice(0,600),ex,state,what}}
+function ssList(){if(!SS||!SS.rows)return [];const seen=new Set();return (SS.head?SS.rows.slice(1):SS.rows).map(ssRow).filter(Boolean).filter(f=>{if(seen.has(f.key))return false;seen.add(f.key);return true}).sort((a,b)=>a.date.localeCompare(b.date))}
+function ssStart(){SS={rows:null,head:false,map:{},picks:new Set(),msg:"",busy:false,file:""};setView("ssimport")}
+function ssLoad(rows,file){rows=rows.map(r=>(r||[]).map(ssNorm)).filter(r=>r.some(Boolean));if(!rows.length){SS.msg="That looks empty. Check you picked the sheet with your games on it.";render();return}
+  const g=ssGuess(rows);Object.assign(SS,{rows,head:g.head,map:g.map,file:file||"",msg:""});SS.picks=new Set(ssList().filter(f=>f.state!=="same").map(f=>f.key));render()}
+// CSV with quotes, commas or semicolons; pasted cells come tab-separated
+function ssCsv(t){t=String(t||"").replace(/^﻿/,"");const tab=t.includes("\t"),sep=tab?"\t":(t.split("\n")[0].split(";").length>t.split("\n")[0].split(",").length?";":",");
+  const rows=[];let row=[],cell="",q=false;for(let i=0;i<t.length;i++){const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){cell+='"';i++}else q=false}else cell+=c}
+    else if(c==='"'&&!cell)q=true;else if(c===sep){row.push(cell);cell=""}else if(c==="\n"||c==="\r"){if(c==="\r"&&t[i+1]==="\n")i++;row.push(cell);rows.push(row);row=[];cell=""}else cell+=c}
+  if(cell||row.length){row.push(cell);rows.push(row)}return rows}
+// a spreadsheet cell as text: real dates (Excel keeps them as dates) become yyyy-mm-dd, so 6/9 is never read the American way
+const ssCell=c=>c instanceof Date?(isNaN(c)?"":new Date(c.getTime()+12*36e5).toISOString().slice(0,10)):c==null?"":String(c);
+function ssXlsxLib(){return window.XLSX?Promise.resolve(window.XLSX):new Promise((res,rej)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";s.onload=()=>res(window.XLSX);s.onerror=()=>rej(new Error("load"));document.head.appendChild(s)})}
+async function ssFile(f){if(!f)return;SS.busy=true;SS.msg="";render();
+  try{if(/\.(csv|txt|tsv)$/i.test(f.name)){ssLoad(ssCsv(await f.text()),f.name)}
+    else{const X=await ssXlsxLib(),wb=X.read(await f.arrayBuffer(),{cellDates:true});
+      // the sheet with the most rows that have a date in them
+      let best=null,bn=-1;wb.SheetNames.forEach(n=>{const r=X.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:""}).map(row=>row.map(ssCell));const k=r.filter(x=>x.some(c=>ssDate(c))).length;if(k>bn){bn=k;best=r}});
+      ssLoad(best||[],f.name)}}
+  catch(e){SS.msg=/load/.test(e.message)?"Couldn't open that file type here (no signal?). Save it as CSV, or copy the cells and paste them below.":"Couldn't read that file. Save it as CSV, or copy the cells and paste them below."}
+  finally{SS.busy=false;render()}}
+function ssView(){if(!canWrite||!SS)return `<div class="card empty">Coaches only.</div>`;const list=ssList(),n=SS.rows?Math.max(...SS.rows.map(r=>r.length)):0,hdr=SS.rows&&SS.head?SS.rows[0]:null;
+  const colName=i=>hdr&&hdr[i]?hdr[i]:`Column ${String.fromCharCode(65+i)}`;const sample=i=>{const r=(SS.head?SS.rows.slice(1):SS.rows).find(x=>ssNorm(x[i]));return r?ssNorm(r[i]).slice(0,24):""};
+  const newPl=[...new Set(list.filter(f=>SS.picks.has(f.key)).flatMap(f=>Object.keys(f.goals)).filter(n=>!players.some(p=>p.name===n)))];
+  return `<section class="card stack"><h2>📊 Import from a spreadsheet</h2>
+    <p class="hint" style="margin:0">Kept your games in Excel, Google Sheets or Numbers? Bring them in here: results, scorers and fixtures. One row per game, with at least a <b>date</b> and the <b>opponent</b>. Scores can be one column (<i>3-1</i>, ours first) or two. Nothing on the site is deleted, and you see every game before it's saved.</p>
+    <label class="f">Pick the file (.xlsx, .xls or .csv)<input type="file" id="ss-file" accept=".xlsx,.xls,.xlsm,.ods,.csv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"></label>
+    <details${SS.rows?"":" open"}><summary>Or copy the cells and paste them</summary><textarea id="ss-paste" rows="6" style="width:100%" placeholder="Select the rows in your spreadsheet (headings too), copy, and paste here"></textarea><div class="btns" style="margin-top:6px"><button class="btn gold" id="ssPaste">Read these</button></div></details>
+    ${SS.busy?`<p class="hint">Reading the file…</p>`:""}${SS.msg?`<div class="note">${esc(SS.msg)}</div>`:""}</section>
+  ${SS.rows?`<section class="card stack"><h3>Which column is which?</h3><p class="hint" style="margin:0">${SS.file?`From <b>${esc(SS.file)}</b>. `:""}We've had a guess from the headings. Change any that are wrong.</p>
+    <div class="grid2">${SS_FIELDS.map(([f,l,req])=>`<label class="f">${esc(l)}${req?" *":""}<select data-ssmap="${f}"><option value="">(not in my sheet)</option>${Array.from({length:n},(_,i)=>`<option value="${i}"${SS.map[f]===i?" selected":""}>${esc(colName(i))}${sample(i)?` · e.g. ${esc(sample(i))}`:""}</option>`).join("")}</select></label>`).join("")}</div>
+    <label class="row" style="cursor:pointer"><span>The first row is headings</span><input type="checkbox" id="ss-head"${SS.head?" checked":""} style="width:20px;height:20px"></label></section>
+  <section class="card stack"><h3>${list.length?`${list.length} game${list.length>1?"s":""} found`:"No games found yet"}</h3>${list.length?`
+    <div class="av">${list.map(f=>`<label class="row" style="cursor:pointer;align-items:flex-start"><span><input type="checkbox" data-sspick="${esc(f.key)}"${f.state==="same"?" disabled":SS.picks.has(f.key)?" checked":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px"><b>${esc(shortDay(f.date))}</b> ${f.ha==="A"?"at":"v"} ${esc(f.opp)}${f.us!=null?` <b>${f.us}-${f.them}</b>`:""}<br><span class="hint">${[f.comp!=="League"?f.comp:"",Object.entries(f.goals).map(([k,v])=>k+(v>1?" "+v:"")).join(", "),f.potm?`${POTM||"POTM"}: ${f.potm}`:""].filter(Boolean).map(esc).join(" · ")}</span></span><span class="pill">${f.state==="new"?(f.us!=null?"New result":f.date>=todayLocal()?"New fixture":"New game"):f.state==="update"?esc(f.what.join(", ")):"Already on the site"}</span></label>`).join("")}</div>
+    ${newPl.length?`<div class="note">Not in your squad yet: <b>${esc(newPl.join(", "))}</b>. Their goals still count. Add them on the Players page if they're in the team (check the spelling matches).</div>`:""}
+    <div class="btns"><button class="btn gold" id="ssImport">Save ticked games</button><button class="mini" id="ssAll">Tick all</button><button class="mini" id="ssNone">Untick all</button></div>`:`<p class="hint">Every game needs a date and an opponent. Check those two columns are set above.</p>`}</section>`:""}`}
+async function ssImport(){const list=ssList().filter(f=>SS.picks.has(f.key)&&f.state!=="same");if(!list.length){toast("Tick at least one game.");render();return}let n=0;
+  for(const f of list){try{const now=new Date().toISOString();
+    if(f.ex){const b={updated:now};if(f.us!=null){b.us=f.us;b.them=f.them}
+      if(Object.keys(f.goals).length&&!Object.keys(played(f.ex)).some(k=>played(f.ex)[k]>0)){const p=Object.assign({},played(f.ex));Object.entries(f.goals).forEach(([k,v])=>p[k]=v);b.played=p;if(!Object.keys(played(f.ex)).length)b.apps=false}
+      if(f.potm&&!f.ex.potm)b.potm=f.potm;if(f.notes&&!f.ex.notes)b.notes=f.notes;await db.collection("matches").doc(f.ex.id).update(b)}
+    else{const b=Object.assign({},(({id,...x})=>x)(blankForm()),{date:f.date,ko:f.ko,opp:f.opp,ha:f.ha,venue:f.venue,comp:f.comp,us:f.us,them:f.them,potm:f.potm||null,notes:f.notes,played:f.goals,apps:false,check:"",updated:now});
+      delete b.saves;delete b.gk;b.postponed=false;await db.collection("matches").doc(`${f.date}-${slug(f.opp)}-${Math.random().toString(36).slice(2,6)}`).set(b)}n++}catch(e){}}
+  toast(n===list.length?`Done: ${n} game${n>1?"s":""} saved.`:`${n} of ${list.length} saved. Try the rest again.`);const past=list.some(f=>f.us!=null||f.date<todayLocal());SS=null;setView(past?"results":"fixtures")}
+document.addEventListener("change",e=>{if(view!=="ssimport"||!SS)return;const t=e.target;
+  if(t.id==="ss-file"){ssFile(t.files&&t.files[0]);return}
+  if(t.dataset.ssmap){const f=t.dataset.ssmap;if(t.value==="")delete SS.map[f];else{const v=+t.value;Object.keys(SS.map).forEach(k=>{if(SS.map[k]===v)delete SS.map[k]});SS.map[f]=v}SS.picks=new Set(ssList().filter(x=>x.state!=="same").map(x=>x.key));render();return}
+  if(t.id==="ss-head"){SS.head=t.checked;SS.picks=new Set(ssList().filter(x=>x.state!=="same").map(x=>x.key));render();return}
+  if(t.dataset.sspick){t.checked?SS.picks.add(t.dataset.sspick):SS.picks.delete(t.dataset.sspick)}});
+document.addEventListener("click",e=>{const t=e.target.closest("button");if(!t)return;
+  if(t.dataset.ssstart!=null&&canWrite){ssStart();return}
+  if(view!=="ssimport"||!SS)return;
+  if(t.id==="ssPaste"){const v=($("#ss-paste")||{}).value||"";ssLoad(ssCsv(v),"");return}
+  if(t.id==="ssImport"){t.disabled=true;ssImport();return}
+  if(t.id==="ssAll"){ssList().filter(f=>f.state!=="same").forEach(f=>SS.picks.add(f.key));render();return}
+  if(t.id==="ssNone"){SS.picks.clear();render();return}});
 // Weekly training in the Fixtures list: one slim row per session for the next four weeks, so parents can say if their
 // child is coming right there (same answers as the Training page and ?tavail, public.training_availability).
 // Weeks off show as "No training". Hidden when a competition filter is on or another season is picked.
@@ -2889,12 +3000,12 @@ function fixturesView(){
   if(!items.length)return `${calBtn}${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one${RUGBY?"":`, or <button class="mini" id="ftStart">📥 import league fixtures</button>`}.`:""}</div>`;
   const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
   const nx=nextFixture();
-  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 ${ftDue()?"Check league fixtures":"Import league fixtures"}</button>`}</div>${ftDue()?`<div class="note edit-only" style="margin-bottom:8px">📅 Has the league moved any games? Check Full-Time once a week: <button class="mini" id="ftStart2">check now</button></div>`:""}`:""}${fixAvAll()}${CKEY()}${coachKidPick()}${coachNamePick()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
+  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 ${ftDue()?"Check league fixtures":"Import league fixtures"}</button>`}<button class="btn ghost" data-ssstart>📊 Import from a spreadsheet</button></div>${ftDue()?`<div class="note edit-only" style="margin-bottom:8px">📅 Has the league moved any games? Check Full-Time once a week: <button class="mini" id="ftStart2">check now</button></div>`:""}`:""}${fixAvAll()}${CKEY()}${coachKidPick()}${coachNamePick()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
 }
 function resultsView(){
   const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
-  if(!items.length)return `${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one.`:""}</div>`;
-  return `<div class="list">${matches.some(m=>m.report&&m.report.trim())||tournaments.some(hasTReport)?`<div class="btns" style="margin-bottom:8px"><button class="btn ghost" data-view="reports">📝 Match reports</button></div>`:""}${CKEY()}${monthList(items)}</div>`;
+  if(!items.length)return `${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}results for ${season} yet.${canWrite?` Use <b>+ Add a match</b> to log the first one, or <button class="mini" data-ssstart>📊 import them from a spreadsheet</button>.`:""}</div>`;
+  return `<div class="list">${canWrite?`<div class="btns edit-only" style="margin-bottom:8px"><button class="btn ghost" data-ssstart>📊 Import results from a spreadsheet</button></div>`:""}${matches.some(m=>m.report&&m.report.trim())||tournaments.some(hasTReport)?`<div class="btns" style="margin-bottom:8px"><button class="btn ghost" data-view="reports">📝 Match reports</button></div>`:""}${CKEY()}${monthList(items)}</div>`;
 }
 
 
@@ -4311,7 +4422,7 @@ function setupView(){
   <section class="card stack" style="gap:10px"><h3 style="margin:0">4. Your fixtures</h3>
     <p class="hint">${fx?`${fx} upcoming fixture${fx>1?"s":""} on the site.`:"No fixtures yet."} Add as many as you have; you can add more any time from <b>Add a match</b>.</p>
     ${SU_FIX.map((r,i)=>`<div class="grid2" data-sufix="${i}"><label class="f">Date<input type="date" data-fx="date" value="${esc(r.date)}"></label><label class="f">Opponent<input type="text" data-fx="opp" value="${esc(r.opp)}"></label><label class="f">Home or away<select data-fx="ha">${[["H","Home"],["A","Away"],["N","Neutral"]].map(([v,t])=>`<option value="${v}"${r.ha===v?" selected":""}>${t}</option>`).join("")}</select></label><label class="f">Kick-off<input type="time" data-fx="ko" value="${esc(r.ko)}"></label><label class="f">Competition<select data-fx="comp">${["League","Cup","Friendly"].map(c=>`<option${r.comp===c?" selected":""}>${c}</option>`).join("")}</select></label></div>`).join("")}
-    <div class="btns"><button class="btn ghost" id="suFixAdd">+ Add a fixture row</button>${SU_FIX.length?`<button class="btn" id="suFixSave">Save these fixtures</button>`:""}</div></section>
+    <div class="btns"><button class="btn ghost" id="suFixAdd">+ Add a fixture row</button><button class="btn ghost" data-ssstart>📊 Import from a spreadsheet</button>${SU_FIX.length?`<button class="btn" id="suFixSave">Save these fixtures</button>`:""}</div></section>
   <section class="card stack" style="gap:10px"><h3 style="margin:0">5. Your coaches</h3>
     <p class="hint">Only these people can sign in and change the site. Anyone you add can sign in straight away with a link sent to their email: send them the coach sign-in link below.${SU_SHARE&&(TEAM.sisterTeams||[]).length?` This list is shared with ${(TEAM.sisterTeams||[]).map(x=>esc(x.name)).join(" and ")}, so adding or removing a coach here does the same there.`:""} Coaches who are also parents sign in here as a coach and can then answer for every ${esc(PL.replace(/s$/,""))}, their own included.</p>
     ${SU_COACHES===null?`<p class="hint">Loading…</p>`:`<div class="stack" style="gap:6px">${SU_COACHES.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${esc(e)}</span>${me&&e===String(me.email||"").toLowerCase()?`<span class="hint">You</span>`:`<button class="mini" data-sucoachdel="${esc(e)}">Remove</button>`}</div>`).join("")}</div>`}
@@ -4647,7 +4758,7 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ratings","insights","birthdays","kit","cphotos","drills","design","formation"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ssimport","ratings","insights","birthdays","kit","cphotos","drills","design","formation"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
