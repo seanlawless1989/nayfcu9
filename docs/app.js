@@ -170,6 +170,7 @@ function render(){
   else if(view==="certs")main.innerHTML=certsView();
   else if(view==="notices")main.innerHTML=noticesView();
   else if(view==="splan")main.innerHTML=splanView();
+  else if(view==="assist")main.innerHTML=assistView();
   else if(view==="coaches")main.innerHTML=coachesView();
   else if(view==="insights")main.innerHTML=insightsView();
   else if(view==="kit")main.innerHTML=kitView();
@@ -243,7 +244,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["notices","📌","Noticeboard","News and notes from the coaches"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["cards","🃏","Player cards","A football card for every player"],["certs","📜","Certificates","Print one when a player reaches a level"],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day photos and videos"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Players, coaches and shirt numbers"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["splan","🗒️","Session plans","Plan training from the drills library"],["coaches","👥","Coaches","Who can do what"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["assist","🤖","Coaching assistant","Session ideas, matchday plans and reports"],["splan","🗒️","Session plans","Plan training from the drills library"],["coaches","👥","Coaches","Who can do what"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -4777,7 +4778,7 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ssimport","ratings","insights","birthdays","kit","cphotos","drills","design","formation","splan","coaches"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ssimport","ratings","insights","birthdays","kit","cphotos","drills","design","formation","splan","assist","coaches"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
@@ -5025,7 +5026,7 @@ function ntRead(){const v=id=>{const el=$("#"+id);return el?el.value:""};if(!ntE
 // ---------- session planner: plan a training session from the drills library, with an AI suggestion (25 Nov 2026) ----------
 // Saved in coach_notes kind 'plan' (k = the session date), coaches only. "Suggest a session" asks the preview function
 // (kind "session") to pick from this site's own drills; with no AI key it builds one here from the library instead.
-let sxDay=null,sxDraft=null,sxBusy=false;
+let sxDay=null,sxDraft=null,sxBusy=false,sxAsk="";
 function sxDays(){const up=trUpcoming(6).filter(x=>!x.off).map(x=>x.iso),saved=Object.keys((CN&&CN.plan)||{});return [...new Set(up.concat(saved))].sort().filter((d,i,a)=>d>=todayLocal()||i>=a.length-6).slice(-10)}
 function sxSum(p){const b=(p&&p.blocks)||[];return b.length?`${b.length} part${b.length===1?"":"s"}, ${b.reduce((a,x)=>a+(+x.mins||0),0)} minutes${p.focus?` · ${p.focus}`:""}`:"Not planned yet"}
 function sxCard(){if(!canWrite)return "";if(!CN)return `<section class="card"><h3>🗒️ Session plans</h3>${cnOff("Session plans")}</section>`;const d=sxDays().find(x=>x>=todayLocal()),p=d&&cnGet("plan",d);
@@ -5042,6 +5043,7 @@ function sxForm(){const p=sxDraft,total=p.blocks.reduce((a,x)=>a+(+x.mins||0),0)
   return `<div class="stack"><button class="btn ghost" data-sxback style="align-self:flex-start">← All plans</button><section class="card stack"><h2 style="margin:0">🗒️ ${esc(longDate(sxDay))}</h2>
     <div class="grid2"><label class="f">Focus<select id="sxF"><option value="">Mixed</option>${DR_FOCUS.filter(f=>f!=="Warm-up"&&f!=="Game").map(f=>`<option${p.focus===f?" selected":""}>${f}</option>`).join("")}</select></label>
     <label class="f">Session length (minutes)<input type="number" id="sxM" min="20" max="150" value="${+p.mins||60}"></label></div>
+    <label class="f">Anything to work on? (optional, for ✨ Suggest a session)<input type="text" id="sxAsk" maxlength="400" value="${esc(sxAsk)}" placeholder="For example: we bunch around the ball"></label>
     <div class="btns"><button class="btn gold" id="sxAi"${sxBusy?" disabled":""}>${sxBusy?"Thinking…":"✨ Suggest a session"}</button></div>
     <h3 style="margin:6px 0 0">The session · ${total} of ${+p.mins||60} minutes</h3>
     ${p.blocks.length?`<ol class="spl">${p.blocks.map((b,i)=>`<li><div class="row" style="gap:8px;justify-content:space-between;flex-wrap:wrap"><b>${b.id?`<button class="linkish" data-drill="${esc(b.id)}">${esc(b.title)}</button>`:esc(b.title)}</b>
@@ -5050,7 +5052,7 @@ function sxForm(){const p=sxDraft,total=p.blocks.reduce((a,x)=>a+(+x.mins||0),0)
     <div class="btns"><select id="sxAdd" style="flex:1;min-width:180px"><option value="">Add a drill…</option>${lib.map(d=>`<option value="${esc(d.id)}">${esc(d.title)} (${esc((d.focus||[]).join(", "))}${d.minutes?`, ${d.minutes} min`:""})</option>`).join("")}</select><button class="mini" id="sxAddGo">Add</button><button class="mini" id="sxAddOwn">Add my own</button></div>
     <label class="f">Notes for the coaches<textarea id="sxN" rows="3" maxlength="800" placeholder="Equipment, who's leading what, anyone to keep an eye on">${esc(p.note||"")}</textarea></label>
     <div class="btns"><button class="btn gold" id="sxSave">Save the plan</button><button class="btn ghost" id="sxShare">Share with the coaches</button>${cnGet("plan",sxDay)?`<button class="btn ghost" id="sxDelete">Delete</button>`:""}</div></section></div>`}
-function sxRead(){const p=sxDraft;if(!p)return;const v=id=>{const el=$("#"+id);return el?el.value:null};if(v("sxF")!=null)p.focus=v("sxF");if(v("sxM")!=null)p.mins=+v("sxM")||60;if(v("sxN")!=null)p.note=v("sxN").trim();
+function sxRead(){const p=sxDraft;if(!p)return;const v=id=>{const el=$("#"+id);return el?el.value:null};if(v("sxF")!=null)p.focus=v("sxF");if(v("sxM")!=null)p.mins=+v("sxM")||60;if(v("sxN")!=null)p.note=v("sxN").trim();if(v("sxAsk")!=null)sxAsk=v("sxAsk").trim();
   document.querySelectorAll("[data-sxmin]").forEach(el=>{const b=p.blocks[+el.dataset.sxmin];if(b)b.mins=Math.max(1,+el.value||1)});document.querySelectorAll("[data-sxnote]").forEach(el=>{const b=p.blocks[+el.dataset.sxnote];if(b)b.note=el.value.trim()})}
 // no AI: warm-up, two or three drills on the focus, finish with a game
 function sxLocal(p){const age=sxAge(),ok=d=>!age||((d.age_from||0)<=age&&(d.age_to||99)>=age),L=(DRILLS||[]).filter(ok),pick=(f,used)=>{const c=L.filter(d=>(d.focus||[]).includes(f)&&!used.has(d.id));return c[Math.floor(Math.random()*c.length)]};
@@ -5132,7 +5134,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
     toast(msg);render();return}
   // session plans
   if(d.sxday){sxDay=d.sxday;const p=cnGet("plan",sxDay);sxDraft=JSON.parse(JSON.stringify(p||{focus:"",mins:TR?Math.max(30,Math.min(120,(()=>{const [a,b]=[TR.start,TR.finish].map(x=>{const m=String(x||"").match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:0});return b>a?b-a:60})())):60,blocks:[],note:""}));if(view!=="splan")setView("splan");else render();window.scrollTo({top:0});return}
-  if("sxback" in d){sxRead();sxDay=null;sxDraft=null;render();return}
+  if("sxback" in d){sxRead();sxDay=null;sxDraft=null;sxAsk="";render();return}
   if(t.id==="sxOtherGo"){const v=$("#sxOther").value;if(v){t.dataset.sxday=v;sxDay=v;sxDraft=JSON.parse(JSON.stringify(cnGet("plan",v)||{focus:"",mins:60,blocks:[],note:""}));render()}return}
   if(view==="splan"&&d.drill){sxRead();drOpen=d.drill;setView("drills");return}
   if(d.sxdel!=null){sxRead();sxDraft.blocks.splice(+d.sxdel,1);render();return}
@@ -5141,7 +5143,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
   if(t.id==="sxAddOwn"){sxRead();const ti=(prompt("What's the activity called?")||"").trim();if(!ti)return;sxDraft.blocks.push({id:"",title:ti.slice(0,80),mins:10,note:""});render();return}
   if(t.id==="sxAi"){sxRead();if(sxDraft.blocks.length&&!confirm("Replace the drills in this plan with a suggestion?"))return;sxBusy=true;render();let blocks=null,why="";
     try{const age=sxAge(),ok=x=>!age||((x.age_from||0)<=age&&(x.age_to||99)>=age),lib=(DRILLS||[]).filter(ok).slice(0,120).map(x=>({id:x.id,title:x.title,focus:x.focus||[],minutes:x.minutes||null}));
-      const {data,error}=await sb.functions.invoke("preview",{body:fnBody({kind:"session",ask:{focus:sxDraft.focus||"",mins:+sxDraft.mins||60,age:TEAM.ageGroup||"",squad:players.filter(inGames).length},drills:lib,team:Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup},RUGBY?{sport:SP.key}:{})})});
+      const {data,error}=await sb.functions.invoke("preview",{body:fnBody({kind:"session",ask:{focus:sxDraft.focus||"",mins:+sxDraft.mins||60,age:TEAM.ageGroup||"",squad:players.filter(inGames).length,text:sxAsk},drills:lib,team:Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup},RUGBY?{sport:SP.key}:{})})});
       if(!error&&data&&Array.isArray(data.blocks)){blocks=data.blocks.map(b=>{const dr=(DRILLS||[]).find(x=>x.id===b.id);return dr?{id:dr.id,title:dr.title,mins:Math.max(1,Math.min(90,+b.mins||10)),note:String(b.note||"").slice(0,200)}:null}).filter(Boolean);if(data.note&&!sxDraft.note)sxDraft.note=String(data.note).slice(0,800)}else why=(data&&data.error)||""}catch(x){}
     sxBusy=false;if(!blocks||!blocks.length){blocks=sxLocal(sxDraft);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a session from the drills library.":"Here's a session from the drills library.")}else toast("Here's a suggestion. Change anything you like, then save.");
     sxDraft.blocks=blocks;render();return}
@@ -5160,6 +5162,97 @@ document.addEventListener("change",async e=>{const el=e.target;
     if(r==="manager"&&!crHasMgr()&&em!==myCoachEmail()&&!confirm(`Make ${coachName(em)} a manager? Only managers will then be able to change the coaches list and roles.`)){el.value=was||"coach";return}
     const {error}=await sb.rpc("set_coach_role",{p_email:em,p_role:r});if(error){toast(/least one manager/.test(error.message)?"The team needs at least one manager. Make someone else a manager first.":/Only/.test(error.message)?"Only a manager can change roles.":"Couldn't save that. Try again.");el.value=was||"coach";return}
     if(c)c.role=r;toast(`${coachName(em)} is now ${/^[aeiou]/i.test(CR_ROLES[r][1])?"an":"a"} ${CR_ROLES[r][1].toLowerCase()}.`);render();return}
+});
+
+// ---------- coaching assistant (25 Nov 2026): suggestions and drafts for coaches, never decisions about children ----------
+// One coaches-only page that brings the AI helpers together: plan a training session (the session planner), find drills
+// for something the coach describes, a matchday plan for the next game, and after a game the parents' report plus a
+// private coaches' debrief. Every call goes to the preview edge function (kinds "session", "drills", "matchday", "debrief",
+// "report"), which checks the caller is a coach and keeps the Anthropic key on the server. No children's names are sent
+// for the matchday plan, so it can't pick a team. With no key, each tool falls back to a simple draft made here.
+// Nothing is saved until a coach saves it. Matchday plans and debriefs are kept in coach_notes kinds 'mday' and 'deb'
+// (k = match id), coaches only (supabase/45_coach_assistant.sql).
+let aiQ="",aiPicks=null,aiTip="",aiBusy="",aiMd=null,aiMdTxt="",aiMdAsk="",aiDb=null,aiDbAsk="",aiDbOut=null;
+const AI_RULE="It suggests and drafts. You decide. It never picks the team, positions or minutes, and never rates or compares children.";
+const AI_PRIV="Describe the team, not a child. Leave out surnames and anything private, like health or family matters.";
+const aiTeam=()=>Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup,publicScores:TEAM.publicScores,format:TEAM.format||"",halfLength:+TEAM.halfLength||null},RUGBY?{sport:SP.key}:{});
+async function aiCall(b){try{const {data,error}=await sb.functions.invoke("preview",{body:fnBody(Object.assign({team:aiTeam()},b))});if(!error&&data&&!data.error)return data;return {error:(data&&data.error)||"failed"}}catch(e){return {error:"failed"}}}
+const aiWhy=e=>e==="no_key"?"AI suggestions aren't switched on yet":e==="coaches_only"?"Only signed-in coaches can use the assistant":"Couldn't reach the assistant";
+const aiAgeOk=d=>{const a=sxAge();return !a||((d.age_from||0)<=a&&(d.age_to||99)>=a)};
+const aiGames=()=>matches.filter(m=>isFixture(m)&&!m.postponed&&!m.practice).sort((a,b)=>(a.date||"").localeCompare(b.date||"")).slice(0,6);
+const aiPlayed=()=>matches.filter(m=>!m.practice&&!m.postponed&&!isFixture(m)&&(m.date||"")<=todayLocal()).sort((a,b)=>(b.date||"").localeCompare(a.date||"")).slice(0,8);
+const aiGameLabel=m=>`${longDate(m.date)}: ${m.ha==="A"?"away at":m.ha==="H"?"home to":"v"} ${m.opp}${m.ko?`, ${clock(m.ko)}`:""}`;
+const aiLastDeb=()=>{const d=(CN&&CN.deb)||{},ids=Object.keys(d).filter(id=>matches.some(m=>m.id===id)).sort((a,b)=>(matches.find(m=>m.id===b).date||"").localeCompare(matches.find(m=>m.id===a).date||""));return ids.length?d[ids[0]]:null};
+const aiList=a=>(a||[]).map(x=>"• "+x).join("\n");
+const aiUnlist=t=>String(t||"").split("\n").map(x=>x.replace(/^\s*[•\-*]\s*/,"").trim()).filter(Boolean).slice(0,6);
+function aiRead(){const v=id=>{const el=$("#"+id);return el?el.value:null};if(v("aiQ")!=null)aiQ=v("aiQ");if(v("aiMdAsk")!=null)aiMdAsk=v("aiMdAsk");if(v("aiMdTxt")!=null)aiMdTxt=v("aiMdTxt");if(v("aiDbAsk")!=null)aiDbAsk=v("aiDbAsk");
+  if(aiDbOut){if(v("aiDbWell")!=null)aiDbOut.well=aiUnlist(v("aiDbWell"));if(v("aiDbWork")!=null)aiDbOut.work=aiUnlist(v("aiDbWork"));if(v("aiDbFocus")!=null)aiDbOut.focus=v("aiDbFocus");if(v("aiDbIdea")!=null)aiDbOut.idea=v("aiDbIdea").trim()}}
+// no AI: the drills whose words best match what the coach typed
+function aiDrillsLocal(q){const w=String(q||"").toLowerCase().split(/[^a-z]+/).filter(x=>x.length>3),L=(DRILLS||[]).filter(aiAgeOk);
+  const sc=d=>{const f=(d.focus||[]).join(" ").toLowerCase(),t=`${d.title} ${d.setup||d.idea||""} ${d.points||""}`.toLowerCase();return w.reduce((a,x)=>a+(f.includes(x.slice(0,5))?3:0)+(t.includes(x.slice(0,5))?1:0),0)};
+  return L.map(d=>[d,sc(d)]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([d])=>({id:d.id,why:`Matches "${(d.focus||[]).join(", ")}".`}))}
+// no AI: a plain matchday plan the coaches fill in
+function aiMdLocal(m){const ko=/^(\d{1,2}):(\d{2})/.exec(m.ko||""),a=sxAge(),before=a&&a<=9?30:a&&a<=12?40:45,at=n=>{if(!ko)return "";const t=+ko[1]*60+ +ko[2]-n;return clock(`${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`)};
+  const wu=(DRILLS||[]).filter(d=>aiAgeOk(d)&&(d.focus||[]).includes("Warm-up")),w=wu[Math.floor(Math.random()*wu.length)],deb=aiLastDeb();
+  return `⏰ Timings\n${ko?`Meet ${at(before)}\nWarm-up ${at(before-10)}\nKick-off ${clock(m.ko)}`:"Meet about "+before+" minutes before kick-off"}\n\n🔥 Warm-up\n${w?`${w.title} (${w.minutes||10} min), then a few passes and shots`:"10 to 15 minutes, a ball each"}\n\n🎯 Our focus today\n${deb&&deb.work&&deb.work.length?aiList(deb.work.slice(0,2)):"• \n• "}\n\n🗣️ Team talk\n• Have fun and work for each other\n• Talk to your team-mates\n• Try things, mistakes are fine\n\n⏸️ Half time\n• What's going well?\n• What could we try next?\n\n🔄 Fair minutes\nEveryone gets a fair share. Use the Sub planner.\n\n🙌 After the game\nPraise the effort, thank the parents and the referee.`}
+function aiCard(){if(!canWrite)return "";return `<section class="card stack"><h3 style="margin:0">🤖 Coaching assistant</h3><p class="hint" style="margin:0">Session ideas, drills, a matchday plan and match reports. ${AI_RULE}</p><div class="btns"><button class="btn gold" data-view="assist">Open the assistant</button></div></section>`}
+function assistView(){if(!canWrite)return `<div class="card empty">The coaching assistant is for coaches. Sign in to use it.</div>`;
+  const d=sxDays().find(x=>x>=todayLocal()),p=d&&CN&&cnGet("plan",d),games=aiGames(),played=aiPlayed(),busy=k=>aiBusy===k?" disabled":"";
+  if(aiMd&&!games.some(m=>m.id===aiMd))aiMd=null;if(!aiMd&&games[0]){aiMd=games[0].id;aiMdTxt=(cnGet("mday",aiMd)||{}).text||""}
+  if(aiDb&&!played.some(m=>m.id===aiDb))aiDb=null;if(!aiDb&&played[0]){aiDb=played[0].id;aiDbOut=cnGet("deb",aiDb)?Object.assign({},cnGet("deb",aiDb)):null}
+  const drill=id=>(DRILLS||[]).find(x=>x.id===id);
+  const picks=(aiPicks||[]).map(x=>[drill(x.id),x.why]).filter(x=>x[0]);
+  const dbm=aiDb&&matches.find(m=>m.id===aiDb),noSc=TEAM.publicScores===false||(!RUGBY&&(()=>{const a=sxAge();return !a||(a>=7&&a<=11)})());
+  return `<div class="stack"><section class="card"><h2 style="margin-top:0">🤖 Coaching assistant</h2><p class="hint" style="margin:0">Help planning training, finding drills, getting ready for a game and writing it up afterwards. <b>${AI_RULE}</b> Only coaches see this page.</p></section>
+  <section class="card stack"><h3 style="margin:0">🗒️ Plan a training session</h3><p class="hint" style="margin:0">${d?`Next session, ${esc(longDate(d))}: <b>${esc(sxSum(p))}</b>.`:"Pick a day and build it from the drills library."} Open it and tap ✨ Suggest a session, then change anything you like.</p>
+    <div class="btns"><button class="btn gold" data-sxday="${esc(d||todayLocal())}">${p?"Open the plan":"Plan the session"}</button><button class="btn ghost" data-view="splan">All plans</button></div></section>
+  <section class="card stack"><h3 style="margin:0">🎯 Find drills</h3><label class="f">What do you want to work on?<textarea id="aiQ" rows="2" maxlength="400" placeholder="For example: we all chase the ball, or passing when someone's closing us down">${esc(aiQ)}</textarea></label>
+    <p class="hint" style="margin:0">Suggestions come from your drills library and suit ${esc(TEAM.ageGroup||"your age group")}. ${AI_PRIV}</p>
+    <div class="btns"><button class="btn gold" id="aiDrills"${busy("drills")}>${aiBusy==="drills"?"Thinking…":"✨ Suggest drills"}</button></div>
+    ${picks.length?`<ol class="spl">${picks.map(([x,why])=>`<li><b>${esc(x.title)}</b> <small class="hint">${esc((x.focus||[]).join(", "))}${x.minutes?` · ${x.minutes} min`:""}${x.age_from?` · ages ${x.age_from}${x.age_to?`-${x.age_to}`:"+"}`:""}</small>${why?`<p style="margin:6px 0">${esc(why)}</p>`:""}<div class="btns"><button class="mini" data-aidrill="${esc(x.id)}">Open the drill</button><button class="mini" data-aiadd="${esc(x.id)}">Add to next session</button></div></li>`).join("")}</ol>${aiTip?`<p class="hint" style="margin:0">💡 ${esc(aiTip)}</p>`:""}`:aiPicks?`<p class="hint">No drills in the library matched that. Try other words, or browse the <button class="linkish" data-view="drills">Drills library</button>.</p>`:""}</section>
+  <section class="card stack"><h3 style="margin:0">📋 Matchday plan</h3>${games.length?`<label class="f">Game<select id="aiMdG">${games.map(m=>`<option value="${esc(m.id)}"${m.id===aiMd?" selected":""}>${esc(aiGameLabel(m))}</option>`).join("")}</select></label>
+    <label class="f">Anything to focus on? (optional)<input type="text" id="aiMdAsk" maxlength="300" value="${esc(aiMdAsk)}" placeholder="For example: spreading out, talking to each other"></label>
+    <p class="hint" style="margin:0">A plan for the day: timings, warm-up, what to focus on, team talk and half-time questions. No names go in, so it never picks anyone: the squad, positions and minutes stay with you.</p>
+    <div class="btns"><button class="btn gold" id="aiMdGo"${busy("md")}>${aiBusy==="md"?"Thinking…":"✨ Draft a matchday plan"}</button>${aiMd?`<button class="mini" data-pick="${esc(aiMd)}">Pick squad</button>`:""}</div>
+    ${aiMdTxt||cnGet("mday",aiMd)?`<label class="f">The plan (change anything)<textarea id="aiMdTxt" rows="16" maxlength="3000">${esc(aiMdTxt)}</textarea></label>
+    <div class="btns"><button class="btn gold" id="aiMdSave">Save the plan</button><button class="btn ghost" id="aiMdShare">Share with the coaches</button>${cnGet("mday",aiMd)?`<button class="btn ghost" id="aiMdDel">Delete</button>`:""}</div>`:""}`:`<p class="hint" style="margin:0">No games coming up. Add a fixture first.</p>`}</section>
+  <section class="card stack"><h3 style="margin:0">📝 After the game</h3>${played.length?`<label class="f">Game<select id="aiDbG">${played.map(m=>`<option value="${esc(m.id)}"${m.id===aiDb?" selected":""}>${esc(aiGameLabel(m))}</option>`).join("")}</select></label>
+    <h4 style="margin:4px 0 0">Report for the parents</h4><p class="hint" style="margin:0">Drafts the match report from the game's facts and Live mode timeline, in your usual style. First names only, positive about every child.${noSc?` For this team it leaves out the score, the result and who scored (FA youth rules).`:""} It goes on your team's own site, which search engines don't list, once you've checked it and tapped Save.</p>
+    <div class="btns"><button class="btn gold" data-airep="${esc(aiDb)}">${dbm&&dbm.report?"Open the report":"✨ Draft the report"}</button></div>
+    <h4 style="margin:10px 0 0">Coaches' debrief (private)</h4><p class="hint" style="margin:0">What went well and what to work on, for the team as a whole. Only coaches see it, and it can set the focus of the next session.</p>
+    <label class="f">Your thoughts (optional)<textarea id="aiDbAsk" rows="2" maxlength="800" placeholder="For example: great energy, but we stopped talking in the second half">${esc(aiDbAsk)}</textarea></label>
+    <p class="hint" style="margin:0">${AI_PRIV}</p>
+    <div class="btns"><button class="btn gold" id="aiDbGo"${busy("deb")}>${aiBusy==="deb"?"Thinking…":"✨ Draft a debrief"}</button></div>
+    ${aiDbOut?`<label class="f">What went well<textarea id="aiDbWell" rows="3" maxlength="900">${esc(aiList(aiDbOut.well))}</textarea></label><label class="f">To work on<textarea id="aiDbWork" rows="3" maxlength="900">${esc(aiList(aiDbOut.work))}</textarea></label>
+    <div class="grid2"><label class="f">Training focus<select id="aiDbFocus"><option value="">Mixed</option>${DR_FOCUS.filter(f=>f!=="Warm-up"&&f!=="Game").map(f=>`<option${aiDbOut.focus===f?" selected":""}>${f}</option>`).join("")}</select></label>
+    <label class="f">Idea for next session<input type="text" id="aiDbIdea" maxlength="300" value="${esc(aiDbOut.idea||"")}"></label></div>
+    <div class="btns"><button class="btn gold" id="aiDbSave">Save the debrief</button><button class="btn ghost" id="aiDbPlan">Plan the next session on this</button></div>`:""}`:`<p class="hint" style="margin:0">Once a game has been played, you can write it up here.</p>`}</section></div>`}
+async function aiSaveNote(kind,k,data,ok){try{if(!CN)throw 0;await cnSet(kind,k,data);toast(ok)}catch(x){toast(CN?"Couldn't save it. This team's database may need a quick update first, so copy it for now.":"Saving isn't switched on for this team yet, so copy it for now.")}}
+document.addEventListener("change",e=>{const el=e.target;if(view!=="assist")return;
+  if(el.id==="aiMdG"){aiRead();aiMd=el.value;aiMdTxt=(cnGet("mday",aiMd)||{}).text||"";render();return}
+  if(el.id==="aiDbG"){aiRead();aiDb=el.value;aiDbOut=cnGet("deb",aiDb)?Object.assign({},cnGet("deb",aiDb)):null;render();return}});
+document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t||view!=="assist"||!canWrite)return;const d=t.dataset;
+  if(d.aidrill){aiRead();drOpen=d.aidrill;setView("drills");return}
+  if(d.aiadd){aiRead();const dr=(DRILLS||[]).find(x=>x.id===d.aiadd);if(!dr)return;const day=sxDays().find(x=>x>=todayLocal())||todayLocal();sxDay=day;sxDraft=JSON.parse(JSON.stringify(cnGet("plan",day)||{focus:"",mins:60,blocks:[],note:""}));
+    sxDraft.blocks.push({id:dr.id,title:dr.title,mins:+dr.minutes||10,note:""});setView("splan");toast("Added. Tap Save the plan to keep it.");return}
+  if(d.airep){aiRead();const m=matches.find(x=>x.id===d.airep);if(!m)return;openMatch(m.id);mdWrite=true;render();const ta=$("#mdReport");if(ta){ta.scrollIntoView({block:"center"});if(!ta.value.trim()){const b=$("#mdReportAi");if(b)b.click()}}return}
+  if(t.id==="aiDrills"){aiRead();if(!aiQ.trim()){toast("Say what you want to work on first.");return}if(!DRILLS)await loadDrills();aiBusy="drills";render();
+    const lib=(DRILLS||[]).filter(aiAgeOk).slice(0,160).map(x=>({id:x.id,title:x.title,focus:x.focus||[],minutes:x.minutes||null,ages:[x.age_from||0,x.age_to||0],about:String(x.setup||x.idea||"").slice(0,160)}));
+    const r=await aiCall({kind:"drills",ask:{text:aiQ.trim()},drills:lib});aiBusy="";
+    if(r.picks){aiPicks=r.picks;aiTip=r.tip||"";toast("Here are some ideas. You choose what fits.")}else{aiPicks=aiDrillsLocal(aiQ);aiTip="";toast(`${aiWhy(r.error)}, so these are drills that match your words.`)}render();return}
+  if(t.id==="aiMdGo"){aiRead();const m=matches.find(x=>x.id===aiMd);if(!m)return;if(aiMdTxt.trim()&&!confirm("Replace the plan in the box with a new draft?"))return;aiBusy="md";render();
+    const deb=aiLastDeb(),r=await aiCall({kind:"matchday",match:m.id,ask:{text:aiMdAsk.trim(),focus:deb&&deb.work?deb.work.join("; "):""}});aiBusy="";
+    if(r.text){aiMdTxt=r.text;toast("Here's a draft. Change anything, then save.")}else{aiMdTxt=aiMdLocal(m);toast(`${aiWhy(r.error)}, so here's a simple plan to fill in.`)}render();return}
+  if(t.id==="aiMdSave"){aiRead();if(!aiMdTxt.trim()){toast("The plan is empty.");return}await aiSaveNote("mday",aiMd,{text:aiMdTxt.trim().slice(0,3000)},"Matchday plan saved. The other coaches can see it.");render();return}
+  if(t.id==="aiMdDel"){if(!confirm("Delete this matchday plan?"))return;try{await cnDel("mday",aiMd);aiMdTxt="";toast("Plan deleted.")}catch(x){toast("Couldn't delete it.")}render();return}
+  if(t.id==="aiMdShare"){aiRead();const m=matches.find(x=>x.id===aiMd),txt=`📋 Matchday plan${m?`, ${aiGameLabel(m)}`:""}\n\n${aiMdTxt.trim()}`;if(navigator.share){try{await navigator.share({text:txt});return}catch(x){if(x&&x.name==="AbortError")return}}try{await navigator.clipboard.writeText(txt);toast("Copied. Paste it into the coaches' chat.")}catch(x){prompt("Copy this",txt)}return}
+  if(t.id==="aiDbGo"){aiRead();const m=matches.find(x=>x.id===aiDb);if(!m)return;if(aiDbOut&&(aiDbOut.well||[]).concat(aiDbOut.work||[]).length&&!confirm("Replace the debrief with a new draft?"))return;aiBusy="deb";render();
+    const r=await aiCall({kind:"debrief",match:m.id,ask:{text:aiDbAsk.trim()},focuses:DR_FOCUS.filter(f=>f!=="Warm-up"&&f!=="Game")});aiBusy="";
+    if(r.well||r.work){aiDbOut={well:r.well||[],work:r.work||[],focus:r.focus||"",idea:r.idea||""};toast("Here's a draft. Change anything, then save.")}else{aiDbOut={well:[],work:[],focus:"",idea:""};toast(`${aiWhy(r.error)}, so fill in the debrief yourself.`)}render();return}
+  if(t.id==="aiDbSave"){aiRead();if(!aiDbOut)return;await aiSaveNote("deb",aiDb,{well:aiDbOut.well,work:aiDbOut.work,focus:aiDbOut.focus||"",idea:aiDbOut.idea||""},"Debrief saved. Only coaches can see it.");render();return}
+  if(t.id==="aiDbPlan"){aiRead();if(!aiDbOut)return;const day=sxDays().find(x=>x>=todayLocal())||todayLocal(),cur=cnGet("plan",day);sxDay=day;sxDraft=JSON.parse(JSON.stringify(cur||{focus:"",mins:60,blocks:[],note:""}));
+    if(aiDbOut.focus)sxDraft.focus=aiDbOut.focus;const n=[aiDbOut.work&&aiDbOut.work.length?"To work on: "+aiDbOut.work.join("; "):"",aiDbOut.idea||""].filter(Boolean).join("\n");if(n&&!sxDraft.note)sxDraft.note=n.slice(0,800);sxAsk=(aiDbOut.work||[]).join("; ").slice(0,400);
+    setView("splan");toast("Focus set from the debrief. Tap ✨ Suggest a session, then save.");return}
 });
 
 (async function(){
@@ -5182,8 +5275,8 @@ document.addEventListener("change",async e=>{const el=e.target;
   if(window.SETUP_WAIT)suRefresh().catch(()=>{window.SETUP_WAIT=false;render()});
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
-  db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit)||(view==="drills"&&!!drEdit)||view==="design";
+  db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup"&&view!=="assist")render()},()=>toast("Couldn't load the squad. Reload the page."));
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit)||(view==="drills"&&!!drEdit)||view==="design"||view==="assist";
   db.collection("matches").onSnapshot(s=>{RAW=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");matches=pubMatches();if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
@@ -5197,7 +5290,7 @@ document.addEventListener("change",async e=>{const el=e.target;
   const qinv=new URLSearchParams(location.search).get("invite");if(qinv&&!canWrite)showInvite(qinv.trim().toLowerCase());else if(qinv&&canWrite){toast("You're already signed in as a coach, so you don't need that invite.");try{history.replaceState(null,"",location.pathname)}catch(e){}}
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos","notices","cards","certs"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos","notices","cards","certs","assist"])if(new URLSearchParams(location.search).has(v))setView(v);
   if(new URLSearchParams(location.search).has("fund")){view="fund";render();fundReturn(new URLSearchParams(location.search))}
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
