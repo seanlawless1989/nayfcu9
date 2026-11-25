@@ -966,3 +966,7 @@ input.need{outline:3px solid #E53935;outline-offset:1px}
 .crrow select{max-width:220px}
 .tl li.act .ic,.tl li.opp .ic{opacity:.9}
 .tl li.opp{color:var(--muted)}
+
+/* season posters (25 Nov 2026) */
+.szwrap{padding:10px;background:repeating-linear-gradient(45deg,rgb(0 0 0/.03) 0 10px,transparent 10px 20px)}
+.szimg{display:block;width:100%;max-width:620px;margin:0 auto;aspect-ratio:1240/1754;box-shadow:0 8px 28px rgba(0,0,0,.22);border-radius:4px;background:#fff}
