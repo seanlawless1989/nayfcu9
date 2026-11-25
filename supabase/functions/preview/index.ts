@@ -3,7 +3,10 @@
 //   POST {match: "<id>", kind: "report"}  "Suggest a report" on a played game: uses the result, awards and the Live-mode timeline
 //   POST {kind: "session", ask: {focus, mins, age, squad}, drills: [{id, title, focus, minutes}]}  "Suggest a session" on a
 //        coach's session plan: picks from the site's own drills library and returns {blocks: [{id, mins, note}], note}
-// Both come from a signed-in coach's phone. Returns {text}. Nothing is saved here: the coach reads the draft, changes it and saves it themselves.
+//   POST {kind: "drills", ask: {text}, drills: [...]}          Coaching assistant "Find drills": picks drills from the library for what the coach describes
+//   POST {kind: "matchday", match: "<id>", ask: {text, focus}}  Coaching assistant "Matchday plan": timings, warm-up, team focus, talks (never who plays)
+//   POST {kind: "debrief", match: "<id>", ask: {text}, focuses} Coaching assistant private coaches' debrief: went well / to work on / next session idea
+// All come from a signed-in coach's phone. Returns {text}. Nothing is saved here: the coach reads the draft, changes it and saves it themselves.
 // Needs the ANTHROPIC_API_KEY secret; without it this returns {error: "no_key"} and the site writes a simpler draft from the stats.
 // Only facts already on the site go to Claude: opponents, dates, venues, results and the first names the site shows.
 import Anthropic from "npm:@anthropic-ai/sdk";
@@ -130,7 +133,7 @@ function reportFacts(m: M, all: M[]) {
 
 const REPORT = `You write match reports for a children's grassroots football team's website. Parents and grandparents read them on their phones, and coaches share them in the parents' WhatsApp group.
 Write as the team's coaches, in warm British English, 120 to 220 words, in short paragraphs separated by blank lines. Plain text only: no headings or bullet points. Add a few fitting emojis through the report (about 4 to 6, such as ⚽ 🧤 💪 🙌 👏 💛), as parents would in a WhatsApp group.
-Tell the story of the game in order using the timeline when there is one (goals, assists, substitutions, half time). Use only the facts you are given: don't invent moments, saves, tactics, weather, quotes or details about the opponents. Only mention players by the first names given. Be positive about every child, never single anyone out for criticism, and praise effort and teamwork whatever the result. Mention the player of the match if there is one.
+Tell the story of the game in order using the timeline when there is one (goals, assists, substitutions, half time). Use only the facts you are given: don't invent moments, saves, tactics, weather, quotes or details about the opponents. Only mention players by the first names given, never surnames. Be positive about every child, never single anyone out for criticism or compare children, and praise effort and teamwork whatever the result. Mention the player of the match if there is one.
 If you're told not to mention scores, results or scorers, follow that strictly, even if the example reports include them: tell the story through effort, teamwork, substitutions, the keepers and the player of the match instead.
 If example reports are given, match their tone, length and style, but never copy facts from them.`;
 
@@ -143,19 +146,104 @@ If there are no previous meetings, say it's a first meeting. If a fact (like kic
 const forSport = (p: string) => !rugby() ? p : p.replaceAll("football", sportName()).replaceAll("⚽ 🧤", "🏉").replaceAll("⚽", "🏉")
   .replace("(goals, assists, substitutions, half time)", "(tries, conversions and kicks, replacements, half time)").replace("substitutions, the keepers and the player of the match", "replacements and the player of the match");
 
+// Every coaching-assistant prompt starts with this: it's an assistant to the coaches, not a decision-maker about children.
+const GUARD = `You are an assistant to volunteer coaches of a children's team. You suggest and draft; the coaches decide everything.
+Never pick, drop or rank players, never say who should start, play where, play more or less, or be left out, and never rate, score, compare or judge an individual child.
+Talk about the team as a whole. If a child is named, use only their first name and only to praise them. Never use surnames.
+Don't give medical, injury, safeguarding or welfare advice: say to speak to the parent, the club welfare officer or a first aider.
+If the coach asks for any of these, say kindly that it's the coaches' call and offer team-level help instead. Use warm British English.`;
+const clip = (v: unknown, n: number) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, n);
+async function ask(system: string, content: string, max = 2000) {
+  const client = new Anthropic({ apiKey: KEY });
+  const r = await client.beta.messages.create({ model: "claude-opus-5-5", max_tokens: max, output_config: { effort: "low" }, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default", system, messages: [{ role: "user", content }] } as any);
+  if (r.stop_reason === "refusal") return null;
+  return r.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("").trim() || null;
+}
+const asJson = (t: string | null) => { const j = t && t.match(/\{[\s\S]*\}/); if (!j) return null; try { return JSON.parse(j[0]); } catch { return null; } };
+const ageNum = () => +((AGE.match(/\d+/) || [])[0] || 0);
+
+// "Find drills": Claude picks from the site's own drills for what the coach describes, and says why
+type LibDrill = { id: string; title: string; focus: string[]; minutes: number | null; ages: number[]; about: string };
+async function drills(body: { ask?: { text?: string }; drills?: LibDrill[] }) {
+  const lib = (Array.isArray(body.drills) ? body.drills : []).filter((d) => d && typeof d.id === "string" && typeof d.title === "string").slice(0, 160)
+    .map((d) => ({ id: d.id.slice(0, 80), title: d.title.slice(0, 100), focus: (Array.isArray(d.focus) ? d.focus : []).map(String).slice(0, 6), minutes: Number(d.minutes) || null,
+      ages: (Array.isArray(d.ages) ? d.ages : []).map(Number).filter((n) => n > 0).slice(0, 2), about: clip(d.about, 160) }));
+  const q = clip(body.ask?.text, 400);
+  if (!q) return { error: "no_ask" };
+  if (lib.length < 2) return { error: "no_drills" };
+  const system = `${GUARD}
+
+Your job now: help a coach find drills for a children's grassroots ${sportName()} team. Pick 3 to 5 drills ONLY from the list you're given, by id, that best fit what the coach wants to work on and suit the age group.
+For each, give one or two sentences (under 40 words) on why it helps and one simple way to make it easier or harder. Then one short practical tip for the coach.
+Reply with JSON only, no other text: {"picks":[{"id":"<drill id>","why":"<sentence>"}],"tip":"<one sentence>"}`;
+  const content = `Age group: ${AGE || "unknown"}. What the coach wants to work on: ${q}\n\nDrills you can use:\n${JSON.stringify(lib)}`;
+  const o = asJson(await ask(system, content));
+  if (!o) return { error: "empty" };
+  const ids = new Set(lib.map((d) => d.id));
+  const picks = (Array.isArray(o.picks) ? o.picks : []).filter((p: any) => p && ids.has(p.id)).slice(0, 5).map((p: any) => ({ id: p.id, why: clip(p.why, 300) }));
+  return picks.length ? { picks, tip: clip(o.tip, 300) } : { error: "empty" };
+}
+
+// "Matchday plan": a plan for the day around the next game. No children's names go in, so it can't pick anyone.
+async function matchday(m: M, all: M[], body: { ask?: { text?: string; focus?: string }; team?: { format?: string; halfLength?: number } }) {
+  const hide = noScoreText(), n = ageNum();
+  const lines = [`Team: ${`${US} ${AGE}`.trim()} (grassroots ${sportName()})${body.team?.format ? `, plays ${clip(body.team.format, 10)}` : ""}${Number(body.team?.halfLength) ? `, ${Number(body.team?.halfLength)}-minute halves` : ""}`,
+    `Game: ${m.ha === "A" ? "away at" : m.ha === "H" ? "at home to" : "against"} ${m.opp}, ${new Date(m.date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}`];
+  lines.push(m.ko ? `Kick-off: ${m.ko}` : "Kick-off time not set yet.");
+  if (m.venue) lines.push(`Venue: ${m.venue}`);
+  if (m.comp) lines.push(`Competition: ${m.comp}`);
+  if (m.squad?.length) lines.push(`Squad size: ${m.squad.length} players`);
+  const h = all.filter((x) => res(x) && x.date < m.date && key(x.opp) === key(m.opp)).length;
+  lines.push(h ? `We've played them ${h} time${h > 1 ? "s" : ""} before.` : "First time we've played them.");
+  if (body.ask?.focus) lines.push(`The coaches' last debrief said to work on: ${clip(body.ask.focus, 300)}`);
+  if (body.ask?.text) lines.push(`The coach's own notes for this game: ${clip(body.ask.text, 500)}`);
+  if (hide) lines.push(`${noScoreRule()}: this age group doesn't play for results. Don't mention scores, winning, league positions or targets for ${rugby() ? "tries" : "goals"}.`);
+  const system = `${GUARD}
+
+Your job now: draft a matchday plan for the coaches for this game. Plain text, under 260 words, in these sections, each starting with its emoji heading on its own line and short lines under it:
+⏰ Timings (a meet time ${n && n <= 9 ? "about 30" : n && n <= 12 ? "about 40" : "about 45"} minutes before kick-off if kick-off is known, warm-up start, kick-off)
+🔥 Warm-up (10 to 15 minutes, simple, everyone with a ball as much as possible)
+🎯 Our focus today (two or three team-wide things, said positively)
+🗣️ Team talk (three short points children can remember)
+⏸️ Half time (two or three questions to ask the players, then one thing to try)
+🔄 Fair minutes (a reminder that everyone gets a fair share, using the Sub planner; never name anyone)
+🙌 After the game (praise effort, thank the parents and the referee)
+Don't name any players. Don't suggest a line-up, positions, formation changes or who plays when. Use only the facts given; if something is missing, leave it out.`;
+  const text = await ask(system, `Draft the matchday plan from these facts:\n\n${lines.join("\n")}`);
+  return text ? { text: text.slice(0, 3000) } : { error: "empty" };
+}
+
+// Private coaches' debrief after a game: team-level, for the coaches only, and it can feed the next session plan
+async function debrief(m: M, all: M[], body: { ask?: { text?: string }; focuses?: string[] }) {
+  const f = reportFacts(m, all).facts, focuses = (Array.isArray(body.focuses) ? body.focuses : []).map((x) => clip(x, 30)).filter(Boolean).slice(0, 12);
+  const system = `${GUARD}
+
+Your job now: draft a short private debrief for the coaches after this game. Only the coaches see it. Base it on the facts and on the coach's own notes; don't invent moments.
+"well": two or three things the team did well. "work": two or three team-wide things to work on at training, said constructively, never naming a child.
+"focus": the one training focus that fits best, chosen exactly from this list: ${JSON.stringify(focuses)}. "idea": one sentence suggesting a practice game for the next session.
+Reply with JSON only, no other text: {"well":["..."],"work":["..."],"focus":"...","idea":"..."}`;
+  const content = `Facts about the game:\n${f}${body.ask?.text ? `\n\nThe coach's own notes: ${clip(body.ask.text, 800)}` : ""}`;
+  const o = asJson(await ask(system, content, 1500));
+  if (!o) return { error: "empty" };
+  const list = (v: unknown) => (Array.isArray(v) ? v : []).map((x) => clip(x, 240)).filter(Boolean).slice(0, 4);
+  return { well: list(o.well), work: list(o.work), focus: focuses.includes(o.focus) ? o.focus : "", idea: clip(o.idea, 300) };
+}
+
 // a training session from the team's own drills: Claude picks the drills and minutes, nothing else is sent
 type Drill = { id: string; title: string; focus: string[]; minutes: number | null };
-async function session(body: { ask?: { focus?: string; mins?: number; age?: string; squad?: number }; drills?: Drill[]; team?: { sport?: string } }) {
+async function session(body: { ask?: { focus?: string; mins?: number; age?: string; squad?: number; text?: string }; drills?: Drill[]; team?: { sport?: string } }) {
   if (body.team?.sport) SPORT = String(body.team.sport);
   const drills = (Array.isArray(body.drills) ? body.drills : []).filter((d) => d && typeof d.id === "string" && typeof d.title === "string").slice(0, 150)
     .map((d) => ({ id: d.id.slice(0, 80), title: d.title.slice(0, 100), focus: (Array.isArray(d.focus) ? d.focus : []).map(String).slice(0, 6), minutes: Number(d.minutes) || null }));
   if (drills.length < 3) return { error: "no_drills" };
   const mins = Math.max(20, Math.min(150, Number(body.ask?.mins) || 60)), focus = String(body.ask?.focus || "").slice(0, 40);
-  const system = `You plan training sessions for a children's grassroots ${sportName()} team. Pick drills ONLY from the list you're given, by their id.
+  const system = `${GUARD}
+
+You plan training sessions for a children's grassroots ${sportName()} team. Pick drills ONLY from the list you're given, by their id.
 Plan a session that starts with a warm-up, builds through two or three activities on the focus, and ends with a game. Keep it fun, active and age-appropriate, with lots of touches and little queueing.
 The minutes must add up to the session length. Give each part a one-line coaching note (under 20 words) in warm British English.
 Reply with JSON only, no other text: {"blocks":[{"id":"<drill id>","mins":<number>,"note":"<short note>"}],"note":"<one sentence for the coaches>"}`;
-  const content = `Session length: ${mins} minutes. Focus: ${focus || "a mix"}. Age group: ${String(body.ask?.age || "").slice(0, 30) || "unknown"}. Players usually at training: ${Number(body.ask?.squad) || "unknown"}.\n\nDrills you can use:\n${JSON.stringify(drills)}`;
+  const content = `Session length: ${mins} minutes. Focus: ${focus || "a mix"}. Age group: ${String(body.ask?.age || "").slice(0, 30) || "unknown"}. Players usually at training: ${Number(body.ask?.squad) || "unknown"}.${body.ask?.text ? `\nThe coach's notes: ${clip(body.ask.text, 400)}` : ""}\n\nDrills you can use:\n${JSON.stringify(drills)}`;
   const client = new Anthropic({ apiKey: KEY });
   const r = await client.beta.messages.create({ model: "claude-opus-5-5", max_tokens: 2000, output_config: { effort: "low" }, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default", system, messages: [{ role: "user", content }] } as any);
   if (r.stop_reason === "refusal") return { error: "refused" };
@@ -174,6 +262,8 @@ Deno.serve(async (req) => {
   try {
     // A team sharing this project says which schema is theirs (tools/team_schema_sql.py); otherwise it's public.
     const body = await req.json().catch(() => ({}));
+    // a warm copy of this function serves every team in the project, so start each request from the defaults
+    US = Deno.env.get("TEAM_NAME") ?? "our team"; AGE = Deno.env.get("AGE_GROUP") ?? ""; SCORES = Deno.env.get("PUBLIC_SCORES") !== "false"; SPORT = Deno.env.get("SPORT") ?? "football";
     const schema = typeof body.schema === "string" && /^[a-z][a-z0-9_]{0,40}$/.test(body.schema) ? body.schema : "public";
     // coaches only: check the caller's sign-in against that team's coaches list
     const auth = req.headers.get("Authorization") ?? "";
@@ -183,16 +273,19 @@ Deno.serve(async (req) => {
     if (!KEY) return out({ error: "no_key" }); // 200 so the site can read why
     db = schema === "public" ? HOME : service(schema);
     const { match, kind, team } = body;
-    if (kind === "session") return out(await session(body));
     if (team?.name) US = String(team.name);
     if (team?.ageGroup) AGE = String(team.ageGroup);
     if (team?.publicScores === false) SCORES = false;
     if (team?.sport) SPORT = String(team.sport);
+    if (kind === "session") return out(await session(body));
+    if (kind === "drills") { await loadTeam(); return out(await drills(body)); }
     const { data: all, error } = await db.from("matches").select("id,date,opp,ha,venue,comp,ko,us,them,played,postponed,stage,squad,assists,potm,keepers,halves,live,report" + (rugby() ? ",kicks" : ""));
     if (error) throw error;
     const m = (all as M[]).find((x) => x.id === match);
     if (!m) return out({ error: "not_found" }, 404);
     await loadTeam();
+    if (kind === "matchday") return out(await matchday(m, all as M[], body));
+    if (kind === "debrief") return out(await debrief(m, all as M[], body));
     let system = forSport(SYSTEM), content = `Write a preview of our next game from these facts:\n\n${facts(m, all as M[])}`;
     if (kind === "report") {
       const r = reportFacts(m, all as M[]);
