@@ -14,6 +14,9 @@
 //   POST {avail: {match, player}} from a parent's phone after answering availability: tells coaches who asked for it
 //                                 (match is "t:<tournament id>" for a whole tournament)
 //   POST {tavail: {day, player}}  the same for a training session
+//   POST {notice: "<id>"} from a signed-in coach's phone after posting on the noticeboard (supabase/44_coach_extras.sql):
+//                         a note for everyone goes to every phone with alerts on; a note for one family only to the phones
+//                         signed in with that child's family code. Once per notice (again only if the coach edits it and asks).
 //   POST {ask: {match} or {day}}  from a signed-in coach's phone: "can your child make it?" now, to the phones whose child
 //                                 hasn't answered for that game, tournament ("t:<id>") or training day. The same phones as the
 //                                 reminders below. Coaches only (checked from the sign-in), at most once an hour for each one.
@@ -344,6 +347,28 @@ async function toWaiting(p: { p_match: string | null; p_day: string | null }, ma
   return sent;
 }
 
+// a coach posted on the noticeboard: -3 not a coach, -1 no such notice
+async function noticeAlert(req: Request, id: string): Promise<number> {
+  const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const { data: u } = jwt ? await pub.auth.getUser(jwt) : { data: null };
+  const email = u?.user?.email?.toLowerCase(); if (!email) return -3;
+  const { data: coach } = await db.from("coaches").select("email").eq("email", email).maybeSingle(); if (!coach) return -3;
+  const { data: n } = await db.from("team_notices").select("id,kind,title,body,player,created").eq("id", id).maybeSingle();
+  if (!n) return -1;
+  // once per version of the notice: an edit the coach asks to send again goes out again
+  const { data: claimed } = await db.rpc("push_claim_note", { p_key: `notice:${n.id}`, p_value: `${n.title}|${n.body}`.slice(0, 200) });
+  if (!claimed) return 0;
+  const icon: Record<string, string> = { news: "📣", cancel: "🚫", kit: "👕", event: "🎉", reminder: "⏰" };
+  const body = String(n.body || "").replace(/\s+/g, " ").trim();
+  const alert = { title: `${icon[n.kind] ?? "📣"} ${n.title}`, body: (body.length > 170 ? body.slice(0, 168).replace(/\s+\S*$/, "") + "…" : body) || `From the ${US} coaches.`, url: `${SITE}?notices`, tag: `notice-${n.id}` };
+  if (n.player) {
+    const { data: subs, error } = await db.rpc("notice_targets", { p_player: n.player }); if (error) throw error;
+    return subs?.length ? await send(null, alert, undefined, subs as Sub[]) : 0;
+  }
+  const { data: subs, error } = await db.from("push_subs").select("endpoint,p256dh,auth").or("reminders.eq.true,live.eq.true"); if (error) throw error;
+  return subs?.length ? await send(null, alert, undefined, subs as Sub[]) : 0;
+}
+
 // a coach tapped "Ask by push". ask = -3 not a coach, -2 asked less than an hour ago (askedAt says when), -1 nothing to ask about
 const ASK_GAP = 60 * 60e3;
 async function askAlert(req: Request, a: { match?: unknown; day?: unknown }): Promise<{ ask: number; askedAt?: string }> {
@@ -448,7 +473,9 @@ async function handle(req: Request) {
     await useTeam(schema);
     const out: Record<string, number> = {};
     let askedAt: string | undefined;
-    if (typeof body.ask === "object" && body.ask) {
+    if (typeof body.notice === "string") {
+      out.notice = await noticeAlert(req, body.notice);
+    } else if (typeof body.ask === "object" && body.ask) {
       const r = await askAlert(req, body.ask); out.ask = r.ask; askedAt = r.askedAt;
     } else if (typeof body.avail === "object" && body.avail) {
       out.avail = await availAlert("avail", body.avail.match, body.avail.player);

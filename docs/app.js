@@ -161,11 +161,16 @@ function render(){
   if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   if(setupPending()&&!canWrite&&view!=="login"){main.innerHTML=settingUpView();document.body.classList.toggle("ro",true);return}
   renderTicker();
-  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+myBadgeStrip()+homeView();
+  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+myBadgeStrip()+ntHomeCard()+homeView();
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
   else if(view==="fund")main.innerHTML=fundView();
   else if(view==="ratings")main.innerHTML=ratingsView();
+  else if(view==="cards")main.innerHTML=cardsView();
+  else if(view==="certs")main.innerHTML=certsView();
+  else if(view==="notices")main.innerHTML=noticesView();
+  else if(view==="splan")main.innerHTML=splanView();
+  else if(view==="coaches")main.innerHTML=coachesView();
   else if(view==="insights")main.innerHTML=insightsView();
   else if(view==="kit")main.innerHTML=kitView();
   else if(view==="pom")main.innerHTML=pomView();
@@ -210,6 +215,7 @@ function render(){
   else if(view==="new"||view==="edit")main.innerHTML=formView();
   document.body.classList.toggle("ro",!canWrite);
   if(me)medalCheck();
+  paintCards();
 }
 
 // a tournament we've entered whose games aren't on the site yet comes before the next match when it's sooner
@@ -236,14 +242,14 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
-const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day photos and videos"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Players, coaches and shirt numbers"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["notices","📌","Noticeboard","News and notes from the coaches"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["cards","🃏","Player cards","A football card for every player"],["certs","📜","Certificates","Print one when a player reaches a level"],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day photos and videos"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Players, coaches and shirt numbers"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["splan","🗒️","Session plans","Plan training from the drills library"],["coaches","👥","Coaches","Who can do what"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
   const fi=HOME_ITEMS.findIndex(x=>x[0]==="fund");if(fLive()){const t=["fund","💷","Fundraiser","Get your name on our pitch"];if(fi<0)HOME_ITEMS.splice(1,0,t)}else if(fi>=0)HOME_ITEMS.splice(fi,1);
   const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:`${RUGBY?"Try":"Goal"} of the month and more`;
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||(PHOTOS_ON&&GAL_DB))&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).map(x=>tile(x," coach")).join(""):""}</div>${galWaiting().length?`<section class="card" style="margin-top:12px"><b>⚑ ${galWaiting().length} photo${galWaiting().length>1?"s":""} to look at.</b> A family asked for ${galWaiting().length>1?"them":"it"} to come down. <button class="mini" data-view="gallery">Check now</button></section>`:""}${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${pics.length})</button></div>`:""}`}
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||(PHOTOS_ON&&GAL_DB))&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).filter(x=>crCan(x[0])).map(x=>tile(x," coach")).join(""):""}</div>${galWaiting().length?`<section class="card" style="margin-top:12px"><b>⚑ ${galWaiting().length} photo${galWaiting().length>1?"s":""} to look at.</b> A family asked for ${galWaiting().length>1?"them":"it"} to come down. <button class="mini" data-view="gallery">Check now</button></section>`:""}${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${pics.length})</button></div>`:""}`}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -778,7 +784,7 @@ function cavBox(item){if(!canWrite||!CAV_ON||!item)return "";const a=CAV[item]||
 let cavNameEdit=false;
 function coachNamePick(){if(!canWrite||!CAV_ON||compFilter)return "";const c=CTEAM.find(x=>x.email===myCoachEmail()),hasRole=CTEAM.length&&"role" in (CTEAM[0]||{}),role=(c&&c.role)||"";
   const rb=(v,t)=>`<button data-cavrole="${v}" aria-pressed="${role===v}">${t}</button>`;
-  const rolePick=!hasRole?"":role?`<p class="hint edit-only" style="margin:0 0 8px">${role==="admin"?"🗂️ You're set as an <b>admin</b>, so you aren't asked if you can make games and training.":"🧢 You're set as a <b>coach</b> at games and training."} <button class="mini" data-cavrole="${role==="admin"?"coach":"admin"}">I'm ${role==="admin"?"a coach":"an admin"}</button></p>`
+  const rolePick=!hasRole?"":role?`<p class="hint edit-only" style="margin:0 0 8px">${role==="admin"?"🗂️ You're set as an <b>admin</b>, so you aren't asked if you can make games and training.":role==="manager"?"🎖️ You're the team's <b>manager</b>.":role==="assistant"?"🤝 You're set as an <b>assistant coach</b> at games and training.":"🧢 You're set as a <b>coach</b> at games and training."} ${role==="manager"||crHasMgr()?`<button class="mini" data-view="coaches">Coaches and roles</button>`:`<button class="mini" data-cavrole="${role==="admin"?"coach":"admin"}">I'm ${role==="admin"?"a coach":"an admin"}</button>`}</p>`
     :`<div class="note edit-only" style="margin-bottom:8px"><b>Are you a coach or an admin?</b> Coaches say if they can make each game and training session. Admins look after the site but aren't asked.<div class="seg" style="margin-top:6px">${rb("coach","🧢 I'm a coach")}${rb("admin","🗂️ I'm an admin")}</div></div>`;
   if(role==="admin")return rolePick;
   if(c&&c.name&&!cavNameEdit)return rolePick+ `<p class="hint edit-only" style="margin:0 0 8px">The other coaches see your answers as <b>${esc(c.name)}</b>. <button class="mini" data-cavname="1">Change</button></p>`;
@@ -887,7 +893,7 @@ async function parentJoin(){const el=$("#pCode"),code=(el&&el.value||"").replace
   const {data,error}=await sb.rpc("link_family",{p_code:code});
   if(error){toast(/too many/i.test(error.message)?"Too many tries. Wait an hour, or ask the coach to check the code.":"Couldn't check that code. Try again.");return}
   if(!data){toast("That code isn't right. Check it with the coach.");return}
-  await loadParent();await loadKit();kitDraft=null;await loadTav();logActive();await loadMyDays();await loadGallery();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
+  await loadParent();await loadKit();kitDraft=null;await loadNotices();await loadTav();logActive();await loadMyDays();await loadGallery();alSync();authBox();toast(`Signed in. This phone is linked to ${data}.`);
   const nx=parentNext;parentNext=null;if(nx)setView(nx);else render()}
 async function parentLeave(n){
   if(n){await sb.rpc("unlink_family",{p_player:n});await loadParent();await loadKit();await loadGallery();kitDraft=null;authBox();render();toast(`${n} is no longer linked to this phone.`);return}
@@ -1065,7 +1071,7 @@ async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.s
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:fnBody({match:id})}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
 async function alSend(body){if(!sb||!CFG.vapidPublicKey)return null;   // alerts not switched on for this team
-try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament??data.treport??data.avail??data.fixture;return typeof v==="number"?v:null}catch(e){return null}}
+try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.notice??data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament??data.treport??data.avail??data.fixture;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
@@ -1113,7 +1119,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   const sec=(h,b)=>`<section class="card"><h3>${h}</h3>${b}</section>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">🔒 Privacy</h2><p class="hint">How this site looks after your child's details. Last updated October 2026.</p>
   ${sec("Who's in charge",`<p>This site is run by <b>${club}</b> for its <b>${team}</b>. The club decides what goes on it and is responsible for your child's information (the "data controller"). Touchline Tales builds and hosts the site for the club and only uses the information to run it (the "data processor").</p>`)}
-  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Coaches' termly development ratings (the FA's four corner model, 1 to 5, with an optional short note) and where each child can play, to help plan their development. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos and videos in a private store that only the team's signed-in coaches can open. These are never shown on the site and have no public links. Ask the coach to delete a photo or video at any time.</li><li>Match-day photos and videos that families and coaches add on the Photos page. Only the team's signed-in coaches and families (a phone signed in with a family code) can see them: they're never public and have no public links. Any family can ask for a photo or video to come down, which hides it straight away, and coaches can delete any of them. The site takes the phone's location data out of each photo and video. The site keeps an anonymous code for the phone that added each photo, never a parent's name.</li></ul>`)}
+  ${sec("What's on the site about the children",`<ul><li>First names only, and a shirt number if the team uses them. Never surnames, ages, dates of birth, schools or addresses.</li><li>Match details: who played, ${RUGBY?"tries, kicks and points":"goals, assists, saves"}, playing time, awards and milestones, and match and tournament reports the coaches write.</li><li>A birthday (day and month only, never the year) if the coaches add one, so they get a reminder. Only the team's signed-in coaches can see it.</li><li>Coaches' own scores out of 10 for each game, used to help pick end-of-season awards. Only the team's signed-in coaches can see them.</li><li>Coaches' termly development ratings (the FA's four corner model, 1 to 5, with an optional short note) and where each child can play, to help plan their development. Only the team's signed-in coaches can see them.</li><li>Kit sizes (shirt, shorts and socks) so the team can order kit. Only the coaches and the ${kid}'s own family can see them.</li><li>Availability answers for each game and training session, and training attendance. Only the coaches can see these, and each signed-in family sees its own answers.</li><li>Notices from the coaches on the Noticeboard. A notice for one family names their ${kid} by first name and only that family and the coaches can see it.</li><li>Player cards and certificates, made on the phone from the stats and awards above. Nothing extra is stored for them.</li><li>A small profile picture of a ${kid}, but only if the club has their parent's consent. Ask the coach to take one down at any time.</li><li>Coaches can keep match, training and team photos and videos in a private store that only the team's signed-in coaches can open. These are never shown on the site and have no public links. Ask the coach to delete a photo or video at any time.</li><li>Match-day photos and videos that families and coaches add on the Photos page. Only the team's signed-in coaches and families (a phone signed in with a family code) can see them: they're never public and have no public links. Any family can ask for a photo or video to come down, which hides it straight away, and coaches can delete any of them. The site takes the phone's location data out of each photo and video. The site keeps an anonymous code for the phone that added each photo, never a parent's name.</li></ul>`)}
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you coach or manage the team: your name, your role and, if you agree, a photo, which the coaches add to the Squad and Players pages for everyone to see. Ask the coaches to change or remove them at any time.</li><li>If you buy a square on the club's pitch fundraiser: the name and message for your square and your email address for the receipt. Only the coaches see your email and what you paid, and messages show once a coach approves them. You pay through Stripe straight to the club; the site never sees your card.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
@@ -1542,7 +1548,7 @@ function tavView(){if(!TR||!TAV_ON)return `<div class="card empty">Training answ
     <div class="btns"><button class="btn ghost" data-view="training">Training details</button></div></section>`}
 function trainingView(){
   if(trEdit&&canWrite)return trFormView();
-  if(!TR)return `<div class="stack"><div class="card empty">Training details are on their way.</div>${drillsCard()}</div>`;
+  if(!TR)return `<div class="stack"><div class="card empty">Training details are on their way.</div>${sxCard()}${drillsCard()}</div>`;
   const up=trUpcoming(6),next=up.find(x=>!x.off),offSoon=up.filter(x=>x.off);
   const maps=TR.venue?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(TR.venue)}`:"";
   const facts=[["📍",TR.venue?`<a href="${maps}" target="_blank" rel="noopener">${esc(TR.venue)}</a>`:""],["🎒",TR.kit?`<b>Bring:</b> ${esc(TR.kit)}`:""],["📅",next?`<b>Next session:</b> ${longDate(next.iso)}`:""],
@@ -1551,7 +1557,7 @@ function trainingView(){
     <div class="trbig"><b>Every ${esc(TR.day)}</b><span>${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span></div>
     <div class="trfacts">${facts.map(([i,v])=>`<div><span>${i}</span><span>${v}</span></div>`).join("")}</div>
     ${TR.notes?`<p style="margin:0">${esc(TR.notes)}</p>`:""}
-    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section>${tavCard()}${attCard()}${drillsCard()}</div>`}
+    <div class="btns"><button class="btn gold" data-view="calendar">🗓️ Add training to my calendar</button>${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">Directions</a>`:""}${canWrite?`<button class="btn ghost edit-only" id="trEditBtn">Edit training</button>`:""}</div></section>${tavCard()}${attCard()}${sxCard()}${drillsCard()}</div>`}
 function trFormView(){const F2=trEdit;const off=(F2.off||[]).slice().sort();
   return `<section class="card stack"><h2>Edit training</h2>
     <div class="grid2"><label class="f">Day<select id="tr-day">${WEEKDAYS.map(d=>`<option${d===F2.day?" selected":""}>${d}</option>`).join("")}</select></label>
@@ -2050,7 +2056,12 @@ async function liveNewPlayer(name){const m=matches.find(x=>x.id===LV.id);name=na
 function bench(){return LV.squad.filter(n=>!LV.slots.includes(n)&&!(LV.sin&&LV.sin[n]))}
 // ---------- sub plan (coaches only: it stays on the coach's phone and never goes to parents) ----------
 // LV.plan = {mode:"off"|"equal"|"manual", gk2: keeper for the second half, ch:[{m,on,off}] for manual, at: last change point dealt with, due:{m,chs}}
-const PLAN_N={off:"Off",equal:"Equal minutes",manual:"Choose my own"};
+const PLAN_N={off:"Off",equal:"Equal minutes",fair:"Fair over the season",manual:"Choose my own"};
+// "Fair over the season" (25 Nov 2026): like equal minutes, but a player who has had less of the game than the squad
+// average so far this season is owed some minutes today (and one who's had more gives some back), up to a quarter of the game.
+function fairOwed(sq,gl){const k=sq.join("|")+"|"+gl+"|"+(LV&&LV.id);if(fairOwed.k===k)return fairOwed.v;const pt=ptStats(seasonMatches().filter(m=>!LV||m.id!==LV.id)),sh={};
+  sq.forEach(n=>{const o=pt.out&&pt.out[n];if(o&&o.avail>0)sh[n]=o.min/o.avail});const known=Object.values(sh),avg=known.length?known.reduce((a,x)=>a+x,0)/known.length:0,out={};
+  sq.forEach(n=>{out[n]=n in sh?Math.max(-gl/4,Math.min(gl/4,(avg-sh[n])*gl)):0});fairOwed.k=k;fairOwed.v=out;return out}
 // change points: each quarter of a half (the middle of a short half) plus half time; with no half time, each quarter of the game
 function planPoints(len,noHt){if(noHt){const q=len>=12?[.25,.5,.75]:[.5];return [...new Set(q.map(f=>Math.round(len*f)))].filter(x=>x>0&&x<len)}const q=len>=12?[.25,.5,.75]:[.5],b=[];[0,len].forEach(h0=>{q.forEach(f=>b.push(h0+Math.round(len*f)));if(!h0)b.push(len)});return [...new Set(b)].filter(x=>x>0&&x<len*2).sort((a,c)=>a-c)}
 function planOf(L){return L.plan||(L.plan={mode:"off",gk2:"",ch:[]})}
@@ -2061,7 +2072,7 @@ function planStep(xi,mins,b,next,len,pl,sq){const out=[];
   // at half time everyone has stopped anyway, so nobody gets a head start
   // players already on win ties, so changes only happen when someone is genuinely owed minutes;
   // the second-half keeper has a full half to come, so they take more of their rest in the first half
-  const k0=SP.keeper?1:0,kp=SP.keeper?xi[0]:null,on=new Set(xi.slice(k0).filter(Boolean)),rest=len*(sq.length-xi.length)/sq.length,key=n=>(mins[n]||0)+(b<len&&n===pl.gk2?rest:0)-(on.has(n)&&b!==len?.5:0);
+  const ow=pl.mode==="fair"?fairOwed(sq,LV&&LV.noHt?len:len*2):{},k0=SP.keeper?1:0,kp=SP.keeper?xi[0]:null,on=new Set(xi.slice(k0).filter(Boolean)),rest=len*(sq.length-xi.length)/sq.length,key=n=>(mins[n]||0)-(ow[n]||0)+(b<len&&n===pl.gk2?rest:0)-(on.has(n)&&b!==len?.5:0);
   const pool=sq.filter(n=>n!==kp).sort((a,c)=>key(a)-key(c)||on.has(c)-on.has(a)||sq.indexOf(a)-sq.indexOf(c));
   const keep=new Set(pool.slice(0,xi.length-k0)),incoming=pool.filter(n=>keep.has(n)&&!on.has(n));
   for(let i=k0;i<xi.length&&incoming.length;i++){if(xi[i]&&keep.has(xi[i]))continue;const n=incoming.shift();out.push({m:b,on:n,off:xi[i]||"",i});xi[i]=n}
@@ -2084,12 +2095,12 @@ function planDue(){const pl=LV&&LV.plan;if(!pl||pl.mode==="off"||!["live","ht"].
   pl.due={m:b,chs};liveSaveLocal();try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}return pl.due}
 function planCard(){const pl=planOf(LV),full=onPitch().length===SIDE,extra=LV.squad.length>SIDE;
   const head=`<section class="card stack" id="planCard"><h3>Sub plan</h3><div class="seg" role="group" aria-label="Sub plan">${Object.keys(PLAN_N).map(k=>`<button data-lvplan="${k}" aria-pressed="${pl.mode===k}">${PLAN_N[k]}</button>`).join("")}</div>`;
-  const what={off:"No planned subs. You make every change yourself during the game.",equal:LV.noHt?"Shares the minutes out as evenly as it can, changing at the quarter points of the game.":"Shares the minutes out as evenly as it can, changing at the quarter points of each half and at half time."+(SP.keeper?" The keeper stays in goal unless you pick a different one for the second half.":""),manual:"You choose each change: the minute, who comes on and who comes off."}[pl.mode];
+  const what={off:"No planned subs. You make every change yourself during the game.",equal:LV.noHt?"Shares the minutes out as evenly as it can, changing at the quarter points of the game.":"Shares the minutes out as evenly as it can, changing at the quarter points of each half and at half time."+(SP.keeper?" The keeper stays in goal unless you pick a different one for the second half.":""),manual:"You choose each change: the minute, who comes on and who comes off.",fair:"Like equal minutes, but anyone who's had less of the game than the rest so far this season gets a bit more today, and anyone who's had more gives some back."+(SP.keeper&&!LV.noHt?" The keeper stays in goal unless you pick a different one for the second half.":"")}[pl.mode];
   if(pl.mode==="off")return `${head}<p class="hint">${what} Turn on a plan and this phone buzzes when each sub is due.</p></section>`;
   if(!extra)return `${head}<p class="hint">${what}</p><p class="hint">Everyone in the squad is starting, so there's nobody to bring on.</p></section>`;
   if(!full)return `${head}<p class="hint">${what}</p><p class="hint">Fill every position on the pitch above and the plan appears here.</p></section>`;
   const sim=planSim(LV),pts=planPoints(sim.len,LV.noHt),ms=LV.squad.map(n=>sim.mins[n]),lo=Math.min(...ms),hi=Math.max(...ms);
-  const gk=pl.mode==="equal"&&SP.keeper&&!LV.noHt?`<label class="f" style="max-width:320px">Keeper for the second half<select id="lvGk2"><option value="">${esc(LV.slots[0])} stays in goal</option>${LV.squad.filter(n=>n!==LV.slots[0]).map(n=>`<option${n===pl.gk2?" selected":""}>${esc(n)}</option>`).join("")}</select></label>`:"";
+  const gk=(pl.mode==="equal"||pl.mode==="fair")&&SP.keeper&&!LV.noHt?`<label class="f" style="max-width:320px">Keeper for the second half<select id="lvGk2"><option value="">${esc(LV.slots[0])} stays in goal</option>${LV.squad.filter(n=>n!==LV.slots[0]).map(n=>`<option${n===pl.gk2?" selected":""}>${esc(n)}</option>`).join("")}</select></label>`:"";
   const add=pl.mode==="manual"?`<div class="btns"><select id="plM" aria-label="Minute">${pts.map(b=>`<option value="${b}">${b===sim.ht?"Half time":b+"'"}</option>`).join("")}</select><select id="plOn" aria-label="Coming on"><option value="">Coming on…</option>${LV.squad.map(n=>`<option>${esc(n)}</option>`).join("")}</select><select id="plOff" aria-label="Coming off"><option value="">Coming off…</option>${LV.squad.map(n=>`<option>${esc(n)}</option>`).join("")}</select><button class="btn ghost" id="lvPlanAdd">Add</button></div>
     <div class="btns"><button class="mini" id="lvPlanEq">Start from equal minutes</button></div>`:"";
   const list=sim.chs.length?`<ol class="tl">${sim.chs.map((c,k)=>`<li${c.bad?' class="bad"':""}><span class="mn">${c.m===sim.ht?"HT":c.m+"'"}</span><span class="ic">🔁</span><span>${chLine(c)}${c.bad?" <b>(won't work: check who's on at that point)</b>":""}${pl.mode==="manual"?` <button class="mini" data-lvplandel="${(pl.ch||[]).findIndex(x=>x.m===c.m&&x.on===c.on&&x.off===c.off)}" aria-label="Remove this change">✕</button>`:""}</span></li>`).join("")}</ol>`:`<p class="hint">No changes planned yet.</p>`;
@@ -2124,18 +2135,19 @@ function commentary(e,m){const opp=esc(m.opp||"the opposition");if(RUGBY){const 
     case "form":return `${esc(TEAM.name)} switch to a ${esc(e.form)}.`;
     case "ht":return e.s?`<b>Half time:</b> ${e.s}.`:`<b>Half time.</b>`;
     case "2h":return `The second half is under way.`;
-    case "ft":return `<b>Full time!</b> ${esc(TEAM.name)} ${e.s||"v"} ${opp}.`;}return ""}
+    case "ft":return `<b>Full time!</b> ${esc(TEAM.name)} ${e.s||"v"} ${opp}.`;
+    case "act":case "opp":return lmText(e,m);}return ""}
 const EVI={lu:"📋",ko:"🟢",goal:"⚽",them:"🥅",sub:"🔁",gk:"🧤",form:"📋",ht:"⏸",["2h"]:"▶️",ft:"🏁"};
 // rugby: the score events say what kind of score it was (e.t) and how many points (e.p)
 const RSCORE={try:"Try",con:"Conversion",pen:"Penalty goal",drop:"Drop goal",pt:"Penalty try"};
-function rugbyCommentary(e,opp){const L=x=>x.map(esc).join(", ");
+function rugbyCommentary(e,opp){const L=x=>x.map(esc).join(", ");if(e.k==="act"||e.k==="opp")return null;
   if(e.k==="lu"){const fb=fwdBacks(e.form,e.line),h=`<b>${e.re?"Line-up change":"Line-up confirmed"}</b> (${esc(e.form)}): `;
     return h+(fb?`Forwards: ${L(fb.fw)}. Backs: ${L(fb.bk)}.`:`${L(e.line.filter(Boolean))}.`)+(e.bench&&e.bench.length?` Replacements: ${L(e.bench)}.`:"")}
   if(e.k==="goal")return e.t==="pt"?`<b>Penalty try</b> to ${esc(TEAM.name)}. ${e.s}`:e.t==="con"?`Conversion by ${esc(e.n)}. ${e.s}`:e.t==="pen"?`Penalty goal by ${esc(e.n)}. ${e.s}`:e.t==="drop"?`<b>Drop goal</b> by ${esc(e.n)}! ${e.s}`:`<b>TRY!</b> ${esc(e.n)} scores for ${esc(TEAM.name)}. ${e.s}`;
   if(e.k==="them")return `${RSCORE[e.t]||"Score"} for ${opp}. ${e.s}`;
   if(e.k==="sub")return `Replacement: <b>${esc(e.on)}</b> comes on for ${esc(e.off)}.`;
   return null}
-const evIcon=e=>RUGBY&&e.k==="goal"?(e.t==="try"||e.t==="pt"||!e.t?"🏉":"🎯"):RUGBY&&e.k==="them"?"🔻":EVI[e.k]||"";
+const evIcon=e=>e.k==="act"||e.k==="opp"?lmIcon(e):RUGBY&&e.k==="goal"?(e.t==="try"||e.t==="pt"||!e.t?"🏉":"🎯"):RUGBY&&e.k==="them"?"🔻":EVI[e.k]||"";
 function timelineHtml(L,m,asc){const ev=(L&&L.events||[]).slice();if(!asc)ev.reverse();
   return ev.length?`<ol class="tl">${ev.map(e=>`<li class="${e.k}"><span class="mn">${esc(e.k==="ht"?"HT":e.k==="ft"?"FT":e.m||"")}</span><span class="ic">${evIcon(e)}</span><span>${commentary(e,m)}</span></li>`).join("")}</ol>`:`<p class="hint">Nothing yet. Updates appear here as they happen.</p>`}
 function liveBoard(m,L){const st=L&&L.status;const lab=st==="live"?`<span class="lv">LIVE</span> ${minuteOf(L)}`:st==="ht"?"Half time":st==="ft"?"Full time":"Not started";
@@ -2179,16 +2191,16 @@ function liveView(){
   const pl=played(m),as=assistsOf(m),on=onPitch(),F=formOf(LV);
   return `<div class="live">${pr}${liveBoard(m,LV)}${planDueHtml()}
   <div class="btns">${LV.status==="live"&&LV.half===1&&!LV.noHt?`<button class="btn" id="lvHt">Half time</button>`:""}${LV.status==="ht"?`<button class="btn gold" id="lv2h">Start 2nd half</button>`:""}
-    <button class="btn ghost" id="lvOther">${RUGBY?"🏉 Try by someone else":"⚽ Someone else scored"}</button><button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" id="lvUndo">Undo last</button>
+    <button class="btn ghost" id="lvOther">${RUGBY?"🏉 Try by someone else":"⚽ Someone else scored"}</button><button class="btn ghost" id="lvThem">+ ${esc(m.opp.split(" ")[0])} scored</button><button class="btn ghost" data-lvact="__opp">➕ ${esc(m.opp.split(" ")[0])} moment</button><button class="btn ghost" id="lvUndo">Undo last</button>
     ${fmSeg("lvform",LV.form,false,false)}</div>${RUGBY?rugbyLiveExtras(m):""}
   ${pitchHtml(LV,false)}
   <div class="lp">${LV.slots.map((n,i)=>n?`<div class="pl on"><div class="nm"><span>${esc(n)}</span><span class="tag">${esc(F.label[i])}</span></div>
-    <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">${RUGBY?`🏉 Try ${pl[n]||0}`:`⚽ ${pl[n]||0}`}</button><button data-lvsub="${i}">🔁 Sub</button>${RUGBY?`<button data-lvsin="${i}" aria-label="Sin bin ${esc(n)}">🟨</button>`:""}</div></div>`:"").join("")}</div>
+    <div class="acts"><button class="goal" data-lvgoal="${esc(n)}">${RUGBY?`🏉 Try ${pl[n]||0}`:`⚽ ${pl[n]||0}`}</button><button data-lvsub="${i}">🔁 Sub</button><button data-lvact="${esc(n)}" aria-label="Something ${esc(n)} did">➕</button>${RUGBY?`<button data-lvsin="${i}" aria-label="Sin bin ${esc(n)}">🟨</button>`:""}</div></div>`:"").join("")}</div>
   <p class="hint"><b>Subs bench:</b> ${bench().map(esc).join(", ")||"none"}. Rolling subs: tap 🔁 on the player coming off.</p>
   ${lateAddHtml()}
   <div class="btns">${(LV.half===2||LV.noHt)&&LV.status==="live"?`<button class="btn gold bigbtn" id="lvDone">Full time: save and finish</button>`:""}<button class="btn ghost" data-tl="${esc(m.id)}">Parents' view</button><button class="btn ghost" data-view="fixtures">${m.practice?"End practice":"Leave (keeps going)"}</button></div>
   <section class="card"><h3>Timeline</h3>${timelineHtml(LV,m)}</section>
-  ${RUGBY?rugbyAsk(m,on):LV.ask?`<div class="ask"><b>Who assisted ${esc(LV.ask)}'s goal?</b><div class="chips">${on.filter(n=>n!==LV.ask).map(n=>`<button data-lvasg="${esc(n)}">${esc(n)}</button>`).join("")}<button data-lvasg="">No assist</button></div></div>`:""}
+  ${lmAsk(m)}${RUGBY?rugbyAsk(m,on):LV.ask?`<div class="ask"><b>Who assisted ${esc(LV.ask)}'s goal?</b><div class="chips">${on.filter(n=>n!==LV.ask).map(n=>`<button data-lvasg="${esc(n)}">${esc(n)}</button>`).join("")}<button data-lvasg="">No assist</button></div></div>`:""}
   ${LV.askOther?`<div class="ask"><b>Who scored${RUGBY?" the try":""}?</b><div class="chips">${bench().map(n=>`<button data-lvother="${esc(n)}">${esc(n)}</button>`).join("")}${notInSquad().map(n=>`<button data-lvother="${esc(n)}">${esc(n)} (not in squad)</button>`).join("")}<button data-lvother="">Cancel</button></div><p class="hint" style="margin:6px 0 0">Players on the pitch have their own ${RUGBY?"🏉":"⚽"} button. Anyone not in the squad is added to it. Not listed at all? Type their name under "Not listed?" below, then come back here.</p></div>`:""}
   ${LV.subSlot!=null?`<div class="ask"><b>Who's coming on for ${esc(LV.slots[LV.subSlot])}?</b><div class="chips">${bench().map(n=>`<button data-lvon="${esc(n)}">${esc(n)}</button>`).join("")}${notInSquad().map(n=>`<button data-lvon="${esc(n)}">${esc(n)} (not in squad)</button>`).join("")}</div>
     <b style="display:block;margin-top:10px">Or swap positions with</b><div class="chips">${on.filter(n=>n!==LV.slots[LV.subSlot]).map(n=>`<button data-lvswap="${esc(n)}">${esc(n)} (${F.label[LV.slots.indexOf(n)]})</button>`).join("")}<button data-lvcancel="1">Cancel</button></div></div>`:""}
@@ -2562,7 +2574,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
   const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button>${rtMatchBtn(m)}<button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed&&(m.comp!=="Tournament"||m.tournament_id)?`<div class="avsum">${avSummary(avKey(m))}</div>`:""}</section>`:"";
-  return `<div class="live md">${back}${board}${info}${cheerCard(m)}${fx?previewCard(m)+mdReports(m,tn):mdReports(m,tn)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${canWrite&&fx&&m.opp&&!m.postponed?oppPrep(m):""}${nav}${coach}</div>`;
+  return `<div class="live md">${back}${board}${info}${ckCard(m)}${cheerCard(m)}${fx?previewCard(m)+mdReports(m,tn):mdReports(m,tn)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${canWrite&&fx&&m.opp&&!m.postponed?oppPrep(m):""}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
@@ -2576,6 +2588,7 @@ function renderTicker(){const el=document.getElementById("ticker");if(!el)return
 // the replay has no score in it either.
 let RP=null;
 function rpAlert(e,m,sc){const US=TEAM.shortName||TEAM.name,opp=m.opp||"the opposition",show=!m.hidden&&sc!=null,score=show?`${US} ${sc} ${opp}`:`${US} v ${opp}`;
+  if(e.k==="act"||e.k==="opp"){const D=(e.k==="act"?LM_US:LM_THEM)[e.t];return D?{t:`${D[0]} ${D[1]}${e.n?`: ${e.n}`:""}`,b:lmText(e,m).replace(/<[^>]+>/g,"").replace(/&amp;/g,"&")}:null}
   if(RUGBY){const R={con:"Conversion",pen:"Penalty",drop:"Drop goal",pt:"Penalty try",try:"Try"};switch(e.k){
     case "goal":return {t:e.t==="pt"?"🏉 Penalty try!":e.t&&e.t!=="try"?`🎯 ${R[e.t]||"Kick"}${e.n?`: ${e.n}`:""}`:`🏉 TRY! ${e.n||US} scores`,b:score,us:1};
     case "them":return {t:`${R[e.t||""]||"Score"} for ${opp}`,b:score,them:1};
@@ -3442,7 +3455,7 @@ sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{
     if(b.dataset.lvswap){const i=LV.subSlot,j=LV.slots.indexOf(b.dataset.lvswap),a=LV.slots[i];LV.slots[i]=LV.slots[j];LV.slots[j]=a;LV.subSlot=null;if(i===0||j===0)addEv({k:"gk",n:LV.slots[0]});liveSaveLocal();render();livePush()}
     if(b.id==="lvThem"&&RUGBY){LV.askThem=true;LV.ask=null;LV.askKick=null;render()}
     else if(b.id==="lvThem"){m.them=(+m.them||0)+1;addEv({k:"them"});liveSaveLocal();render();livePush({them:m.them})}
-    if(b.id==="lvUndo"){const i=[...LV.events].reverse().findIndex(e=>["goal","them","sub"].includes(e.k));if(i<0)return;const k=LV.events.length-1-i,e=LV.events[k];
+    if(b.id==="lvUndo"){const i=[...LV.events].reverse().findIndex(e=>["goal","them","sub","act","opp"].includes(e.k));if(i<0)return;const k=LV.events.length-1-i,e=LV.events[k];
       if(e.k==="goal"&&RUGBY){if(e.t==="try"){const pl=Object.assign({},m.played);pl[e.n]=Math.max(0,(pl[e.n]||0)-1);m.played=pl}
         if(KICK[e.t]&&e.n){const k=JSON.parse(JSON.stringify(m.kicks||{})),o=k[e.n]||{};o[e.t]=Math.max(0,(o[e.t]||0)-1);if(!o[e.t])delete o[e.t];if(Object.keys(o).length)k[e.n]=o;else delete k[e.n];m.kicks=k}
         m.us=Math.max(0,(+m.us||0)-(+e.p||0))}
@@ -3647,6 +3660,7 @@ function playerDetail(n){
   return `<div class="stack"><button class="btn ghost" data-back style="align-self:flex-start">← All players</button>
   <section class="card"><div class="pcard">${PHOTOS[n]?`<div class="pphoto">${pface(n,"")}<span>${esc(numOf(n))||""}</span></div>`:`<div class="big">${esc(numOf(n))||"·"}</div>`}<div><h2 style="margin:0">${esc(n)}</h2><p class="hint">${noScores()?`${tot.apps||0} appearances · `:RUGBY?`${tot.goals} career tries · ${tot.pts||0} points · `:`${tot.goals} career goals · ${tot.assists||0} assists · `}${tot.potm} ${esc(TEAM.potm&&TEAM.potm.sponsor||"player of the match")} awards${(k=>k?` · ${k} player of the tournament`:"")(tournaments.filter(t=>t.potm===n).length)}${(k=>k?` · ${k} player of the month`:"")(pomOf(n).length)}</p>${canWrite?`<label class="bup btn ghost">${PHOTOS[n]?"Change photo":"Add photo"}<input type="file" accept="image/*" data-photo="${esc(n)}"></label> <span class="hint">Everyone can see player photos.</span>`:""}</div></div></section>
   <button class="btn gold" data-story="${esc(n)}" style="align-self:flex-start">✨ ${esc(n)}'s ${esc(season)} season story</button>
+  ${pcPlayerCard(n)}${ctPlayerCard(n)}
   ${(L=>L.length?`<section class="card"><h3>Player of the month</h3>${L.map(x=>`<div class="potm">${POM_IC} ${esc(pomLabel(x.month))}${x.note?` <span class="meta">· ${esc(x.note)}</span>`:""}</div>`).join("")}${canWrite?`<div class="mg edit-only" style="margin-top:8px">${L.map(x=>`<button class="mini" data-pomgfx="${esc(x.month)}">${esc(pomMonthName(x.month))} poster</button>`).join("")}</div>`:""}</section>`:"")(pomOf(n))}
   ${(ms=>ms.length?`<section class="card"><h3>Milestones</h3>${ms.map(msRow).join("")}</section>`:"")(milestones().filter(x=>x.n===n))}
   ${playerMedalCard(n)}
@@ -4763,12 +4777,12 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ssimport","ratings","insights","birthdays","kit","cphotos","drills","design","formation"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ssimport","ratings","insights","birthdays","kit","cphotos","drills","design","formation","splan","coaches"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
   await loadTav();alSync();await loadFormations();
-  await loadAvail();await loadPhotos();await loadStaff();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadCoachNotes();await loadBirthdays();await loadCoachPhotos();await loadGallery();await loadKit();await loadDrills();
+  await loadAvail();await loadPhotos();await loadStaff();await loadViews();await loadHelp();await loadAttendance();await loadPolls();await loadPosts();await loadRatings();await loadCoachNotes();await loadNotices();await loadCertPrefs();await loadBirthdays();await loadCoachPhotos();await loadGallery();await loadKit();await loadDrills();
   authBox();render();
   setTimeout(()=>ftAuto().catch(()=>{}),4000);
 }
@@ -4817,6 +4831,337 @@ document.addEventListener("submit",async e=>{
   if(!error){loginCodeStep(email);return}
   toast(!error?"Check your email for the sign-in link (it can land in junk).":error.status===429||/rate limit/i.test(error.message||"")?"Too many sign-in emails in the last hour. Use the last link we sent, or try again in an hour.":/database error|coach/i.test(error.message||"")?"That email isn't on the club's coach list.":"Couldn't send the sign-in email just now. Try again in a few minutes.");
 });
+// ---------- live match moments: shots, saves, tackles and more, for the live commentary (25 Nov 2026) ----------
+// A coach taps ➕ next to a player (or "➕ Their moment" for the opposition). Each moment is a live event {k:"act", t, n}
+// or {k:"opp", t}: it goes in the commentary and the replay, but never sends a phone alert (too many buzzes) and never
+// changes the score. Counts feed the player cards (shots, saves, tackles).
+const LM_US=RUGBY?{tackle:["💥","Big tackle","Big tackle by {n}."],save:["🛡️","Try-saving tackle","<b>Try-saving tackle</b> by {n}!"],break:["⚡","Line break","<b>Line break</b> by {n}!"],carry:["🐂","Strong carry","Strong carry from {n}."],turnover:["🔄","Turnover","Turnover won by {n}."],kick:["🦶","Great kick","Great kick from {n}."],steal:["🙌",SP.league?"Ball steal":"Lineout steal",`${SP.league?"Ball":"Lineout"} steal by {n}.`],offload:["🤝","Offload","Lovely offload from {n}."]}
+  :{shot:["🎯","Shot wide","{n} shoots, but it's just wide."],sot:["🎯","Shot saved","{n} gets a shot on target, but the keeper saves it."],post:["🥅","Hit the woodwork","{n} hits the woodwork! So close."],save:["🧤","Great save","<b>Great save</b> by {n}!"],block:["🛡️","Block","Big block from {n}."],tackle:["💪","Tackle","Strong tackle by {n} wins the ball back."],skill:["✨","Skill","Lovely bit of skill from {n}."],chance:["👟","Chance made","{n} makes a chance for {us}."],corner:["🚩","Won a corner","{n} wins a corner for {us}."],pen:["⚠️","Won a penalty","{n} wins a penalty for {us}!"]};
+const LM_THEM=RUGBY?{break:["⚡","Line break","{opp} make a line break."],pen:["🟡","Penalty","Penalty to {opp}."],turnover:["🔄","Turnover","{opp} win a turnover."]}
+  :{shot:["🎯","Shot wide","{opp} shoot, but it's wide."],sot:["🧤","Shot saved","{opp} get a shot on target, and it's saved."],post:["🥅","Hit the woodwork","{opp} hit the woodwork!"],chance:["👟","Chance","{opp} have a chance."],corner:["🚩","Corner","Corner to {opp}."]};
+function lmText(e,m){const D=(e.k==="act"?LM_US:LM_THEM)[e.t];if(!D)return "";
+  return D[2].replace("{n}",`<b>${esc(e.n||"")}</b>`).replace("{us}",esc(TEAM.name)).replace("{opp}",esc(m.opp||"the opposition"))}
+const lmIcon=e=>((e.k==="act"?LM_US:LM_THEM)[e.t]||[""])[0];
+function lmAsk(m){if(!LV||!LV.askAct)return "";
+  if(LV.askAct==="__opp")return `<div class="ask"><b>What did ${esc(m.opp)} do?</b><div class="chips">${Object.entries(LM_THEM).map(([k,d])=>`<button data-lvmom="${k}">${d[0]} ${esc(d[1])}</button>`).join("")}<button data-lvmom="">Cancel</button></div></div>`;
+  const keep=LV.slots[0]===LV.askAct&&SP.keeper;
+  const list=Object.entries(LM_US).sort((a,b)=>keep?(a[0]==="save"?-1:b[0]==="save"?1:0):0);
+  return `<div class="ask"><b>What did ${esc(LV.askAct)} do?</b><div class="chips">${list.map(([k,d])=>`<button data-lvmom="${k}">${d[0]} ${esc(d[1])}</button>`).join("")}<button data-lvmom="">Cancel</button></div><p class="hint" style="margin:6px 0 0">It goes in the live commentary for parents. It doesn't buzz their phones or change the score.</p></div>`}
+// how many of each moment a player had in these games
+function lmCounts(list){const out={};(list||[]).forEach(m=>((m.live&&m.live.events)||[]).forEach(e=>{if(e.k!=="act"||!e.n)return;const o=out[e.n]=out[e.n]||{};o[e.t]=(o[e.t]||0)+1}));return out}
+
+// ---------- player cards: a football-card for each player, made from the stats on the site (25 Nov 2026) ----------
+// Our own design (not any game's): the big number is the SHIRT NUMBER, never a rating, so no child is ranked on a public
+// page. The card's colour goes by games played this season, so everyone can reach gold by turning up:
+// bronze under 10 games, silver 10 to 24, gold 25 and up. Player of the month this season makes it a "Star" card.
+// Scores-based numbers (goals, assists, clean sheets) are left off for visitors when the team keeps scores back.
+const PC_TIERS={bronze:{a:"#E7B98A",b:"#9A6235",ink:"#2B1A0C",line:"#F6D7B5",name:"Bronze"},silver:{a:"#F1F4F6",b:"#9AA6AF",ink:"#1E262C",line:"#FFFFFF",name:"Silver"},gold:{a:"#FCE79A",b:"#C9962A",ink:"#2A1F05",line:"#FFF3C4",name:"Gold"},star:{a:"#1C4A33",b:"#0B1F15",ink:"#F2C230",line:"#F2C230",name:"Star"}};
+function pcPos(n,list){const c={};list.forEach(m=>((m.live&&m.live.events)||[]).forEach(e=>{if(e.k!=="ko"||!Array.isArray(e.line))return;const i=e.line.indexOf(n);if(i<0)return;const F=FORMS[e.form];if(!F)return;const l=F&&F.label&&F.label[i];if(l)c[l]=(c[l]||0)+1}));
+  return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||""}
+function pcData(n){const list=seasonMatches(),o=playerStats(list)[n]||{apps:0,goals:0,assists:0,potm:0,gk:0,cs:0},lm=lmCounts(list)[n]||{},sc=!noScores();
+  const shown=new Set(mdShown().map(d=>d.id)),med=playerMedals(n).filter(x=>shown.has(x.id)).length,tpotm=seasonTournaments().filter(t=>t.potm===n).length;
+  const S=[["GMS",o.apps||0]];
+  if(RUGBY){if(sc)S.push(["TRY",o.goals||0],["PTS",o.pts||0]);S.push(["POT",(o.potm||0)+tpotm],["MED",med]);[["TKL",(lm.tackle||0)+(lm.save||0)],["BRK",lm.break||0],["TOV",lm.turnover||0],["CRY",lm.carry||0]].forEach(x=>S.length<6&&S.push(x))}
+  else{if(sc)S.push(["GLS",o.goals||0],["AST",o.assists||0]);S.push(["POT",(o.potm||0)+tpotm],["MED",med]);
+    const more=(o.gk?[sc?["CS",o.cs||0]:null,["SAV",lm.save||0]]:[]).concat([["SHT",(lm.shot||0)+(lm.sot||0)+(lm.post||0)],["TKL",(lm.tackle||0)+(lm.block||0)],["SKL",(lm.skill||0)+(lm.chance||0)]]).filter(Boolean);more.forEach(x=>S.length<6&&S.push(x))}
+  const apps=o.apps||0,star=pomOf(n).some(x=>seasonOf(x.month+"-15")===season);
+  return {n,num:numOf(n),pos:pcPos(n,list),tier:star?"star":apps>=25?"gold":apps>=10?"silver":"bronze",stats:S.slice(0,6),apps,photo:PHOTOS[n]||""}}
+const pcCache={};
+function pcImg(src){return new Promise((ok,bad)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=bad;i.src=src})}
+async function pcCanvas(d){const W=600,H=860,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d"),T=PC_TIERS[d.tier];
+  try{await Promise.all(['120px "Archivo Black"','600 30px Archivo','800 30px Archivo'].map(f=>document.fonts&&document.fonts.load(f)))}catch(e){}
+  const shape=(i)=>{const r=34,ch=70;x.beginPath();x.moveTo(i+ch,i);x.lineTo(W/2-60,i);x.quadraticCurveTo(W/2,i+26,W/2+60,i);x.lineTo(W-i-ch,i);x.lineTo(W-i,i+ch);x.lineTo(W-i,H-i-110);
+    x.quadraticCurveTo(W-i,H-i-60,W-i-50,H-i-36);x.lineTo(W/2+20,H-i);x.lineTo(W/2-20,H-i);x.lineTo(i+50,H-i-36);x.quadraticCurveTo(i,H-i-60,i,H-i-110);x.lineTo(i,i+ch);x.closePath()};
+  shape(6);const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,T.a);g.addColorStop(.55,T.b);g.addColorStop(1,T.a);x.fillStyle=g;x.fill();
+  x.save();x.clip();x.globalAlpha=.09;x.strokeStyle=T.line;x.lineWidth=14;for(let k=-H;k<W+H;k+=46){x.beginPath();x.moveTo(k,0);x.lineTo(k+H*.6,H);x.stroke()}x.globalAlpha=1;
+  const sh=x.createRadialGradient(W*.7,120,10,W*.7,120,420);sh.addColorStop(0,"rgba(255,255,255,.35)");sh.addColorStop(1,"rgba(255,255,255,0)");x.fillStyle=sh;x.fillRect(0,0,W,H);x.restore();
+  shape(22);x.strokeStyle=T.line;x.lineWidth=3;x.globalAlpha=.8;x.stroke();x.globalAlpha=1;
+  // photo or a big initial
+  const px=230,py=74,pw=320,ph=330;
+  if(d.photo){try{const im=await pcImg(d.photo),s=Math.max(pw/im.width,ph/im.height),w=im.width*s,h=im.height*s;x.save();x.beginPath();x.rect(px,py,pw,ph);x.clip();x.drawImage(im,px+(pw-w)/2,py+(ph-h)/2,w,h);
+    const fd=x.createLinearGradient(0,py+ph*.6,0,py+ph);fd.addColorStop(0,"rgba(0,0,0,0)");fd.addColorStop(1,T.b);x.fillStyle=fd;x.fillRect(px,py,pw,ph);x.restore()}catch(e){d.photo=""}}
+  if(!d.photo){x.fillStyle=T.ink;x.globalAlpha=.14;x.beginPath();x.arc(px+pw/2,py+ph/2-10,128,0,7);x.fill();x.globalAlpha=.85;x.textAlign="center";x.font='150px "Archivo Black", Arial';x.fillText((d.n[0]||"?").toUpperCase(),px+pw/2,py+ph/2+42);x.globalAlpha=1}
+  // number, position, crest
+  x.textAlign="center";x.fillStyle=T.ink;x.font='118px "Archivo Black", Arial';x.fillText(String(d.num||"·"),130,190,180);
+  x.font='800 40px Archivo, Arial';if(d.pos)x.fillText(d.pos,130,240,170);
+  x.fillRect(80,262,100,3);
+  try{const cr=await pcImg(CREST),h=96,w=Math.min(130,h*cr.width/cr.height);x.drawImage(cr,130-w/2,282,w,h)}catch(e){}
+  // name
+  x.font='64px "Archivo Black", Arial';let fs=64;const nm=d.n.toUpperCase();while(fs>34&&x.measureText(nm).width>W-90){fs-=2;x.font=`${fs}px "Archivo Black", Arial`}x.fillText(nm,W/2,478);
+  x.globalAlpha=.55;x.fillRect(70,500,W-140,3);x.globalAlpha=1;
+  // stats: two columns of three
+  x.textAlign="left";d.stats.forEach(([l,v],i)=>{const col=i<3?0:1,row=i%3,cx=col?W/2+40:95,cy=572+row*76;x.font='54px "Archivo Black", Arial';x.fillText(String(v),cx,cy);const vw=x.measureText(String(v)).width;x.font='800 32px Archivo, Arial';x.fillText(l,cx+vw+14,cy-2)});
+  x.globalAlpha=.55;x.fillRect(W/2-1,525,3,190);x.globalAlpha=1;
+  // footer
+  x.textAlign="center";x.font='800 26px Archivo, Arial';x.fillText(`${TEAM.name||""} ${TEAM.ageShort||TEAM.ageGroup||""}`.trim().toUpperCase(),W/2,770,W-140);
+  x.font='600 22px Archivo, Arial';x.globalAlpha=.8;x.fillText(`${T.name.toUpperCase()} · ${season}`,W/2,802);x.globalAlpha=1;
+  return c}
+async function pcUrl(n){const d=pcData(n),k=JSON.stringify([d.num,d.pos,d.tier,d.stats,season,(d.photo||"").length,TEAM.name]);if(pcCache[n]&&pcCache[n].k===k)return pcCache[n].u;
+  const c=await pcCanvas(d),u=c.toDataURL("image/png");pcCache[n]={k,u};return u}
+function pcTag(n,cls){return `<img class="pcimg ${cls||""}" data-pc="${esc(n)}" alt="${esc(n)}'s player card" width="300" height="430">`}
+// fill in every card on the page once it's drawn (called at the end of render)
+let pcBusy=false;
+async function paintCards(){if(pcBusy)return;pcBusy=true;try{for(const el of document.querySelectorAll("img[data-pc]:not([src])")){try{el.src=await pcUrl(el.dataset.pc)}catch(e){}}}finally{pcBusy=false}
+  if(document.querySelector("img[data-pc]:not([src])"))setTimeout(paintCards,50)}
+async function pcShare(n){try{const im=await pcImg(await pcUrl(n)),c=document.createElement("canvas");c.width=760;c.height=1020;const x=c.getContext("2d"),col=TEAM.colours||{},g=x.createLinearGradient(0,0,0,1020);g.addColorStop(0,col.clubDeep||"#16239E");g.addColorStop(1,col.club||"#2235E8");x.fillStyle=g;x.fillRect(0,0,760,1020);x.drawImage(im,80,80,600,860);
+  const blob=await new Promise(r=>c.toBlob(r,"image/png")),name=`${n.toLowerCase().replace(/[^a-z0-9]+/g,"-")}-player-card.png`,f=new File([blob],name,{type:"image/png"});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:`${n}'s player card`});return}catch(e){if(e&&e.name==="AbortError")return}}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast("Card downloaded.")}catch(e){toast("Couldn't make the picture on this phone.")}}
+let pcOpen=null;
+function cardsView(){const sq=players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)||a.name.localeCompare(b.name));
+  if(pcOpen&&sq.some(p=>p.name===pcOpen))return `<div class="stack"><button class="btn ghost" data-pcback style="align-self:flex-start">← All cards</button>
+    <section class="card stack" style="align-items:center">${pcTag(pcOpen,"big")}<div class="btns" style="justify-content:center"><button class="btn gold" data-pcshare="${esc(pcOpen)}">Share or save the card</button><button class="btn ghost" data-player="${esc(pcOpen)}">${esc(pcOpen)}'s page</button></div></section></div>`;
+  return `<div class="stack"><section class="card"><h2 style="margin-top:0">🃏 Player cards · ${esc(season)}</h2>
+    <p class="hint" style="margin:0">A card for every ${esc(PL.replace(/s$/,""))}, made from this season's games. The big number is the shirt number. Cards go <b>bronze</b>, then <b>silver</b> at 10 games and <b>gold</b> at 25, and a player of the month gets a <b>Star</b> card. Tap a card to share it.</p></section>
+    <div class="pcgrid">${sq.map(p=>`<button class="pcbtn" data-pcopen="${esc(p.name)}">${pcTag(p.name)}</button>`).join("")||`<div class="card empty">No players yet.</div>`}</div></div>`}
+function pcPlayerCard(n){if(!gameName(n))return "";return `<section class="card stack pcside"><h3 style="margin:0">🃏 Player card</h3><button class="pcbtn" data-pcopen="${esc(n)}">${pcTag(n)}</button><div class="btns"><button class="btn ghost" data-pcshare="${esc(n)}">Share or save</button></div></section>`}
+
+// ---------- certificates: printable certificates when a player reaches a level (25 Nov 2026) ----------
+// The levels are the team's own (public.team_prefs 'certs', supabase/44_coach_extras.sql; the defaults below until a coach
+// changes them). Everyone sees a player's certificates on their page and can print them. Score-based ones (goals,
+// hat-tricks, assists, clean sheets) are left out for visitors when the team keeps scores back, like the medals, and
+// training ones are for coaches only (attendance is coaches-only data). A coach can also make one by hand (Most improved...).
+const CT_DEF={apps:[1,10,25,50,100],goals:[1,5,10,25,50],assists:[5,10,25],cs:[1,5,10],train:[10,25,50],hat:true,potm:true,pom:true,tour:true};
+let CTP=null,CT_ON=false;
+async function loadCertPrefs(){CTP=null;CT_ON=false;if(!sb)return;try{const {data,error}=await sb.from("team_prefs").select("k,v");if(error)return;CT_ON=true;const r=(data||[]).find(x=>x.k==="certs");if(r)CTP=r.v}catch(e){}}
+const ctLv=()=>Object.assign({},CT_DEF,CTP||{});
+const ctN=k=>(ctLv()[k]||[]).map(Number).filter(x=>x>0).sort((a,b)=>a-b);
+const ctTeam=()=>`${TEAM.name||""}${TEAM.ageShort||TEAM.ageGroup?` ${TEAM.ageShort||TEAM.ageGroup}`:""}`;
+function certsFor(n){const out=[],L=ctLv(),sc=!noScores(),games=sortMatches(matches.filter(m=>counted(m)&&!m.practice&&!isFixture(m)));let apps=0,goals=0,ast=0,cs=0;
+  const add=(id,title,line,date)=>out.push({id,title,line,date:date||""}),cross=(was,now,lv)=>lv.filter(t=>t>was&&t<=now);
+  games.forEach(m=>{const pl=played(m);const on=n in pl&&m.apps!==false||(m.apps===false&&(+pl[n]>0||m.potm===n));
+    if(on){const was=apps;apps++;cross(was,apps,ctN("apps")).forEach(t=>add("apps"+t,t===1?"First game":`${t} games`,t===1?`for playing ${PRN.p} first game for ${ctTeam()}`:`for playing ${t} games for ${ctTeam()}`,m.date))}
+    const g=+pl[n]||0;if(g&&sc){const was=goals;goals+=g;cross(was,goals,ctN("goals")).forEach(t=>add("goals"+t,t===1?`First ${SP.goal}`:`${t} ${SP.goals}`,t===1?`for scoring ${PRN.p} first ${SP.goal} for ${ctTeam()}`:`for scoring ${t} ${SP.goals} for ${ctTeam()}`,m.date));
+      if(L.hat&&g>=3&&!RUGBY)add("hat:"+m.id,"Hat-trick",`for scoring a hat-trick ${m.ha==="A"?"at":"against"} ${m.opp||"the opposition"}`,m.date)}
+    const a=+assistsOf(m)[n]||0;if(a&&sc&&!RUGBY){const was=ast;ast+=a;cross(was,ast,ctN("assists")).forEach(t=>add("ast"+t,`${t} assists`,`for setting up ${t} goals for ${ctTeam()}`,m.date))}
+    const k=keepersOf(m);if(sc&&n in k&&+k[n]){const was=cs;cs++;cross(was,cs,ctN("cs")).forEach(t=>add("cs"+t,t===1?"First clean sheet":`${t} clean sheets`,t===1?`for keeping ${PRN.p} first clean sheet`:`for keeping ${t} clean sheets`,m.date))}
+    if(L.potm&&m.potm===n)add("potm:"+m.id,POTM.charAt(0).toUpperCase()+POTM.slice(1),`for being ${POTM} ${m.ha==="A"?"at":"against"} ${m.opp||"the opposition"}`,m.date)});
+  if(L.pom)pomOf(n).forEach(x=>add("pom:"+x.month,"Player of the month",`for being player of the month for ${pomLabel(x.month)}`,x.month+"-28"));
+  if(L.tour)tournaments.forEach(t=>{const inIt=tSquad(t).includes(n)||tGames(t).some(m=>n in played(m));if(!inIt)return;
+    if(/^(winners|plate winners|shield winners|cup winners)/i.test(t.trophy||""))add("tour:"+t.id,t.trophy,`for winning the ${t.name||"tournament"} (${t.trophy.toLowerCase()})`,t.date);
+    if(t.potm===n)add("tpot:"+t.id,"Player of the tournament",`for being player of the tournament at the ${t.name||"tournament"}`,t.date)});
+  if(canWrite&&ATT){const days=Object.keys(ATT).filter(d=>ATT[d].includes(n)).sort();ctN("train").forEach(t=>{if(days.length>=t)add("train"+t,`${t} training sessions`,`for coming to ${t} training sessions`,days[t-1])})}
+  return out.sort((a,b)=>(b.date||"").localeCompare(a.date||""))}
+async function ctCanvas(name,title,line,date){const W=1754,H=1240,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d"),col=TEAM.colours||{},club=col.club||"#13804A",gold=col.gold||"#F2C230";
+  try{await Promise.all(['90px "Archivo Black"','600 40px Archivo','100px "Luckiest Guy"'].map(f=>document.fonts&&document.fonts.load(f)))}catch(e){}
+  x.fillStyle="#FFFDF7";x.fillRect(0,0,W,H);x.strokeStyle=club;x.lineWidth=34;x.strokeRect(40,40,W-80,H-80);x.strokeStyle=gold;x.lineWidth=8;x.strokeRect(84,84,W-168,H-168);
+  [[110,110],[W-110,110],[110,H-110],[W-110,H-110]].forEach(([a,b])=>{x.fillStyle=gold;x.beginPath();x.arc(a,b,16,0,7);x.fill()});
+  try{const cr=await pcImg(CREST),h=200,w=h*cr.width/cr.height;x.drawImage(cr,W/2-w/2,130,w,h)}catch(e){}
+  x.textAlign="center";x.fillStyle=club;x.font='92px "Archivo Black", Arial';x.fillText("CERTIFICATE",W/2,430);
+  x.fillStyle="#3B3B3B";x.font='600 36px Archivo, Arial';x.fillText("O F   A C H I E V E M E N T",W/2,486);
+  x.font='600 38px Archivo, Arial';x.fillText("This is awarded to",W/2,590);
+  x.fillStyle=club;let fs=128;x.font=`${fs}px "Luckiest Guy", "Archivo Black", Arial`;while(fs>60&&x.measureText(name).width>W-400){fs-=4;x.font=`${fs}px "Luckiest Guy", "Archivo Black", Arial`}x.fillText(name,W/2,730);
+  x.fillStyle=gold;x.fillRect(W/2-300,760,600,6);
+  x.fillStyle="#1E1E1E";x.font='800 54px Archivo, Arial';x.fillText(title,W/2,850,W-300);
+  x.font='500 40px Archivo, Arial';const words=line.split(" ");let ln="",y=920;words.forEach(w=>{const t=ln?ln+" "+w:w;if(x.measureText(t).width>W-420){x.fillText(ln,W/2,y);ln=w;y+=52}else ln=t});if(ln)x.fillText(ln,W/2,y);
+  x.strokeStyle="#555";x.lineWidth=2;x.beginPath();x.moveTo(300,1050);x.lineTo(760,1050);x.moveTo(W-760,1050);x.lineTo(W-300,1050);x.stroke();
+  x.fillStyle="#555";x.font='600 30px Archivo, Arial';x.fillText("Coach",530,1090);x.fillText(date?new Date(date+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}):"Date",W-530,1090);
+  x.fillStyle=club;x.font='800 30px Archivo, Arial';x.fillText(ctTeam().toUpperCase(),W/2,1150);
+  return c}
+async function ctOut(name,title,line,date,how){try{const c=await ctCanvas(name,title,line,date),fn=`${name}-${title}`.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+".png";
+  if(how==="print"){const u=c.toDataURL("image/png"),f=document.createElement("iframe");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(f);
+    const d=f.contentWindow.document;d.open();d.write(`<!doctype html><title>${esc(name)} certificate</title><style>@page{size:A4 landscape;margin:0}html,body{margin:0}img{width:100%;height:100vh;object-fit:contain;display:block}</style><img src="${u}">`);d.close();
+    const go=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>f.remove(),60000)};const im=d.querySelector("img");if(im.complete)setTimeout(go,100);else im.onload=go;return}
+  const blob=await new Promise(r=>c.toBlob(r,"image/png")),file=new File([blob],fn,{type:"image/png"});
+  if(how==="share"&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:`${name}'s certificate`});return}catch(e){if(e&&e.name==="AbortError")return}}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast("Certificate downloaded.")}catch(e){toast("Couldn't make the certificate on this phone.")}}
+const ctBtns=(n,c)=>`<button class="mini" data-ct="print" data-ctn="${esc(n)}" data-ctid="${esc(c.id)}">🖨️ Print</button><button class="mini" data-ct="share" data-ctn="${esc(n)}" data-ctid="${esc(c.id)}">Save</button>`;
+function ctPlayerCard(n){const L=certsFor(n);if(!L.length)return "";const show=L.slice(0,6);
+  return `<section class="card"><h3>📜 Certificates</h3>${show.map(c=>`<div class="ctrow"><span><b>${esc(c.title)}</b><span class="hint"> · ${esc(c.date?shortDate(c.date):"")}</span></span><span class="btns">${ctBtns(n,c)}</span></div>`).join("")}
+    ${L.length>show.length?`<div class="btns" style="margin-top:8px"><button class="mini" data-view="certs" data-ctp="${esc(n)}">All ${L.length} certificates</button></div>`:""}<p class="hint" style="margin:8px 0 0">Print on A4, landscape.</p></section>`}
+const shortDate=d=>{const x=new Date(String(d).slice(0,10)+"T12:00:00");return isNaN(x)?"":x.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})};
+let ctPlayer="",ctEditLv=false,ctCustom=null;
+function certsView(){const sq=players.filter(inGames).sort((a,b)=>a.name.localeCompare(b.name));
+  if(ctPlayer){const L=certsFor(ctPlayer);return `<div class="stack"><button class="btn ghost" data-ctback style="align-self:flex-start">← All certificates</button>
+    <section class="card"><h2 style="margin-top:0">📜 ${esc(ctPlayer)}'s certificates</h2>${L.length?L.map(c=>`<div class="ctrow"><span><b>${esc(c.title)}</b><span class="hint"> · ${esc(c.line)} · ${esc(shortDate(c.date))}</span></span><span class="btns">${ctBtns(ctPlayer,c)}</span></div>`).join(""):`<p class="hint">None yet.</p>`}</section></div>`}
+  const since=new Date();since.setDate(since.getDate()-30);const from=since.toLocaleDateString("en-CA");
+  const recent=[];sq.forEach(p=>certsFor(p.name).forEach(c=>{if((c.date||"")>=from)recent.push(Object.assign({n:p.name},c))}));recent.sort((a,b)=>b.date.localeCompare(a.date));
+  const L=ctLv(),lvRow=(k,t,why)=>`<label class="f">${t}${why?` <span class="hint">${why}</span>`:""}<input type="text" data-ctlv="${k}" value="${esc(ctN(k).join(", "))}" inputmode="numeric"></label>`,tick=(k,t)=>`<label class="chk"><input type="checkbox" data-ctlv="${k}"${L[k]?" checked":""}> ${t}</label>`;
+  return `<div class="stack"><section class="card"><h2 style="margin-top:0">📜 Certificates</h2><p class="hint" style="margin:0">A certificate is ready to print whenever a ${esc(PL.replace(/s$/,""))} reaches one of the team's levels. Families can print them from their ${esc(PRN.kid)}'s page too.</p></section>
+    <section class="card"><h3>Earned in the last 30 days</h3>${recent.length?recent.map(c=>`<div class="ctrow"><span><b>${esc(c.n)}</b>: ${esc(c.title)}<span class="hint"> · ${esc(shortDate(c.date))}</span></span><span class="btns">${ctBtns(c.n,c)}</span></div>`).join(""):`<p class="hint">Nothing new in the last 30 days.</p>`}</section>
+    <section class="card"><h3>Every ${esc(PL.replace(/s$/,""))}</h3><div class="chips drchips">${sq.map(p=>`<button data-ctp="${esc(p.name)}">${esc(p.name)} (${certsFor(p.name).length})</button>`).join("")}</div></section>
+    ${canWrite?`<section class="card stack"><h3 style="margin:0">Make one by hand</h3><p class="hint" style="margin:0">For end-of-season awards and anything else: Most improved, Coaches' award, Best attitude…</p>
+      <div class="grid2"><label class="f">${esc(PL.replace(/s$/,"").replace(/^./,c=>c.toUpperCase()))}<select id="ctcN">${sq.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select></label><label class="f">Award<input type="text" id="ctcT" maxlength="60" placeholder="Most improved player" list="ctcL"><datalist id="ctcL">${["Most improved player","Coaches' player of the season","Players' player of the season","Parents' player of the season","Top goalscorer","Best attitude","Golden boot","Golden glove","Clubman award","Effort award"].map(t=>`<option>${t}</option>`).join("")}</datalist></label></div>
+      <label class="f">Words under the award<input type="text" id="ctcW" maxlength="140" value="for a brilliant ${esc(season)} season"></label><label class="f">Date<input type="date" id="ctcD" value="${todayLocal()}"></label>
+      <div class="btns"><button class="btn gold" data-ctc="print">🖨️ Print</button><button class="btn ghost" data-ctc="share">Save</button></div></section>
+    <section class="card stack"><h3 style="margin:0">The team's levels</h3>${CT_ON?"":cnOff("Changing the levels")}
+      ${ctEditLv&&CT_ON?`<p class="hint" style="margin:0">Numbers separated by commas. Leave a box empty to switch that one off.</p>${lvRow("apps","Games played")}${lvRow("goals",SP.Goals,TEAM.publicScores===false?"(coaches and the player's page only when scores are shown)":"")}${RUGBY?"":lvRow("assists","Assists")}${SP.keeper?lvRow("cs","Clean sheets"):""}${lvRow("train","Training sessions","(coaches only)")}
+        ${RUGBY?"":tick("hat","Hat-tricks")}${tick("potm",POTM.charAt(0).toUpperCase()+POTM.slice(1))}${tick("pom","Player of the month")}${tick("tour","Tournament winners and player of the tournament")}
+        <div class="btns"><button class="btn gold" id="ctSave">Save levels</button><button class="btn ghost" id="ctCancel">Cancel</button><button class="btn ghost" id="ctReset">Back to the usual levels</button></div>`
+      :`<p class="hint" style="margin:0">Games: ${ctN("apps").join(", ")||"off"} · ${SP.Goals}: ${ctN("goals").join(", ")||"off"}${RUGBY?"":` · Assists: ${ctN("assists").join(", ")||"off"}`}${SP.keeper?` · Clean sheets: ${ctN("cs").join(", ")||"off"}`:""} · Training: ${ctN("train").join(", ")||"off"}${!RUGBY&&L.hat?" · every hat-trick":""}${L.potm?` · every ${esc(POTM)}`:""}${L.pom?" · player of the month":""}${L.tour?" · tournament winners":""}</p>${CT_ON?`<div class="btns"><button class="btn ghost" id="ctEdit">Change the levels</button></div>`:""}`}</section>`:""}</div>`}
+
+// ---------- noticeboard: announcements from the coaches, with a push to phones (25 Nov 2026) ----------
+// public.team_notices (supabase/44_coach_extras.sql). A note for everyone shows on the home page and the Noticeboard
+// for anyone who opens the site; a note for one family only reaches the coaches and the phones signed in with that
+// child's family code (the database checks it). "Send to phones" asks the notify function to push it once.
+const NT_KINDS={news:["📣","News"],cancel:["🚫","Cancelled or changed"],kit:["👕","Kit"],event:["🎉","Event"],reminder:["⏰","Reminder"]};
+let NT=null,NT_ON=false,ntEdit=null,ntBusy=false;
+async function loadNotices(){NT=null;NT_ON=false;if(!sb)return;try{const {data,error}=await sb.from("team_notices").select("*").order("created",{ascending:false}).limit(60);if(error)return;NT_ON=true;NT=data||[]}catch(e){}}
+const ntLive=x=>!x.expires||x.expires>=todayLocal();
+function ntRow(x,full){const k=NT_KINDS[x.kind]||NT_KINDS.news;
+  return `<div class="ntrow${x.pinned?" pin":""}"><div class="ntic">${k[0]}</div><div style="min-width:0"><b>${esc(x.title)}</b>${x.player?` <span class="pill">For ${esc(x.player)}'s family</span>`:""}${x.pinned?` <span class="pill">📌 Pinned</span>`:""}
+    ${x.body?`<p style="margin:4px 0 0;white-space:pre-wrap">${esc(full?x.body:clip(x.body,180))}</p>`:""}<span class="hint">${esc(shortDate(x.created))}${x.expires?` · until ${esc(shortDate(x.expires))}`:""}</span>
+    ${canWrite&&full?`<div class="btns" style="margin-top:6px"><button class="mini" data-ntedit="${esc(x.id)}">Edit</button><button class="mini" data-ntdel="${esc(x.id)}">Delete</button>${x.player?"":`<button class="mini" data-ntpin="${esc(x.id)}">${x.pinned?"Unpin":"Pin to the top"}</button>`}</div>`:""}</div></div>`}
+function ntHomeCard(){if(!NT_ON||!NT)return "";const L=NT.filter(ntLive).sort((a,b)=>(b.pinned-a.pinned)||b.created.localeCompare(a.created)).slice(0,2);if(!L.length)return "";
+  return `<section class="card ntcard"><div class="row" style="justify-content:space-between;gap:8px"><h3 style="margin:0">📌 Noticeboard</h3><button class="mini" data-view="notices">All notices</button></div>${L.map(x=>ntRow(x,false)).join("")}</section>`}
+function noticesView(){if(!NT_ON)return `<div class="stack"><section class="card"><h2 style="margin-top:0">📌 Noticeboard</h2>${canWrite?cnOff("The noticeboard"):`<p class="hint">No notices yet.</p>`}</section></div>`;
+  if(ntEdit&&canWrite)return ntForm();const live=NT.filter(ntLive).sort((a,b)=>(b.pinned-a.pinned)||b.created.localeCompare(a.created)),old=NT.filter(x=>!ntLive(x));
+  return `<div class="stack"><section class="card"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><h2 style="margin:0">📌 Noticeboard</h2>${canWrite&&crCan("notice")?`<button class="btn gold" id="ntNew">Write a notice</button>`:""}</div>
+    <p class="hint" style="margin:6px 0 0">${canWrite?"Everything here is from the coaches. Notes for everyone are on the site for anyone with the link; a note for one family only reaches that family.":`News from the coaches.${myKids().length?"":` Notes just for your family show here once you sign in with your family code.`} Turn on <button class="mini" data-view="alerts">🔔 Match alerts</button> to get them on your phone.`}</p></section>
+    ${live.length?`<section class="card">${live.map(x=>ntRow(x,true)).join("")}</section>`:`<div class="card empty">No notices right now.</div>`}
+    ${old.length?`<details class="card"><summary>Older notices (${old.length})</summary>${old.map(x=>ntRow(x,true)).join("")}</details>`:""}</div>`}
+function ntForm(){const f=ntEdit,sq=players.filter(p=>p.current).sort((a,b)=>a.name.localeCompare(b.name));
+  return `<section class="card stack"><h2 style="margin:0">${f.id?"Edit the notice":"Write a notice"}</h2>
+    <div class="chips drchips">${Object.entries(NT_KINDS).map(([k,[i,l]])=>`<button data-ntkind="${k}" aria-pressed="${f.kind===k}">${i} ${l}</button>`).join("")}</div>
+    <label class="f">Headline<input type="text" id="ntT" maxlength="80" value="${esc(f.title)}" placeholder="${f.kind==="cancel"?"No training on Tuesday":f.kind==="kit"?"Bring your black socks on Saturday":"Christmas party on 20 December"}"></label>
+    <label class="f">Message<textarea id="ntB" rows="5" maxlength="1500">${esc(f.body)}</textarea></label>
+    <div class="grid2"><label class="f">Who it's for<select id="ntP"><option value="">Every family</option>${sq.map(p=>`<option${f.player===p.name?" selected":""}>${esc(p.name)}</option>`).join("")}</select></label>
+    <label class="f">Show it until (optional)<input type="date" id="ntE" value="${esc(f.expires||"")}"></label></div>
+    <label class="chk"><input type="checkbox" id="ntPush"${f.id?"":" checked"}> Send it to phones that have alerts on${f.id?" (again)":""}</label>
+    <p class="hint" style="margin:0">First names only. A note for one family only goes to the phones signed in with that ${esc(PRN.kid)}'s family code.</p>
+    <div class="btns"><button class="btn gold" id="ntSave"${ntBusy?" disabled":""}>${f.id?"Save":"Post the notice"}</button><button class="btn ghost" id="ntCancel">Cancel</button></div></section>`}
+function ntRead(){const v=id=>{const el=$("#"+id);return el?el.value:""};if(!ntEdit)return;Object.assign(ntEdit,{title:v("ntT").trim(),body:v("ntB").trim(),player:v("ntP")||null,expires:v("ntE")||null})}
+
+// ---------- session planner: plan a training session from the drills library, with an AI suggestion (25 Nov 2026) ----------
+// Saved in coach_notes kind 'plan' (k = the session date), coaches only. "Suggest a session" asks the preview function
+// (kind "session") to pick from this site's own drills; with no AI key it builds one here from the library instead.
+let sxDay=null,sxDraft=null,sxBusy=false;
+function sxDays(){const up=trUpcoming(6).filter(x=>!x.off).map(x=>x.iso),saved=Object.keys((CN&&CN.plan)||{});return [...new Set(up.concat(saved))].sort().filter((d,i,a)=>d>=todayLocal()||i>=a.length-6).slice(-10)}
+function sxSum(p){const b=(p&&p.blocks)||[];return b.length?`${b.length} part${b.length===1?"":"s"}, ${b.reduce((a,x)=>a+(+x.mins||0),0)} minutes${p.focus?` · ${p.focus}`:""}`:"Not planned yet"}
+function sxCard(){if(!canWrite)return "";if(!CN)return `<section class="card"><h3>🗒️ Session plans</h3>${cnOff("Session plans")}</section>`;const d=sxDays().find(x=>x>=todayLocal()),p=d&&cnGet("plan",d);
+  return `<section class="card stack"><h3 style="margin:0">🗒️ Session plans</h3><p class="hint" style="margin:0">${d?`Next session, ${longDate(d)}: <b>${esc(sxSum(p))}</b>.`:"Plan a session from the drills library."} Only coaches see plans.</p>
+    <div class="btns"><button class="btn gold" data-sxday="${esc(d||todayLocal())}">${p?"Open the plan":"Plan the session"}</button><button class="btn ghost" data-view="splan">All plans</button></div></section>`}
+function sxAge(){const m=String(TEAM.ageGroup||TEAM.ageShort||"").match(/(\d{1,2})/);return m?+m[1]:0}
+function splanView(){if(!canWrite)return `<div class="card empty">Session plans are for coaches. Sign in to use them.</div>`;if(!CN)return `<div class="stack"><section class="card"><h2>🗒️ Session plans</h2>${cnOff("Session plans")}</section></div>`;
+  if(sxDay)return sxForm();const days=sxDays();
+  return `<div class="stack"><section class="card"><h2 style="margin-top:0">🗒️ Session plans</h2><p class="hint" style="margin:0">Pick drills from the library, set the minutes, add notes, or let ✨ Suggest a session do it. Only coaches see plans.</p></section>
+    <section class="card stack">${days.map(d=>`<button class="rt-game" data-sxday="${esc(d)}"><span><b>${esc(longDate(d))}</b><small> ${esc(sxSum(cnGet("plan",d)))}</small></span><span class="pill">${cnGet("plan",d)?"Open":"Plan it"}</span></button>`).join("")||`<p class="hint">Add your training details on the Training page first.</p>`}
+      <div class="btns"><input type="date" id="sxOther" value="${todayLocal()}"><button class="mini" id="sxOtherGo">Plan another day</button></div></section></div>`}
+function sxForm(){const p=sxDraft,total=p.blocks.reduce((a,x)=>a+(+x.mins||0),0),age=sxAge();
+  const lib=(DRILLS||[]).filter(d=>(!p.focus||(d.focus||[]).includes(p.focus)||(d.focus||[]).includes("Warm-up")||(d.focus||[]).includes("Game"))&&(!age||((d.age_from||0)<=age&&(d.age_to||99)>=age)));
+  return `<div class="stack"><button class="btn ghost" data-sxback style="align-self:flex-start">← All plans</button><section class="card stack"><h2 style="margin:0">🗒️ ${esc(longDate(sxDay))}</h2>
+    <div class="grid2"><label class="f">Focus<select id="sxF"><option value="">Mixed</option>${DR_FOCUS.filter(f=>f!=="Warm-up"&&f!=="Game").map(f=>`<option${p.focus===f?" selected":""}>${f}</option>`).join("")}</select></label>
+    <label class="f">Session length (minutes)<input type="number" id="sxM" min="20" max="150" value="${+p.mins||60}"></label></div>
+    <div class="btns"><button class="btn gold" id="sxAi"${sxBusy?" disabled":""}>${sxBusy?"Thinking…":"✨ Suggest a session"}</button></div>
+    <h3 style="margin:6px 0 0">The session · ${total} of ${+p.mins||60} minutes</h3>
+    ${p.blocks.length?`<ol class="spl">${p.blocks.map((b,i)=>`<li><div class="row" style="gap:8px;justify-content:space-between;flex-wrap:wrap"><b>${b.id?`<button class="linkish" data-drill="${esc(b.id)}">${esc(b.title)}</button>`:esc(b.title)}</b>
+      <span class="btns"><input type="number" min="1" max="90" value="${+b.mins||10}" data-sxmin="${i}" style="width:64px" aria-label="Minutes"> min <button class="mini" data-sxup="${i}" aria-label="Move up">↑</button><button class="mini" data-sxdel="${i}" aria-label="Remove">✕</button></span></div>
+      <input type="text" data-sxnote="${i}" value="${esc(b.note||"")}" maxlength="200" placeholder="Coaching points, groups, who leads it…" style="width:100%;margin-top:6px"></li>`).join("")}</ol>`:`<p class="hint">No drills yet. Add some below or tap ✨ Suggest a session.</p>`}
+    <div class="btns"><select id="sxAdd" style="flex:1;min-width:180px"><option value="">Add a drill…</option>${lib.map(d=>`<option value="${esc(d.id)}">${esc(d.title)} (${esc((d.focus||[]).join(", "))}${d.minutes?`, ${d.minutes} min`:""})</option>`).join("")}</select><button class="mini" id="sxAddGo">Add</button><button class="mini" id="sxAddOwn">Add my own</button></div>
+    <label class="f">Notes for the coaches<textarea id="sxN" rows="3" maxlength="800" placeholder="Equipment, who's leading what, anyone to keep an eye on">${esc(p.note||"")}</textarea></label>
+    <div class="btns"><button class="btn gold" id="sxSave">Save the plan</button><button class="btn ghost" id="sxShare">Share with the coaches</button>${cnGet("plan",sxDay)?`<button class="btn ghost" id="sxDelete">Delete</button>`:""}</div></section></div>`}
+function sxRead(){const p=sxDraft;if(!p)return;const v=id=>{const el=$("#"+id);return el?el.value:null};if(v("sxF")!=null)p.focus=v("sxF");if(v("sxM")!=null)p.mins=+v("sxM")||60;if(v("sxN")!=null)p.note=v("sxN").trim();
+  document.querySelectorAll("[data-sxmin]").forEach(el=>{const b=p.blocks[+el.dataset.sxmin];if(b)b.mins=Math.max(1,+el.value||1)});document.querySelectorAll("[data-sxnote]").forEach(el=>{const b=p.blocks[+el.dataset.sxnote];if(b)b.note=el.value.trim()})}
+// no AI: warm-up, two or three drills on the focus, finish with a game
+function sxLocal(p){const age=sxAge(),ok=d=>!age||((d.age_from||0)<=age&&(d.age_to||99)>=age),L=(DRILLS||[]).filter(ok),pick=(f,used)=>{const c=L.filter(d=>(d.focus||[]).includes(f)&&!used.has(d.id));return c[Math.floor(Math.random()*c.length)]};
+  const used=new Set(),out=[],total=+p.mins||60,push=(d,m)=>{if(!d)return;used.add(d.id);out.push({id:d.id,title:d.title,mins:m,note:""})};
+  push(pick("Warm-up",used),Math.round(total*.15));const opts=DR_FOCUS.filter(f=>!["Warm-up","Game","Goalkeeping","Fitness"].includes(f)),main=p.focus||opts[Math.floor(Math.random()*opts.length)];
+  push(pick(main,used),Math.round(total*.25));push(pick(main,used)||pick(DR_FOCUS[2],used),Math.round(total*.25));push(pick("Game",used),total-out.reduce((a,x)=>a+x.mins,0));
+  return out}
+function sxText(){const p=sxDraft;return `🗒️ Training plan, ${longDate(sxDay)}${p.focus?` (${p.focus})`:""}\n\n${p.blocks.map((b,i)=>`${i+1}. ${b.title} (${b.mins} min)${b.note?`\n   ${b.note}`:""}`).join("\n")}${p.note?`\n\nNotes: ${p.note}`:""}`}
+
+// ---------- matchday checklist: the jobs before a game, ticked off by any coach (25 Nov 2026) ----------
+// coach_notes kind 'chk': k "_list" = the team's own list, k = a match id = what's ticked for that game. Coaches only.
+// The first few lines are worked out from the site itself (squad picked, availability, line-up...).
+const CK_DEF=["Kit bag and shirts","Match balls","Goalkeeper gloves","First aid kit","Water and spare bottles","Bibs and cones","Nets, pegs and corner flags","Referee confirmed","Pitch booked","Parents told the meet time"];
+let ckEdit=false;
+const ckList=()=>{const l=cnGet("chk","_list");return l&&Array.isArray(l.items)?l.items:CK_DEF};
+function ckAuto(m){const av=AV[m.id]||{},sq=players.filter(inGames),ans=sq.filter(p=>av[p.name]).length;
+  return [[`Squad picked${(m.squad||[]).length?` (${m.squad.length})`:""}`,(m.squad||[]).length>0,`data-pick="${esc(m.id)}"`],
+    [`Availability: ${ans} of ${sq.length} answered`,sq.length>0&&ans===sq.length,`data-avset="${esc(m.id)}"`],
+    ["Match preview written",!!(m.preview||"").trim(),`data-md="${esc(m.id)}"`]]}
+function ckCard(m){if(!canWrite||!m||!isFixture(m)||m.postponed)return "";if(!CN)return "";const done=(cnGet("chk",m.id)||{}).done||[],items=ckList(),auto=ckAuto(m),n=done.filter(x=>items.includes(x)).length+auto.filter(a=>a[1]).length,all=items.length+auto.length;
+  if(ckEdit)return `<section class="card stack"><h3 style="margin:0">✅ Matchday checklist: your list</h3><p class="hint" style="margin:0">One job per line. Every game uses this list.</p><textarea id="ckL" rows="10">${esc(items.join("\n"))}</textarea>
+    <div class="btns"><button class="btn gold" id="ckSave">Save the list</button><button class="btn ghost" id="ckCancel">Cancel</button><button class="btn ghost" id="ckReset">Back to the usual list</button></div></section>`;
+  return `<section class="card stack ckcard"><div class="row" style="justify-content:space-between;gap:8px"><h3 style="margin:0">✅ Matchday checklist</h3><span class="pill${n===all?" rt-ok":""}">${n} of ${all}</span></div>
+    <div class="ck">${auto.map(([t,ok,act])=>`<div class="ckrow auto"><span>${ok?"✅":"⬜"}</span><span>${esc(t)}</span>${ok?"":`<button class="mini" ${act}>Do it</button>`}</div>`).join("")}
+    ${items.map(t=>`<label class="ckrow"><input type="checkbox" data-ck="${esc(m.id)}" data-cki="${esc(t)}"${done.includes(t)?" checked":""}><span>${esc(t)}</span></label>`).join("")}</div>
+    <p class="hint" style="margin:0">Ticks are shared with the other coaches. Only coaches see this. <button class="mini" id="ckEdit">Change the list</button></p></section>`}
+
+// ---------- coach permissions: manager, coach, assistant coach, admin (25 Nov 2026, supabase/44_coach_extras.sql) ----------
+// While nobody is a manager every coach can do everything, as before. Once someone is a manager:
+//   managers: everything, including the coaches list, roles, team setup, sponsors and the fundraiser
+//   coaches and admins: everything else (admins aren't asked if they can make games and training)
+//   assistants: the matchday jobs (live matches, availability, training, ratings, notes, photos, drills, tactics),
+//               but not adding or deleting games, tournaments or players, notices to every family, or the jobs above
+// The database enforces the coaches list and roles; the rest is what the site shows each coach.
+const CR_ROLES={manager:["🎖️","Manager","Everything, including the coaches list and who can do what"],coach:["🧢","Coach","Everything except the coaches list, team setup, sponsors and the fundraiser"],assistant:["🤝","Assistant coach","Match days, training, availability, ratings and notes. Can't add or delete games or players"],admin:["🗂️","Admin","Like a coach, but runs the site and isn't asked about games and training"]};
+const crMine=()=>(myCoachRow().role||"coach"),crHasMgr=()=>CTEAM.some(c=>c.role==="manager");
+function crCan(what){if(!canWrite)return false;if(!crHasMgr())return true;const r=crMine();if(r==="manager")return true;
+  if(["setup","sponsors","fund","roles"].includes(what))return false;
+  if(r==="assistant"&&["new","tnew","delete","players","notice","pom","kit","invite"].includes(what))return false;return true}
+function coachesView(){if(!canWrite)return `<div class="card empty">This page is for coaches.</div>`;
+  const mgr=crHasMgr(),can=!mgr||crMine()==="manager",byRole=r=>CTEAM.filter(c=>(c.role||"coach")===r);
+  return `<div class="stack"><section class="card"><h2 style="margin-top:0">👥 Coaches and permissions</h2>
+    <p class="hint" style="margin:0">${mgr?`You're ${CR_ROLES[crMine()]?`${/^[aeiou]/i.test(CR_ROLES[crMine()][1])?"an":"a"} <b>${CR_ROLES[crMine()][1].toLowerCase()}</b>`:"a coach"}. ${can?"You can change anyone's role.":"Only a manager can change roles or the coaches list."}`:"Nobody is a <b>manager</b> yet, so every coach can do everything. Make someone a manager to keep the coaches list, team setup, sponsors and the fundraiser to them."}</p></section>
+    <section class="card"><h3>What each role can do</h3>${Object.entries(CR_ROLES).map(([k,[i,l,d]])=>`<div class="pvfacts"><div><span>${i}</span><b>${l}</b>: ${esc(d)}</div></div>`).join("")}</section>
+    <section class="card stack"><h3 style="margin:0">The coaches (${CTEAM.length})</h3>${CTEAM.length?CTEAM.map(c=>{const r=c.role||"coach";return `<div class="crrow"><div style="min-width:0"><b>${esc(coachName(c.email))}</b>${c.email===myCoachEmail()?" (you)":""}<div class="hint" style="overflow-wrap:anywhere">${esc(c.email)}</div></div>
+      ${can?`<select data-crset="${esc(c.email)}" aria-label="Role">${Object.entries(CR_ROLES).map(([k,[i,l]])=>`<option value="${k}"${k===r?" selected":""}>${i} ${l}</option>`).join("")}</select>`:`<span class="pill">${CR_ROLES[r]?CR_ROLES[r][0]+" "+CR_ROLES[r][1]:r}</span>`}</div>`}).join(""):`<p class="hint">${CAV_ON?"Nobody on the list yet.":cnOff("Coach roles")}</p>`}
+    <p class="hint" style="margin:0">${can?(hasSetup()?"Add or remove coaches in Team setup, or send an invite link from there.":"To add or remove a coach, ask Touchline Tales."):""} A role change works on this team's site straight away.</p></section></div>`}
+
+// ---------- clicks for the 25 Nov features ----------
+document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const d=t.dataset;
+  // live moments
+  if(d.lvact!=null&&LV){LV.askAct=d.lvact;LV.ask=null;LV.askOther=false;LV.subSlot=null;render();return}
+  if(d.lvmom!=null&&LV){const who=LV.askAct;LV.askAct=null;if(!d.lvmom||!who){render();return}
+    addEv(who==="__opp"?{k:"opp",t:d.lvmom}:{k:"act",t:d.lvmom,n:who});liveSaveLocal();render();livePush();return}
+  // player cards
+  if(d.pcopen){pcOpen=d.pcopen;setView("cards");window.scrollTo({top:0});return}
+  if("pcback" in d){pcOpen=null;render();return}
+  if(d.pcshare){pcShare(d.pcshare);return}
+  // certificates
+  if(d.ct){const n=d.ctn,c=certsFor(n).find(x=>x.id===d.ctid);if(c)ctOut(n,c.title,c.line,c.date,d.ct);return}
+  if(d.ctp!=null){ctPlayer=d.ctp;if(view!=="certs")setView("certs");else render();window.scrollTo({top:0});return}
+  if("ctback" in d){ctPlayer="";render();return}
+  if(d.ctc){const n=$("#ctcN").value,ti=$("#ctcT").value.trim(),w=$("#ctcW").value.trim(),dt=$("#ctcD").value;if(!ti){toast("Type the award, e.g. Most improved player.");return}ctOut(n,ti,w,dt,d.ctc);return}
+  if(t.id==="ctEdit"){ctEditLv=true;render();return}
+  if(t.id==="ctCancel"){ctEditLv=false;render();return}
+  if(t.id==="ctReset"||t.id==="ctSave"){let v={};if(t.id==="ctSave"){document.querySelectorAll("[data-ctlv]").forEach(el=>{const k=el.dataset.ctlv;v[k]=el.type==="checkbox"?el.checked:el.value.split(/[^\d]+/).map(Number).filter(x=>x>0&&x<1000)})}
+    t.disabled=true;const {error}=await sb.from("team_prefs").upsert({k:"certs",v,updated:new Date().toISOString()});t.disabled=false;if(error){toast("Couldn't save that. Try again.");return}CTP=v;ctEditLv=false;toast("Certificate levels saved.");render();return}
+  // noticeboard
+  if(t.id==="ntNew"){ntEdit={kind:"news",title:"",body:"",player:null,expires:null};render();return}
+  if(d.ntkind){ntRead();ntEdit.kind=d.ntkind;render();return}
+  if(t.id==="ntCancel"){ntEdit=null;render();return}
+  if(d.ntedit){const x=NT.find(y=>y.id===d.ntedit);if(x){ntEdit=Object.assign({},x);render();window.scrollTo({top:0})}return}
+  if(d.ntdel){if(!confirm("Delete this notice?"))return;const {error}=await sb.from("team_notices").delete().eq("id",d.ntdel);if(error){toast("Couldn't delete it.");return}NT=NT.filter(x=>x.id!==d.ntdel);toast("Notice deleted.");render();return}
+  if(d.ntpin){const x=NT.find(y=>y.id===d.ntpin);if(!x)return;const {error}=await sb.from("team_notices").update({pinned:!x.pinned}).eq("id",x.id);if(error){toast("Couldn't change it.");return}x.pinned=!x.pinned;render();return}
+  if(t.id==="ntSave"){ntRead();const f=ntEdit;if(!f.title){toast("Add a headline.");return}if(!f.player&&!crCan("notice")){toast("Only the manager or coaches can post to every family.");return}
+    const push=$("#ntPush")&&$("#ntPush").checked,row={id:f.id||`${Date.now().toString(36)}-${(f.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"note").slice(0,30)}`,kind:f.kind,title:f.title,body:f.body,player:f.player,expires:f.expires,pinned:!!f.pinned,author:myCoachEmail()};
+    ntBusy=true;render();const {error}=await sb.from("team_notices").upsert(row);ntBusy=false;if(error){toast("Couldn't save the notice. Try again.");render();return}
+    await loadNotices();ntEdit=null;let msg="Notice posted.";if(push){const r=await alSend({notice:row.id});msg=r==null?"Notice posted. (Phone alerts aren't switched on for this team, so it's on the site only.)":r>0?`Notice posted and sent to ${r} phone${r===1?"":"s"}.`:"Notice posted. No phones with alerts on to send it to yet."}
+    toast(msg);render();return}
+  // session plans
+  if(d.sxday){sxDay=d.sxday;const p=cnGet("plan",sxDay);sxDraft=JSON.parse(JSON.stringify(p||{focus:"",mins:TR?Math.max(30,Math.min(120,(()=>{const [a,b]=[TR.start,TR.finish].map(x=>{const m=String(x||"").match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:0});return b>a?b-a:60})())):60,blocks:[],note:""}));if(view!=="splan")setView("splan");else render();window.scrollTo({top:0});return}
+  if("sxback" in d){sxRead();sxDay=null;sxDraft=null;render();return}
+  if(t.id==="sxOtherGo"){const v=$("#sxOther").value;if(v){t.dataset.sxday=v;sxDay=v;sxDraft=JSON.parse(JSON.stringify(cnGet("plan",v)||{focus:"",mins:60,blocks:[],note:""}));render()}return}
+  if(view==="splan"&&d.drill){sxRead();drOpen=d.drill;setView("drills");return}
+  if(d.sxdel!=null){sxRead();sxDraft.blocks.splice(+d.sxdel,1);render();return}
+  if(d.sxup!=null){sxRead();const i=+d.sxup;if(i>0){const b=sxDraft.blocks;[b[i-1],b[i]]=[b[i],b[i-1]]}render();return}
+  if(t.id==="sxAddGo"){sxRead();const id=$("#sxAdd").value,dr=(DRILLS||[]).find(x=>x.id===id);if(!dr)return;sxDraft.blocks.push({id:dr.id,title:dr.title,mins:+dr.minutes||10,note:""});render();return}
+  if(t.id==="sxAddOwn"){sxRead();const ti=(prompt("What's the activity called?")||"").trim();if(!ti)return;sxDraft.blocks.push({id:"",title:ti.slice(0,80),mins:10,note:""});render();return}
+  if(t.id==="sxAi"){sxRead();if(sxDraft.blocks.length&&!confirm("Replace the drills in this plan with a suggestion?"))return;sxBusy=true;render();let blocks=null,why="";
+    try{const age=sxAge(),ok=x=>!age||((x.age_from||0)<=age&&(x.age_to||99)>=age),lib=(DRILLS||[]).filter(ok).slice(0,120).map(x=>({id:x.id,title:x.title,focus:x.focus||[],minutes:x.minutes||null}));
+      const {data,error}=await sb.functions.invoke("preview",{body:fnBody({kind:"session",ask:{focus:sxDraft.focus||"",mins:+sxDraft.mins||60,age:TEAM.ageGroup||"",squad:players.filter(inGames).length},drills:lib,team:Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup},RUGBY?{sport:SP.key}:{})})});
+      if(!error&&data&&Array.isArray(data.blocks)){blocks=data.blocks.map(b=>{const dr=(DRILLS||[]).find(x=>x.id===b.id);return dr?{id:dr.id,title:dr.title,mins:Math.max(1,Math.min(90,+b.mins||10)),note:String(b.note||"").slice(0,200)}:null}).filter(Boolean);if(data.note&&!sxDraft.note)sxDraft.note=String(data.note).slice(0,800)}else why=(data&&data.error)||""}catch(x){}
+    sxBusy=false;if(!blocks||!blocks.length){blocks=sxLocal(sxDraft);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a session from the drills library.":"Here's a session from the drills library.")}else toast("Here's a suggestion. Change anything you like, then save.");
+    sxDraft.blocks=blocks;render();return}
+  if(t.id==="sxSave"){sxRead();try{await cnSet("plan",sxDay,sxDraft);toast("Plan saved. The other coaches can see it.")}catch(x){toast("Couldn't save the plan. Try again.")}render();return}
+  if(t.id==="sxDelete"){if(!confirm("Delete this plan?"))return;try{await cnDel("plan",sxDay);sxDay=null;sxDraft=null;toast("Plan deleted.")}catch(x){toast("Couldn't delete it.")}render();return}
+  if(t.id==="sxShare"){sxRead();const txt=sxText();if(navigator.share){try{await navigator.share({text:txt});return}catch(x){if(x&&x.name==="AbortError")return}}try{await navigator.clipboard.writeText(txt);toast("Copied. Paste it into the coaches' chat.")}catch(x){prompt("Copy this",txt)}return}
+  // checklist
+  if(t.id==="ckEdit"){ckEdit=true;render();return}
+  if(t.id==="ckCancel"){ckEdit=false;render();return}
+  if(t.id==="ckSave"||t.id==="ckReset"){const items=t.id==="ckReset"?CK_DEF:$("#ckL").value.split("\n").map(x=>x.trim().slice(0,80)).filter(Boolean).slice(0,30);try{await cnSet("chk","_list",{items});ckEdit=false;toast("Checklist saved.")}catch(x){toast("Couldn't save that.")}render();return}
+});
+document.addEventListener("change",async e=>{const el=e.target;
+  if(el.dataset&&el.dataset.ck){const id=el.dataset.ck,it=el.dataset.cki,cur=Object.assign({done:[]},cnGet("chk",id)||{}),s=new Set(cur.done);if(el.checked)s.add(it);else s.delete(it);cur.done=[...s];
+    try{await cnSet("chk",id,cur)}catch(x){el.checked=!el.checked;toast("Couldn't save that tick.")}render();return}
+  if(el.dataset&&el.dataset.crset){const em=el.dataset.crset,r=el.value,c=CTEAM.find(x=>x.email===em),was=c&&c.role;
+    if(r==="manager"&&!crHasMgr()&&em!==myCoachEmail()&&!confirm(`Make ${coachName(em)} a manager? Only managers will then be able to change the coaches list and roles.`)){el.value=was||"coach";return}
+    const {error}=await sb.rpc("set_coach_role",{p_email:em,p_role:r});if(error){toast(/least one manager/.test(error.message)?"The team needs at least one manager. Make someone else a manager first.":/Only/.test(error.message)?"Only a manager can change roles.":"Couldn't save that. Try again.");el.value=was||"coach";return}
+    if(c)c.role=r;toast(`${coachName(em)} is now ${/^[aeiou]/i.test(CR_ROLES[r][1])?"an":"a"} ${CR_ROLES[r][1].toLowerCase()}.`);render();return}
+});
+
 (async function(){
   render();
   if(!window.supabase||!CFG.supabaseUrl||!CFG.supabaseAnonKey){document.getElementById("main").innerHTML=`<div class="card empty">This site isn't connected to its database yet. Add the Supabase details to config.js (see the README).</div>`;return}
@@ -4852,7 +5197,7 @@ document.addEventListener("submit",async e=>{
   const qinv=new URLSearchParams(location.search).get("invite");if(qinv&&!canWrite)showInvite(qinv.trim().toLowerCase());else if(qinv&&canWrite){toast("You're already signed in as a coach, so you don't need that invite.");try{history.replaceState(null,"",location.pathname)}catch(e){}}
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos","notices","cards","certs"])if(new URLSearchParams(location.search).has(v))setView(v);
   if(new URLSearchParams(location.search).has("fund")){view="fund";render();fundReturn(new URLSearchParams(location.search))}
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
