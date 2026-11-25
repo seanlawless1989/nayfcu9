@@ -937,3 +937,32 @@ body.rp-on{overflow:hidden}
 .spk .mini.on{background:var(--club);color:#fff;border-color:var(--club)}
 input.need{outline:3px solid #E53935;outline-offset:1px}
 .fm-ed .spot{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+/* 25 Nov 2026: player cards, certificates, noticeboard, session plans, matchday checklist, coach roles, live moments */
+.pcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.pcbtn{background:none;border:0;padding:0;cursor:pointer;display:block;width:100%}
+.pcimg{display:block;width:100%;height:auto;aspect-ratio:600/860;filter:drop-shadow(0 6px 14px rgb(0 0 0/.25));transition:transform .15s}
+.pcbtn:hover .pcimg{transform:translateY(-3px) rotate(-1deg)}
+.pcimg.big{max-width:340px;margin:0 auto}
+.pcside .pcbtn{max-width:220px}
+.ctrow,.crrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.ctrow:last-of-type,.crrow:last-of-type{border-bottom:0}
+.ctrow .btns{gap:6px}
+.chk{display:flex;align-items:center;gap:8px;font-weight:600}
+.chk input{width:20px;height:20px}
+.ntcard{border-left:6px solid var(--gold)}
+.ntrow{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.ntrow:last-child{border-bottom:0}
+.ntrow.pin b{color:var(--club)}
+.ntic{font-size:22px;line-height:1.2;flex:none}
+.spl{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
+.spl li{padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--field)}
+.linkish{background:none;border:0;padding:0;font:inherit;color:var(--club);text-decoration:underline;cursor:pointer;text-align:left}
+.ck{display:flex;flex-direction:column;gap:2px}
+.ckrow{display:flex;align-items:center;gap:10px;padding:7px 4px;border-radius:8px;cursor:pointer}
+.ckrow.auto{cursor:default}
+.ckrow input{width:20px;height:20px;flex:none}
+.ckrow input:checked+span{text-decoration:line-through;color:var(--muted)}
+.ckrow .mini{margin-left:auto}
+.crrow select{max-width:220px}
+.tl li.act .ic,.tl li.opp .ic{opacity:.9}
+.tl li.opp{color:var(--muted)}

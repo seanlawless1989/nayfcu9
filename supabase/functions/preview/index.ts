@@ -1,6 +1,8 @@
 // Drafts a match preview or match report with Claude for a coach to edit before saving.
 //   POST {match: "<id>"}                  "Suggest a preview" on an upcoming game's match page
 //   POST {match: "<id>", kind: "report"}  "Suggest a report" on a played game: uses the result, awards and the Live-mode timeline
+//   POST {kind: "session", ask: {focus, mins, age, squad}, drills: [{id, title, focus, minutes}]}  "Suggest a session" on a
+//        coach's session plan: picks from the site's own drills library and returns {blocks: [{id, mins, note}], note}
 // Both come from a signed-in coach's phone. Returns {text}. Nothing is saved here: the coach reads the draft, changes it and saves it themselves.
 // Needs the ANTHROPIC_API_KEY secret; without it this returns {error: "no_key"} and the site writes a simpler draft from the stats.
 // Only facts already on the site go to Claude: opponents, dates, venues, results and the first names the site shows.
@@ -141,6 +143,32 @@ If there are no previous meetings, say it's a first meeting. If a fact (like kic
 const forSport = (p: string) => !rugby() ? p : p.replaceAll("football", sportName()).replaceAll("⚽ 🧤", "🏉").replaceAll("⚽", "🏉")
   .replace("(goals, assists, substitutions, half time)", "(tries, conversions and kicks, replacements, half time)").replace("substitutions, the keepers and the player of the match", "replacements and the player of the match");
 
+// a training session from the team's own drills: Claude picks the drills and minutes, nothing else is sent
+type Drill = { id: string; title: string; focus: string[]; minutes: number | null };
+async function session(body: { ask?: { focus?: string; mins?: number; age?: string; squad?: number }; drills?: Drill[]; team?: { sport?: string } }) {
+  if (body.team?.sport) SPORT = String(body.team.sport);
+  const drills = (Array.isArray(body.drills) ? body.drills : []).filter((d) => d && typeof d.id === "string" && typeof d.title === "string").slice(0, 150)
+    .map((d) => ({ id: d.id.slice(0, 80), title: d.title.slice(0, 100), focus: (Array.isArray(d.focus) ? d.focus : []).map(String).slice(0, 6), minutes: Number(d.minutes) || null }));
+  if (drills.length < 3) return { error: "no_drills" };
+  const mins = Math.max(20, Math.min(150, Number(body.ask?.mins) || 60)), focus = String(body.ask?.focus || "").slice(0, 40);
+  const system = `You plan training sessions for a children's grassroots ${sportName()} team. Pick drills ONLY from the list you're given, by their id.
+Plan a session that starts with a warm-up, builds through two or three activities on the focus, and ends with a game. Keep it fun, active and age-appropriate, with lots of touches and little queueing.
+The minutes must add up to the session length. Give each part a one-line coaching note (under 20 words) in warm British English.
+Reply with JSON only, no other text: {"blocks":[{"id":"<drill id>","mins":<number>,"note":"<short note>"}],"note":"<one sentence for the coaches>"}`;
+  const content = `Session length: ${mins} minutes. Focus: ${focus || "a mix"}. Age group: ${String(body.ask?.age || "").slice(0, 30) || "unknown"}. Players usually at training: ${Number(body.ask?.squad) || "unknown"}.\n\nDrills you can use:\n${JSON.stringify(drills)}`;
+  const client = new Anthropic({ apiKey: KEY });
+  const r = await client.beta.messages.create({ model: "claude-opus-5-5", max_tokens: 2000, output_config: { effort: "low" }, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default", system, messages: [{ role: "user", content }] } as any);
+  if (r.stop_reason === "refusal") return { error: "refused" };
+  const text = r.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("").trim();
+  const j = text.match(/\{[\s\S]*\}/); if (!j) return { error: "empty" };
+  try {
+    const o = JSON.parse(j[0]); const ids = new Set(drills.map((d) => d.id));
+    const blocks = (Array.isArray(o.blocks) ? o.blocks : []).filter((b: any) => b && ids.has(b.id)).slice(0, 8)
+      .map((b: any) => ({ id: b.id, mins: Math.max(1, Math.min(90, Math.round(Number(b.mins) || 10))), note: String(b.note || "").slice(0, 200) }));
+    return blocks.length ? { blocks, note: String(o.note || "").slice(0, 300) } : { error: "empty" };
+  } catch { return { error: "empty" }; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -155,6 +183,7 @@ Deno.serve(async (req) => {
     if (!KEY) return out({ error: "no_key" }); // 200 so the site can read why
     db = schema === "public" ? HOME : service(schema);
     const { match, kind, team } = body;
+    if (kind === "session") return out(await session(body));
     if (team?.name) US = String(team.name);
     if (team?.ageGroup) AGE = String(team.ageGroup);
     if (team?.publicScores === false) SCORES = false;
