@@ -167,6 +167,7 @@ function render(){
   else if(view==="fund")main.innerHTML=fundView();
   else if(view==="ratings")main.innerHTML=ratingsView();
   else if(view==="cards")main.innerHTML=cardsView();
+  else if(view==="poster")main.innerHTML=szView();
   else if(view==="certs")main.innerHTML=certsView();
   else if(view==="notices")main.innerHTML=noticesView();
   else if(view==="splan")main.innerHTML=splanView();
@@ -215,7 +216,7 @@ function render(){
   else if(view==="new"||view==="edit")main.innerHTML=formView();
   document.body.classList.toggle("ro",!canWrite);
   if(me)medalCheck();
-  paintCards();
+  paintCards();if(view==="poster")szPaint();
 }
 
 // a tournament we've entered whose games aren't on the site yet comes before the next match when it's sooner
@@ -243,7 +244,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["notices","📌","Noticeboard","News and notes from the coaches"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["cards","🃏","Player cards","A football card for every player"],["certs","📜","Certificates","Print one when a player reaches a level"],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day photos and videos"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Players, coaches and shirt numbers"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["splan","🗒️","Session plans","Plan training from the drills library"],["coaches","👥","Coaches","Who can do what"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["poster","🖼️","Season posters","Team and player posters to print"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["splan","🗒️","Session plans","Plan training from the drills library"],["coaches","👥","Coaches","Who can do what"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -5162,6 +5163,221 @@ document.addEventListener("change",async e=>{const el=e.target;
     if(c)c.role=r;toast(`${coachName(em)} is now ${/^[aeiou]/i.test(CR_ROLES[r][1])?"an":"a"} ${CR_ROLES[r][1].toLowerCase()}.`);render();return}
 });
 
+// ---------- season posters: a printable end-of-season poster for the team or one player (25 Nov 2026) ----------
+// Our own design, drawn on a canvas at A4 size (2480 x 3508, 300 dpi) from what's already on the site. COACHES ONLY: the
+// poster is never shown on the site, a coach downloads, prints or shares it. Players are first names only, as everywhere.
+// Scores, results, goals, assists and clean sheets are left off when the team keeps scores back (TEAM.publicScores false)
+// or the age group is one where the FA doesn't allow them to be published (U7 to U11), even though coaches can see them:
+// the poster then shows games, tournaments, training, awards and moments instead.
+let szMode="team",szPl="",szDark=false,szCo=true,szSpOn=true,szHead="",szNote="",szT=null,szBusy=false,szAgain=false,szLast=null;
+const szScores=()=>TEAM.publicScores!==false&&!youngAge(TEAM.ageGroup,SP.key);
+const szRgb=h=>{const m=/^#?([0-9a-f]{6})$/i.exec(h||"");return m?[0,2,4].map(i=>parseInt(m[1].substr(i,2),16)):[34,53,232]};
+const szMix=(a,b,k)=>"#"+szRgb(a).map((v,i)=>Math.round(v*(1-k)+szRgb(b)[i]*k).toString(16).padStart(2,"0")).join("");
+const szLum=h=>{const [r,g,b]=szRgb(h);return (r*.299+g*.587+b*.114)/255};
+const szA=(h,a)=>`rgba(${szRgb(h).join(",")},${a})`;
+function szPal(){const c=TEAM.colours||{},club=c.club||"#2235E8",deep=c.clubDeep||szMix(club,"#000000",.35),gold=c.gold||"#FFD200";
+  const acc=szLum(club)>.62?(szLum(deep)<.5?deep:"#14182E"):club;// club colour as text on paper, unless it's too pale to read
+  const k=Object.values(TEAM.kits||{})[0]||{body:club,trim:gold,ink:szLum(club)>.6?"#111111":"#FFFFFF"};
+  return szDark?{bg:szMix(deep,"#000000",.55),ink:"#FFFFFF",sub:"rgba(255,255,255,.72)",card:"rgba(255,255,255,.07)",line:"rgba(255,255,255,.16)",acc:szLum(club)<.55?szMix(club,"#FFFFFF",.4):club,club,deep,gold,kit:k,faint:"rgba(255,255,255,.12)"}
+    :{bg:"#FBFAF6",ink:"#14182E",sub:"#5B6075",card:"#FFFFFF",line:"#E4E1D8",acc,club,deep,gold,kit:k,faint:"#ECEAE3"}}
+async function szImg(src){if(!src)return null;try{return await pcImg(src)}catch(e){return null}}
+// first names only: the squad is first names already, coaches' names are cut to the first word
+const szFirst=s=>String(s||"").trim().split(/\s+/)[0]||"";
+function szGames(){return seasonMatches().filter(m=>counted(m)&&!isFixture(m)&&(result(m)||Object.keys(played(m)).length||m.potm))}
+function szSponsors(){const out=[],seen=new Set(),add=(name,logo)=>{const k=String(name||logo||"").toLowerCase();if(!k||seen.has(k))return;seen.add(k);out.push({name:name||"",logo:logo||""})};
+  if(TEAM.sponsor)add(TEAM.sponsor.name,TEAM.sponsor.logo);if(TEAM.kitSponsor)add(TEAM.kitSponsor.name,TEAM.kitSponsor.logo);if(TEAM.potm&&TEAM.potm.sponsor)add(TEAM.potm.sponsor,TEAM.potm.logo);
+  (SPON||[]).forEach(s=>add(s.name,s.logo));return out.slice(0,8)}
+function szHomeGround(list){const c={};list.filter(m=>m.ha==="H"&&m.venue).forEach(m=>{const v=String(m.venue).split(",")[0].trim();c[v]=(c[v]||0)+1});return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||""}
+function szTrainDays(){return ATT?Object.keys(ATT).filter(d=>seasonOf(d)===season&&ATT[d].length):[]}
+function szMoments(list,n){const c=lmCounts(list),t={};Object.entries(c).forEach(([who,o])=>{if(n&&who!==n)return;Object.entries(o).forEach(([k,v])=>t[k]=(t[k]||0)+v)});
+  const L=RUGBY?[["tackle","tackles"],["break","line breaks"],["carry","carries"],["turnover","turnovers"],["save","try savers"]]:[["save","saves"],["tackle","tackles"],["block","blocks"],["shot","shots"],["skill","skills"],["chance","chances made"]];
+  return L.map(([k,l])=>[t[k]||0,l]).filter(x=>x[0]>0)}
+
+// ---- drawing helpers (on a 1240 x 1754 page, drawn at double size) ----
+function szCtx(){const W=1240,H=1754,c=document.createElement("canvas");c.width=W*2;c.height=H*2;const x=c.getContext("2d");x.scale(2,2);return {c,x,W,H}}
+function szRR(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
+const SZF={d:'"Archivo Black","Arial Black",Arial,sans-serif',b:'Archivo,Arial,sans-serif'};
+function szT2(x,s,a,b,o){o=o||{};let px=o.px||30;const f=()=>`${o.w||""} ${px}px ${o.f==="b"?SZF.b:SZF.d}`.trim();x.font=f();if(o.max)while(px>10&&x.measureText(s).width>o.max){px-=1;x.font=f()}
+  x.fillStyle=o.c||"#000";x.textAlign=o.al||"left";x.textBaseline=o.bl||"alphabetic";if(o.ls&&"letterSpacing" in x)x.letterSpacing=o.ls+"px";x.fillText(s,a,b);if("letterSpacing" in x)x.letterSpacing="0px";return px}
+function szWrap(x,items,a,b,maxW,lh,o){// lays words or chips out in lines; returns the y after the last line
+  let cx=a,cy=b;x.font=`${o.w||600} ${o.px}px ${SZF.b}`;items.forEach((s,i)=>{const t=s+(i<items.length-1?(o.sep||"   "):"");const w=x.measureText(t).width;if(cx>a&&cx+w>a+maxW){cx=a;cy+=lh}x.fillStyle=o.c;x.textAlign="left";x.fillText(t,cx,cy);cx+=w});return cy+lh}
+function szLabel(x,P,s,a,b){x.fillStyle=P.gold;x.fillRect(a,b-17,6,22);szT2(x,s.toUpperCase(),a+16,b,{px:21,c:P.sub,f:"b",w:800,ls:2})}
+function szShirt(x,cx,top,w,P,num){const k=P.kit,h=w*.92,s=w/100;x.save();x.translate(cx-w/2,top);x.scale(s,s);
+  x.beginPath();x.moveTo(30,0);x.quadraticCurveTo(50,12,70,0);x.lineTo(100,16);x.lineTo(92,40);x.lineTo(80,35);x.lineTo(80,92);x.lineTo(20,92);x.lineTo(20,35);x.lineTo(8,40);x.lineTo(0,16);x.closePath();
+  x.fillStyle=k.body||P.club;x.fill();x.lineWidth=2.4;x.strokeStyle=szLum(k.body||P.club)>.85?"#C9C6BD":szA("#000000",.18);x.stroke();
+  x.fillStyle=k.trim||P.gold;x.beginPath();x.moveTo(30,0);x.quadraticCurveTo(50,12,70,0);x.lineTo(64,0);x.quadraticCurveTo(50,8,36,0);x.closePath();x.fill();
+  x.restore();if(num!==""&&num!=null)szT2(x,String(num),cx,top+h*.72,{px:Math.round(w*.42),c:k.ink||"#FFFFFF",al:"center"})}
+function szCrestDisc(x,img,cx,cy,r,P){x.fillStyle="#FFFFFF";x.beginPath();x.arc(cx,cy,r,0,7);x.fill();x.lineWidth=6;x.strokeStyle=P.gold;x.stroke();
+  if(img){const s=Math.min(r*1.45/img.width,r*1.45/img.height);x.drawImage(img,cx-img.width*s/2,cy-img.height*s/2,img.width*s,img.height*s)}}
+function szBand(x,W,h,P){x.fillStyle=P.deep;x.fillRect(0,0,W,h);x.save();x.beginPath();x.rect(0,0,W,h);x.clip();x.strokeStyle=szA(P.club,.55);x.lineWidth=44;
+  for(let k=W*.42;k<W+h;k+=104){x.beginPath();x.moveTo(k,0);x.lineTo(k-h*.8,h);x.stroke()}x.restore();x.fillStyle=P.gold;x.fillRect(0,h-10,W,10)}
+function szPill(x,s,a,b,P,al){x.font=`800 26px ${SZF.b}`;if("letterSpacing" in x)x.letterSpacing="2px";const w=x.measureText(s).width+44;if("letterSpacing" in x)x.letterSpacing="0px";const l=al==="center"?a-w/2:a;
+  szRR(x,l,b,w,50,25);x.fillStyle=P.gold;x.fill();szT2(x,s,l+22,b+34,{px:26,c:(TEAM.colours||{}).goldInk||"#14182E",f:"b",w:800,ls:2})}
+function szTile(x,a,b,w,h,v,l,P,hi){szRR(x,a,b,w,h,22);x.fillStyle=hi?P.acc:P.card;x.fill();if(!hi&&!szDark){x.lineWidth=2;x.strokeStyle=P.line;x.stroke()}
+  szT2(x,String(v),a+w/2,b+h*.6,{px:Math.min(88,h*.52),c:hi?(szLum(P.acc)>.6?"#14182E":"#FFFFFF"):P.acc,al:"center",max:w-20});
+  szT2(x,l.toUpperCase(),a+w/2,b+h-24,{px:20,c:hi?(szLum(P.acc)>.6?"#14182E":"rgba(255,255,255,.85)"):P.sub,al:"center",f:"b",w:800,ls:1.5,max:w-16})}
+async function szFoot(x,W,H,P){const sp=szSpOn?szSponsors():[];const y0=H-118;x.fillStyle=P.line;x.fillRect(60,y0,W-120,2);
+  if(sp.length){szT2(x,"PROUDLY SUPPORTED BY",60,y0+34,{px:18,c:P.sub,f:"b",w:800,ls:2});let a=60;const top=y0+48,hh=52;
+    for(const s of sp){const im=await szImg(s.logo);if(im){const w=Math.min(170,hh*im.width/im.height);if(szDark){szRR(x,a-6,top-6,w+12,hh+12,8);x.fillStyle="#FFFFFF";x.fill()}x.drawImage(im,a,top,w,hh);a+=w+34}
+      else{const px=szT2(x,s.name,a,top+36,{px:26,c:P.ink,f:"b",w:800,max:260});x.font=`800 ${px}px ${SZF.b}`;a+=x.measureText(s.name).width+34}if(a>W-300)break}}
+  if(TEAM.poweredBy!==false)szT2(x,"Made with Touchline Tales",W-60,H-30,{px:17,c:P.sub,f:"b",w:600,al:"right"});
+  szT2(x,`${ctTeam()} · ${season}`.toUpperCase(),W-60,y0+34,{px:18,c:P.sub,f:"b",w:800,al:"right",ls:2})}
+async function szFonts(){try{await Promise.all(['80px "Archivo Black"','800 30px Archivo','600 30px Archivo'].map(f=>document.fonts&&document.fonts.load(f)))}catch(e){}}
+
+// ---- the team poster ----
+async function szTeam(){await szFonts();const {c,x,W,H}=szCtx(),P=szPal(),sc=szScores(),list=szGames(),st=teamStats(list),ps=playerStats(list),crest=await szImg(CREST);
+  x.fillStyle=P.bg;x.fillRect(0,0,W,H);
+  // header
+  szBand(x,W,330,P);const sp=szSpOn?szSponsors():[];
+  if(sp.length)szT2(x,("Sponsored by "+sp.slice(0,3).map(s=>s.name).join(" & ")).toUpperCase(),W/2,46,{px:18,c:"rgba(255,255,255,.8)",f:"b",w:800,al:"center",ls:3,max:W-120});
+  szCrestDisc(x,crest,170,190,112,P);
+  szT2(x,String(TEAM.name||"").toUpperCase(),318,178,{px:104,c:"#FFFFFF",max:W-370});
+  szT2(x,[TEAM.ageGroup,TEAM.league&&sc?TEAM.league:""].filter(Boolean).join(" · ").toUpperCase(),320,226,{px:28,c:P.gold,f:"b",w:800,ls:2,max:W-380});
+  szPill(x,(szHead||`Season ${season}`).toUpperCase(),318,250,P);
+  // headline numbers
+  const tiles=sc?[[st.P,"Played"],[st.W,"Won",1],[st.D,"Drawn"],[st.L,"Lost"],[st.P?Math.round(st.W/st.P*100)+"%":"–","Win rate"]]
+    :[[list.length,"Games"],[seasonTournaments().length,"Tournaments"],[szTrainDays().length||insRoster(list).length,szTrainDays().length?"Training":"Players",0],[Object.values(ps).reduce((a,o)=>a+(o.apps||0),0),"Appearances",1],[list.filter(m=>m.potm).length+pomSeason(season).length,"Awards"]];
+  const tw=(W-120-4*20)/5;tiles.forEach(([v,l,hi],i)=>szTile(x,60+i*(tw+20),370,tw,170,v,l,P,hi));
+  // every result in order, or games month by month
+  let y=600;
+  if(sc){szLabel(x,P,"Every result, in order",60,y);const R=list.filter(result),n=R.length,per=n<=24?Math.max(n,1):Math.ceil(n/2),sz=Math.min(n<=24?44:38,Math.floor((W-120)/per)-6);
+    R.forEach((m,i)=>{const r=result(m),row=i<per?0:1,col=row?i-per:i,a=60+col*(sz+6),b=y+22+row*(sz+8);szRR(x,a,b,sz,sz,7);
+      x.fillStyle=r==="W"?P.acc:r==="D"?P.gold:szDark?"rgba(255,255,255,.22)":"#C8C5BC";x.fill();szT2(x,r,a+sz/2,b+sz*.72,{px:sz*.55,c:r==="W"?(szLum(P.acc)>.6?"#14182E":"#FFFFFF"):r==="L"&&szDark?"#FFFFFF":"#14182E",al:"center"})});
+    if(!n)szT2(x,"No results yet this season.",60,y+52,{px:26,c:P.sub,f:"b",w:600})}
+  else{szLabel(x,P,"Games month by month",60,y);const ms=[7,8,9,10,11,0,1,2,3,4,5],cnt=ms.map(mo=>list.filter(m=>+m.date.slice(5,7)-1===mo).length),mx=Math.max(1,...cnt),bw=(W-120)/ms.length;
+    ms.forEach((mo,i)=>{const h=cnt[i]?Math.max(10,cnt[i]/mx*62):3,a=60+i*bw+8,b=y+86-h;szRR(x,a,b,bw-16,h,5);x.fillStyle=cnt[i]?P.acc:P.faint;x.fill();
+      if(cnt[i])szT2(x,String(cnt[i]),a+(bw-16)/2,b-8,{px:20,c:P.ink,al:"center"});szT2(x,MONTHS[mo].toUpperCase(),a+(bw-16)/2,y+112,{px:17,c:P.sub,f:"b",w:800,al:"center"})})}
+  // two columns
+  y=740;const L=60,R0=W/2+12,CW=W/2-72;
+  const card=(a,b,w,h)=>{szRR(x,a,b,w,h,24);x.fillStyle=P.card;x.fill();if(!szDark){x.lineWidth=2;x.strokeStyle=P.line;x.stroke()}};
+  if(sc){card(L,y,CW,250);szLabel(x,P,`${SP.Goals} scored and conceded`,L+28,y+46);
+    szT2(x,String(st.F),L+28,y+150,{px:96,c:P.acc});szT2(x,"SCORED",L+30,y+182,{px:20,c:P.sub,f:"b",w:800,ls:2});
+    szT2(x,String(st.A),L+CW-28,y+150,{px:96,c:P.ink,al:"right"});szT2(x,"CONCEDED",L+CW-30,y+182,{px:20,c:P.sub,f:"b",w:800,ls:2,al:"right"});
+    const tot=Math.max(1,st.F+st.A),bx=L+28,bw=CW-56,fw=bw*st.F/tot;szRR(x,bx,y+204,bw,18,9);x.fillStyle=szDark?"rgba(255,255,255,.25)":"#D8D5CC";x.fill();if(st.F){szRR(x,bx,y+204,Math.max(18,fw),18,9);x.fillStyle=P.acc;x.fill()}
+    szT2(x,`${st.GD>0?"+":""}${st.GD}`,L+CW/2,y+128,{px:46,c:P.gold,al:"center"});szT2(x,"DIFFERENCE",L+CW/2,y+160,{px:16,c:P.sub,f:"b",w:800,al:"center",ls:2});
+    const R=list.filter(result),win=R.filter(m=>result(m)==="W").sort((a,b)=>(b.us-b.them)-(a.us-a.them)||b.us-a.us)[0],cs=SP.keeper?R.filter(m=>+m.them===0).length:null,hi=R.slice().sort((a,b)=>b.us-a.us)[0];
+    const half=(CW-20)/2;card(L,y+272,half,190);card(L+half+20,y+272,half,190);
+    szLabel(x,P,"Biggest win",L+24,y+314);if(win){szT2(x,`${win.us}–${win.them}`,L+half/2,y+392,{px:64,c:P.acc,al:"center",max:half-30});szT2(x,`v ${win.opp}`.toUpperCase(),L+half/2,y+436,{px:18,c:P.sub,f:"b",w:800,al:"center",max:half-30})}
+    else szT2(x,"Still to come",L+half/2,y+392,{px:30,c:P.sub,al:"center"});
+    const b2=L+half+20;if(cs!=null){szLabel(x,P,"Clean sheets",b2+24,y+314);szT2(x,String(cs),b2+half/2,y+410,{px:92,c:P.acc,al:"center"})}
+    else{szLabel(x,P,"Most in a game",b2+24,y+314);szT2(x,hi?String(hi.us):"–",b2+half/2,y+392,{px:64,c:P.acc,al:"center"});if(hi)szT2(x,`v ${hi.opp}`.toUpperCase(),b2+half/2,y+436,{px:18,c:P.sub,f:"b",w:800,al:"center",max:half-30})}
+    // right: top scorer and every scorer
+    card(R0,y,CW,462);const sc2=Object.entries(ps).filter(([,o])=>o.goals>0).sort((a,b)=>b[1].goals-a[1].goals||a[0].localeCompare(b[0]));
+    szLabel(x,P,`Top ${RUGBY?"try scorer":"scorer"}`,R0+28,y+46);
+    if(sc2.length){const [tn,to]=sc2[0],joint=sc2.filter(([,o])=>o.goals===to.goals).map(([n])=>n);szShirt(x,R0+96,y+74,124,P,joint.length>1?"":numOf(tn));
+      szT2(x,(joint.length>1?joint.slice(0,3).join(" & "):tn).toUpperCase(),R0+184,y+130,{px:54,c:P.ink,max:CW-210});szT2(x,`${to.goals} ${to.goals===1?SP.goal:SP.goals}`.toUpperCase(),R0+186,y+178,{px:30,c:P.acc,f:"b",w:800,ls:1})}
+    else szT2(x,"No scorers yet",R0+28,y+140,{px:34,c:P.sub});
+    szT2(x,`ALL OUR ${SP.Goals.toUpperCase()==="GOALS"?"SCORERS":"TRY SCORERS"}`,R0+28,y+246,{px:18,c:P.sub,f:"b",w:800,ls:2});
+    let yy=szWrap(x,sc2.map(([n,o])=>`${n} ${o.goals}`),R0+28,y+282,CW-56,34,{px:25,w:600,c:P.ink,sep:"  ·  "});
+    const top=(k)=>Object.entries(ps).filter(([,o])=>(o[k]||0)>0).sort((a,b)=>b[1][k]-a[1][k])[0];
+    const ta=SP.assists&&assistsTracked(season)&&top("assists"),tp=top("potm");
+    if(ta)szT2(x,`MOST ASSISTS  ${ta[0].toUpperCase()} (${ta[1].assists})`,R0+28,Math.max(yy,y+392),{px:20,c:P.acc,f:"b",w:800,ls:1,max:CW-56});
+    if(tp)szT2(x,`MOST ${POTM.toUpperCase()}  ${tp[0].toUpperCase()} (${tp[1].potm})`,R0+28,y+430,{px:20,c:P.acc,f:"b",w:800,ls:1,max:CW-56})}
+  else{// no scores: tournaments and awards
+    card(L,y,CW,462);szLabel(x,P,"Tournaments",L+28,y+46);const ts=seasonTournaments().sort((a,b)=>(a.date||"").localeCompare(b.date||""));let yy=y+96;
+    if(!ts.length)szT2(x,"None yet this season",L+28,yy,{px:26,c:P.sub,f:"b",w:600});
+    const tm=szMoments(list);ts.slice(0,tm.length?4:6).forEach(t=>{szT2(x,(t.name||"Tournament").toUpperCase(),L+28,yy,{px:26,c:P.ink,max:CW-56});szT2(x,[t.trophy,t.potm?`Player of the tournament: ${t.potm}`:""].filter(Boolean).join(" · ")||(t.date?niceD(t.date):""),L+28,yy+28,{px:20,c:P.acc,f:"b",w:700,max:CW-56});yy+=66});
+    if(tm.length){szT2(x,"ON THE PITCH",L+28,y+340,{px:18,c:P.sub,f:"b",w:800,ls:2});szWrap(x,tm.map(([v,l])=>`${v} ${l}`),L+28,y+374,CW-56,32,{px:23,w:600,c:P.ink,sep:"  ·  "})}
+    card(R0,y,CW,462);szLabel(x,P,"Player of the month",R0+28,y+46);yy=y+96;const pm=pomSeason(season).slice().sort((a,b)=>a.month.localeCompare(b.month));
+    if(!pm.length)szT2(x,"Picked each month by the coaches",R0+28,yy,{px:24,c:P.sub,f:"b",w:600});
+    pm.slice(0,5).forEach(p=>{szT2(x,pomMonthName(p.month).toUpperCase(),R0+28,yy,{px:20,c:P.sub,f:"b",w:800,ls:2});szT2(x,p.player.toUpperCase(),R0+CW-28,yy,{px:28,c:P.acc,al:"right",max:CW-260});yy+=44});
+    const aw=Object.entries(ps).filter(([,o])=>o.potm>0).sort((a,b)=>a[0].localeCompare(b[0]));
+    if(aw.length){szT2(x,POTM.toUpperCase(),R0+28,Math.max(yy+14,y+330),{px:18,c:P.sub,f:"b",w:800,ls:2,max:CW-56});szWrap(x,aw.map(([n,o])=>`${n} ${o.potm}`),R0+28,Math.max(yy+48,y+364),CW-56,32,{px:23,w:600,c:P.ink,sep:"  ·  "})}}
+  // the squad
+  y=1236;szLabel(x,P,"The squad",60,y);const sq=players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)||a.name.localeCompare(b.name)),n=sq.length;
+  const cols=Math.min(10,Math.max(6,Math.ceil(n/3))),rows=Math.ceil(n/cols),cw=(W-120)/cols,rh=Math.min(150,(1490-y-24)/Math.max(rows,1)),sw=Math.min(100,cw*.7,(rh-46)/.92);
+  sq.forEach((p,i)=>{const r=Math.floor(i/cols),cI=i%cols,inRow=Math.min(cols,n-r*cols),off=(cols-inRow)*cw/2,cx=60+off+cI*cw+cw/2,top=y+22+r*rh;
+    szShirt(x,cx,top,sw,P,p.num??"");szT2(x,p.name.toUpperCase(),cx,top+sw*.92+24,{px:17,c:P.ink,f:"b",w:800,al:"center",max:cw-8})});
+  // coaches, home ground, honours
+  y=1508;const third=(W-120-40)/3,boxes=[];
+  const co=szCo?(CTEAM||[]).filter(c=>c.email).map(c=>{const r=c.role&&CR_ROLES[c.role]?CR_ROLES[c.role][1]:"";return [szFirst(coachName(c.email)),r]}).filter(c=>c[0]).slice(0,4):[];
+  if(co.length)boxes.push(["Coaches",co.map(([n,r])=>r&&r!=="Coach"?`${n} (${r.toLowerCase()})`:n).join(", ")]);
+  const hg=szHomeGround(list);if(hg)boxes.push(["Home ground",hg]);
+  const tr=seasonTournaments().filter(t=>t.trophy&&/winner|champion|runner/i.test(t.trophy));if(tr.length)boxes.push(["Honours",tr.map(t=>`${t.trophy} · ${t.name||""}`).join(", ")]);
+  if(TEAM.league&&boxes.length<3&&sc)boxes.push(["League",TEAM.league]);
+  if(boxes.length<3&&TR)boxes.push(["Training",`${TR.day}s, ${String(TR.venue||"").split(",")[0]}`]);
+  boxes.slice(0,3).forEach(([h,t],i)=>{const a=60+i*(third+20);szLabel(x,P,h,a,y+18);szLines(x,String(t),third-10,24,2).forEach((l,k)=>szT2(x,l,a,y+54+k*30,{px:24,c:P.ink,f:"b",w:700,max:third-10}))});
+  await szFoot(x,W,H,P);return c}
+function szLines(x,t,maxW,px,max){x.font=`700 ${px}px ${SZF.b}`;const out=[];let ln="";t.split(" ").forEach(w=>{const tt=ln?ln+" "+w:w;if(x.measureText(tt).width>maxW&&ln){out.push(ln);ln=w}else ln=tt});if(ln)out.push(ln);
+  if(out.length>max){out.length=max;out[max-1]+="…"}return out}
+const niceD=d=>new Date(d+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"long"});
+
+// ---- the player poster ----
+async function szPlayer(n){await szFonts();const {c,x,W,H}=szCtx(),P=szPal(),sc=szScores(),list=szGames(),o=playerStats(list)[n]||{apps:0,goals:0,assists:0,potm:0,gk:0,cs:0},crest=await szImg(CREST),photo=await szImg(PHOTOS[n]);
+  x.fillStyle=P.bg;x.fillRect(0,0,W,H);
+  szBand(x,W,250,P);szCrestDisc(x,crest,130,124,82,P);
+  szT2(x,ctTeam().toUpperCase(),240,112,{px:56,c:"#FFFFFF",max:W-300});szPill(x,(szHead||`Season ${season}`).toUpperCase(),240,140,P);
+  // hero: number, name and photo
+  const num=numOf(n),pos=pcPos(n,list);
+  const fx=W-60-400,fy=290,fw=400,fh=440;
+  if(num!==""){x.save();x.globalAlpha=szDark?.14:.08;szT2(x,String(num),fx-30,700,{px:380,c:P.acc,al:"right"});x.restore()}
+szRR(x,fx,fy,fw,fh,34);x.fillStyle=P.acc;x.fill();
+  if(photo){x.save();szRR(x,fx+12,fy+12,fw-24,fh-24,26);x.clip();const s=Math.max((fw-24)/photo.width,(fh-24)/photo.height);x.drawImage(photo,fx+fw/2-photo.width*s/2,fy+fh/2-photo.height*s/2,photo.width*s,photo.height*s);x.restore()}
+  else{x.save();szRR(x,fx,fy,fw,fh,34);x.clip();x.strokeStyle=szA("#FFFFFF",.12);x.lineWidth=30;for(let k=fx;k<fx+fw+fh;k+=80){x.beginPath();x.moveTo(k,fy);x.lineTo(k-fh*.7,fy+fh);x.stroke()}x.restore();szShirt(x,fx+fw/2,fy+100,250,P,num)}
+  if(num!==""){x.beginPath();x.arc(fx+fw-46,fy+fh-46,54,0,7);x.fillStyle=P.gold;x.fill();x.lineWidth=6;x.strokeStyle=P.bg;x.stroke();szT2(x,String(num),fx+fw-46,fy+fh-26,{px:54,c:(TEAM.colours||{}).goldInk||"#14182E",al:"center"})}
+  szT2(x,"PLAYER",60,370,{px:22,c:P.sub,f:"b",w:800,ls:4});
+  szT2(x,n.toUpperCase(),56,480,{px:140,c:P.ink,max:fx-90});
+  let hy=540;if(pos){szT2(x,`USUALLY PLAYS ${pos}`,60,hy,{px:24,c:P.acc,f:"b",w:800,ls:2,max:fx-100});hy+=44}
+  if(szNote){x.font=`italic 600 30px ${SZF.b}`;const words=(`“${szNote}”`).split(" ");let ln="",yy=hy+20,k=0;words.forEach(w=>{const t=ln?ln+" "+w:w;if(x.measureText(t).width>fx-110&&ln){if(k<4){x.fillStyle=P.ink;x.textAlign="left";x.fillText(ln,60,yy)}k++;yy+=40;ln=w}else ln=t});if(k<4){x.fillStyle=P.ink;x.fillText(ln,60,yy)}
+    szT2(x,"— THE COACHES",60,Math.min(yy,hy+20+3*40)+40,{px:18,c:P.sub,f:"b",w:800,ls:2})}
+  // stat tiles
+  const tp=seasonTournaments().filter(t=>tSquad(t).includes(n)||tGames(t).some(m=>n in played(m))).length,pom=pomOf(n).filter(p=>seasonOf(p.month+"-15")===season).length,tr=szTrainDays().filter(d=>ATT[d].includes(n)).length;
+  const shown=new Set(mdShown().filter(d=>sc||!d.sc).map(d=>d.id)),med=playerMedals(n,list).filter(m=>shown.has(m.id)).length;
+  const T=[[o.apps||0,"Games",1,1]];if(sc){T.push([o.goals||0,SP.Goals]);if(SP.assists&&assistsTracked(season))T.push([o.assists||0,"Assists"]);if(RUGBY)T.push([o.pts||0,"Points"]);if(SP.keeper&&o.gk)T.push([o.cs||0,"Clean sheets"])}
+  T.push([o.potm||0,POTM.length>22?"Player of the match":POTM],[pom,"Player of the month"],[tp,"Tournaments"],[tr,"Training sessions"],[med,"Medals"]);
+  const TT=T.filter(t=>t[3]||t[0]>0).slice(0,8),per=TT.length<=5?Math.max(TT.length,1):TT.length===6?3:4,tw=(W-120-(per-1)*20)/per,rowsN=Math.ceil(TT.length/per);
+  TT.forEach(([v,l,hi],i)=>{const r=Math.floor(i/per),cI=i%per;szTile(x,60+cI*(tw+20),770+r*146,tw,130,v,l,P,hi)});
+  // game by game
+  let y=770+rowsN*146+36;szLabel(x,P,"Game by game",60,y);const G=list,gw=Math.min(48,(W-120)/Math.max(G.length,1)-6);let gx=60,gy=y+24;
+  G.forEach(m=>{const pl=played(m),on=insIn(m,n),g=sc?+pl[n]||0:0,star=m.potm===n;if(gx+gw>W-60){gx=60;gy+=gw+30}
+    szRR(x,gx,gy,gw,gw,9);x.fillStyle=on?P.acc:P.faint;x.fill();if(star){x.fillStyle=P.gold;x.beginPath();x.arc(gx+gw/2,gy+gw/2,gw*.24,0,7);x.fill()}
+    if(g)szT2(x,String(g),gx+gw/2,gy+gw+24,{px:Math.min(20,gw*.5),c:P.acc,al:"center"});gx+=gw+6});
+  gy+=gw+(sc?58:38);x.font=`700 19px ${SZF.b}`;let lx=60;[[P.acc,"Played"],[P.faint,"Didn't play"],[P.gold,POTM.charAt(0).toUpperCase()+POTM.slice(1),1]].concat(sc?[[null,`Number under a game = ${SP.goals}`]]:[]).forEach(([col,l,dot])=>{
+    if(col){szRR(x,lx,gy-16,20,20,5);x.fillStyle=dot?P.acc:col;x.fill();if(dot){x.fillStyle=col;x.beginPath();x.arc(lx+10,gy-6,5,0,7);x.fill()}lx+=28}szT2(x,l,lx,gy,{px:19,c:P.sub,f:"b",w:700});x.font=`700 19px ${SZF.b}`;lx+=x.measureText(l).width+30});
+  // highlights and moments
+  y=gy+34;const half=(W-120-24)/2;
+  const card=(a,b,w,h)=>{szRR(x,a,b,w,h,24);x.fillStyle=P.card;x.fill();if(!szDark){x.lineWidth=2;x.strokeStyle=P.line;x.stroke()}};
+  const hgt=H-150-y;card(60,y,half,hgt);szLabel(x,P,"Season highlights",88,y+46);
+  const SCK=/^(goals|hat:|ast|cs)/;const hl=certsFor(n).filter(h=>seasonOf(h.date)===season&&(sc||!SCK.test(h.id))).reverse();let yy=y+92;
+  if(!hl.length)szT2(x,"Plenty more to come",88,yy,{px:24,c:P.sub,f:"b",w:600});
+  const fit=Math.max(1,Math.floor((hgt-80)/56));hl.slice(-fit).forEach(h=>{x.fillStyle=P.gold;x.beginPath();x.arc(96,yy-8,7,0,7);x.fill();szT2(x,h.title.toUpperCase(),114,yy,{px:22,c:P.ink,max:half-70});
+    szT2(x,(h.date?niceD(h.date)+" · ":"")+h.line.replace(/^for /,""),114,yy+26,{px:17,c:P.sub,f:"b",w:600,max:half-70});yy+=56});
+  const R0=60+half+24;card(R0,y,half,hgt);szLabel(x,P,"On the pitch",R0+28,y+46);yy=y+92;const mo=szMoments(list,n);
+  if(o.gk&&SP.keeper)mo.unshift([o.gk,o.gk===1?"game in goal":"games in goal"]);
+  if(!mo.length)szT2(x,"Saves, tackles and skills added on match days show here",R0+28,yy,{px:20,c:P.sub,f:"b",w:600,max:half-56});
+  mo.slice(0,Math.max(1,Math.floor((hgt-80)/54))).forEach(([v,l])=>{szT2(x,String(v),R0+28,yy+6,{px:44,c:P.acc});x.font=`44px ${SZF.d}`;szT2(x,l.toUpperCase(),R0+40+x.measureText(String(v)).width,yy,{px:21,c:P.ink,f:"b",w:800,ls:1,max:half-120});yy+=54});
+  await szFoot(x,W,H,P);return c}
+
+async function szCanvas(){return szMode==="player"&&szPl?szPlayer(szPl):szTeam()}
+async function szPaint(){if(view!=="poster")return;if(szBusy){szAgain=true;return}szBusy=true;try{const c=await szCanvas();szLast=c;const im=$("#szImg");if(im)im.src=c.toDataURL("image/jpeg",.82)}catch(e){console.error(e)}finally{szBusy=false}
+  if(szAgain){szAgain=false;szPaint()}}
+const szSoon=()=>{clearTimeout(szT);szT=setTimeout(szPaint,350)};
+function szName(){return `${szMode==="player"&&szPl?szPl+"-":""}${TEAM.name||"team"}-${TEAM.ageShort||""}-${season}-season-poster`.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")+".png"}
+async function szOut(how){try{const c=await szCanvas(),fn=szName();
+  if(how==="print"){const u=c.toDataURL("image/png"),f=document.createElement("iframe");f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";document.body.appendChild(f);
+    const d=f.contentWindow.document;d.open();d.write(`<!doctype html><title>Season poster</title><style>@page{size:A4 portrait;margin:0}html,body{margin:0}img{width:100%;height:100vh;object-fit:contain;display:block}</style><img src="${u}">`);d.close();
+    const go=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){}setTimeout(()=>f.remove(),60000)};const im=d.querySelector("img");if(im.complete)setTimeout(go,100);else im.onload=go;return}
+  const blob=await new Promise(r=>c.toBlob(r,"image/png")),file=new File([blob],fn,{type:"image/png"});
+  if(how==="share"&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:"Season poster"});return}catch(e){if(e&&e.name==="AbortError")return}}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast("Poster downloaded.")}catch(e){console.error(e);toast("Couldn't make the poster on this phone.")}}
+function szView(){if(!canWrite)return `<div class="card empty">Season posters are made by the coaches.</div>`;
+  const sq=players.filter(inGames).sort((a,b)=>a.name.localeCompare(b.name));if(!szPl||!sq.some(p=>p.name===szPl))szPl=sq[0]?.name||"";
+  const seg=(k,v,l,on)=>`<button data-${k}="${v}" aria-pressed="${on}">${l}</button>`;
+  return `<div class="stack"><section class="card stack"><h2 style="margin:0">🖼️ Season posters · ${esc(season)}</h2>
+    <p class="hint" style="margin:0">A poster of the season to print or send to families, for the whole team or for one ${esc(PL.replace(/s$/,""))}. It's made from what's on the site, with your badge, colours and sponsors. Only coaches can make one, and it's never shown on the site.${szScores()?"":` Scores, results and ${SP.goals} are left off, as ${TEAM.publicScores===false?"this team keeps scores back":"the FA asks for younger age groups"}: it shows games, tournaments, awards and moments instead.`} Change the season at the top of the page.</p>
+    <div class="seg" role="group" aria-label="Team or player">${seg("szm","team","Team poster",szMode==="team")}${seg("szm","player","Player poster",szMode==="player")}</div>
+    ${szMode==="player"?`<label>${esc(PL.replace(/s$/,"").replace(/^./,c=>c.toUpperCase()))}<select id="sz-pl">${sq.map(p=>`<option${p.name===szPl?" selected":""}>${esc(p.name)}</option>`).join("")}</select></label>
+      <label>A line from the coaches (optional)<input type="text" id="sz-note" maxlength="140" value="${esc(szNote)}" placeholder="Brilliant all season, never stopped running"></label>`:""}
+    <label>Headline<input type="text" id="sz-head" maxlength="40" value="${esc(szHead)}" placeholder="Season ${esc(season)}"></label>
+    <div class="seg" role="group" aria-label="Look">${seg("szth","light","Light",!szDark)}${seg("szth","dark","Dark",szDark)}</div>
+    <label class="chk"><input type="checkbox" id="sz-sp"${szSpOn?" checked":""}> Show sponsors</label>${szMode==="team"?`<label class="chk"><input type="checkbox" id="sz-co"${szCo?" checked":""}> Show coaches' first names</label>`:""}
+    <div class="btns"><button class="btn gold" data-szout="share">Save or share</button><button class="btn ghost" data-szout="print">🖨️ Print (A4)</button><button class="btn ghost" data-szout="dl">Download</button></div></section>
+    <section class="card szwrap"><img id="szImg" class="szimg" alt="Season poster preview"></section></div>`}
+document.addEventListener("click",e=>{if(view!=="poster")return;const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+  if(d.szm){szMode=d.szm;render();return}if(d.szth){szDark=d.szth==="dark";render();return}if(d.szout){szOut(d.szout);return}});
+document.addEventListener("input",e=>{if(view!=="poster")return;const id=e.target.id;if(id==="sz-head"){szHead=e.target.value.trim();szSoon()}else if(id==="sz-note"){szNote=e.target.value.trim();szSoon()}});
+document.addEventListener("change",e=>{if(view!=="poster")return;const id=e.target.id;if(id==="sz-pl"){szPl=e.target.value;szPaint()}else if(id==="sz-sp"){szSpOn=e.target.checked;szPaint()}else if(id==="sz-co"){szCo=e.target.checked;szPaint()}});
+
 (async function(){
   render();
   if(!window.supabase||!CFG.supabaseUrl||!CFG.supabaseAnonKey){document.getElementById("main").innerHTML=`<div class="card empty">This site isn't connected to its database yet. Add the Supabase details to config.js (see the README).</div>`;return}
@@ -5197,7 +5413,7 @@ document.addEventListener("change",async e=>{const el=e.target;
   const qinv=new URLSearchParams(location.search).get("invite");if(qinv&&!canWrite)showInvite(qinv.trim().toLowerCase());else if(qinv&&canWrite){toast("You're already signed in as a coach, so you don't need that invite.");try{history.replaceState(null,"",location.pathname)}catch(e){}}
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos","notices","cards","certs"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos","notices","cards","certs","poster"])if(new URLSearchParams(location.search).has(v))setView(v);
   if(new URLSearchParams(location.search).has("fund")){view="fund";render();fundReturn(new URLSearchParams(location.search))}
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
