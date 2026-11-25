@@ -249,7 +249,24 @@ function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every $
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
   const fi=HOME_ITEMS.findIndex(x=>x[0]==="fund");if(fLive()){const t=["fund","💷","Fundraiser","Get your name on our pitch"];if(fi<0)HOME_ITEMS.splice(1,0,t)}else if(fi>=0)HOME_ITEMS.splice(fi,1);
   const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:`${RUGBY?"Try":"Goal"} of the month and more`;
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||(PHOTOS_ON&&GAL_DB))&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).filter(x=>crCan(x[0])).map(x=>tile(x," coach")).join(""):""}</div>${galWaiting().length?`<section class="card" style="margin-top:12px"><b>⚑ ${galWaiting().length} photo${galWaiting().length>1?"s":""} to look at.</b> A family asked for ${galWaiting().length>1?"them":"it"} to come down. <button class="mini" data-view="gallery">Check now</button></section>`:""}${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${pics.length})</button></div>`:""}`}
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||(PHOTOS_ON&&GAL_DB))&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).filter(x=>crCan(x[0])).map(x=>tile(x," coach")).join(""):""}</div>${guidesCard()}${galWaiting().length?`<section class="card" style="margin-top:12px"><b>⚑ ${galWaiting().length} photo${galWaiting().length>1?"s":""} to look at.</b> A family asked for ${galWaiting().length>1?"them":"it"} to come down. <button class="mini" data-view="gallery">Check now</button></section>`:""}${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${pics.length})</button></div>`:""}`}
+// ---------- quick guides: a short video and a printable PDF for parents (family code, Home Screen, alerts) and coaches
+// (sign in, Team setup). One generic set for every team, made from the made-up Sample Town demo and kept on touchlinetales.club,
+// so a fix there reaches every site at once. TEAM.guides=false hides them. (25 Nov 2026)
+const GUIDES=TEAM.guides===false?null:"https://touchlinetales.club/guides/getting-started/";
+const GUIDE={parents:{ic:"👪",t:"Parents",d:"Family code, Home Screen and match alerts",v:"parents-guide",pdf:"Touchline_Tales_parents_guide.pdf",len:"45 sec"},
+  coaches:{ic:"🧢",t:"Coaches",d:"Signing in and Team setup",v:"coaches-guide",pdf:"Touchline_Tales_coaches_guide.pdf",len:"1 min"}};
+const guideBtns=k=>{const g=GUIDE[k];return `<button class="btn gold" type="button" data-guide="${k}">▶ Watch (${g.len})</button><a class="btn ghost" href="${GUIDES+g.pdf}" target="_blank" rel="noopener">📄 PDF guide</a>`};
+function guidesCard(){if(!GUIDES)return "";const order=canWrite?["coaches","parents"]:["parents","coaches"];
+  return `<section class="card gd-card"><h3>📘 New to the site? Quick guides</h3><p class="hint" style="margin-top:0">A short video and a guide you can print, on signing in and getting set up.</p>
+  <div class="gd-cols">${order.map(k=>{const g=GUIDE[k];return `<div class="gd"><b>${g.ic} ${g.t}</b><span class="hint">${g.d}</span><div class="btns">${guideBtns(k)}</div></div>`}).join("")}</div><div class="gd-play" hidden></div></section>`}
+// the video opens in the card it was tapped from, so the page doesn't jump
+document.addEventListener("click",e=>{const b=e.target.closest("[data-guide]");if(!b||!GUIDES)return;const g=GUIDE[b.dataset.guide];if(!g)return;
+  const card=b.closest(".card"),box=card&&card.querySelector(".gd-play");if(!box)return;
+  box.hidden=false;box.innerHTML=`<video src="${GUIDES+g.v}.mp4" poster="${GUIDES+g.v}.jpg" controls autoplay playsinline preload="metadata"></video><button class="mini" type="button" data-guideclose>Close video</button>`;
+  box.scrollIntoView({block:"nearest",behavior:"smooth"})});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-guideclose]");if(!b)return;const box=b.closest(".gd-play");if(box){box.innerHTML="";box.hidden=true}});
+function guideLine(k,lead){if(!GUIDES)return "";return `<div class="gd-line"><p class="hint" style="margin:0">${lead}</p><div class="btns">${guideBtns(k)}</div><div class="gd-play" hidden></div></div>`}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -911,7 +928,7 @@ function parentsView(){const kid=PRN.kid,kids=myKids();
     <h3>Another ${kid} in the squad?</h3>${joinBox("Type their family code as well.")}
     <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div>${coachToo()}</section>${kitFamCard()}`;
   return `<section class="card stack"><h2>👪 Parents</h2><p>Sign in with the family code the coach sent you. You only do this once on each phone, and both parents (or any carer) can use the same code on their own phones. Then you can:</p>${what}${joinBox("")}
-    <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p>${coachToo()}</section>`}
+    <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p>${guideLine("parents","New to the site? The parents' guide shows how to sign in, add it to your Home Screen and turn on alerts.")}${coachToo()}</section>`}
 // coaches: every player's code, how many phones use it, and the "parents must sign in" switch (on the Squad page)
 async function loadFam(){if(!sb||!canWrite)return;const {data,error}=await sb.rpc("family_overview");FAM=error?[]:(data||[]);if(view==="squad")render()}
 const famText=f=>`Hi! Here's ${f.player}'s family code for the ${TEAM.name||""} ${TEAM.ageGroup||""} website:\n\n${fmtCode(f.code)}\n\nOpen ${siteUrl()}?parents on your phone and type it in once. Each parent or carer can type the same code on their own phone. Then you can tell us whether ${f.player} can make each game, add ${f.player}'s kit sizes, and vote in team votes.\n\nPlease keep it to your family. Thank you! ${TEAM.cheer||SP.ball}`;
@@ -4402,7 +4419,7 @@ async function suLoad(){if(!sb||!canWrite)return;
   if(view==="setup")render()}
 function suRemember(row){SETUP_ROW=row;try{localStorage.setItem(SETUP_KEY,JSON.stringify(row))}catch(e){}}
 function settingUpView(){return `<section class="card empty"><h2>${esc(TEAM.name||"This team")}'s site is being set up</h2><p class="hint">It'll be ready soon. The club will share the link when it's live.</p><p class="hint" style="margin-top:12px">Are you one of the coaches? <button class="mini" id="signIn">Coach sign in</button> to finish setting it up.</p></section>`}
-function setupBanner(){return `<section class="card" style="border-left:6px solid var(--gold);margin-bottom:12px"><h2 style="margin-top:0">Finish setting up your team</h2><p class="hint">Only coaches can see the site until you've added your team's details and your ${WELFARE} has signed it off. It takes about 20 minutes.</p><div class="btns" style="margin-top:10px"><button class="btn gold" data-view="setup">Set up your team</button></div></section>`}
+function setupBanner(){return `<section class="card" style="border-left:6px solid var(--gold);margin-bottom:12px"><h2 style="margin-top:0">Finish setting up your team</h2><p class="hint">Only coaches can see the site until you've added your team's details and your ${WELFARE} has signed it off. It takes about 20 minutes.</p><div class="btns" style="margin-top:10px"><button class="btn gold" data-view="setup">Set up your team</button></div>${guideLine("coaches","First time? The coaches' guide shows every step.")}</section>`}
 function setupView(){
   if(!canWrite)return `<section class="card empty">Sign in as a coach to set up the team.</section>`;
   if(!SU)SU=suFromTeam();if(SU_COACHES===null)suLoad();const f=SU,S=SU_SIGN||{};
