@@ -4427,7 +4427,8 @@ function setupView(){
     <p class="hint">Only these people can sign in and change the site. Anyone you add can sign in straight away with a link sent to their email: send them the coach sign-in link below.${SU_SHARE&&(TEAM.sisterTeams||[]).length?` This list is shared with ${(TEAM.sisterTeams||[]).map(x=>esc(x.name)).join(" and ")}, so adding or removing a coach here does the same there.`:""} Coaches who are also parents sign in here as a coach and can then answer for every ${esc(PL.replace(/s$/,""))}, their own included.</p>
     ${SU_COACHES===null?`<p class="hint">Loading…</p>`:`<div class="stack" style="gap:6px">${SU_COACHES.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>${esc(e)}</span>${me&&e===String(me.email||"").toLowerCase()?`<span class="hint">You</span>`:`<button class="mini" data-sucoachdel="${esc(e)}">Remove</button>`}</div>`).join("")}</div>`}
     <div class="btns"><input type="text" id="su-coach" inputmode="email" placeholder="New coach's email" style="max-width:280px"><button class="btn" id="suCoachAdd">Add coach</button></div>
-    <p class="hint" style="margin:0">Coach sign-in link: <b>${esc(location.origin+location.pathname)}?coach</b> <button class="mini" id="suCoachLink">Copy</button></p></section>
+    <p class="hint" style="margin:0">Coach sign-in link: <b>${esc(location.origin+location.pathname)}?coach</b> <button class="mini" id="suCoachLink">Copy</button></p>
+    <p class="hint" style="margin:0">Don't know their email? <button class="mini" id="suInvite">Make an invite link</button> and send it on WhatsApp. It works once, for one coach, for 30 days.</p></section>
   <section class="card stack" style="gap:10px;border-left:6px solid var(--gold)"><h3 style="margin:0">6. ${fs.rugby?"Safeguarding":"Welfare"} sign-off${live?"":" and go live"}</h3>
     <p class="hint">Please go through this with your club ${wo}. How we keep the children safe: first names only; the site is kept out of Google and parents get the link from the club; only the coaches above can change anything; your data sits in its own database in London, kept only for your club; sticker book photos stay on the coach's phone.</p>
     <div class="grid2"><label class="f">${Wo}'s name<input type="text" id="su-wname" value="${esc(S.welfare_name||"")}"></label><label class="f">${Wo}'s email<input type="text" id="su-wemail" inputmode="email" value="${esc(S.welfare_email||"")}"></label></div>
@@ -4469,6 +4470,9 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
     // the welfare officer's address is contact info only: adding it as a coach would let sign-in emails go to it, so ask first
     if(SU_SIGN&&em===String(SU_SIGN.welfare_email||"").trim().toLowerCase()&&!confirm(`${em} is your ${(SPORTS[SU.sport]||SP).rugby?"safeguarding":"welfare"} officer's email. Adding it as a coach means they can sign in and get sign-in emails from the site. Add them as a coach anyway?`))return;
     const {error}=await sb.rpc("add_coach",{new_email:em});if(error){toast("Couldn't add that coach. Try again.");return}toast(`${em} can now sign in${SU_SHARE?" (on the shared sites too)":""}.`);$("#su-coach").value="";SU_COACHES=null;suLoad();return}
+  if(b.id==="suInvite"){const who=(prompt("Who's it for? (first name, just so you remember)")||"").trim();b.disabled=true;const {data,error}=await sb.rpc("make_coach_invite",{p_note:who});b.disabled=false;
+    if(error||!data){toast("Couldn't make an invite link just now. Try again.");return}const u=location.origin+location.pathname+"?invite="+data;
+    copyOut(`${who?`Hi ${who}, h`:"H"}ere's your link to be a coach on our ${TEAM.name||""} ${TEAM.ageGroup||""} site. Open it and type your email, then use the code we email you: ${u}`,"Invite copied. Paste it into WhatsApp. It works once, for 30 days.");return}
   if(b.id==="suCoachLink"){const u=location.origin+location.pathname+"?coach";try{await navigator.clipboard.writeText(u);toast("Link copied.")}catch(e){prompt("Copy this link:",u)}return}
   if(b.dataset.sucoachdel){const em=b.dataset.sucoachdel;if(!confirm(`Remove ${em}? They won't be able to sign in any more.`))return;
     const {error}=await sb.rpc("remove_coach",{old_email:em});if(error){toast("Couldn't remove that coach.");return}toast(`${em} removed.`);SU_COACHES=null;suLoad();return}
@@ -4775,6 +4779,20 @@ document.addEventListener("click",async e=>{
 function showLogin(note){const m=document.getElementById("main");view="login";
     m.hidden=false;document.getElementById("gfxView").hidden=true;
     m.innerHTML=`<form class="card stack" id="loginForm" style="max-width:420px"><h2>Coach sign in</h2><p class="hint">${note||""}We'll email you a sign-in link and a code. Only coaches on the club's list can add matches.${me&&isParent()?" This phone is signed in with a family code: as a coach you'll see every player, so you won't need it. If you sign out as a coach later, type the family code again.":""}</p><label class="f">Email<input type="text" id="loginEmail" inputmode="email" autocomplete="email"></label><div class="btns"><button class="btn" type="submit">Email me a link</button><button class="btn ghost" type="button" data-view="home">Cancel</button></div></form>`}
+// coach invite link (43_coach_invites.sql): <site>?invite=<code>, sent on WhatsApp by a coach or by us, so nobody needs the
+// new coach's email first. They type their own email here, it goes on the coaches list, and the usual sign-in email follows.
+function showInvite(code,note){const m=document.getElementById("main");view="login";m.hidden=false;document.getElementById("gfxView").hidden=true;
+  m.innerHTML=`<form class="card stack" id="inviteForm" style="max-width:420px"><h2>🧢 You're invited to coach</h2><p class="hint">${note||""}You've been invited to be a coach on the <b>${esc(TEAM.name||"")} ${esc(TEAM.ageGroup||"")}</b> site. Type your email and we'll send you a sign-in code. No password needed.</p>
+    <label class="f">Your email<input type="email" id="inviteEmail" autocomplete="email" required></label><div class="btns"><button class="btn gold" type="submit">Send my sign-in code</button></div></form>`;
+  m.dataset.invite=code;setTimeout(()=>{const i=document.getElementById("inviteEmail");i&&i.focus()},50)}
+document.addEventListener("submit",async e=>{if(e.target.id!=="inviteForm")return;e.preventDefault();const m=document.getElementById("main"),btn=e.target.querySelector("button");
+  const email=(document.getElementById("inviteEmail").value||"").trim().toLowerCase(),code=m.dataset.invite||"";if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){toast("Type your email address.");return}
+  btn.disabled=true;const {data,error}=await sb.rpc("redeem_coach_invite",{p_code:code,p_email:email});
+  if(error||!data){btn.disabled=false;showInvite(code,"<b>That invite link has already been used or has run out.</b> Ask for a new one. ");return}
+  try{const q=new URLSearchParams(location.search);q.delete("invite");history.replaceState(null,"",location.pathname+(q.toString()?"?"+q:""))}catch(er){}
+  const r=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
+  if(r.error){toast(r.error.status===429?"Too many sign-in emails just now. Try again in an hour.":"You're on the coach list, but the sign-in email didn't send. Tap Coach sign in to try again.");showLogin();return}
+  loginCodeStep(email)});
 // step 2: the code from the email. On an iPhone the Home Screen app keeps its own sign-in, separate from Safari,
 // so tapping the emailed link signs in Safari, not the app; typing the code signs in the app itself.
 function loginCodeStep(email){const m=document.getElementById("main");view="login";
@@ -4830,6 +4848,7 @@ document.addEventListener("submit",async e=>{
   await checkCoach();
   if(linkErr){try{sessionStorage.removeItem("linkErr")}catch(e){}if(canWrite)toast("You're already signed in as a coach. That email link was an old one, so you don't need it.");
     else showLogin("<b>That sign-in link has already been used or has run out.</b> Each email link works once. Type your email for a new one, then use the newest email (or type its code). Next time, open this page from your bookmark or Home Screen, not the old email. ")}
+  const qinv=new URLSearchParams(location.search).get("invite");if(qinv&&!canWrite)showInvite(qinv.trim().toLowerCase());else if(qinv&&canWrite){toast("You're already signed in as a coach, so you don't need that invite.");try{history.replaceState(null,"",location.pathname)}catch(e){}}
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
   for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos"])if(new URLSearchParams(location.search).has(v))setView(v);
