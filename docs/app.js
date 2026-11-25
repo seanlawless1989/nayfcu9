@@ -156,6 +156,7 @@ function render(){
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
   const main=$("#main");const gv=view==="gfx";main.hidden=gv;$("#gfxView").hidden=!gv;if(gv){window.GFX&&GFX.refresh();document.body.classList.toggle("ro",!canWrite);return}
   if(view==="privacy"){main.innerHTML=privacyView();return}
+  if(view==="login"&&main.querySelector("form"))return;   // a sign-in or invite form the coach is filling in: never draw over it
   if(!db||window.SETUP_WAIT){main.innerHTML=`<div class="card empty">Loading the results…</div>`;return}
   if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   if(setupPending()&&!canWrite&&view!=="login"){main.innerHTML=settingUpView();document.body.classList.toggle("ro",true);return}
