@@ -1,0 +1,43 @@
+{
+  "appId": "club.touchlinetales.app",
+  "appName": "Touchline Tales",
+  "webDir": "www",
+  "server": {
+    "url": "https://touchlinetales.club/app/",
+    "errorPath": "offline.html",
+    "allowNavigation": []
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0E2A1D",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "android": {
+    "backgroundColor": "#0E2A1D"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#0E2A1D",
+      "showSpinner": false
+    },
+    "FirebaseMessaging": {
+      "presentationOptions": [
+        "alert",
+        "sound",
+        "badge"
+      ]
+    }
+  },
+  "experimental": {
+    "ios": {
+      "spm": {
+        "packageOptions": {
+          "@capacitor-firebase/messaging": {
+            "symlink": true
+          }
+        }
+      }
+    }
+  }
+}

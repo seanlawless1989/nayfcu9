@@ -1,0 +1,66 @@
+# Builds the Touchline Tales app for Google Play (app/ folder). Run it from the Actions tab: "Build the Android app".
+# Download the .aab from the run's Artifacts and upload it in Play Console (or let a later step upload it).
+# Repository secrets it uses (Settings > Secrets and variables > Actions), see app/README.md:
+#   GOOGLE_SERVICES_JSON       the Android app's google-services.json from Firebase (needed for match alerts)
+#   TT_UPLOAD_KEYSTORE_B64     the upload key (a .jks file) as base64
+#   TT_UPLOAD_KEYSTORE_PASSWORD, TT_UPLOAD_KEY_ALIAS, TT_UPLOAD_KEY_PASSWORD
+# Without the keystore secrets it still builds, unsigned, as a check.
+name: Build the Android app
+on:
+  pull_request:          # a check build (unsigned) whenever the app changes
+    paths: ["app/**", ".github/workflows/app-android.yml"]
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Version code (a whole number, one higher than the last upload)"
+        required: true
+        default: "1"
+      version_name:
+        description: "Version shown in the store, e.g. 1.0.1"
+        required: true
+        default: "1.0.0"
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: Firebase settings
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else echo "::warning::GOOGLE_SERVICES_JSON isn't set, so this build has no match alerts"; fi
+      - run: npx cap sync android
+      - name: Upload key
+        env:
+          KEY_B64: ${{ secrets.TT_UPLOAD_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEY_B64" ]; then echo "$KEY_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"; echo "TT_UPLOAD_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          else echo "::warning::No upload key secrets, so the .aab is unsigned (Play Console won't take it)"; fi
+      - name: Build
+        working-directory: app/android
+        env:
+          TT_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.TT_UPLOAD_KEYSTORE_PASSWORD }}
+          TT_UPLOAD_KEY_ALIAS: ${{ secrets.TT_UPLOAD_KEY_ALIAS }}
+          TT_UPLOAD_KEY_PASSWORD: ${{ secrets.TT_UPLOAD_KEY_PASSWORD }}
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode ${{ inputs.version_code || '1' }}/; s/versionName \"[^\"]*\"/versionName \"${{ inputs.version_name || '1.0.0' }}\"/" app/build.gradle
+          chmod +x gradlew
+          ./gradlew --no-daemon bundleRelease assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: touchline-tales-android-${{ inputs.version_name || '1.0.0' }}-${{ inputs.version_code || '1' }}
+          path: |
+            app/android/app/build/outputs/bundle/release/*.aab
+            app/android/app/build/outputs/apk/debug/*.apk
