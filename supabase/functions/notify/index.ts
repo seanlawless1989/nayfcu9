@@ -127,6 +127,10 @@ async function send(kind: Kind | null, alert: Alert, only?: string, list?: Sub[]
   for (let i = 0; i < subs.length; i += 25) {
     await Promise.all(subs.slice(i, i + 25).map(async (s) => {
       try {
+        if (s.endpoint.startsWith("app:fcm:")) { // a phone in the Touchline Tales app (45_app_push.sql)
+          const gone = await sendFcm(s.endpoint.slice(8), alert, kind === "reminders" || !kind ? 3600 : 900);
+          if (gone) { await db.from("push_subs").delete().eq("endpoint", s.endpoint); return; }
+        } else
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(alert), { TTL: kind === "reminders" || !kind ? 3600 : 900, urgency: "high" });
         ok++; await db.from("push_subs").update({ last_ok: new Date().toISOString() }).eq("endpoint", s.endpoint);
       } catch (e) {
@@ -137,6 +141,51 @@ async function send(kind: Kind | null, alert: Alert, only?: string, list?: Sub[]
     }));
   }
   return ok;
+}
+
+// ---- the Touchline Tales app: alerts through Firebase Cloud Messaging ----
+// Phones in the App Store / Google Play app save an FCM token instead of a web push address (see 45_app_push.sql).
+// FCM delivers to Android directly and to iPhones through Apple. Needs the secret FCM_SERVICE_ACCOUNT: the JSON key of a
+// Firebase service account (Project settings > Service accounts > Generate new private key). Without it these phones are skipped.
+let fcmAuth: { token: string; until: number; project: string } | null = null;
+const b64url = (b: ArrayBuffer | Uint8Array | string) =>
+  btoa(typeof b === "string" ? b : String.fromCharCode(...new Uint8Array(b instanceof Uint8Array ? b : new Uint8Array(b))))
+    .replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+async function fcmAccess() {
+  if (fcmAuth && fcmAuth.until > Date.now() + 60_000) return fcmAuth;
+  const raw = Deno.env.get("FCM_SERVICE_ACCOUNT"); if (!raw) return null;
+  const sa = JSON.parse(raw) as { client_email: string; private_key: string; project_id: string };
+  const now = Math.floor(Date.now() / 1000);
+  const unsigned = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" })) + "." + b64url(JSON.stringify({
+    iss: sa.client_email, scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 }));
+  const pem = sa.private_key.replace(/-----[^-]+-----|\s/g, "");
+  const key = await crypto.subtle.importKey("pkcs8", Uint8Array.from(atob(pem), (c) => c.charCodeAt(0)),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
+  const r = await fetch("https://oauth2.googleapis.com/token", { method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: unsigned + "." + b64url(sig) }) });
+  const j = await r.json(); if (!r.ok || !j.access_token) throw new Error("FCM sign-in failed: " + JSON.stringify(j).slice(0, 200));
+  return fcmAuth = { token: j.access_token, until: Date.now() + (j.expires_in ?? 3600) * 1000, project: sa.project_id };
+}
+// true when the token is no longer valid (app removed or alerts turned off), so the row should go
+async function sendFcm(token: string, alert: Alert, ttl: number): Promise<boolean> {
+  const a = await fcmAccess(); if (!a) throw new Error("FCM_SERVICE_ACCOUNT secret is not set");
+  const r = await fetch(`https://fcm.googleapis.com/v1/projects/${a.project}/messages:send`, {
+    method: "POST", headers: { authorization: `Bearer ${a.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ message: {
+      token, notification: { title: alert.title, body: alert.body }, data: { url: alert.url || "", tag: alert.tag || "" },
+      android: { priority: "high", ttl: `${ttl}s`, notification: { channel_id: "match_alerts", tag: alert.tag || undefined, sound: "default" } },
+      apns: { headers: { "apns-priority": "10", "apns-expiration": String(Math.floor(Date.now() / 1000) + ttl),
+                         ...(alert.tag ? { "apns-collapse-id": alert.tag.slice(0, 64) } : {}) },
+              payload: { aps: { sound: "default", "thread-id": alert.tag || "team" } } },
+    } }),
+  });
+  if (r.ok) return false;
+  const txt = await r.text();
+  if (r.status === 404 || /UNREGISTERED|registration-token-not-registered/.test(txt) || (r.status === 400 && /INVALID_ARGUMENT/.test(txt) && /token/i.test(txt))) return true;
+  throw Object.assign(new Error("FCM " + r.status + " " + txt.slice(0, 200)), { statusCode: r.status });
 }
 
 // ---- live match events ----

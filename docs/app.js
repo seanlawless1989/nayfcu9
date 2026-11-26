@@ -62,13 +62,15 @@ const fileTag=APP.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
   // the masthead and hero use lighter and darker shades of the club colour; Newton Aycliffe's are tuned by hand in the CSS
   if(cl&&c.club.toUpperCase()!=="#2235E8"){const W=[255,255,255],K=[0,0,0];set("--clubRGB",cl.join(" "));set("--clubHi",mix(cl,W,.15));set("--clubMid",mix(cl,K,.12));set("--clubSoft",mix(cl,W,.3));set("--clubDark",mix(cl,K,.45));set("--clubDarker",mix(cl,K,.6));set("--shadowRGB",cl.map(v=>Math.round(v*.45)).join(" "))}
   document.querySelectorAll('img.crest,link[rel=icon]').forEach(el=>el.tagName==="LINK"?el.href=CREST:el.src=CREST)})();
+// In the Touchline Tales app (App Store / Google Play: nayfcu9 app/), the page runs inside a native shell (Capacitor).
+const NATIVE=!!(window.Capacitor&&typeof Capacitor.isNativePlatform==="function"&&Capacitor.isNativePlatform());
 // Footer: a Privacy link (always) and a small "Powered by Touchline Tales" credit (unless team.js sets poweredBy: false).
 // The ref names the team (TEAM.slug, or the same slug tools/package_team.py uses) so sign-ups can be traced back.
 (function poweredBy(){const f=document.getElementById("siteFoot");if(!f)return;
   const slug=String(TEAM.slug||`${TEAM.name||""} ${TEAM.ageShort||""}`).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"team";
   const priv=`<button type="button" data-view="privacy" style="background:none;border:0;padding:0;font:inherit;color:var(--muted);opacity:.85;cursor:pointer">Privacy</button>`;
   const adm=TEAM.club&&TEAM.club.id&&/^https:\/\//.test(TEAM.club.url||"")?` · <a href="${esc(TEAM.club.url.replace(/\/?$/,"/"))}admin/" style="color:var(--muted)">Club admin</a>`:"";
-  f.innerHTML=`<span id="footCoach"></span>`+(TEAM.poweredBy===false?priv:`${priv} · <a href="https://touchlinetales.club/?ref=powered-${slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>`)+adm;f.hidden=false})();
+  f.innerHTML=`<span id="footCoach"></span>`+(TEAM.poweredBy===false||NATIVE?priv:`${priv} · <a href="https://touchlinetales.club/?ref=powered-${slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>`)+adm+(NATIVE?` · <a href="https://touchlinetales.club/app/?switch" style="color:var(--muted)">Switch team</a>`:"");f.hidden=false})();
 let tournaments=[], honours=[], T=null, H=null;
 let matches=[], players=[], view="home", season=null, editing=null, playerView=null, oppView=null;
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -228,7 +230,7 @@ function tHeroHtml(t){const d=new Date(t.date+"T12:00:00");const days=Math.max(0
   const cd=days===0?"Today":days===1?"Tomorrow":`In ${days} days`;
   return `<section class="hero"><div class="kick">Next up · Tournament</div>
     <div class="vs"><div class="side"><img src="${CREST}" alt=""><span>${esc(TEAM.name)}</span></div><div class="mid"><b>🏆</b><span>Tournament</span></div><div class="side">${tLogo(t)?`<img src="${tLogo(t)}" alt="">`:`<span class="ini">${esc(ini)}</span>`}<span>${esc(t.name||"Tournament")}</span></div></div>
-    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${t.venue?`<span class="pill">📍 ${esc(t.venue)}</span>`:""}${TMD(t).meet?`<span class="pill">🕘 Meet ${esc(TMD(t).meet)}</span>`:""}${TMD(t).kit?`<span class="pill">👕 ${esc(kitLabel(TMD(t).kit))}</span>`:""}${tWx(t)?`<span class="pill">${esc(tWx(t))}</span>`:""}</div>
+    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${t.venue?`<a class="pill" href="${tMaps(t)}" target="_blank" rel="noopener">📍 ${esc(t.venue)} · Map</a>`:""}${TMD(t).meet?`<span class="pill">🕘 Meet ${esc(TMD(t).meet)}</span>`:""}${TMD(t).kit?`<span class="pill">👕 ${esc(kitLabel(TMD(t).kit))}</span>`:""}${tWx(t)?`<span class="pill">${esc(tWx(t))}</span>`:""}</div>
     ${TMD(t).notice?`<div class="hpv">📣 ${esc(TMD(t).notice)}</div>`:""}<div class="hpv">${tSquad(t).length?`Squad: ${esc(tSquad(t).join(", "))}. `:""}${esc(tTeamsLine(t))}${tGames(t).length?"Games and kick-off times are on the Fixtures page.":"We're entered. Games and kick-off times to follow."}${t.notes?` ${esc(clip(t.notes,140))}`:""}</div>
     <div class="btns"><button class="btn gold" data-tour="${esc(t.id)}">🏆 Tournament details</button>${!canWrite&&!tSquad(t).length?`<button class="btn ghost" data-avset="t:${esc(t.id)}">Can your ${esc(PRN.kid)} make it?</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=live?null:nextFixture(),tn=live?null:nextTournament(nm&&nm.date);if(tn)return tHeroHtml(tn);const m=live||nm;if(!m)return "";
@@ -240,7 +242,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
   const cd=live?"🔴 Live now":days===0?"Today":days===1?"Tomorrow":`In ${days} days`;
   return `<section class="hero"><div class="kick">${live?"Live now":"Next match"} · ${esc(compName(m.comp||""))}</div>
     <div class="vs">${home?us:them}${mid}${home?them:us}</div>
-    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${m.venue?`<span class="pill">📍 ${esc(m.venue)}</span>`:""}${m.ha==="A"||m.ha==="H"?`<span class="pill">${m.ha==="A"?"Away":"Home"}</span>`:m.venue?"":`<span class="pill">Venue TBC</span>`}${!live&&wxText(m)?`<span class="pill">${esc(wxText(m))}</span>`:""}</div>
+    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${m.venue?(live?`<span class="pill">📍 ${esc(m.venue)}</span>`:`<a class="pill" href="${mapsUrl(m)}" target="_blank" rel="noopener">📍 ${esc(m.venue)} · Map</a>`):""}${m.ha==="A"||m.ha==="H"?`<span class="pill">${m.ha==="A"?"Away":"Home"}</span>`:m.venue?"":`<span class="pill">Venue TBC</span>`}${!live&&wxText(m)?`<span class="pill">${esc(wxText(m))}</span>`:""}</div>
     ${!live&&h.length?`<div class="h2hrow">Last time: ${h.slice(0,3).map(scChip).join(" ")}</div>`:""}
     ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
@@ -321,7 +323,7 @@ function matchRow(m){
     <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
       <div class="meta">${cc?`<span class="ctag">${esc(compName(m.comp))}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":!r&&!m.hidden&&!m.postponed?"KO TBC":""].filter(Boolean).map(esc).join(" · ")}</div>
       ${sc?`<div class="meta">${SP.ball} ${esc(sc)}</div>`:""}${RUGBY&&kicksLine(m)?`<div class="meta">🎯 ${esc(kicksLine(m))}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">${POTM_IC} ${esc(m.potm)}</div>`:""}${m.report&&m.report.trim()?`<div class="meta">📝 Match report</div>`:!r&&hasPreview(m)?`<div class="meta">📰 Match preview</div>`:""}
-      ${!r&&!m.hidden&&!m.postponed&&mdBits(m).length?`<div class="meta">🎒 ${mdBits(m).map(esc).join(" · ")}</div>`:""}${!r&&!m.hidden&&!m.postponed&&wxText(m)?`<div class="meta">${esc(wxText(m))} at kick-off</div>`:""}
+      ${!r&&!m.hidden&&!m.postponed&&mdBits(m).length?`<div class="meta">🎒 ${mdBits(m).map(esc).join(" · ")}</div>`:""}${!r&&!m.hidden&&!m.postponed&&wxText(m)?`<div class="meta">${esc(wxText(m))} at kick-off</div>`:""}${!r&&!m.hidden&&!m.postponed&&m.venue?`<div class="meta">${mapLink(mapsUrl(m),"🧭 Directions")}</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&!m.hidden&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}${!r&&!m.postponed&&!m.hidden&&m.comp!=="Tournament"&&!(m.live&&m.live.status&&m.live.status!=="pre")?fixAv(m.id):""}</div>
     <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:m.hidden&&!m.postponed?`<span class="chip N" title="Played">✓</span>`:m.postponed?`<span class="chip P" title="Postponed">P</span>`:`<span class="chip N">${m.comp==="Tournament"?"T":"–"}</span>`}</div>
@@ -373,7 +375,7 @@ function tGameRow(m){const r=result(m);return `<div class="tgame" role="button" 
 const TMD=t=>t&&t.matchday||{};
 const tHasInfo=t=>Object.keys(TMD(t)).some(k=>TMD(t)[k]);
 const kitWear=k=>!k?"":TKITS()[k]||k==="Training kit"?`Wear the ${kitLabel(k).toLowerCase()}`:`Kit: ${k}`;
-const tMaps=t=>{const d=TMD(t),q=[t.venue,d.address,d.postcode].filter(Boolean).join(", ");return q?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q):""};
+const tMaps=t=>{const d=TMD(t);return gmaps(mapClean(t.venue)||t.venue,d.address,d.postcode)};
 function tFacts(t,full){const d=TMD(t);return [["📣",d.notice||""],["🕘",d.meet?`Meet at ${d.meet}${d.where?` · ${d.where}`:""}`:d.where?`Meet: ${d.where}`:""],["👕",kitWear(d.kit)],
   ["🎒",d.bring?`Bring: ${d.bring}`:""],["📍",full?[t.venue,d.address,d.postcode].filter(Boolean).join(", "):""],["🅿️",full&&d.parking?`Parking: ${d.parking}`:""],["💷",full&&d.cost?d.cost:""],["🏁",full&&d.finish?`Finishes around ${d.finish}`:""]].filter(([,v])=>v)}
 function tCard(t){
@@ -384,7 +386,7 @@ function tCard(t){
     <div class="d">${d?multi?`<b>${d.getDate()}–${e.getDate()}</b>${MONTHS[d.getMonth()]}${e.getMonth()!==d.getMonth()?"–"+MONTHS[e.getMonth()]:""}`:`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${tLogo(t)?`<img class="badge sm" src="${tLogo(t)}" alt="">`:""}${esc(t.name||"Tournament")}${t.trophy?`<span class="trophy">${trophyIcon(t.trophy)} ${esc(t.trophy)}</span>`:""}</div>
       <div class="meta"><span class="ctag">Tournament</span>${multi?`${days.length} days${t.venue?" · ":""}`:""}${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
-      ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}${tWx(t)?`<div class="meta">${esc(tWx(t))}</div>`:""}</div>
+      ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}${tWx(t)?`<div class="meta">${esc(tWx(t))}</div>`:""}${tEnd(t)>=todayLocal()&&t.venue?`<div class="meta">${mapLink(tMaps(t),"🧭 Directions")}</div>`:""}</div>
     <div></div></div>${tEnd(t)>=todayLocal()&&tHasInfo(t)?`<div class="tinfo">${tFacts(t).map(([i,v])=>`<div${i==="📣"?' class="tnotice"':""}><span>${i}</span>${esc(v)}</div>`).join("")}<button class="mini" data-tour="${esc(t.id)}">📋 Full details and directions</button></div>`:""}${hasTReport(t)?`<div class="trep" role="button" tabindex="0" data-tour="${esc(t.id)}"><b>📝 Tournament report</b><span>${esc(clip(t.report,150))}</span><em>Read the report →</em></div>`:""}${tTeamsHtml(t)}${tSquad(t).length&&tSquadOpen(t)?`<div class="tteams"><div class="tday">👕 Squad (${tSquad(t).length})</div><div class="tchips">${tSquad(t).map(n=>`<span class="tteam">${esc(n)}</span>`).join("")}</div></div>`:""}
     ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">${tEnd(t)>=new Date().toISOString().slice(0,10)?tTeams(t).length&&!tDrawn(t)?"Fixtures to follow once the groups are drawn.":"Tournament entered. Fixtures to follow.":"No games added yet."}</p>`}
     <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button>${tAvOpen(t)?`<button class="mini" data-msg="t:${esc(t.id)}">Parents' message</button>`:""}${tSquadOpen(t)?`<button class="mini" data-pick="t:${esc(t.id)}">${tSquad(t).length?`Squad picked (${tSquad(t).length})`:"Pick squad"}</button>`:""}<label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label>${g.some(m=>result(m)||isLive(m))?`<button class="mini" data-trep="${esc(t.id)}">${hasTReport(t)?"Edit tournament report":"📝 Write tournament report"}</button>`:""}<button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button>${(window.TEAM_CONFIG||window.NAYFC_CONFIG||{}).vapidPublicKey&&tEnd(t)>=todayLocal()?`<button class="mini" data-ttell="${esc(t.id)}">📣 Tell parents: groups and games confirmed</button>`:""}</div>
@@ -466,7 +468,7 @@ let FUND=null,FSQ=[],FALL=null,FUND_ON=false,FINFO=null,FSTRIPE=null,FTOTAL=null
 const FSIZES=[[20,10],[25,20],[40,25]];// 200, 500 and 1,000 squares
 const fMoney=p=>"£"+(p%100?(p/100).toFixed(2):(p/100).toLocaleString("en-GB"));
 const fCardFee=p=>Math.ceil((p+20)/(1-.015))-p;// UK card 1.5% + 20p, the same sum as the edge function
-const fLive=()=>!!(FUND&&FUND.status==="live"&&!(FUND.ends&&FUND.ends<todayLocal()));
+const fLive=()=>!(NATIVE&&!canWrite)&&!!(FUND&&FUND.status==="live"&&!(FUND.ends&&FUND.ends<todayLocal()));
 const fRaised=()=>FTOTAL?+FTOTAL.raised||0:0;
 const fPrice=g=>g&&FUND.gold?FUND.gold:FUND.price;
 const fFee=()=>FINFO?+FINFO.fee_bps||0:500;
@@ -988,11 +990,16 @@ const MD=m=>m&&m.matchday||{};
 const MDX=m=>{const t=m&&m.tournament_id&&tournaments.find(x=>x.id===m.tournament_id);if(!t||!t.matchday)return MD(m);const d=TMD(t);return Object.assign({},d.meet?{meet:d.meet}:{},d.kit?{kit:d.kit}:{},d.postcode?{postcode:d.postcode}:{},d.notice?{notice:d.notice}:{},MD(m))};
 const TKITS=()=>TEAM.kits||{home:{label:"Home"}},kitLabel=k=>!k?"":(TKITS()[k]&&TKITS()[k].label?TKITS()[k].label+" kit":k);
 function mdBits(m){const d=MDX(m);return [d.meet?`Meet ${d.meet}`:"",d.pitch?`Pitch ${d.pitch}`:"",kitLabel(d.kit)].filter(Boolean)}
-const mapsUrl=m=>{const q=[m.venue,MDX(m).postcode].filter(Boolean).join(", ");return q?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q):""};
+// map links (26 Nov 2026): a Google Maps search for the venue without pitch numbers and formats ("RUSSELL FOSTER FOOTBALL CENTRE 7 v 7
+// Pitch 7" -> "RUSSELL FOSTER FOOTBALL CENTRE"), plus the postcode when one was added, so the map finds the ground and not "Pitch 7"
+const mapClean=v=>String(v||"").replace(/\b(pitch|pitches|field|court)\s*[a-z]?\d*[a-z]?\b/gi," ").replace(/\b\d+\s*(v|vs|a)\s*\d+\b/gi," ").replace(/#\s*\d+/g," ").replace(/\b(3g|4g|astro(turf)?|all weather)\b/gi," ").replace(/[()]/g," ").replace(/\s+/g," ").replace(/[\s,·-]+$|^[\s,·-]+/g,"").trim();
+const gmaps=(...p)=>{const q=p.filter(Boolean).join(", ");return q?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q):""};
+const mapsUrl=m=>gmaps(mapClean(m.venue)||m.venue,MDX(m).postcode);
+const mapLink=(u,txt)=>u?`<a class="maplink" href="${u}" target="_blank" rel="noopener">${txt||"🧭 Map"}</a>`:"";
 // weather at kick-off for the place the game is played (26 Nov 2026). Where: the game's postcode (Matchday details), else its
 // tournament's postcode, else a postcode written in the venue, else the venue's name looked up on OpenStreetMap (Photon) and kept
 // within 80 km of TEAM.area, so a "Temple Park Centre" in Sheffield can't win over the one up the road; a home game with no venue
-// uses TEAM.area itself. Forecast from Open-Meteo, up to 15 days ahead. None of these need a key, and only the venue is sent.
+// uses TEAM.area itself, and so does any game whose venue cannot be found (grassroots games are local and weather is regional). Forecast from Open-Meteo, up to 15 days ahead. None of these need a key, and only the venue is sent.
 const WX={},WXP={};const WXI={0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌦️",56:"🌧️",57:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",66:"🌧️",67:"🌧️",71:"🌨️",73:"🌨️",75:"❄️",77:"🌨️",80:"🌦️",81:"🌧️",82:"⛈️",85:"🌨️",86:"❄️",95:"⛈️",96:"⛈️",99:"⛈️"};
 const WXA=TEAM.area&&isFinite(TEAM.area.lat)?TEAM.area:null,WXPC=/\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
 // "RUSSELL FOSTER FOOTBALL CENTRE 7 v 7 Pitch 7" -> "russell foster football centre"
@@ -1004,8 +1011,11 @@ function wxGeo(w){const k=w.pc?"pc:"+w.pc:"q:"+w.q;if(k in WXP)return WXP[k];con
   const keep=g=>{try{const s2=wxStore();s2[k]=g;localStorage.setItem(SK+"-wxgeo",JSON.stringify(s2))}catch(e){}return g};
   const photon=q=>fetch("https://photon.komoot.io/api/?limit=5&lang=en&q="+encodeURIComponent(q)+(WXA?`&lat=${WXA.lat}&lon=${WXA.lon}`:"")).then(r=>r.json())
     .then(j=>{const f=(j.features||[]).map(f=>({lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],cc:f.properties.countrycode})).find(g=>g.cc==="GB"&&(!WXA||wxKm(WXA,g)<=80));return f?{lat:+f.lat.toFixed(3),lon:+f.lon.toFixed(3)}:null});
+  // OpenStreetMap's own search as a second try, inside a box about 80 km round the home town
+  const nomi=q=>fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&countrycodes=gb&q="+encodeURIComponent(q)+(WXA?`&bounded=1&viewbox=${WXA.lon-1.2},${WXA.lat+0.7},${WXA.lon+1.2},${WXA.lat-0.7}`:"")).then(r=>r.json())
+    .then(j=>{const f=(j||[]).map(x=>({lat:+x.lat,lon:+x.lon})).find(g=>!WXA||wxKm(WXA,g)<=80);return f?{lat:+f.lat.toFixed(3),lon:+f.lon.toFixed(3)}:null});
   return WXP[k]=(w.pc?fetch("https://api.postcodes.io/postcodes/"+encodeURIComponent(w.pc)).then(r=>r.json()).then(j=>{const g=j&&j.result;return g?{lat:+g.latitude.toFixed(3),lon:+g.longitude.toFixed(3)}:null})
-    :photon(w.q).then(g=>g||(w.q.includes(",")?photon(w.q.split(",")[0]):null))).then(keep,()=>{delete WXP[k];return null})}
+    :photon(w.q).catch(()=>null).then(g=>g||nomi(w.q)).then(g=>g||(w.q.includes(",")?photon(w.q.split(",")[0]).catch(()=>null):null))).then(keep,()=>{delete WXP[k];return null})}
 // where a game (or a tournament, given as {tourn}) is played, for the forecast
 function wxWhere(m){const t=m.tourn,pc=(t?TMD(t).postcode:MDX(m).postcode)||((WXPC.exec(m.venue||"")||[]).slice(1,3).join(""));const venue=t?t.venue:m.venue;
   if(pc)return {pc:pc.replace(/\s+/g,"").toUpperCase()};const q=wxClean(venue);if(q.length>2)return {q};
@@ -1013,7 +1023,7 @@ function wxWhere(m){const t=m.tourn,pc=(t?TMD(t).postcode:MDX(m).postcode)||((WX
 function wxFor(m){if(!m||!m.date||m.postponed)return null;const days=(new Date(m.date+"T12:00:00")-new Date(todayLocal()+"T12:00:00"))/864e5;if(days<0||days>15)return null;
   const w=wxWhere(m);if(!w)return null;const time=m.tourn?TMD(m.tourn).meet:m.ko,hr=Math.min(23,+(/^(\d{1,2})/.exec(time||"")||[0,m.tourn?10:12])[1]);
   const k=(m.tourn?"t:"+m.tourn.id:m.id)+"|"+JSON.stringify(w)+"|"+m.date+"|"+hr;if(k in WX)return WX[k];WX[k]=null;
-  (w.area?Promise.resolve(WXA):wxGeo(w)).then(g=>{if(!g)throw 0;
+  (w.area?Promise.resolve(WXA):wxGeo(w)).then(g=>{g=g||WXA;if(!g)throw 0;
     return fetch(`https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&wind_speed_unit=mph&timezone=Europe%2FLondon&start_date=${m.date}&end_date=${m.date}`)})
   .then(r=>r.json()).then(j=>{const h=j.hourly;if(!h||!h.time)throw 0;const i=Math.max(0,h.time.findIndex(t=>+t.slice(11,13)===hr));if(h.temperature_2m[i]==null)throw 0;
     WX[k]={t:Math.round(h.temperature_2m[i]),p:h.precipitation_probability[i],c:h.weather_code[i],w:Math.round(h.wind_speed_10m[i])};
@@ -1075,12 +1085,40 @@ function chaseView(){const m=avTarget(msgMatch);if(!m)return `<div class="card e
 const AL={sub:null,checked:false,busy:false,prefs:{reminders:true,goals:false,results:false,live:true,avail:true}};
 try{Object.assign(AL.prefs,JSON.parse(localStorage.getItem(SK+".alerts")||"{}"))}catch(e){}
 function alIos(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)}
-function alStandalone(){return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}
-function alSupported(){return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&!!CFG.vapidPublicKey}
-async function alCheck(){if(!alSupported()){AL.checked=true;return}try{const r=await navigator.serviceWorker.ready;AL.sub=await r.pushManager.getSubscription()}catch(e){}AL.checked=true;if(view==="alerts")render()}
+function alStandalone(){return NATIVE||matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}
+function alSupported(){if(NATIVE)return !!NPUSH;return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&!!CFG.vapidPublicKey}
+async function alCheck(){if(!alSupported()){AL.checked=true;return}try{if(NATIVE)AL.sub=await npGet(false);else{const r=await navigator.serviceWorker.ready;AL.sub=await r.pushManager.getSubscription()}}catch(e){}AL.checked=true;if(view==="alerts")render()}
 // after signing in or out (coach or family code): save the phone's alerts again under the new sign-in
-async function alSync(){if(!sb||!alSupported())return;try{const r=await navigator.serviceWorker.ready,sub=await r.pushManager.getSubscription();if(!sub)return;AL.sub=sub;
+async function alSync(){if(!sb||!alSupported())return;try{const sub=NATIVE?await npGet(false):await (await navigator.serviceWorker.ready).pushManager.getSubscription();if(!sub)return;AL.sub=sub;
   const k=`${me?me.id:""}|${canWrite}|${myKids().join(",")}`;if(localStorage.getItem(SK+".alSync")===k)return;await alSave(sub);localStorage.setItem(SK+".alSync",k)}catch(e){}}
+// ---------- match alerts in the Touchline Tales app ----------
+// The app opens touchlinetales.club/app/ (pick your team), then the team's own site, so every site works in it unchanged.
+// Web push doesn't work inside an app, so there alerts go through Firebase Cloud Messaging (which also delivers to iPhones
+// through Apple). The phone's FCM token is saved in push_subs like a web push phone, as endpoint "app:fcm:<token>", with the
+// same choices, and the notify function sends those through FCM (supabase/45_app_push.sql). One token can be saved by
+// several teams (a parent with two children), so turning one team's alerts off only removes that team's row.
+const NPUSH=NATIVE&&window.Capacitor.Plugins&&window.Capacitor.Plugins.FirebaseMessaging||null;
+const NPLAT=NATIVE&&typeof Capacitor.getPlatform==="function"?Capacitor.getPlatform():"";
+function npSub(token){const endpoint="app:fcm:"+token;
+  return {endpoint,toJSON:()=>({endpoint,keys:{p256dh:NPLAT||"app",auth:"app"}}),unsubscribe:async()=>{try{localStorage.removeItem(SK+".appPush")}catch(e){}return true}}}
+// this team's alerts on this phone: the token while they're on (null when off); create asks permission first ("denied" if refused)
+async function npGet(create){if(!NPUSH)return null;
+  if(!create&&!localStorage.getItem(SK+".appPush"))return null;
+  const p=create?await NPUSH.requestPermissions():await NPUSH.checkPermissions();
+  if(p.receive!=="granted"){if(p.receive==="denied")AL.denied=true;return create?"denied":null}AL.denied=false;
+  if(NPLAT==="android")try{await NPUSH.createChannel({id:"match_alerts",name:"Match alerts",description:"Kick-off, goals and full time",importance:5,visibility:1})}catch(e){}
+  const {token}=await NPUSH.getToken();if(!token)return null;try{localStorage.setItem(SK+".appPush","1")}catch(e){}return npSub(token)}
+// alert links: Newton Aycliffe U9s' own domain isn't in the app, so its alerts open its touchlinetales.club copy
+const npUrl=u=>String(u||"").replace(/^https:\/\/(www\.)?nayfootball\.club/,"https://touchlinetales.club/newton-aycliffe-u9s");
+if(NPUSH){NPUSH.addListener("notificationActionPerformed",e=>{const u=npUrl(e&&e.notification&&e.notification.data&&e.notification.data.url);if(/^https:\/\/touchlinetales\.club\//.test(u))location.href=u});
+  // Android doesn't show an alert while the app is open, so show it as a message on the page
+  NPUSH.addListener("notificationReceived",e=>{const n=e&&e.notification;if(n&&NPLAT==="android"&&n.title)toast(n.title+(n.body?": "+n.body:""))});
+  NPUSH.addListener("tokenReceived",()=>{try{localStorage.removeItem(SK+".alSync")}catch(e){}alSync()})}
+// the app reopens the last team you looked at and lists every team you've opened under "Switch team" (touchlinetales.club/app/);
+// a touchlinetales.club link tapped elsewhere on the phone opens in the app
+if(NATIVE){try{const p=location.pathname.replace(/[^/]*$/,""),n=`${TEAM.name||""} ${TEAM.ageGroup||""}`.trim(),L=JSON.parse(localStorage.getItem("ttapp.teams")||"[]").filter(t=>t&&t.path!==p);
+    L.unshift({path:p,name:n});localStorage.setItem("ttapp.teams",JSON.stringify(L.slice(0,8)));localStorage.setItem("ttapp.last",p)}catch(e){}
+  const A=window.Capacitor.Plugins&&window.Capacitor.Plugins.App;if(A)A.addListener("appUrlOpen",e=>{const u=npUrl(e&&e.url);if(/^https:\/\/touchlinetales\.club\//.test(u))location.href=u})}
 function alKey(b64){const p=(b64+"=".repeat((4-b64.length%4)%4)).replace(/-/g,"+").replace(/_/g,"/");return Uint8Array.from(atob(p),c=>c.charCodeAt(0))}
 // The sign-in (a coach, or a parent's family code) is saved with the phone's alerts, so reminders to answer availability
 // only go while this family's own child hasn't answered, and coaches can get availability answers (16_availability_alerts.sql).
@@ -1090,8 +1128,9 @@ async function alSave(sub){const j=sub.toJSON(),P=AL.prefs,a={p_endpoint:j.endpo
   if(error)({error}=await sb.rpc("push_subscribe",Object.assign({},a,{p_live:P.live||P.goals||P.results})));// a database without supabase/9_matchday_and_more.sql
   if(error)throw error;try{localStorage.setItem(SK+".alerts",JSON.stringify(AL.prefs))}catch(e){}return j.endpoint}
 async function alOn(){if(AL.busy)return;AL.busy=true;render();
-  try{if(await Notification.requestPermission()!=="granted"){toast("Alerts weren't allowed on this phone.");return}
-    const r=await navigator.serviceWorker.ready;const sub=(await r.pushManager.getSubscription())||await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:alKey(CFG.vapidPublicKey)});
+  try{let sub;if(NATIVE){sub=await npGet(true);if(sub==="denied"){AL.denied=true;toast("Alerts weren't allowed. Turn on notifications for Touchline Tales in your phone's Settings.");return}if(!sub)throw new Error("no token")}
+    else{if(await Notification.requestPermission()!=="granted"){toast("Alerts weren't allowed on this phone.");return}
+    const r=await navigator.serviceWorker.ready;sub=(await r.pushManager.getSubscription())||await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:alKey(CFG.vapidPublicKey)})}
     const ep=await alSave(sub);AL.sub=sub;sb.functions.invoke("notify",{body:fnBody({test:ep})}).catch(()=>{});toast("Alerts are on. You should get a test one now.")}
   catch(e){toast("Couldn't turn alerts on. Try again in a moment.")}finally{AL.busy=false;render()}}
 async function alTest(){if(!AL.sub)return;AL.busy=true;render();try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody({test:AL.sub.endpoint})});toast(!error&&data&&data.test>0?"Test alert sent. It should arrive in a few seconds.":"The test alert didn't go. Turn alerts off and on again.")}catch(e){toast("Couldn't send a test alert. Check your connection.")}finally{AL.busy=false;render()}}
@@ -1107,7 +1146,7 @@ function alertsView(){if(!AL.checked)alCheck();
   if(!CFG.vapidPublicKey)bodyHtml=`<div class="note">${window.DEMO?"Match alerts are switched off in this demo. On a real team site, parents get them on their phones.":"Match alerts aren't switched on for this team yet. Everything else on the site works as normal."}</div>`;
   else if(alIos()&&!alStandalone())bodyHtml=`<div class="note">On an iPhone or iPad, alerts only work from the club app on your home screen:<br>1. Tap the Share button <b>⬆︎</b> in Safari (on newer iPhones tap <b>⋯</b> first, then <b>Share</b>).<br>2. Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.<br>3. Open <b>${esc(APP)}</b> from your home screen and come back to this page.</div>`;
   else if(!alSupported())bodyHtml=`<div class="note">This browser can't show alerts. On Android use Chrome; on iPhone add the site to your home screen first.</div>`;
-  else if(Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
+  else if(NATIVE?AL.denied:Notification.permission==="denied")bodyHtml=`<div class="note">Alerts are blocked for this site on this phone. Allow notifications for it in your phone's settings, then come back here.</div>`;
   else{const on=!!AL.sub;
     const box=(id,k,label,hint)=>`<label class="row" style="cursor:pointer"><span style="white-space:nowrap"><input type="checkbox" id="${id}"${AL.prefs[k]?" checked":""}${k!=="reminders"&&k!=="live"&&k!=="avail"&&AL.prefs.live?" disabled":""} style="width:20px;height:20px;vertical-align:-4px;margin-right:8px">${label}</span><span class="hint">${hint}</span></label>`;
     bodyHtml=`<p class="hint" style="margin:0">Choose what this phone gets:</p><div class="av">${box("al-rem","reminders","Reminders",`squad picked, match previews, 10 and 2 minutes before kick-off, games postponed${TAV_ON?`, and (once you've signed in with your family code) a nudge to say if your ${PRN.kid} can make games and training`:""}`)}
@@ -1152,7 +1191,7 @@ function privacyView(){const club=esc((TEAM.club&&TEAM.club.name)||TEAM.fullName
   ${sec("What we keep about you and your phone",`<ul><li>Nothing that names you. Parents never give us a name or email address.</li><li>If you coach or manage the team: your name, your role and, if you agree, a photo, which the coaches add to the Squad and Players pages for everyone to see. Ask the coaches to change or remove them at any time.</li><li>If you buy a square on the club's pitch fundraiser: the name and message for your square and your email address for the receipt. Only the coaches see your email and what you paid, and messages show once a coach approves them. You pay through Stripe straight to the club; the site never sees your card.</li><li>If you sign in with your ${kid}'s family code: a random sign-in id for your phone, which ${kid} it's linked to and when, and which days the phone opens the site while signed in (so the coaches can see how many families use it, as a count, and so your phone can show you your own badges). Your availability answers and votes then count for your family. The link is deleted when you sign the phone out, when the coach makes a new code, or when your ${kid} leaves the squad. Only the coaches see family codes, and only how many phones use each one. Supabase, which runs the sign-in, keeps short technical logs that include your phone's internet address.</li><li>If you turn on match alerts, the web address your phone's alert service gives us (from Apple, Google or Mozilla) and which alerts you picked. If the phone is signed in with a family code, the alerts are linked to that sign-in, so reminders to answer availability only come while your ${kid} hasn't answered. It's deleted when you turn alerts off.</li><li>If you vote in a poll, your family (when signed in) or a random code made on your phone, so each family or phone votes once.</li><li>If you send a cheer: which cheer, the first name you typed and a random code made on your phone, used only to stop floods of cheers. Cheers and the names on them show to anyone with the link, so only type your own first name. Coaches can hide any cheer. Cheers are deleted 30 days after they're sent.</li><li>Your settings, saved on your own phone. We also count visits each day (a number only, not who visited).</li></ul><p>Coaches sign in with an email link. We keep their email address, when they signed in, which days they used the site, and any change requests they send through the site.</p>`)}
   ${sec("Why we use it",`<p>To run the team and keep families up to date. The club relies on its legitimate interest in doing that, and on consent for profile pictures.</p>`)}
   ${sec("Who can see it",`<p>Anyone with the link can see results, the squad's first names, stats, match reports and profile pictures. The site is kept out of Google and parents get the link from the club.${noScores()?" This team hides scores and scorers from visitors"+(RUGBY?" for younger age groups.":", as the FA asks for younger age groups."):""} Nobody's information is sold or used for advertising.</p>`)}
-  ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts. Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
+  ${sec("Who helps run it",`<p>Supabase stores the team's database in London. GitHub hosts the web pages. Google Fonts and jsDelivr supply the lettering and some code, so they see your phone's internet address when a page loads. Apple, Google or Mozilla deliver alerts (in the Touchline Tales app, Google's Firebase Cloud Messaging does). Touchline Tales uses Claude (Anthropic) to help handle coaches' change requests. Some of these are US companies; they protect information under UK-approved safeguards.</p>`)}
   ${sec("How long we keep it",`<p>Results and stats stay as the team's history while the club uses the site. A coach can remove a player at any time. If the club stops using Touchline Tales, everything is deleted within 30 days.</p>`)}
   ${sec("Your rights",`<p>You can ask to see, correct or delete your child's information, or object to it being shown. Speak to the team's coach or the club's ${WELFARE}, or email <a href="mailto:hello@touchlinetales.club">hello@touchlinetales.club</a> and we'll pass it on to the club.</p><p>If you're unhappy, you can complain to the Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">ico.org.uk/make-a-complaint</a> or on 0303 123 1113.</p>`)}
   <div class="btns"><button class="btn ghost" data-view="home">Back to the home page</button></div></div>`}
@@ -4639,6 +4678,7 @@ document.addEventListener("click",e=>{const th=e.target.closest("table.lb thead 
   rows.sort((a,b)=>{const x=cv(a),y=cv(b);if(x===y)return 0;if(x===null)return 1;if(y===null)return -1;const c=typeof x==="number"&&typeof y==="number"?x-y:String(x).localeCompare(String(y));return dir==="asc"?c:-c}).forEach(r=>tb.appendChild(r))});
 // ---------- events ----------
 document.addEventListener("click",async e=>{
+  if(e.target.closest("a.maplink,.hero a.pill"))return;
   const t=e.target.closest("button,tr.click,[data-edit],[data-tour],.match,.pom-row[data-player]");if(!t)return;
   if(t.closest("#gfxView"))return;
   if(t.tagName!=="BUTTON"&&e.target.closest(".fxav"))return;   // the gap around Yes/Maybe/No in a Fixtures row

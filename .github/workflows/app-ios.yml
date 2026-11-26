@@ -1,0 +1,70 @@
+# Builds the Touchline Tales iPhone app (app/ folder) and sends it to App Store Connect, where it shows in TestFlight
+# a few minutes later. Run it from the Actions tab: "Build the iPhone app". No Mac needed: Xcode signs it in the cloud
+# with an App Store Connect API key. Repository secrets it uses, see app/README.md:
+#   APPLE_TEAM_ID              the 10-character Team ID (developer.apple.com > Membership details)
+#   ASC_KEY_ID, ASC_ISSUER_ID  an App Store Connect API key with the Admin role (Users and Access > Integrations)
+#   ASC_KEY_P8_B64             that key's .p8 file as base64
+#   GOOGLE_SERVICE_INFO_PLIST  the iOS app's GoogleService-Info.plist from Firebase (needed for match alerts)
+name: Build the iPhone app
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Build number (a whole number, one higher than the last upload)"
+        required: true
+        default: "1"
+      version:
+        description: "Version shown in the store, e.g. 1.0.1"
+        required: true
+        default: "1.0.0"
+jobs:
+  ios:
+    runs-on: macos-26
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: npm ci
+      - name: Firebase settings
+        env:
+          PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          if [ -n "$PLIST" ]; then printf '%s' "$PLIST" > www/GoogleService-Info.plist
+          else echo "::warning::GOOGLE_SERVICE_INFO_PLIST isn't set, so this build has no match alerts"; fi
+      - run: npx cap sync ios
+      - name: API key
+        env:
+          P8: ${{ secrets.ASC_KEY_P8_B64 }}
+        run: echo "$P8" | base64 -d > "$RUNNER_TEMP/asc.p8"
+      - name: Archive
+        working-directory: app/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" archive \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION=${{ inputs.version }} CURRENT_PROJECT_VERSION=${{ inputs.build_number }} \
+            -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/asc.p8" \
+            -authenticationKeyID ${{ secrets.ASC_KEY_ID }} -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }}
+      - name: Upload to App Store Connect
+        working-directory: app/ios/App
+        run: |
+          cat > "$RUNNER_TEMP/export.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/export.plist" \
+            -exportPath "$RUNNER_TEMP/export" -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/asc.p8" \
+            -authenticationKeyID ${{ secrets.ASC_KEY_ID }} -authenticationKeyIssuerID ${{ secrets.ASC_ISSUER_ID }}
