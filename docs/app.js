@@ -70,7 +70,7 @@ const NATIVE=!!(window.Capacitor&&typeof Capacitor.isNativePlatform==="function"
   const slug=String(TEAM.slug||`${TEAM.name||""} ${TEAM.ageShort||""}`).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"team";
   const priv=`<button type="button" data-view="privacy" style="background:none;border:0;padding:0;font:inherit;color:var(--muted);opacity:.85;cursor:pointer">Privacy</button>`;
   const adm=TEAM.club&&TEAM.club.id&&/^https:\/\//.test(TEAM.club.url||"")?` · <a href="${esc(TEAM.club.url.replace(/\/?$/,"/"))}admin/" style="color:var(--muted)">Club admin</a>`:"";
-  f.innerHTML=`<span id="footCoach"></span>`+(TEAM.poweredBy===false?priv:`${priv} · <a href="https://touchlinetales.club/?ref=powered-${slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>`)+adm+(NATIVE?` · <a href="https://touchlinetales.club/app/?switch" style="color:var(--muted)">Switch team</a>`:"");f.hidden=false})();
+  f.innerHTML=`<span id="footCoach"></span>`+(TEAM.poweredBy===false||NATIVE?priv:`${priv} · <a href="https://touchlinetales.club/?ref=powered-${slug}" target="_blank" rel="noopener">Powered by Touchline Tales</a>`)+adm+(NATIVE?` · <a href="https://touchlinetales.club/app/?switch" style="color:var(--muted)">Switch team</a>`:"");f.hidden=false})();
 let tournaments=[], honours=[], T=null, H=null;
 let matches=[], players=[], view="home", season=null, editing=null, playerView=null, oppView=null;
 const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
