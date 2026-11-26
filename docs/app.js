@@ -226,7 +226,7 @@ function tHeroHtml(t){const d=new Date(t.date+"T12:00:00");const days=Math.max(0
   const cd=days===0?"Today":days===1?"Tomorrow":`In ${days} days`;
   return `<section class="hero"><div class="kick">Next up · Tournament</div>
     <div class="vs"><div class="side"><img src="${CREST}" alt=""><span>${esc(TEAM.name)}</span></div><div class="mid"><b>🏆</b><span>Tournament</span></div><div class="side">${tLogo(t)?`<img src="${tLogo(t)}" alt="">`:`<span class="ini">${esc(ini)}</span>`}<span>${esc(t.name||"Tournament")}</span></div></div>
-    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${t.venue?`<span class="pill">📍 ${esc(t.venue)}</span>`:""}${TMD(t).meet?`<span class="pill">🕘 Meet ${esc(TMD(t).meet)}</span>`:""}${TMD(t).kit?`<span class="pill">👕 ${esc(kitLabel(TMD(t).kit))}</span>`:""}${tWx(t)?`<span class="pill">${esc(tWx(t))}</span>`:""}</div>
+    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${tDays(t).length>1?esc(tRange(t,true)):d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${t.venue?`<a class="pill" href="${tMaps(t)}" target="_blank" rel="noopener">📍 ${esc(t.venue)} · Map</a>`:""}${TMD(t).meet?`<span class="pill">🕘 Meet ${esc(TMD(t).meet)}</span>`:""}${TMD(t).kit?`<span class="pill">👕 ${esc(kitLabel(TMD(t).kit))}</span>`:""}${tWx(t)?`<span class="pill">${esc(tWx(t))}</span>`:""}</div>
     ${TMD(t).notice?`<div class="hpv">📣 ${esc(TMD(t).notice)}</div>`:""}<div class="hpv">${tSquad(t).length?`Squad: ${esc(tSquad(t).join(", "))}. `:""}${esc(tTeamsLine(t))}${tGames(t).length?"Games and kick-off times are on the Fixtures page.":"We're entered. Games and kick-off times to follow."}${t.notes?` ${esc(clip(t.notes,140))}`:""}</div>
     <div class="btns"><button class="btn gold" data-tour="${esc(t.id)}">🏆 Tournament details</button>${!canWrite&&!tSquad(t).length?`<button class="btn ghost" data-avset="t:${esc(t.id)}">Can your ${esc(PRN.kid)} make it?</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=live?null:nextFixture(),tn=live?null:nextTournament(nm&&nm.date);if(tn)return tHeroHtml(tn);const m=live||nm;if(!m)return "";
@@ -238,7 +238,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
   const cd=live?"🔴 Live now":days===0?"Today":days===1?"Tomorrow":`In ${days} days`;
   return `<section class="hero"><div class="kick">${live?"Live now":"Next match"} · ${esc(compName(m.comp||""))}</div>
     <div class="vs">${home?us:them}${mid}${home?them:us}</div>
-    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${m.venue?`<span class="pill">📍 ${esc(m.venue)}</span>`:""}${m.ha==="A"||m.ha==="H"?`<span class="pill">${m.ha==="A"?"Away":"Home"}</span>`:m.venue?"":`<span class="pill">Venue TBC</span>`}${!live&&wxText(m)?`<span class="pill">${esc(wxText(m))}</span>`:""}</div>
+    <div class="meta"><span class="pill cd">${cd}</span><span class="pill">${d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"long"})}</span>${m.venue?(live?`<span class="pill">📍 ${esc(m.venue)}</span>`:`<a class="pill" href="${mapsUrl(m)}" target="_blank" rel="noopener">📍 ${esc(m.venue)} · Map</a>`):""}${m.ha==="A"||m.ha==="H"?`<span class="pill">${m.ha==="A"?"Away":"Home"}</span>`:m.venue?"":`<span class="pill">Venue TBC</span>`}${!live&&wxText(m)?`<span class="pill">${esc(wxText(m))}</span>`:""}</div>
     ${!live&&h.length?`<div class="h2hrow">Last time: ${h.slice(0,3).map(scChip).join(" ")}</div>`:""}
     ${!live&&hasPreview(m)?`<div class="hpv"><b>Match preview:</b> ${esc(clip(m.preview,170))}</div>`:""}
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
@@ -319,7 +319,7 @@ function matchRow(m){
     <div style="min-width:0"><div class="o">${m.opp?badge(m.opp,"sm"):""}${m.ha==="A"?"at ":m.ha==="H"?"v ":""}${esc(m.opp||"Opponent to add")}${m.check?`<span class="flag">Check</span>`:""}</div>
       <div class="meta">${cc?`<span class="ctag">${esc(compName(m.comp))}</span>`:""}${[cc?"":m.comp,m.venue,m.ko?m.ko+" KO":!r&&!m.hidden&&!m.postponed?"KO TBC":""].filter(Boolean).map(esc).join(" · ")}</div>
       ${sc?`<div class="meta">${SP.ball} ${esc(sc)}</div>`:""}${RUGBY&&kicksLine(m)?`<div class="meta">🎯 ${esc(kicksLine(m))}</div>`:""}${as?`<div class="meta">🅰️ Assists: ${esc(as)}</div>`:""}${(k=>k.length?`<div class="meta">🧤 ${k.map(([n,c])=>esc(n)+(+c?" (clean sheet)":"")).join(", ")}</div>`:"")(Object.entries(keepersOf(m)))}${m.potm?`<div class="potm">${POTM_IC} ${esc(m.potm)}</div>`:""}${m.report&&m.report.trim()?`<div class="meta">📝 Match report</div>`:!r&&hasPreview(m)?`<div class="meta">📰 Match preview</div>`:""}
-      ${!r&&!m.hidden&&!m.postponed&&mdBits(m).length?`<div class="meta">🎒 ${mdBits(m).map(esc).join(" · ")}</div>`:""}${!r&&!m.hidden&&!m.postponed&&wxText(m)?`<div class="meta">${esc(wxText(m))} at kick-off</div>`:""}
+      ${!r&&!m.hidden&&!m.postponed&&mdBits(m).length?`<div class="meta">🎒 ${mdBits(m).map(esc).join(" · ")}</div>`:""}${!r&&!m.hidden&&!m.postponed&&wxText(m)?`<div class="meta">${esc(wxText(m))} at kick-off</div>`:""}${!r&&!m.hidden&&!m.postponed&&m.venue?`<div class="meta">${mapLink(mapsUrl(m),"🧭 Directions")}</div>`:""}
       ${m.postponed?`<div class="meta"><b>Postponed.</b> New date to be confirmed.</div>`:""}
       ${!r&&!m.hidden&&m.comp!=="Tournament"?(h=>h.length?`<div class="h2h">Previously: ${h.slice(0,4).map(scChip).join("")}</div>`:`<div class="h2h">First time we've played them</div>`)(meetings(m.opp,m.date)):""}${!r&&!m.postponed&&!m.hidden&&m.comp!=="Tournament"&&!(m.live&&m.live.status&&m.live.status!=="pre")?fixAv(m.id):""}</div>
     <div class="sc">${r?`${m.us}–${m.them}<span class="chip ${r}">${r}</span>`:m.hidden&&!m.postponed?`<span class="chip N" title="Played">✓</span>`:m.postponed?`<span class="chip P" title="Postponed">P</span>`:`<span class="chip N">${m.comp==="Tournament"?"T":"–"}</span>`}</div>
@@ -371,7 +371,7 @@ function tGameRow(m){const r=result(m);return `<div class="tgame" role="button" 
 const TMD=t=>t&&t.matchday||{};
 const tHasInfo=t=>Object.keys(TMD(t)).some(k=>TMD(t)[k]);
 const kitWear=k=>!k?"":TKITS()[k]||k==="Training kit"?`Wear the ${kitLabel(k).toLowerCase()}`:`Kit: ${k}`;
-const tMaps=t=>{const d=TMD(t),q=[t.venue,d.address,d.postcode].filter(Boolean).join(", ");return q?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q):""};
+const tMaps=t=>{const d=TMD(t);return gmaps(mapClean(t.venue)||t.venue,d.address,d.postcode)};
 function tFacts(t,full){const d=TMD(t);return [["📣",d.notice||""],["🕘",d.meet?`Meet at ${d.meet}${d.where?` · ${d.where}`:""}`:d.where?`Meet: ${d.where}`:""],["👕",kitWear(d.kit)],
   ["🎒",d.bring?`Bring: ${d.bring}`:""],["📍",full?[t.venue,d.address,d.postcode].filter(Boolean).join(", "):""],["🅿️",full&&d.parking?`Parking: ${d.parking}`:""],["💷",full&&d.cost?d.cost:""],["🏁",full&&d.finish?`Finishes around ${d.finish}`:""]].filter(([,v])=>v)}
 function tCard(t){
@@ -382,7 +382,7 @@ function tCard(t){
     <div class="d">${d?multi?`<b>${d.getDate()}–${e.getDate()}</b>${MONTHS[d.getMonth()]}${e.getMonth()!==d.getMonth()?"–"+MONTHS[e.getMonth()]:""}`:`<b>${d.getDate()}</b>${MONTHS[d.getMonth()]}`:"?"}</div>
     <div style="min-width:0"><div class="o">${tLogo(t)?`<img class="badge sm" src="${tLogo(t)}" alt="">`:""}${esc(t.name||"Tournament")}${t.trophy?`<span class="trophy">${trophyIcon(t.trophy)} ${esc(t.trophy)}</span>`:""}</div>
       <div class="meta"><span class="ctag">Tournament</span>${multi?`${days.length} days${t.venue?" · ":""}`:""}${esc(t.venue||"")}${st.P?` · P${st.P} W${st.W} D${st.D} L${st.L}`:""}</div>
-      ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}${tWx(t)?`<div class="meta">${esc(tWx(t))}</div>`:""}</div>
+      ${t.potm?`<div class="potm">⭐ Player of the tournament: ${esc(t.potm)}</div>`:""}${t.notes?`<div class="meta">${esc(t.notes)}</div>`:""}${tWx(t)?`<div class="meta">${esc(tWx(t))}</div>`:""}${tEnd(t)>=todayLocal()&&t.venue?`<div class="meta">${mapLink(tMaps(t),"🧭 Directions")}</div>`:""}</div>
     <div></div></div>${tEnd(t)>=todayLocal()&&tHasInfo(t)?`<div class="tinfo">${tFacts(t).map(([i,v])=>`<div${i==="📣"?' class="tnotice"':""}><span>${i}</span>${esc(v)}</div>`).join("")}<button class="mini" data-tour="${esc(t.id)}">📋 Full details and directions</button></div>`:""}${hasTReport(t)?`<div class="trep" role="button" tabindex="0" data-tour="${esc(t.id)}"><b>📝 Tournament report</b><span>${esc(clip(t.report,150))}</span><em>Read the report →</em></div>`:""}${tTeamsHtml(t)}${tSquad(t).length&&tSquadOpen(t)?`<div class="tteams"><div class="tday">👕 Squad (${tSquad(t).length})</div><div class="tchips">${tSquad(t).map(n=>`<span class="tteam">${esc(n)}</span>`).join("")}</div></div>`:""}
     ${g.length?`<div class="tgames">${games}</div>`:`<p class="hint" style="margin-top:8px">${tEnd(t)>=new Date().toISOString().slice(0,10)?tTeams(t).length&&!tDrawn(t)?"Fixtures to follow once the groups are drawn.":"Tournament entered. Fixtures to follow.":"No games added yet."}</p>`}
     <div class="mg edit-only" style="margin-top:10px"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tgame="${esc(t.id)}">+ Add a game</button>${tAvOpen(t)?`<button class="mini" data-msg="t:${esc(t.id)}">Parents' message</button>`:""}${tSquadOpen(t)?`<button class="mini" data-pick="t:${esc(t.id)}">${tSquad(t).length?`Squad picked (${tSquad(t).length})`:"Pick squad"}</button>`:""}<label class="mini bup">${tLogo(t)?"Change logo":"+ Logo"}<input type="file" accept="image/*" data-tlogo="${esc(t.id)}"></label>${g.some(m=>result(m)||isLive(m))?`<button class="mini" data-trep="${esc(t.id)}">${hasTReport(t)?"Edit tournament report":"📝 Write tournament report"}</button>`:""}<button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button>${(window.TEAM_CONFIG||window.NAYFC_CONFIG||{}).vapidPublicKey&&tEnd(t)>=todayLocal()?`<button class="mini" data-ttell="${esc(t.id)}">📣 Tell parents: groups and games confirmed</button>`:""}</div>
@@ -983,11 +983,16 @@ const MD=m=>m&&m.matchday||{};
 const MDX=m=>{const t=m&&m.tournament_id&&tournaments.find(x=>x.id===m.tournament_id);if(!t||!t.matchday)return MD(m);const d=TMD(t);return Object.assign({},d.meet?{meet:d.meet}:{},d.kit?{kit:d.kit}:{},d.postcode?{postcode:d.postcode}:{},d.notice?{notice:d.notice}:{},MD(m))};
 const TKITS=()=>TEAM.kits||{home:{label:"Home"}},kitLabel=k=>!k?"":(TKITS()[k]&&TKITS()[k].label?TKITS()[k].label+" kit":k);
 function mdBits(m){const d=MDX(m);return [d.meet?`Meet ${d.meet}`:"",d.pitch?`Pitch ${d.pitch}`:"",kitLabel(d.kit)].filter(Boolean)}
-const mapsUrl=m=>{const q=[m.venue,MDX(m).postcode].filter(Boolean).join(", ");return q?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q):""};
+// map links (26 Nov 2026): a Google Maps search for the venue without pitch numbers and formats ("RUSSELL FOSTER FOOTBALL CENTRE 7 v 7
+// Pitch 7" -> "RUSSELL FOSTER FOOTBALL CENTRE"), plus the postcode when one was added, so the map finds the ground and not "Pitch 7"
+const mapClean=v=>String(v||"").replace(/\b(pitch|pitches|field|court)\s*[a-z]?\d*[a-z]?\b/gi," ").replace(/\b\d+\s*(v|vs|a)\s*\d+\b/gi," ").replace(/#\s*\d+/g," ").replace(/\b(3g|4g|astro(turf)?|all weather)\b/gi," ").replace(/[()]/g," ").replace(/\s+/g," ").replace(/[\s,·-]+$|^[\s,·-]+/g,"").trim();
+const gmaps=(...p)=>{const q=p.filter(Boolean).join(", ");return q?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q):""};
+const mapsUrl=m=>gmaps(mapClean(m.venue)||m.venue,MDX(m).postcode);
+const mapLink=(u,txt)=>u?`<a class="maplink" href="${u}" target="_blank" rel="noopener">${txt||"🧭 Map"}</a>`:"";
 // weather at kick-off for the place the game is played (26 Nov 2026). Where: the game's postcode (Matchday details), else its
 // tournament's postcode, else a postcode written in the venue, else the venue's name looked up on OpenStreetMap (Photon) and kept
 // within 80 km of TEAM.area, so a "Temple Park Centre" in Sheffield can't win over the one up the road; a home game with no venue
-// uses TEAM.area itself. Forecast from Open-Meteo, up to 15 days ahead. None of these need a key, and only the venue is sent.
+// uses TEAM.area itself, and so does any game whose venue cannot be found (grassroots games are local and weather is regional). Forecast from Open-Meteo, up to 15 days ahead. None of these need a key, and only the venue is sent.
 const WX={},WXP={};const WXI={0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌦️",56:"🌧️",57:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",66:"🌧️",67:"🌧️",71:"🌨️",73:"🌨️",75:"❄️",77:"🌨️",80:"🌦️",81:"🌧️",82:"⛈️",85:"🌨️",86:"❄️",95:"⛈️",96:"⛈️",99:"⛈️"};
 const WXA=TEAM.area&&isFinite(TEAM.area.lat)?TEAM.area:null,WXPC=/\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
 // "RUSSELL FOSTER FOOTBALL CENTRE 7 v 7 Pitch 7" -> "russell foster football centre"
@@ -999,8 +1004,11 @@ function wxGeo(w){const k=w.pc?"pc:"+w.pc:"q:"+w.q;if(k in WXP)return WXP[k];con
   const keep=g=>{try{const s2=wxStore();s2[k]=g;localStorage.setItem(SK+"-wxgeo",JSON.stringify(s2))}catch(e){}return g};
   const photon=q=>fetch("https://photon.komoot.io/api/?limit=5&lang=en&q="+encodeURIComponent(q)+(WXA?`&lat=${WXA.lat}&lon=${WXA.lon}`:"")).then(r=>r.json())
     .then(j=>{const f=(j.features||[]).map(f=>({lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],cc:f.properties.countrycode})).find(g=>g.cc==="GB"&&(!WXA||wxKm(WXA,g)<=80));return f?{lat:+f.lat.toFixed(3),lon:+f.lon.toFixed(3)}:null});
+  // OpenStreetMap's own search as a second try, inside a box about 80 km round the home town
+  const nomi=q=>fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&countrycodes=gb&q="+encodeURIComponent(q)+(WXA?`&bounded=1&viewbox=${WXA.lon-1.2},${WXA.lat+0.7},${WXA.lon+1.2},${WXA.lat-0.7}`:"")).then(r=>r.json())
+    .then(j=>{const f=(j||[]).map(x=>({lat:+x.lat,lon:+x.lon})).find(g=>!WXA||wxKm(WXA,g)<=80);return f?{lat:+f.lat.toFixed(3),lon:+f.lon.toFixed(3)}:null});
   return WXP[k]=(w.pc?fetch("https://api.postcodes.io/postcodes/"+encodeURIComponent(w.pc)).then(r=>r.json()).then(j=>{const g=j&&j.result;return g?{lat:+g.latitude.toFixed(3),lon:+g.longitude.toFixed(3)}:null})
-    :photon(w.q).then(g=>g||(w.q.includes(",")?photon(w.q.split(",")[0]):null))).then(keep,()=>{delete WXP[k];return null})}
+    :photon(w.q).catch(()=>null).then(g=>g||nomi(w.q)).then(g=>g||(w.q.includes(",")?photon(w.q.split(",")[0]).catch(()=>null):null))).then(keep,()=>{delete WXP[k];return null})}
 // where a game (or a tournament, given as {tourn}) is played, for the forecast
 function wxWhere(m){const t=m.tourn,pc=(t?TMD(t).postcode:MDX(m).postcode)||((WXPC.exec(m.venue||"")||[]).slice(1,3).join(""));const venue=t?t.venue:m.venue;
   if(pc)return {pc:pc.replace(/\s+/g,"").toUpperCase()};const q=wxClean(venue);if(q.length>2)return {q};
@@ -1008,7 +1016,7 @@ function wxWhere(m){const t=m.tourn,pc=(t?TMD(t).postcode:MDX(m).postcode)||((WX
 function wxFor(m){if(!m||!m.date||m.postponed)return null;const days=(new Date(m.date+"T12:00:00")-new Date(todayLocal()+"T12:00:00"))/864e5;if(days<0||days>15)return null;
   const w=wxWhere(m);if(!w)return null;const time=m.tourn?TMD(m.tourn).meet:m.ko,hr=Math.min(23,+(/^(\d{1,2})/.exec(time||"")||[0,m.tourn?10:12])[1]);
   const k=(m.tourn?"t:"+m.tourn.id:m.id)+"|"+JSON.stringify(w)+"|"+m.date+"|"+hr;if(k in WX)return WX[k];WX[k]=null;
-  (w.area?Promise.resolve(WXA):wxGeo(w)).then(g=>{if(!g)throw 0;
+  (w.area?Promise.resolve(WXA):wxGeo(w)).then(g=>{g=g||WXA;if(!g)throw 0;
     return fetch(`https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&wind_speed_unit=mph&timezone=Europe%2FLondon&start_date=${m.date}&end_date=${m.date}`)})
   .then(r=>r.json()).then(j=>{const h=j.hourly;if(!h||!h.time)throw 0;const i=Math.max(0,h.time.findIndex(t=>+t.slice(11,13)===hr));if(h.temperature_2m[i]==null)throw 0;
     WX[k]={t:Math.round(h.temperature_2m[i]),p:h.precipitation_probability[i],c:h.weather_code[i],w:Math.round(h.wind_speed_10m[i])};
@@ -4634,6 +4642,7 @@ document.addEventListener("click",e=>{const th=e.target.closest("table.lb thead 
   rows.sort((a,b)=>{const x=cv(a),y=cv(b);if(x===y)return 0;if(x===null)return 1;if(y===null)return -1;const c=typeof x==="number"&&typeof y==="number"?x-y:String(x).localeCompare(String(y));return dir==="asc"?c:-c}).forEach(r=>tb.appendChild(r))});
 // ---------- events ----------
 document.addEventListener("click",async e=>{
+  if(e.target.closest("a.maplink,.hero a.pill"))return;
   const t=e.target.closest("button,tr.click,[data-edit],[data-tour],.match,.pom-row[data-player]");if(!t)return;
   if(t.closest("#gfxView"))return;
   if(t.tagName!=="BUTTON"&&e.target.closest(".fxav"))return;   // the gap around Yes/Maybe/No in a Fixtures row
