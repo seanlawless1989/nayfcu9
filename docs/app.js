@@ -152,7 +152,7 @@ function seasons(){const set=new Set(matches.map(m=>seasonOf(m.date)).filter(Boo
 function appsTracked(list){return list.length>0}// scorers and PotM count as apps even without a team sheet
 
 // ---------- views ----------
-function setView(v){rpClose();if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));if(v==="fund"){fSel=null;fundOpen()}render();window.scrollTo({top:0})}
+function setView(v){rpClose();if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search))||(v!=="event"&&/[?&]event=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));if(v==="fund"){fSel=null;fundOpen()}render();window.scrollTo({top:0})}
 function render(){
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
@@ -163,7 +163,7 @@ function render(){
   if(PRACTICE&&view!=="live"&&view!=="tl"){matches=matches.filter(m=>!m.practice);PRACTICE=null;if(LV&&LV.id==="practice")LV=null}
   if(setupPending()&&!canWrite&&view!=="login"){main.innerHTML=settingUpView();document.body.classList.toggle("ro",true);return}
   renderTicker();
-  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+myBadgeStrip()+ntHomeCard()+homeView();
+  if(view==="home")main.innerHTML=(canWrite&&setupPending()?setupBanner():"")+bdHomeCard()+myBadgeStrip()+ntHomeCard()+evHomeCard()+homeView();
   else if(view==="setup")main.innerHTML=setupView();
   else if(view==="sponsors")main.innerHTML=sponsorsView();
   else if(view==="fund")main.innerHTML=fundView();
@@ -172,6 +172,8 @@ function render(){
   else if(view==="poster")main.innerHTML=szView();
   else if(view==="certs")main.innerHTML=certsView();
   else if(view==="notices")main.innerHTML=noticesView();
+  else if(view==="event")main.innerHTML=evView();
+  else if(view==="evnew"){if(!evEdit)evEdit=evBlank();view="event";main.innerHTML=evView()}
   else if(view==="splan")main.innerHTML=splanView();
   else if(view==="coaches")main.innerHTML=coachesView();
   else if(view==="insights")main.innerHTML=insightsView();
@@ -246,7 +248,7 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["notices","📌","Noticeboard","News and notes from the coaches"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["cards","🃏","Player cards","A football card for every player"],["certs","📜","Certificates","Print one when a player reaches a level"],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day photos and videos"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Players, coaches and shirt numbers"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["poster","🖼️","Season posters","Team and player posters to print"],["tnew","🏅","Tournament","Add a tournament day"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["splan","🗒️","Session plans","Plan training from the drills library"],["coaches","👥","Coaches","Who can do what"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["poster","🖼️","Season posters","Team and player posters to print"],["tnew","🏅","Tournament","Add a tournament day"],["evnew","🎉","Add an event","Party, presentation night, fundraiser"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["splan","🗒️","Session plans","Plan training from the drills library"],["coaches","👥","Coaches","Who can do what"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
   const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
@@ -825,6 +827,7 @@ function availAllView(){const kids=canWrite?[]:myKids();
   avAllCur=n;const gOk=!n||gameName(n),open=n&&gOk?games.filter(m=>!((canWrite?AV:AV_MINE)[m.id]||{})[n]).length:0;
   const rows=!n?`<p class="hint">Choose ${canWrite?`a ${PRN.kid}`:`your ${PRN.kid}`} above.</p>`:`
     <h3>Games</h3>${!gOk?`<p class="hint">${esc(n)} is training with us for now, so there are no games to answer yet. The coach will let you know when ${PRN.sh} can play.</p>`:""}${gOk&&open>1?`<div class="btns"><button class="btn gold" id="avAllYes">✅ Yes to every game (${open})</button></div><p class="hint" style="margin:0">Fills in every game below that hasn't got an answer yet. Any No or Maybe stays as it is, and you can change any game after.</p>`:""}${!gOk?"":games.length?`<div class="av">${games.map(m=>avRow(n,((canWrite?AV:AV_MINE)[m.id]||{})[n],"av",(AVBY[m.id]||{})[n],` data-mid="${esc(m.id)}"`,gm(m))).join("")}</div>`:`<p class="hint">No games coming up yet.</p>`}
+    ${(()=>{const evs=EV_ON?evComing().filter(x=>x.rsvp):[];return evs.length?`<h3>Events</h3><div class="av">${evs.map(x=>avRow(n,((canWrite?AV:AV_MINE)["e:"+x.id]||{})[n],"av",(AVBY["e:"+x.id]||{})[n],` data-mid="e:${esc(x.id)}"`,`<b>${esc(shortDay(x.date))}</b><br><span class="hint">${evIc(x)} ${esc(x.title)}</span>`)).join("")}</div>`:""})()}
     ${sess.length?`<h3>Training</h3><div class="av">${sess.map(d=>avRow(n,((canWrite?TAV:TAV_MINE)[d]||{})[n],"tav",(TAVBY[d]||{})[n],` data-day="${d}"`,`<b>${esc(shortDay(d))}</b><br><span class="hint">${esc(clock(TR.start))} to ${esc(clock(TR.finish))}</span>`)).join("")}</div>`:""}`;
   return `<section class="card stack"><h2>Can ${PRN.s} make it?</h2>
     <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${esc(n||kids[0])}.`:""} Say Yes, Maybe or No for every game and tournament coming up this season, or say yes to them all in one tap. You can change an answer any time. Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="availall">Sign in</button>`:""}</p>
@@ -846,15 +849,17 @@ async function askPush(b){const lbl="📲 Ask by push";
   b.disabled=false;b.textContent=lbl;const hm=at?clock(new Date(at).toTimeString().slice(0,5)):"";
   toast(r==null?"Couldn't send it. Check your connection and try again.":r===-3?"Only a signed-in coach can send this. Sign in again, then try.":r===-2?`Parents were already asked by push at ${hm}. You can ask again an hour after that.`:r===-1?"That one has been played or isn't on any more, so there's nothing to ask.":r===0?"No phones to send it to: the parents still to answer haven't got alerts on with their family code. Use Chase replies for WhatsApp.":`Sent to ${r} phone${r===1?"":"s"} of parents still to answer.`)}
 // current players with no answer yet for this fixture, in shirt-number order
-function avWaiting(id){const a=AV[id]||{};return players.filter(p=>inGames(p)&&!a[p.name]).sort((x,y)=>(+x.num||99)-(+y.num||99)).map(p=>p.name)}
+function avWaiting(id){const a=AV[id]||{},ev=String(id).startsWith("e:");return players.filter(p=>(ev?p.current:inGames(p))&&!a[p.name]).sort((x,y)=>(+x.num||99)-(+y.num||99)).map(p=>p.name)}
 // A whole tournament gets one availability answer per player, stored with match_id "t:<tournament id>"
 // (supabase/29_tournament_availability.sql). Its games use the tournament's answers.
 const avKey=m=>m&&m.tournament_id?"t:"+m.tournament_id:m&&m.id;
 // what an answer is for: a game, or a tournament made to look like one
 function avTarget(id){const m=matches.find(x=>x.id===id);if(m)return m;const t=String(id||"").startsWith("t:")?tournaments.find(x=>x.id===id.slice(2)):null;
-  return t?{id:"t:"+t.id,date:t.date,opp:"",tourn:t,venue:t.venue||"",squad:tSquad(t)}:null}
+  if(t)return {id:"t:"+t.id,date:t.date,opp:"",tourn:t,venue:t.venue||"",squad:tSquad(t)};
+  const ev=String(id||"").startsWith("e:")?evFind(id.slice(2)):null;   // a team event (supabase/46_team_events.sql)
+  return ev?{id:"e:"+ev.id,date:ev.date,opp:"",ev,venue:ev.venue||"",ko:"",squad:[]}:null}
 const avWhen=m=>m.tourn&&tDays(m.tourn).length>1?tRange(m.tourn,true):new Date(m.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
-const avWhat=m=>m.tourn?`🏆 ${m.tourn.name||"Tournament"}`:`${m.ha==="A"?"at ":"v "}${m.opp}`;
+const avWhat=m=>m.ev?`${evIc(m.ev)} ${m.ev.title}${evTime(m.ev)?`, ${evTime(m.ev)}`:""}`:m.tourn?`🏆 ${m.tourn.name||"Tournament"}`:`${m.ha==="A"?"at ":"v "}${m.opp}`;
 const tAvOpen=t=>!!t&&tEnd(t)>=todayLocal();
 // a tournament game's own answers if a coach set any, otherwise the tournament's
 const avFor=m=>m&&Object.keys(AV[m.id]||{}).length||!m||!m.tournament_id?AV[m&&m.id]||{}:AV["t:"+m.tournament_id]||{};
@@ -862,15 +867,15 @@ function siteUrl(){return location.origin+location.pathname}
 function availView(){
   let m=avTarget(availMatch);if(m&&m.tournament_id&&!Object.keys(AV[m.id]||{}).length&&!AV_MINE[m.id]){const t=avTarget("t:"+m.tournament_id);if(t){m=t;availMatch=t.id}}
   if(!m)return `<div class="card empty">That fixture couldn't be found. Ask the coach for a new link.</div>`;
-  const kids=canWrite?[]:myKids();let roster=players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99));
-  const head=`<h2>Can ${PRN.s} make it?</h2>
+  const kids=canWrite?[]:myKids();let roster=players.filter(m.ev?p=>p.current:inGames).sort((a,b)=>(+a.num||99)-(+b.num||99));
+  const head=`<h2>${m.ev?`Is ${PRN.s} coming?`:`Can ${PRN.s} make it?`}</h2>
     <p><b>${esc(avWhat(m))}</b><br>${esc(avWhen(m))}${m.ko?` · ${esc(m.ko)} kick-off`:""}${m.venue?` · ${esc(m.venue)}`:""}</p>${m.tourn?`<p class="hint" style="margin:0">One answer for the whole tournament${tDays(m.tourn).length>1?", all days":""}.</p>`:""}`;
   if(kids.length){roster=roster.filter(p=>kids.includes(p.name));if(!roster.length)return `<section class="card stack">${head}<p class="hint">${kids.map(esc).join(" and ")} ${kids.length>1?"are":"is"} training with us for now, so there's nothing to answer for this game. The coach will let you know when ${PRN.sh} can play.</p><div class="btns"><button class="btn ghost" data-view="training">Training</button></div></section>`}
   else if(PREQ&&!canWrite){parentNext="avail";return `<section class="card stack">${head}${joinBox(`To answer, type the family code the coach sent you. You only do this once on this phone.`)}</section>`}
   return `<section class="card stack">${head}
     <p class="hint">${canWrite?avCoachHint():`${kids.length?`Answering for ${kids.map(esc).join(" and ")}.`:`Tap the answer next to your ${PRN.kid}'s name.`} Only the coaches can see the answers.`}${!kids.length&&PL_ON&&!canWrite?` Got a family code? <button class="mini" data-view="parents" data-pnext="avail">Sign in</button>`:""}</p>
     <div class="av">${roster.map(p=>avRow(p.name,(canWrite?AV:AV_MINE)[m.id]&&(canWrite?AV:AV_MINE)[m.id][p.name],"av",(AVBY[m.id]||{})[p.name])).join("")}</div>
-    ${canWrite?`<div class="btns"><button class="btn gold" data-pick="${esc(m.id)}">${m.squad&&m.squad.length?"Back to the squad":"Pick squad"}</button><button class="btn ghost" data-view="availall">One ${esc(PRN.kid)}, every game</button><button class="btn ghost" data-view="fixtures">Fixtures</button></div>`:`<div class="btns"><button class="btn ghost" data-view="availall">Answer for every game coming up</button></div>`}</section>`;
+    ${canWrite&&m.ev?`<div class="btns"><button class="btn gold" data-evopen="${esc(m.ev.id)}">Back to the event</button></div>`:canWrite?`<div class="btns"><button class="btn gold" data-pick="${esc(m.id)}">${m.squad&&m.squad.length?"Back to the squad":"Pick squad"}</button><button class="btn ghost" data-view="availall">One ${esc(PRN.kid)}, every game</button><button class="btn ghost" data-view="fixtures">Fixtures</button></div>`:`<div class="btns">${m.ev?`<button class="btn ghost" data-evopen="${esc(m.ev.id)}">Back to the event</button>`:""}<button class="btn ghost" data-view="availall">Answer for every game coming up</button></div>`}</section>`;
 }
 let availMatch=null;const AV_MINE={};
 // ---------- parent login (family codes, supabase/10_parent_login.sql) ----------
@@ -1059,16 +1064,16 @@ function msgText(m){const d=new Date(m.date+"T12:00:00");
   if(m.tourn){const t=m.tourn;return `🏆 ${TEAM.ageGroup?TEAM.ageGroup+": ":""}${t.name||"Tournament"}\n📅 ${avWhen(m)}${t.venue?`\n📍 ${t.venue}`:""}${tFacts(t).filter(([i])=>i!=="📣").map(([i,v])=>`\n${i} ${v}`).join("")}${tMaps(t)?`\n🧭 ${tMaps(t)}`:""}${TMD(t).notice?`\n\n📣 ${TMD(t).notice}`:""}${tTeams(t).length?`\n${tTeams(t).length} teams entered`:""}\n\nFull details:\n${siteUrl()}?tour=${encodeURIComponent(t.id)}\n\nPlease let us know if your ${PRN.kid} can make it, so we can pick the squad${PREQ?" (first time? type in your family code)":""}:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nGet squad and ${SP.goal} alerts on your phone:\n${siteUrl()}?alerts\n\nThank you! ${TEAM.cheer||SP.ball}`}
   return `${SP.ball} ${TEAM.ageGroup||"Match"}: ${d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}\n\n${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp}${m.comp?` (${compName(m.comp)})`:""}\n${m.ko?`🕙 Kick-off ${m.ko}`:"🕙 Kick-off to be confirmed"}\n${MDX(m).meet?`\n🕘 Meet at ${MDX(m).meet}`:""}\n${m.venue?`📍 ${m.venue}${MDX(m).pitch?`, pitch ${MDX(m).pitch}`:""}`:"📍 Venue to be confirmed"}${MDX(m).kit?`\n👕 ${kitLabel(MDX(m).kit)}`:""}${mapsUrl(m)?`\n🧭 ${mapsUrl(m)}`:""}\n\nFollow the game live on the day:\n${siteUrl()}?live=${encodeURIComponent(m.id)}\n\nPlease let us know if your ${PRN.kid} can make it${PREQ?" (first time? type in your family code)":""}:\n${siteUrl()}?avail=${encodeURIComponent(avKey(m))}\n\nGet kick-off and ${SP.goal} alerts on your phone:\n${siteUrl()}?alerts\n\nThank you! ${TEAM.cheer||SP.ball}`}
 function msgView(){const m=avTarget(msgMatch)||nextFixture();if(!m)return `<div class="card empty">No upcoming fixtures.</div>`;
-  return `<section class="card stack"><h2>Parents' message</h2>${whenBar(m.date,m.tourn?m.tourn.name||"Tournament":`${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp||""}`)}<p class="hint">Copy this into the parents' WhatsApp group. The link lets each parent say whether their ${PRN.kid} can make it, and you'll see the answers on the Fixtures page.</p>
+  return `<section class="card stack"><h2>Parents' message</h2>${whenBar(m.date,m.ev?m.ev.title:m.tourn?m.tourn.name||"Tournament":`${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp||""}`)}<p class="hint">Copy this into the parents' WhatsApp group. The link lets each parent say whether their ${PRN.kid} can make it, and you'll see the answers on the Fixtures page.</p>
   <textarea id="msgText" rows="12" style="width:100%;font:15px var(--body)">${esc(msgText(m))}</textarea>
   <div class="btns"><button class="btn gold" id="copyMsg">Copy message</button><button class="btn ghost" data-view="fixtures">Back to fixtures</button></div></section>`}
 let msgMatch=null,msgChase=false;
 // a reminder for the parents' group naming only the players we haven't heard about
 function chaseText(m){const w=avWaiting(m.id);
-  return `⏳ Still waiting to hear about ${m.tourn?`the ${(m.tourn.name||"tournament").replace(/^the /i,"")} (${avWhen(m)})`:`${avWhen(m)}${m.opp?` ${m.ha==="A"?"at":"v"} ${m.opp}`:""}`}.\n\nNot answered yet: ${w.join(", ")}\n\nPlease tap your ${PRN.kid}'s name and choose Yes, Maybe or No, so we can pick the squad:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nThank you! ${TEAM.cheer||SP.ball}`}
+  return `⏳ Still waiting to hear about ${m.ev?`${m.ev.title} (${avWhen(m)})`:m.tourn?`the ${(m.tourn.name||"tournament").replace(/^the /i,"")} (${avWhen(m)})`:`${avWhen(m)}${m.opp?` ${m.ha==="A"?"at":"v"} ${m.opp}`:""}`}.\n\nNot answered yet: ${w.join(", ")}\n\nPlease tap your ${PRN.kid}'s name and choose Yes, Maybe or No, so we ${m.ev?"know who's coming":"can pick the squad"}:\n${siteUrl()}?avail=${encodeURIComponent(m.id)}\n\nThank you! ${TEAM.cheer||SP.ball}`}
 function chaseView(){const m=avTarget(msgMatch);if(!m)return `<div class="card empty">That fixture couldn't be found.</div>`;const w=avWaiting(m.id);
-  if(!w.length)return `<section class="card stack"><h2>Chase replies</h2><p>Everyone has answered for this ${m.tourn?"tournament":"game"}. Nothing to chase.</p><div class="btns"><button class="btn ghost" data-view="fixtures">Back to fixtures</button></div></section>`;
-  return `<section class="card stack"><h2>Chase replies</h2>${whenBar(m.date,m.tourn?m.tourn.name||"Tournament":`${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp||""}`)}<p class="hint">${w.length} ${w.length===1?"player hasn't":"players haven't"} answered yet. Send this to the parents' WhatsApp group. It names only first names, and the answers stay private to the coaches.</p>
+  if(!w.length)return `<section class="card stack"><h2>Chase replies</h2><p>Everyone has answered for this ${m.ev?"event":m.tourn?"tournament":"game"}. Nothing to chase.</p><div class="btns"><button class="btn ghost" data-view="fixtures">Back to fixtures</button></div></section>`;
+  return `<section class="card stack"><h2>Chase replies</h2>${whenBar(m.date,m.ev?m.ev.title:m.tourn?m.tourn.name||"Tournament":`${m.ha==="A"?"Away at":m.ha==="H"?"Home to":"v"} ${m.opp||""}`)}<p class="hint">${w.length} ${w.length===1?"player hasn't":"players haven't"} answered yet. Send this to the parents' WhatsApp group. It names only first names, and the answers stay private to the coaches.</p>
   <textarea id="msgText" rows="10" style="width:100%;font:15px var(--body)">${esc(chaseText(m))}</textarea>
   <div class="btns"><button class="btn" id="waMsg">Open in WhatsApp</button><button class="btn ghost" id="copyMsg">Copy message</button><button class="btn ghost" data-view="fixtures">Back to fixtures</button></div>
   ${askOk()?`<p class="hint" style="margin:0">Or send a push to the phones of parents still to answer. It opens this ${m.tourn?"tournament":"game"} so they can tap Yes, Maybe or No. Only phones with alerts on and signed in with their family code get it.</p><div class="btns">${askBtn("avpush",m.id).replace('class="mini"','class="btn gold"')}</div>`:""}</section>`}
@@ -1134,7 +1139,7 @@ async function alOff(){if(!AL.sub)return;AL.busy=true;render();try{const ep=AL.s
 function alNotify(id){if(sb&&id&&id!=="practice")sb.functions.invoke("notify",{body:fnBody({match:id})}).catch(()=>{})}
 // squad and player of the match alerts: resolves to how many phones were sent it, -1 when nothing needed sending, null when it failed
 async function alSend(body){if(!sb||!CFG.vapidPublicKey)return null;   // alerts not switched on for this team
-try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.notice??data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament??data.treport??data.avail??data.fixture;return typeof v==="number"?v:null}catch(e){return null}}
+try{const {data,error}=await sb.functions.invoke("notify",{body:fnBody(body)});if(error||!data)return null;const v=data.event??data.notice??data.squad??data.tsquad??data.potm??data.postponed??data.preview??data.tournament??data.treport??data.avail??data.fixture;return typeof v==="number"?v:null}catch(e){return null}}
 function alertsView(){if(!AL.checked)alCheck();
   const head=`<h2>🔔 Match alerts</h2><p>Get a message on this phone when the squad is picked, before kick-off, and on match day. You choose how much.</p>`;
   let bodyHtml;
@@ -3072,12 +3077,12 @@ function trFixRow(x){const d=new Date(x.iso+"T12:00:00"),day=`<div class="d"><b>
   else if(canWrite&&CAV_ON)body=`<div class="trav">${cavBox("tr:"+x.iso)}</div>`;
   return `<div class="trfix">${day}<div style="min-width:0"><div class="o">🏃 Training <span>${esc(when)}</span></div>${body}</div></div>`}
 function fixturesView(){
-  const items=listItems(byComp(seasonMatches().filter(isFixture)),tByComp(seasonTournaments().filter(tIsFixture))).concat(trFixRows()).sort((a,b)=>a.date.localeCompare(b.date));
+  const items=listItems(byComp(seasonMatches().filter(isFixture)),tByComp(seasonTournaments().filter(tIsFixture))).concat(trFixRows(),evFixRows()).sort((a,b)=>a.date.localeCompare(b.date));
   const calBtn=`<div class="btns" style="margin-bottom:8px"><button class="btn ghost" data-view="calendar">🗓️ Add all fixtures to my calendar</button><button class="btn ghost" data-view="training">🏃 Training</button></div>`;
   if(!items.length)return `${calBtn}${CKEY()}<div class="card empty">No ${compFilter?compFilter.toLowerCase()+" ":""}fixtures left for ${season}.${canWrite?` Use <b>+ Add a match</b> to add one${RUGBY?"":`, or <button class="mini" id="ftStart">📥 import league fixtures</button>`}.`:""}</div>`;
   const pp=items.filter(i=>i.pp),rest=items.filter(i=>!i.pp);
   const nx=nextFixture();
-  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 ${ftDue()?"Check league fixtures":"Import league fixtures"}</button>`}<button class="btn ghost" data-ssstart>📊 Import from a spreadsheet</button></div>${ftDue()?`<div class="note edit-only" style="margin-bottom:8px">📅 Has the league moved any games? Check Full-Time once a week: <button class="mini" id="ftStart2">check now</button></div>`:""}`:""}${fixAvAll()}${CKEY()}${coachKidPick()}${coachNamePick()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
+  return `<div class="list">${calBtn}${canWrite?`<div class="btns edit-only" style="margin-bottom:8px">${nx?`<button class="btn gold" data-msg="${esc(nx.id)}">Friday parents' message (next game)</button>`:""}<button class="btn ghost" data-gmonth="1">Fixtures this month graphic</button><button class="btn ghost" id="evNew">🎉 Add an event</button><button class="btn ghost" id="practice">▶ Practice live match</button>${RUGBY?"":`<button class="btn ghost" id="ftStart">📥 ${ftDue()?"Check league fixtures":"Import league fixtures"}</button>`}<button class="btn ghost" data-ssstart>📊 Import from a spreadsheet</button></div>${ftDue()?`<div class="note edit-only" style="margin-bottom:8px">📅 Has the league moved any games? Check Full-Time once a week: <button class="mini" id="ftStart2">check now</button></div>`:""}`:""}${fixAvAll()}${CKEY()}${coachKidPick()}${coachNamePick()}${pp.length?`<div class="month">Postponed, awaiting a new date</div>`+pp.map(i=>i.html).join(""):""}${monthList(rest)}</div>`;
 }
 function resultsView(){
   const items=listItems(byComp(seasonMatches().filter(m=>!isFixture(m))),tByComp(seasonTournaments().filter(t=>!tIsFixture(t)))).sort((a,b)=>b.date.localeCompare(a.date));
@@ -3457,7 +3462,7 @@ document.addEventListener("click",async e=>{const b=e.target.closest("button");i
   if(b.dataset.tavclr&&canWrite){const n=b.dataset.n,day=b.dataset.day||tavDay,was=(TAV[day]||{})[n];if(TAV[day])delete TAV[day][n];if(TAVBY[day])delete TAVBY[day][n];render();
     sb.from("training_availability").delete().eq("day",day).eq("player",n).then(({error})=>{if(error){(TAV[day]=TAV[day]||{})[n]=was;render();toast("Couldn't clear that. Try again.")}else toast(`${n}'s training answer cleared.`)});return}
   if(b.dataset.av){const n=b.dataset.n,v=b.dataset.av,mid=b.dataset.mid||availMatch;(AV_MINE[mid]=AV_MINE[mid]||{})[n]=v;if(canWrite){(AV[mid]=AV[mid]||{})[n]=v;(AVBY[mid]=AVBY[mid]||{})[n]=true}render();
-sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`${canWrite?"Saved":"Thanks"}, ${n}: ${v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`);
+sb.rpc("set_availability",{p_match:mid,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`${canWrite?"Saved":"Thanks"}, ${n}: ${String(mid).startsWith("e:")?(v==="yes"?"coming":v==="no"?"not coming":"maybe coming"):v==="yes"?"can make it":v==="no"?"can't make it":"maybe"}.`);
       if(!error&&!canWrite)alSend({avail:{match:mid,player:n}})})}// tells the coaches who asked for availability alerts
   if(b.dataset.tav){const n=b.dataset.n,v=b.dataset.tav,day=b.dataset.day||tavDay;(TAV_MINE[day]=TAV_MINE[day]||{})[n]=v;if(canWrite){(TAV[day]=TAV[day]||{})[n]=v;(TAVBY[day]=TAVBY[day]||{})[n]=true}render();
     sb.rpc("set_training_availability",{p_day:day,p_player:n,p_status:v}).then(({error})=>{toast(error?(/family code/i.test(error.message)?"Sign in with your family code first.":"Couldn't save that. Try again."):`${canWrite?"Saved":"Thanks"}, ${n}: ${v==="yes"?"coming to training":v==="no"?"not coming to training":"maybe coming to training"}.`);
@@ -5086,6 +5091,91 @@ function ntForm(){const f=ntEdit,sq=players.filter(p=>p.current).sort((a,b)=>a.n
     <div class="btns"><button class="btn gold" id="ntSave"${ntBusy?" disabled":""}>${f.id?"Save":"Post the notice"}</button><button class="btn ghost" id="ntCancel">Cancel</button></div></section>`}
 function ntRead(){const v=id=>{const el=$("#"+id);return el?el.value:""};if(!ntEdit)return;Object.assign(ntEdit,{title:v("ntT").trim(),body:v("ntB").trim(),player:v("ntP")||null,expires:v("ntE")||null})}
 
+// ---------- team events in the diary: presentation night, fundraiser, Christmas party... (26 Nov 2026) ----------
+// public.team_events (supabase/46_team_events.sql). Coaches add them; they show in Fixtures with the games, tournaments
+// and training, on the home page while they're coming up, and in the calendar feed. Anyone with the link sees them
+// (no names in them). With "Ask who's coming" on, parents answer Yes/Maybe/No in the usual availability table with
+// match_id "e:<event id>", so the counts, Set answers, Chase replies, Ask by push and coach alerts all work as for a
+// game. Training-only players are asked too. "Send to phones" asks the notify function to push it ({event: id}).
+const EV_KINDS={party:["🥳","Party"],presentation:["🏆","Presentation night"],fundraiser:["💷","Fundraiser"],social:["🎉","Team social"],meeting:["🗣️","Parents' meeting"],other:["📌","Something else"]};
+let EVS=[],EV_ON=false,evOpen=null,evEdit=null,evBusy=false;
+async function loadEvents(){if(!sb)return;try{const {data,error}=await sb.from("team_events").select("*").order("date").order("start");if(error){EV_ON=false;EVS=[];return}EV_ON=true;EVS=data||[]}catch(e){}}
+const evFind=id=>EVS.find(x=>x.id===id);
+const evIc=x=>x.kind==="party"&&/christmas|xmas|festive/i.test(x.title)?"🎄":(EV_KINDS[x.kind]||EV_KINDS.other)[0];
+const evTime=x=>x.start?`${clock(x.start)}${x.finish?` to ${clock(x.finish)}`:""}`:"";
+const evLong=x=>new Date(x.date+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+const evComing=()=>EVS.filter(x=>x.date>=todayLocal());
+const evMaps=x=>x.venue?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(x.venue):"";
+const evUrl=x=>`${siteUrl()}?event=${encodeURIComponent(x.id)}`;
+function evOpenIt(id){evOpen=id;evEdit=null;setView("event");try{history.replaceState(null,"",location.pathname+"?event="+encodeURIComponent(id))}catch(e){}window.scrollTo({top:0})}
+// the answers for an event: counts and the coach's buttons, or the parent's own children
+function evAnswers(x,slim){const id="e:"+x.id;if(!x.rsvp)return "";
+  if(canWrite){if(slim){const a=AV[id]||{},c={yes:0,maybe:0,no:0};Object.values(a).forEach(v=>c[v]!=null&&c[v]++);const w=avWaiting(id).length,mk=coachKid();
+      return `<div class="trsum">✅ ${c.yes} ❔ ${c.maybe} ❌ ${c.no}${w?` ⏳ ${w}`:""} <button class="mini" data-avset="${esc(id)}">Set answers</button>${w?` ${askBtn("avpush",id)}`:""}</div>${mk?`<div class="trav">${avRow(mk,a[mk],"av",(AVBY[id]||{})[mk],` data-mid="${esc(id)}"`)}</div>`:""}`}
+    return `<p class="hint" style="margin:0">${avSummary0(id)}</p>`}
+  const kids=myKids();
+  if(kids.length)return `<div class="trav">${kids.map(n=>avRow(n,(AV_MINE[id]||{})[n],"av",false,` data-mid="${esc(id)}"`,kids.length>1?"":"Coming?")).join("")}</div>`;
+  return `<div class="trsum"><button class="mini" data-avset="${esc(id)}">Say if your ${esc(PRN.kid)} is coming</button></div>`}
+// Fixtures: one slim row per event still to come this season (hidden with a competition filter, like training)
+function evFixRows(){if(!EV_ON||compFilter)return [];return evComing().filter(x=>seasonOf(x.date)===season).map(x=>({date:x.date,pp:false,html:evFixRow(x)}))}
+function evFixRow(x){const d=new Date(x.date+"T12:00:00"),meta=[evTime(x),x.venue&&x.venue.split(",")[0],x.cost].filter(Boolean).join(" · ");
+  return `<div class="trfix evfix"><div class="d"><b>${d.getDate()}</b>${MONTHS[d.getMonth()]}</div><div style="min-width:0"><button class="evlink" data-evopen="${esc(x.id)}"><span class="o">${evIc(x)} ${esc(x.title)}${meta?` <span>${esc(meta)}</span>`:""}</span></button>${evAnswers(x,true)}</div></div>`}
+// home page: anything in the next three weeks
+function evHomeCard(){if(!EV_ON)return "";const lim=new Date(Date.now()+21*864e5).toLocaleDateString("en-CA"),L=evComing().filter(x=>x.date<=lim).slice(0,3);if(!L.length)return "";
+  return `<section class="card evcard"><h3 style="margin:0">🗓️ Coming up</h3>${L.map(evFixRow).join("")}</section>`}
+function evView(){if(evEdit&&canWrite)return evForm();const x=evFind(evOpen);
+  if(!x)return `<div class="card empty">That event couldn't be found. It may have been taken off the diary. <button class="mini" data-view="fixtures">Fixtures</button></div>`;
+  const k=EV_KINDS[x.kind]||EV_KINDS.other,past=x.date<todayLocal(),maps=evMaps(x);
+  return `<div class="stack"><section class="card stack evpage"><div class="hint">${esc(k[1])}</div><h2 style="margin:0">${evIc(x)} ${esc(x.title)}</h2>
+    <div class="tinfo"><div><span>📅</span>${esc(evLong(x))}${evTime(x)?`, ${esc(evTime(x))}`:""}</div>${x.venue?`<div><span>📍</span>${esc(x.venue)}</div>`:""}${x.cost?`<div><span>💷</span>${esc(x.cost)}</div>`:""}</div>
+    ${x.details?`<p style="margin:0;white-space:pre-wrap">${esc(x.details)}</p>`:""}
+    ${x.rsvp&&!past?`<h3 style="margin:6px 0 0">Who's coming?</h3>${evAnswers(x,false)}${canWrite?"":`<p class="hint" style="margin:0">Only the coaches can see the answers.</p>`}`:""}
+    <div class="btns">${past?"":`<button class="btn ghost" data-evics="${esc(x.id)}">🗓️ Add to my calendar</button>`}${maps?`<a class="btn ghost" href="${maps}" target="_blank" rel="noopener">🧭 Directions</a>`:""}<button class="btn ghost" data-view="fixtures">Fixtures</button></div>
+    ${canWrite?`<div class="btns edit-only"><button class="btn gold" data-evmsg="${esc(x.id)}">Copy message for parents</button>${askOk()&&!past?`<button class="btn ghost" data-evpush="${esc(x.id)}">📲 Send to phones</button>`:""}<button class="mini" data-evedit="${esc(x.id)}">Edit</button><button class="mini" data-evdel="${esc(x.id)}">Delete</button></div>`:""}</section></div>`}
+function evBlank(){return {kind:"party",title:"",date:"",start:"",finish:"",venue:"",cost:"",details:"",rsvp:true}}
+function evForm(){const f=evEdit;if(!EV_ON)return `<section class="card stack"><h2 style="margin:0">Add an event</h2>${cnOff("Events in the diary")}<div class="btns"><button class="btn ghost" id="evCancel">Back</button></div></section>`;
+  const ph={party:"Christmas party",presentation:"End of season presentation night",fundraiser:"Bag pack at Tesco",social:"Team bowling",meeting:"Parents' meeting",other:"Kit collection"}[f.kind]||"";
+  return `<section class="card stack"><h2 style="margin:0">${f.id?"Edit the event":"Add an event"}</h2>
+    <p class="hint" style="margin:0">For things that aren't a game or training, like a party, presentation night or fundraiser. It goes in Fixtures and everyone's calendar.</p>
+    <div class="chips drchips">${Object.entries(EV_KINDS).map(([k,[i,l]])=>`<button data-evkind="${k}" aria-pressed="${f.kind===k}">${i} ${l}</button>`).join("")}</div>
+    <label class="f">What is it?<input type="text" id="evT" maxlength="80" value="${esc(f.title)}" placeholder="${esc(ph)}"></label>
+    <div class="grid2"><label class="f">Date<input type="date" id="evD" value="${esc(f.date)}"></label><label class="f">Cost (optional)<input type="text" id="evC" maxlength="60" value="${esc(f.cost)}" placeholder="£5 per child, free for adults"></label></div>
+    <div class="grid2"><label class="f">Starts (optional)<input type="time" id="evS" value="${esc(f.start)}"></label><label class="f">Finishes (optional)<input type="time" id="evF" value="${esc(f.finish)}"></label></div>
+    <label class="f">Where (optional)<input type="text" id="evV" maxlength="160" value="${esc(f.venue)}" placeholder="Name of the place, and the postcode"></label>
+    <label class="f">Details (optional)<textarea id="evB" rows="5" maxlength="1500" placeholder="What to bring, what to wear, food, who's welcome...">${esc(f.details)}</textarea></label>
+    <label class="chk"><input type="checkbox" id="evR"${f.rsvp?" checked":""}> Ask who's coming (parents tap Yes, Maybe or No, like a game)</label>
+    ${askOk()?`<label class="chk"><input type="checkbox" id="evPush"${f.id?"":" checked"}> Send it to phones that have alerts on${f.id?" (again)":""}</label>`:""}
+    <p class="hint" style="margin:0">Anyone with the team's link can see events, so don't put children's surnames or private details here.</p>
+    <div class="btns"><button class="btn gold" id="evSave"${evBusy?" disabled":""}>${f.id?"Save":"Add to the diary"}</button><button class="btn ghost" id="evCancel">Cancel</button></div></section>`}
+function evRead(){const v=id=>{const el=$("#"+id);return el?el.value:""};if(!evEdit||!$("#evT"))return;
+  Object.assign(evEdit,{title:v("evT").trim(),date:v("evD"),start:v("evS"),finish:v("evF"),venue:v("evV").trim(),cost:v("evC").trim(),details:v("evB").trim(),rsvp:!!($("#evR")&&$("#evR").checked)})}
+function evText(x){return `${evIc(x)} ${TEAM.ageGroup?TEAM.ageGroup+": ":""}${x.title}\n📅 ${evLong(x)}${evTime(x)?`, ${evTime(x)}`:""}${x.venue?`\n📍 ${x.venue}`:""}${x.cost?`\n💷 ${x.cost}`:""}${x.details?`\n\n${x.details}`:""}\n\n${x.rsvp?`Please tap Yes, Maybe or No so we know who's coming:\n`:"All the details:\n"}${evUrl(x)}\n\nThank you! ${TEAM.cheer||SP.ball}`}
+function evIcs(x){const e=s=>String(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"),d=x.date.replace(/-/g,""),hm=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||"");return m?m[1].padStart(2,"0")+m[2]+"00":""};
+  const nx=new Date(x.date+"T12:00:00Z");nx.setUTCDate(nx.getUTCDate()+1);const s=hm(x.start);let f=hm(x.finish);if(s&&(!f||f<=s))f=String(Math.min(23,+s.slice(0,2)+2)).padStart(2,"0")+s.slice(2);
+  const when=s?[`DTSTART;TZID=Europe/London:${d}T${s}`,`DTEND;TZID=Europe/London:${d}T${f}`]:[`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${nx.toISOString().slice(0,10).replace(/-/g,"")}`];
+  return ["BEGIN:VCALENDAR","VERSION:2.0",`PRODID:-//${TEAM.fullName||APP}//${TEAM.ageShort||""}//EN`,ICS_TZ,"BEGIN:VEVENT",`UID:event-${x.id}@${SITE.replace(/^https?:\/\//,"")}`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"")}`,...when,
+    `SUMMARY:${e(`${evIc(x)} ${APP}: ${x.title}`)}`,x.venue?`LOCATION:${e(x.venue)}`:"",`DESCRIPTION:${e([x.cost,x.details,evUrl(x)].filter(Boolean).join("\n\n"))}`,`URL:${evUrl(x)}`,"END:VEVENT","END:VCALENDAR"].filter(Boolean).join("\r\n")+"\r\n"}
+async function evPush(id){const r=await alSend({event:id});return r==null?"Phone alerts aren't switched on for this team, so it's on the site only.":r>0?`Sent to ${r} phone${r===1?"":"s"}.`:r===0?"Already sent, or no phones with alerts on yet.":"Couldn't send it."}
+document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const d=t.dataset;
+  if(d.evopen){evOpenIt(d.evopen);return}
+  if(t.id==="evNew"){if(!canWrite)return;evEdit=evBlank();setView("event");window.scrollTo({top:0});return}
+  if(d.evkind){evRead();evEdit.kind=d.evkind;render();return}
+  if(t.id==="evCancel"){const back=evEdit&&evEdit.id;evEdit=null;if(back)render();else setView("fixtures");return}
+  if(d.evedit){const x=evFind(d.evedit);if(x){evEdit=Object.assign({},x);render();window.scrollTo({top:0})}return}
+  if(d.evdel){if(!confirm("Take this event off the diary? Any answers for it are deleted too."))return;const {error}=await sb.from("team_events").delete().eq("id",d.evdel);if(error){toast("Couldn't delete it.");return}
+    sb.from("availability").delete().eq("match_id","e:"+d.evdel).then(()=>{});EVS=EVS.filter(x=>x.id!==d.evdel);toast("Event deleted.");setView("fixtures");return}
+  if(d.evics){const x=evFind(d.evics);if(!x)return;const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([evIcs(x)],{type:"text/calendar"}));a.download=`${fileTag}-${slug(x.title)}-${x.date}.ics`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);return}
+  if(d.evmsg){const x=evFind(d.evmsg);if(!x)return;const txt=evText(x);if(navigator.share){try{await navigator.share({text:txt});return}catch(err){if(err&&err.name==="AbortError")return}}try{await navigator.clipboard.writeText(txt);toast("Copied. Paste it into the parents' WhatsApp group.")}catch(err){prompt("Copy this",txt)}return}
+  if(d.evpush){if(!d.sure){d.sure="1";const l=t.textContent;t.textContent="Tap again to send to parents' phones";setTimeout(()=>{if(d.sure){delete d.sure;t.textContent=l}},6000);return}
+    delete d.sure;t.disabled=true;toast(await evPush(d.evpush));t.disabled=false;return}
+  if(t.id==="evSave"){evRead();const f=evEdit;if(!f.title){toast("Say what the event is, e.g. Christmas party.");return}if(!/^\d{4}-\d{2}-\d{2}$/.test(f.date)){toast("Pick the date.");return}
+    const push=$("#evPush")&&$("#evPush").checked,id=f.id||`${Date.now().toString(36)}-${(f.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"event").slice(0,30)}`.replace(/-$/,"");
+    const row={id,kind:f.kind,title:f.title,date:f.date,start:f.start||"",finish:f.finish||"",venue:f.venue,cost:f.cost,details:f.details,rsvp:!!f.rsvp,updated:new Date().toISOString()};
+    evBusy=true;render();const {error}=await sb.from("team_events").upsert(row);evBusy=false;if(error){toast("Couldn't save the event. Try again.");render();return}
+    await loadEvents();evEdit=null;let msg=f.id?"Event saved.":"Event added to the diary.";if(push&&row.date>=todayLocal())msg+=" "+await evPush(id);
+    toast(msg);evOpenIt(id);return}
+});
+
 // ---------- session planner: plan a training session from the drills library, with an AI suggestion (25 Nov 2026) ----------
 // Saved in coach_notes kind 'plan' (k = the session date), coaches only. "Suggest a session" asks the preview function
 // (kind "session") to pick from this site's own drills; with no AI key it builds one here from the library instead.
@@ -5468,7 +5558,7 @@ document.addEventListener("change",e=>{if(view!=="poster")return;const id=e.targ
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
   await loadBadges();
-  await Promise.all([loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors(),loadPom(),loadFund()]);
+  await Promise.all([loadTraining(),loadPolls(),loadParentSettings(),loadCheerSettings(),loadSponsors(),loadPom(),loadFund(),loadEvents()]);
   if(!window.SETUP_WAIT)suRefresh().catch(()=>{});
   await checkCoach();
   if(linkErr){try{sessionStorage.removeItem("linkErr")}catch(e){}if(canWrite)toast("You're already signed in as a coach. That email link was an old one, so you don't need it.");
@@ -5479,6 +5569,7 @@ document.addEventListener("change",e=>{if(view!=="poster")return;const id=e.targ
   for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos","notices","cards","certs","poster"])if(new URLSearchParams(location.search).has(v))setView(v);
   if(new URLSearchParams(location.search).has("fund")){view="fund";render();fundReturn(new URLSearchParams(location.search))}
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
+  const qev=new URLSearchParams(location.search).get("event");if(qev){evOpen=qev;view="event";render()}
   const qtr=new URLSearchParams(location.search).get("tour");if(qtr){trTour=qtr;trFrom="results";view="tr";render()}
   if(new URLSearchParams(location.search).has("app")){view="app";render()}
   const ql=new URLSearchParams(location.search).get("live");if(ql){tlMatch=ql;view="tl";render()}

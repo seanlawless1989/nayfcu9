@@ -17,6 +17,9 @@
 //   POST {notice: "<id>"} from a signed-in coach's phone after posting on the noticeboard (supabase/44_coach_extras.sql):
 //                         a note for everyone goes to every phone with alerts on; a note for one family only to the phones
 //                         signed in with that child's family code. Once per notice (again only if the coach edits it and asks).
+//   POST {event: "<id>"} from a signed-in coach's phone after adding a team event to the diary (supabase/46_team_events.sql):
+//                         a party, presentation night, fundraiser... to every phone with alerts on. Once per version.
+//                         Answers for an event use match "e:<event id>" in {avail} and {ask} below.
 //   POST {ask: {match} or {day}}  from a signed-in coach's phone: "can your child make it?" now, to the phones whose child
 //                                 hasn't answered for that game, tournament ("t:<id>") or training day. The same phones as the
 //                                 reminders below. Coaches only (checked from the sign-in), at most once an hour for each one.
@@ -363,7 +366,10 @@ async function availAlert(kind: "avail" | "tavail", ref: string, player: string)
   const said = SAID[row?.status ?? ""]; if (!said) return -1;
   let where: string, url: string;
   if (kind === "avail") {
-    if (ref.startsWith("t:")) {   // a whole tournament (supabase/30_tournament_availability.sql)
+    if (ref.startsWith("e:")) {   // a team event (supabase/46_team_events.sql)
+      const { data: ev } = await db.from("team_events").select("title,date,start").eq("id", ref.slice(2)).maybeSingle(); if (!ev) return -1;
+      where = `${ev.title}, ${dayName(ev.date)}${ev.start ? `, ${clock(ev.start)}` : ""}.`;
+    } else if (ref.startsWith("t:")) {   // a whole tournament (supabase/30_tournament_availability.sql)
       const { data: t } = await db.from("tournaments").select("name,date").eq("id", ref.slice(2)).maybeSingle(); if (!t) return -1;
       where = `${US} at the ${(t.name || "tournament").replace(/^the /i, "")}, ${dayName(t.date)}.`;
     } else {
@@ -418,6 +424,24 @@ async function noticeAlert(req: Request, id: string): Promise<number> {
   return subs?.length ? await send(null, alert, undefined, subs as Sub[]) : 0;
 }
 
+// a coach added a team event to the diary: -3 not a coach, -1 no such event (or it's over), 0 already sent this version
+async function eventAlert(req: Request, id: string): Promise<number> {
+  const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const { data: u } = jwt ? await pub.auth.getUser(jwt) : { data: null };
+  const email = u?.user?.email?.toLowerCase(); if (!email) return -3;
+  const { data: coach } = await db.from("coaches").select("email").eq("email", email).maybeSingle(); if (!coach) return -3;
+  const { data: ev } = await db.from("team_events").select("id,kind,title,date,start,finish,venue,cost,rsvp").eq("id", id).maybeSingle();
+  if (!ev || ev.date < londonDate(Date.now())) return -1;
+  const { data: claimed } = await db.rpc("push_claim_note", { p_key: `event:${ev.id}`, p_value: `${ev.title}|${ev.date}|${ev.start}|${ev.venue}`.slice(0, 200) });
+  if (!claimed) return 0;
+  const icon: Record<string, string> = { party: /christmas|xmas|festive/i.test(ev.title) ? "🎄" : "🥳", presentation: "🏆", fundraiser: "💷", social: "🎉", meeting: "🗣️", other: "📌" };
+  const when = `${dayName(ev.date)}${ev.start ? `, ${clock(ev.start)}${ev.finish ? ` to ${clock(ev.finish)}` : ""}` : ""}`;
+  const body = `${when}${ev.venue ? ` at ${ev.venue.split(",")[0]}` : ""}.${ev.cost ? ` ${ev.cost}.` : ""}${ev.rsvp ? " Tap to say if you're coming." : " Tap for the details."}`;
+  const alert = { title: `${icon[ev.kind] ?? "📌"} ${ev.title}`, body, url: `${SITE}?event=${encodeURIComponent(ev.id)}`, tag: `event-${ev.id}` };
+  const { data: subs, error } = await db.from("push_subs").select("endpoint,p256dh,auth").or("reminders.eq.true,live.eq.true"); if (error) throw error;
+  return subs?.length ? await send(null, alert, undefined, subs as Sub[]) : 0;
+}
+
 // a coach tapped "Ask by push". ask = -3 not a coach, -2 asked less than an hour ago (askedAt says when), -1 nothing to ask about
 const ASK_GAP = 60 * 60e3;
 async function askAlert(req: Request, a: { match?: unknown; day?: unknown }): Promise<{ ask: number; askedAt?: string }> {
@@ -428,7 +452,14 @@ async function askAlert(req: Request, a: { match?: unknown; day?: unknown }): Pr
   let p: { p_match: string | null; p_day: string | null }, make: (kids: string[]) => Alert, ref: string;
   const who = (kids: string[]) => kids.length ? names(kids) : "your child";
   const today = londonDate(Date.now());
-  if (typeof a.match === "string" && a.match.startsWith("t:")) {
+  if (typeof a.match === "string" && a.match.startsWith("e:")) {   // a team event (supabase/46_team_events.sql)
+    const { data: ev } = await db.from("team_events").select("id,title,date,start,rsvp").eq("id", a.match.slice(2)).maybeSingle();
+    if (!ev || !ev.rsvp || ev.date < today) return { ask: -1 };
+    ref = a.match;
+    const body = `The coaches are asking: ${ev.title}, ${dayName(ev.date)}${ev.start ? `, ${clock(ev.start)}` : ""}. Tap to answer yes, maybe or no.`;
+    p = { p_match: ref, p_day: null };
+    make = (kids) => ({ title: `🎉 Is ${who(kids)} coming to the ${ev.title.replace(/^the /i, "")}?`, body, url: `${SITE}?event=${encodeURIComponent(ev.id)}`, tag: `avr-${ref}` });
+  } else if (typeof a.match === "string" && a.match.startsWith("t:")) {
     const { data: t } = await db.from("tournaments").select("id,name,date").eq("id", a.match.slice(2)).maybeSingle();
     if (!t || (t.date && t.date < today)) return { ask: -1 };
     const nm = (t.name || "tournament").replace(/^the /i, ""); ref = a.match;
@@ -522,7 +553,9 @@ async function handle(req: Request) {
     await useTeam(schema);
     const out: Record<string, number> = {};
     let askedAt: string | undefined;
-    if (typeof body.notice === "string") {
+    if (typeof body.event === "string") {
+      out.event = await eventAlert(req, body.event);
+    } else if (typeof body.notice === "string") {
       out.notice = await noticeAlert(req, body.notice);
     } else if (typeof body.ask === "object" && body.ask) {
       const r = await askAlert(req, body.ask); out.ask = r.ask; askedAt = r.askedAt;
