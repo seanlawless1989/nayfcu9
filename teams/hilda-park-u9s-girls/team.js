@@ -35,5 +35,6 @@ self.TEAM = {
   hashtags: "#HildaPark #GirlsFootball",
   shortHashtags: "#HildaPark",
   cheer: "💙💛",
+  area: { name: "Chester-le-Street", lat: 54.857, lon: -1.571 },   // home town: match-day weather looks venues up near here
   storageKey: "hilda-park-u9s-girls"
 };

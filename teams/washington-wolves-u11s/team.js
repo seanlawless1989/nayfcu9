@@ -35,5 +35,6 @@ self.TEAM = {
   hashtags: "#WashingtonWolves #GirlsFootball",
   shortHashtags: "#WashingtonWolves",
   cheer: "🐺💙",
+  area: { name: "Washington", lat: 54.9, lon: -1.519 },   // home town: match-day weather looks venues up near here
   storageKey: "washington-wolves-u11s"
 };

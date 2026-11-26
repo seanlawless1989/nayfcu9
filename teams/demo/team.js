@@ -34,5 +34,6 @@ self.TEAM = {
   hashtags: "#SampleTown #GrassrootsFootball",
   shortHashtags: "#SampleTown",
   cheer: "💚💛",
+  // area: { name: "Darlington", lat: 54.524, lon: -1.553 },   // home town: match-day weather looks venues up near here (optional)
   storageKey: "sampletown-u11s"
 };
