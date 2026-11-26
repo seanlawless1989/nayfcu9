@@ -50,5 +50,6 @@ self.TEAM = {
   cheer: "💙💛",
 
   // Key prefix for things this site remembers on each phone. Keep it unchanged once a team is live.
+  area: { name: "Newton Aycliffe", lat: 54.618, lon: -1.572 },   // home town: match-day weather looks venues up near here
   storageKey: "nayfc"
 };

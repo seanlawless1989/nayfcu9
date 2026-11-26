@@ -297,7 +297,7 @@ window.DEMO={paint(){
   el.innerHTML=`<div class="in"><span><b>DEMO</b>A made-up team. Try anything: nothing you do is saved or seen by anyone else.</span>
     <span class="acts"><button class="go" data-demo="${c?"parent":"coach"}">${c?"Parents' view":"Try the coach view"}</button>
     <button data-demo="age">${flags.hidden?"Show scores":WD.ageBtn}</button>
-    <button data-demo="reset">Start again</button><a href="../${REF?"?ref="+encodeURIComponent(REF):""}#signup">Get your own</a></span>
+    <button data-demo="reset">Start again</button>${window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()?"":`<a href="../${REF?"?ref="+encodeURIComponent(REF):""}#signup">Get your own</a>`}</span>
     <span class="tip">${c?WD.coachTip:flags.hidden?WD.hiddenTip:WD.tip}</span></div>`}};
 // ---------- follow-up: after a couple of minutes, ask (once) who they are, unless the home page already did ----------
 // Sent to the Touchline Tales inbox by FormSubmit, the same as the home page sign-up form (FORM_ID in assets/home.js there).

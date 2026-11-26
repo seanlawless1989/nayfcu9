@@ -17,6 +17,9 @@
 //   POST {notice: "<id>"} from a signed-in coach's phone after posting on the noticeboard (supabase/44_coach_extras.sql):
 //                         a note for everyone goes to every phone with alerts on; a note for one family only to the phones
 //                         signed in with that child's family code. Once per notice (again only if the coach edits it and asks).
+//   POST {event: "<id>"} from a signed-in coach's phone after adding a team event to the diary (supabase/46_team_events.sql):
+//                         a party, presentation night, fundraiser... to every phone with alerts on. Once per version.
+//                         Answers for an event use match "e:<event id>" in {avail} and {ask} below.
 //   POST {ask: {match} or {day}}  from a signed-in coach's phone: "can your child make it?" now, to the phones whose child
 //                                 hasn't answered for that game, tournament ("t:<id>") or training day. The same phones as the
 //                                 reminders below. Coaches only (checked from the sign-in), at most once an hour for each one.
@@ -124,6 +127,10 @@ async function send(kind: Kind | null, alert: Alert, only?: string, list?: Sub[]
   for (let i = 0; i < subs.length; i += 25) {
     await Promise.all(subs.slice(i, i + 25).map(async (s) => {
       try {
+        if (s.endpoint.startsWith("app:fcm:")) { // a phone in the Touchline Tales app (45_app_push.sql)
+          const gone = await sendFcm(s.endpoint.slice(8), alert, kind === "reminders" || !kind ? 3600 : 900);
+          if (gone) { await db.from("push_subs").delete().eq("endpoint", s.endpoint); return; }
+        } else
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(alert), { TTL: kind === "reminders" || !kind ? 3600 : 900, urgency: "high" });
         ok++; await db.from("push_subs").update({ last_ok: new Date().toISOString() }).eq("endpoint", s.endpoint);
       } catch (e) {
@@ -134,6 +141,51 @@ async function send(kind: Kind | null, alert: Alert, only?: string, list?: Sub[]
     }));
   }
   return ok;
+}
+
+// ---- the Touchline Tales app: alerts through Firebase Cloud Messaging ----
+// Phones in the App Store / Google Play app save an FCM token instead of a web push address (see 45_app_push.sql).
+// FCM delivers to Android directly and to iPhones through Apple. Needs the secret FCM_SERVICE_ACCOUNT: the JSON key of a
+// Firebase service account (Project settings > Service accounts > Generate new private key). Without it these phones are skipped.
+let fcmAuth: { token: string; until: number; project: string } | null = null;
+const b64url = (b: ArrayBuffer | Uint8Array | string) =>
+  btoa(typeof b === "string" ? b : String.fromCharCode(...new Uint8Array(b instanceof Uint8Array ? b : new Uint8Array(b))))
+    .replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+async function fcmAccess() {
+  if (fcmAuth && fcmAuth.until > Date.now() + 60_000) return fcmAuth;
+  const raw = Deno.env.get("FCM_SERVICE_ACCOUNT"); if (!raw) return null;
+  const sa = JSON.parse(raw) as { client_email: string; private_key: string; project_id: string };
+  const now = Math.floor(Date.now() / 1000);
+  const unsigned = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" })) + "." + b64url(JSON.stringify({
+    iss: sa.client_email, scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 }));
+  const pem = sa.private_key.replace(/-----[^-]+-----|\s/g, "");
+  const key = await crypto.subtle.importKey("pkcs8", Uint8Array.from(atob(pem), (c) => c.charCodeAt(0)),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
+  const r = await fetch("https://oauth2.googleapis.com/token", { method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: unsigned + "." + b64url(sig) }) });
+  const j = await r.json(); if (!r.ok || !j.access_token) throw new Error("FCM sign-in failed: " + JSON.stringify(j).slice(0, 200));
+  return fcmAuth = { token: j.access_token, until: Date.now() + (j.expires_in ?? 3600) * 1000, project: sa.project_id };
+}
+// true when the token is no longer valid (app removed or alerts turned off), so the row should go
+async function sendFcm(token: string, alert: Alert, ttl: number): Promise<boolean> {
+  const a = await fcmAccess(); if (!a) throw new Error("FCM_SERVICE_ACCOUNT secret is not set");
+  const r = await fetch(`https://fcm.googleapis.com/v1/projects/${a.project}/messages:send`, {
+    method: "POST", headers: { authorization: `Bearer ${a.token}`, "content-type": "application/json" },
+    body: JSON.stringify({ message: {
+      token, notification: { title: alert.title, body: alert.body }, data: { url: alert.url || "", tag: alert.tag || "" },
+      android: { priority: "high", ttl: `${ttl}s`, notification: { channel_id: "match_alerts", tag: alert.tag || undefined, sound: "default" } },
+      apns: { headers: { "apns-priority": "10", "apns-expiration": String(Math.floor(Date.now() / 1000) + ttl),
+                         ...(alert.tag ? { "apns-collapse-id": alert.tag.slice(0, 64) } : {}) },
+              payload: { aps: { sound: "default", "thread-id": alert.tag || "team" } } },
+    } }),
+  });
+  if (r.ok) return false;
+  const txt = await r.text();
+  if (r.status === 404 || /UNREGISTERED|registration-token-not-registered/.test(txt) || (r.status === 400 && /INVALID_ARGUMENT/.test(txt) && /token/i.test(txt))) return true;
+  throw Object.assign(new Error("FCM " + r.status + " " + txt.slice(0, 200)), { statusCode: r.status });
 }
 
 // ---- live match events ----
@@ -314,7 +366,10 @@ async function availAlert(kind: "avail" | "tavail", ref: string, player: string)
   const said = SAID[row?.status ?? ""]; if (!said) return -1;
   let where: string, url: string;
   if (kind === "avail") {
-    if (ref.startsWith("t:")) {   // a whole tournament (supabase/30_tournament_availability.sql)
+    if (ref.startsWith("e:")) {   // a team event (supabase/46_team_events.sql)
+      const { data: ev } = await db.from("team_events").select("title,date,start").eq("id", ref.slice(2)).maybeSingle(); if (!ev) return -1;
+      where = `${ev.title}, ${dayName(ev.date)}${ev.start ? `, ${clock(ev.start)}` : ""}.`;
+    } else if (ref.startsWith("t:")) {   // a whole tournament (supabase/30_tournament_availability.sql)
       const { data: t } = await db.from("tournaments").select("name,date").eq("id", ref.slice(2)).maybeSingle(); if (!t) return -1;
       where = `${US} at the ${(t.name || "tournament").replace(/^the /i, "")}, ${dayName(t.date)}.`;
     } else {
@@ -369,6 +424,24 @@ async function noticeAlert(req: Request, id: string): Promise<number> {
   return subs?.length ? await send(null, alert, undefined, subs as Sub[]) : 0;
 }
 
+// a coach added a team event to the diary: -3 not a coach, -1 no such event (or it's over), 0 already sent this version
+async function eventAlert(req: Request, id: string): Promise<number> {
+  const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const { data: u } = jwt ? await pub.auth.getUser(jwt) : { data: null };
+  const email = u?.user?.email?.toLowerCase(); if (!email) return -3;
+  const { data: coach } = await db.from("coaches").select("email").eq("email", email).maybeSingle(); if (!coach) return -3;
+  const { data: ev } = await db.from("team_events").select("id,kind,title,date,start,finish,venue,cost,rsvp").eq("id", id).maybeSingle();
+  if (!ev || ev.date < londonDate(Date.now())) return -1;
+  const { data: claimed } = await db.rpc("push_claim_note", { p_key: `event:${ev.id}`, p_value: `${ev.title}|${ev.date}|${ev.start}|${ev.venue}`.slice(0, 200) });
+  if (!claimed) return 0;
+  const icon: Record<string, string> = { party: /christmas|xmas|festive/i.test(ev.title) ? "🎄" : "🥳", presentation: "🏆", fundraiser: "💷", social: "🎉", meeting: "🗣️", other: "📌" };
+  const when = `${dayName(ev.date)}${ev.start ? `, ${clock(ev.start)}${ev.finish ? ` to ${clock(ev.finish)}` : ""}` : ""}`;
+  const body = `${when}${ev.venue ? ` at ${ev.venue.split(",")[0]}` : ""}.${ev.cost ? ` ${ev.cost}.` : ""}${ev.rsvp ? " Tap to say if you're coming." : " Tap for the details."}`;
+  const alert = { title: `${icon[ev.kind] ?? "📌"} ${ev.title}`, body, url: `${SITE}?event=${encodeURIComponent(ev.id)}`, tag: `event-${ev.id}` };
+  const { data: subs, error } = await db.from("push_subs").select("endpoint,p256dh,auth").or("reminders.eq.true,live.eq.true"); if (error) throw error;
+  return subs?.length ? await send(null, alert, undefined, subs as Sub[]) : 0;
+}
+
 // a coach tapped "Ask by push". ask = -3 not a coach, -2 asked less than an hour ago (askedAt says when), -1 nothing to ask about
 const ASK_GAP = 60 * 60e3;
 async function askAlert(req: Request, a: { match?: unknown; day?: unknown }): Promise<{ ask: number; askedAt?: string }> {
@@ -379,7 +452,14 @@ async function askAlert(req: Request, a: { match?: unknown; day?: unknown }): Pr
   let p: { p_match: string | null; p_day: string | null }, make: (kids: string[]) => Alert, ref: string;
   const who = (kids: string[]) => kids.length ? names(kids) : "your child";
   const today = londonDate(Date.now());
-  if (typeof a.match === "string" && a.match.startsWith("t:")) {
+  if (typeof a.match === "string" && a.match.startsWith("e:")) {   // a team event (supabase/46_team_events.sql)
+    const { data: ev } = await db.from("team_events").select("id,title,date,start,rsvp").eq("id", a.match.slice(2)).maybeSingle();
+    if (!ev || !ev.rsvp || ev.date < today) return { ask: -1 };
+    ref = a.match;
+    const body = `The coaches are asking: ${ev.title}, ${dayName(ev.date)}${ev.start ? `, ${clock(ev.start)}` : ""}. Tap to answer yes, maybe or no.`;
+    p = { p_match: ref, p_day: null };
+    make = (kids) => ({ title: `🎉 Is ${who(kids)} coming to the ${ev.title.replace(/^the /i, "")}?`, body, url: `${SITE}?event=${encodeURIComponent(ev.id)}`, tag: `avr-${ref}` });
+  } else if (typeof a.match === "string" && a.match.startsWith("t:")) {
     const { data: t } = await db.from("tournaments").select("id,name,date").eq("id", a.match.slice(2)).maybeSingle();
     if (!t || (t.date && t.date < today)) return { ask: -1 };
     const nm = (t.name || "tournament").replace(/^the /i, ""); ref = a.match;
@@ -473,7 +553,9 @@ async function handle(req: Request) {
     await useTeam(schema);
     const out: Record<string, number> = {};
     let askedAt: string | undefined;
-    if (typeof body.notice === "string") {
+    if (typeof body.event === "string") {
+      out.event = await eventAlert(req, body.event);
+    } else if (typeof body.notice === "string") {
       out.notice = await noticeAlert(req, body.notice);
     } else if (typeof body.ask === "object" && body.ask) {
       const r = await askAlert(req, body.ask); out.ask = r.ask; askedAt = r.askedAt;

@@ -1,5 +1,5 @@
 // Calendar feed (.ics) of fixtures, tournaments and training that families subscribe to on their phones.
-//   GET              matches, tournaments and weekly training
+//   GET              matches, tournaments, team events (parties, presentation nights...) and weekly training
 //   GET ?training=0  matches and tournaments only
 //   GET ?team=<schema>&site=<url>  another team that shares this Supabase project (tools/team_schema_sql.py)
 // Phones check the feed every few hours, so new kick-off times and venues turn up on their own.
@@ -146,6 +146,19 @@ function trainingEvent(t: Training, from: string) {
   return event("training", lines, { SUMMARY: `🏃 ${TEAM} training`, LOCATION: t.venue, DESCRIPTION: desc, URL: `${SITE}?training` });
 }
 
+// a team event in the diary: party, presentation night, fundraiser... (supabase/46_team_events.sql)
+type TeamEvent = { id: string; kind: string; title: string; date: string; start: string; finish: string; venue: string; cost: string; details: string; updated: string | null };
+function teamEvent(e: TeamEvent) {
+  let mins = 120;
+  const s = hm(e.start), f = hm(e.finish);
+  if (s && f) { const d = (+f[1] * 60 + +f[2]) - (+s[1] * 60 + +s[2]); if (d > 0) mins = d; }
+  const icon = e.kind === "party" ? (/christmas|xmas|festive/i.test(e.title) ? "🎄" : "🥳") : ({ presentation: "🏆", fundraiser: "💷", social: "🎉", meeting: "🗣️" } as Record<string, string>)[e.kind] ?? "📌";
+  const url = `${SITE}?event=${encodeURIComponent(e.id)}`;
+  const lm = e.updated ? [`LAST-MODIFIED:${stamp(new Date(e.updated))}`, `SEQUENCE:${Math.max(0, Math.floor((Date.parse(e.updated) - Date.UTC(2026, 0, 1)) / 60000))}`] : [];
+  return event(`event-${e.id}`, [...when(e.date, e.start, mins), ...lm],
+    { SUMMARY: `${icon} ${TEAM}: ${e.title}`, LOCATION: e.venue, DESCRIPTION: [e.cost, e.details, url].filter(Boolean).join("\n\n"), URL: url });
+}
+
 // One request at a time: the team details above are shared, and requests are quick.
 let queue: Promise<unknown> = Promise.resolve();
 Deno.serve((req) => {
@@ -165,10 +178,11 @@ async function feed(req: Request) {
   FULL ||= TEAM;
   const today = new Date().toISOString().slice(0, 10);
   const since = addDays(today, -120); // recent results stay in the calendar for a few months
-  const [mq, tq, trq] = await Promise.all([
+  const [mq, tq, trq, evq] = await Promise.all([
     db.from("matches").select("id,date,opp,ha,venue,comp,ko,us,them,postponed,stage,tournament_id,updated").gte("date", since).order("date"),
     db.from("tournaments").select("id,name,date,end_date,venue,trophy").gte("date", since),
     withTraining ? db.from("training").select("*").eq("id", 1).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    db.from("team_events").select("id,kind,title,date,start,finish,venue,cost,details,updated").gte("date", since),   // an error before 46_team_events.sql: no events
   ]);
   if (mq.error || tq.error) return new Response("Calendar is unavailable right now", { status: 503 });
   const matches = (mq.data as Match[]).filter((m) => !m.postponed && m.stage !== "placeholder");
@@ -179,6 +193,7 @@ async function feed(req: Request) {
     "REFRESH-INTERVAL;VALUE=DURATION:PT6H", "X-PUBLISHED-TTL:PT6H", ...TZ];
   for (const m of matches) if (!m.tournament_id || !tIds.has(m.tournament_id)) out.push(...matchEvent(m));
   for (const t of tours) out.push(...tournamentEvents(t, matches.filter((m) => m.tournament_id === t.id)));
+  for (const e of ((evq.error ? [] : evq.data) ?? []) as TeamEvent[]) out.push(...teamEvent(e));
   if (trq.data) out.push(...trainingEvent(trq.data as Training, since > "2026-09-01" ? since : "2026-09-01"));
   out.push("END:VCALENDAR");
   return new Response(out.map(fold).join("\r\n") + "\r\n", {

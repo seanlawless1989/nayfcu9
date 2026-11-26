@@ -1,0 +1,5 @@
+node_modules/
+*.jks
+*.keystore
+www/GoogleService-Info.plist
+android/app/google-services.json

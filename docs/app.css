@@ -970,3 +970,14 @@ input.need{outline:3px solid #E53935;outline-offset:1px}
 /* season posters (25 Nov 2026) */
 .szwrap{padding:10px;background:repeating-linear-gradient(45deg,rgb(0 0 0/.03) 0 10px,transparent 10px 20px)}
 .szimg{display:block;width:100%;max-width:620px;margin:0 auto;aspect-ratio:1240/1754;box-shadow:0 8px 28px rgba(0,0,0,.22);border-radius:4px;background:#fff}
+
+/* map links on fixtures and the home hero (26 Nov 2026) */
+a.maplink{color:var(--club);font-weight:700;text-decoration:none}a.maplink:hover{text-decoration:underline}
+.hero a.pill{color:inherit;text-decoration:none}
+
+/* team events in the diary (26 Nov 2026) */
+.trfix.evfix{border-style:solid;border-left:4px solid var(--gold,#E8B04B)}
+.evlink{display:block;width:100%;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+.evlink .o{display:block}
+.evcard{margin-bottom:12px}.evcard .trfix{margin-top:8px}
+.evpage .tinfo{margin-top:0}.evpage a.btn{text-decoration:none}
