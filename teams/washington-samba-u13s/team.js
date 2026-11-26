@@ -36,5 +36,6 @@ self.TEAM = {
   hashtags: "#WashingtonSamba #GrassrootsFootball",
   shortHashtags: "#WashingtonSamba",
   cheer: "⚽💃",
+  area: { name: "Washington", lat: 54.9, lon: -1.519 },   // home town: match-day weather looks venues up near here
   storageKey: "washington-samba-u13s"
 };

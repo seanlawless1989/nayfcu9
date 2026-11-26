@@ -39,5 +39,6 @@ self.TEAM = {
   hashtags: "#NAYFC #NewtonAycliffe #GirlsFootball",
   shortHashtags: "#NAYFC #GirlsFootball",
   cheer: "💙💛",
+  area: { name: "Newton Aycliffe", lat: 54.618, lon: -1.572 },   // home town: match-day weather looks venues up near here
   storageKey: "nayfc-u11-pumas"
 };
