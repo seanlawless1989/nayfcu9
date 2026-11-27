@@ -2648,7 +2648,7 @@ function mdView(){const m=matches.find(x=>x.id===mdMatch);
   const sm=sortMatches(matches.filter(x=>seasonOf(x.date)===seasonOf(m.date)&&!x.practice&&x.stage!=="placeholder"&&!x.postponed&&(result(x)||isLive(x))));const i=sm.findIndex(x=>x.id===m.id);
   const nav=i>=0&&(sm[i-1]||sm[i+1])?`<div class="btns mdnav">${sm[i-1]?`<button class="btn ghost" data-md="${esc(sm[i-1].id)}">← ${esc(sm[i-1].opp||"Previous")}</button>`:"<span></span>"}${sm[i+1]?`<button class="btn ghost" data-md="${esc(sm[i+1].id)}">${esc(sm[i+1].opp||"Next")} →</button>`:""}</div>`:"";
   const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3>${m.notes?`<p class="hint">Notes: ${esc(m.notes)}</p>`:""}<div class="mg"><button class="mini" data-medit="${esc(m.id)}">Edit match</button>${rtMatchBtn(m)}<button class="mini" data-gfx="squad" data-mid="${esc(m.id)}">Squad post</button><button class="mini" data-gfx="ft" data-mid="${esc(m.id)}"${r?"":" disabled"}>Result post</button><button class="mini" data-gfx="potm" data-mid="${esc(m.id)}"${m.potm?"":" disabled"}>PotM post</button>${fx&&!m.postponed?`<button class="mini" data-pick="${esc(m.id)}">Pick squad</button><button class="mini" data-live="${esc(m.id)}">▶ Live match</button><button class="mini" data-tbmatch="${esc(m.id)}">📋 Tactics</button><button class="mini" data-msg="${esc(m.id)}">Parents' message</button>`:""}</div>${fx&&!m.postponed&&(m.comp!=="Tournament"||m.tournament_id)?`<div class="avsum">${avSummary(avKey(m))}</div>`:""}</section>`:"";
-  return `<div class="live md">${back}${board}${info}${ckCard(m)}${cheerCard(m)}${fx?previewCard(m)+mdReports(m,tn):mdReports(m,tn)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${canWrite&&fx&&m.opp&&!m.postponed?oppPrep(m):""}${nav}${coach}</div>`;
+  return `<div class="live md">${back}${board}${info}${ckCard(m)}${mwCard(m)}${cheerCard(m)}${fx?previewCard(m)+mdReports(m,tn):mdReports(m,tn)+previewCard(m)}${fx&&!m.postponed?`<div class="btns"><button class="btn ghost" data-ics="${esc(m.id)}">🗓️ Add to calendar</button><button class="btn ghost" data-view="calendar">Get every game</button></div><p class="hint">"Add to calendar" saves this game once and won't change if the kick-off time or venue does. "Get every game" keeps your calendar up to date.</p>`:""}${isLive(m)?`<button class="btn gold" data-tl="${esc(m.id)}">🔴 Follow live</button>`:""}${photosCard(m)}${team}${awards}${lineup}${story}${msHtml}${h2h}${canWrite&&fx&&m.opp&&!m.postponed?oppPrep(m):""}${nav}${coach}</div>`;
 }
 function liveNow(){const t=todayLocal();return matches.filter(m=>m.live&&(m.live.status==="live"||m.live.status==="ht"||(m.live.status==="ft"&&m.date===t)))}
 function renderTicker(){const el=document.getElementById("ticker");if(!el)return;const L=liveNow();
@@ -5186,7 +5186,8 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
 // Saved in coach_notes kind 'plan' (k = the session date), coaches only. "Suggest a session" asks the preview function
 // (kind "session") to pick from this site's own drills; with no AI key it builds one here from the library instead.
 let sxDay=null,sxDraft=null,sxBusy=false;
-function sxDays(){const up=trUpcoming(6).filter(x=>!x.off).map(x=>x.iso),saved=Object.keys((CN&&CN.plan)||{});return [...new Set(up.concat(saved))].sort().filter((d,i,a)=>d>=todayLocal()||i>=a.length-6).slice(-10)}
+function sxDays(){const up=trUpcoming(6).filter(x=>!x.off).map(x=>x.iso),saved=Object.keys((CN&&CN.plan)||{}).filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)),all=[...new Set(up.concat(saved))].sort(),t=todayLocal();
+  return all.filter(d=>d<t).slice(-3).concat(all.filter(d=>d>=t).slice(0,12))}
 function sxSum(p){const b=(p&&p.blocks)||[];return b.length?`${b.length} part${b.length===1?"":"s"}, ${b.reduce((a,x)=>a+(+x.mins||0),0)} minutes${p.focus?` · ${p.focus}`:""}`:"Not planned yet"}
 function sxCard(){if(!canWrite)return "";if(!CN)return `<section class="card"><h3>🗒️ Session plans</h3>${cnOff("Session plans")}</section>`;const d=sxDays().find(x=>x>=todayLocal()),p=d&&cnGet("plan",d);
   return `<section class="card stack"><h3 style="margin:0">🗒️ Session plans</h3><p class="hint" style="margin:0">${d?`Next session, ${longDate(d)}: <b>${esc(sxSum(p))}</b>.`:"Plan a session from the drills library."} Only coaches see plans.</p>
@@ -5194,31 +5195,32 @@ function sxCard(){if(!canWrite)return "";if(!CN)return `<section class="card"><h
 function sxAge(){const m=String(TEAM.ageGroup||TEAM.ageShort||"").match(/(\d{1,2})/);return m?+m[1]:0}
 function splanView(){if(!canWrite)return `<div class="card empty">Session plans are for coaches. Sign in to use them.</div>`;if(!CN)return `<div class="stack"><section class="card"><h2>🗒️ Session plans</h2>${cnOff("Session plans")}</section></div>`;
   if(sxDay)return sxForm();const days=sxDays();
-  return `<div class="stack"><section class="card"><h2 style="margin-top:0">🗒️ Session plans</h2><p class="hint" style="margin:0">Pick drills from the library, set the minutes, add notes, or let ✨ Suggest a session do it. Only coaches see plans.</p></section>
-    <section class="card stack">${days.map(d=>`<button class="rt-game" data-sxday="${esc(d)}"><span><b>${esc(longDate(d))}</b><small> ${esc(sxSum(cnGet("plan",d)))}</small></span><span class="pill">${cnGet("plan",d)?"Open":"Plan it"}</span></button>`).join("")||`<p class="hint">Add your training details on the Training page first.</p>`}
+  return `<div class="stack"><section class="card"><h2 style="margin-top:0">🗒️ Session plans</h2><p class="hint" style="margin:0">Pick drills from the library, set the minutes, add notes, or let ✨ Suggest a session do it. Only coaches see plans.</p></section>${sxSeasonCard()}
+    <section class="card stack">${days.map(d=>{const s=!cnGet("plan",d)&&sxSeasonFor(d);return `<button class="rt-game" data-sxday="${esc(d)}"><span><b>${esc(longDate(d))}</b><small> ${esc(sxSum(cnGet("plan",d)))}${s?` · season: ${esc(s.fest?"festival week":s.focus)}`:""}</small></span><span class="pill">${cnGet("plan",d)?"Open":"Plan it"}</span></button>`}).join("")||`<p class="hint">Add your training details on the Training page first.</p>`}
       <div class="btns"><input type="date" id="sxOther" value="${todayLocal()}"><button class="mini" id="sxOtherGo">Plan another day</button></div></section></div>`}
 function sxForm(){const p=sxDraft,total=p.blocks.reduce((a,x)=>a+(+x.mins||0),0),age=sxAge();
   const lib=(DRILLS||[]).filter(d=>(!p.focus||(d.focus||[]).includes(p.focus)||(d.focus||[]).includes("Warm-up")||(d.focus||[]).includes("Game"))&&(!age||((d.age_from||0)<=age&&(d.age_to||99)>=age)));
   return `<div class="stack"><button class="btn ghost" data-sxback style="align-self:flex-start">← All plans</button><section class="card stack"><h2 style="margin:0">🗒️ ${esc(longDate(sxDay))}</h2>
     <div class="grid2"><label class="f">Focus<select id="sxF"><option value="">Mixed</option>${DR_FOCUS.filter(f=>f!=="Warm-up"&&f!=="Game").map(f=>`<option${p.focus===f?" selected":""}>${f}</option>`).join("")}</select></label>
     <label class="f">Session length (minutes)<input type="number" id="sxM" min="20" max="150" value="${+p.mins||60}"></label></div>
-    <div class="btns"><button class="btn gold" id="sxAi"${sxBusy?" disabled":""}>${sxBusy?"Thinking…":"✨ Suggest a session"}</button></div>
-    <h3 style="margin:6px 0 0">The session · ${total} of ${+p.mins||60} minutes</h3>
+    ${sxWorkHtml(p)}
+    <div class="btns"><button class="btn gold" id="sxAi"${sxBusy?" disabled":""}>${sxBusy?"Thinking…":"✨ Suggest a session"}</button><button class="btn ghost" id="sxTn">🌙 Tonight mode</button></div>
+    ${sxTn?sxTnPanel():p.tonight?`<div class="sxtnbar">🌙 <b>Tonight: ${p.tonight.n} players, ${p.tonight.mins} minutes, ${esc((SX_SPACE[p.tonight.space]||"").toLowerCase())}${p.tonight.keeper?"":", no keeper"}.</b> <button class="mini" id="sxTn">Change</button> <button class="mini" id="sxTnOff">Clear</button>${ATT&&sxDay<=todayLocal()?` <button class="mini" id="sxTnReg">Save as the register</button>`:""}</div>`:""}
+    <h3 style="margin:6px 0 0">The session · ${total} of ${+p.mins||60} minutes</h3>${sxRateHtml(p)}
     ${p.blocks.length?`<ol class="spl">${p.blocks.map((b,i)=>`<li><div class="row" style="gap:8px;justify-content:space-between;flex-wrap:wrap"><b>${b.id?`<button class="linkish" data-drill="${esc(b.id)}">${esc(b.title)}</button>`:esc(b.title)}</b>
-      <span class="btns"><input type="number" min="1" max="90" value="${+b.mins||10}" data-sxmin="${i}" style="width:64px" aria-label="Minutes"> min <button class="mini" data-sxup="${i}" aria-label="Move up">↑</button><button class="mini" data-sxdel="${i}" aria-label="Remove">✕</button></span></div>
+      <span class="btns"><input type="number" min="1" max="90" value="${+b.mins||10}" data-sxmin="${i}" style="width:64px" aria-label="Minutes"> min ${sxRateBtns(b,i)}<button class="mini" data-sxup="${i}" aria-label="Move up">↑</button><button class="mini" data-sxdel="${i}" aria-label="Remove">✕</button></span></div>${b.tn?`<div class="sxtnline">🌙 ${esc(b.tn)}</div>`:""}
       <input type="text" data-sxnote="${i}" value="${esc(b.note||"")}" maxlength="200" placeholder="Coaching points, groups, who leads it…" style="width:100%;margin-top:6px"></li>`).join("")}</ol>`:`<p class="hint">No drills yet. Add some below or tap ✨ Suggest a session.</p>`}
     <div class="btns"><select id="sxAdd" style="flex:1;min-width:180px"><option value="">Add a drill…</option>${lib.map(d=>`<option value="${esc(d.id)}">${esc(d.title)} (${esc((d.focus||[]).join(", "))}${d.minutes?`, ${d.minutes} min`:""})</option>`).join("")}</select><button class="mini" id="sxAddGo">Add</button><button class="mini" id="sxAddOwn">Add my own</button></div>
     <label class="f">Notes for the coaches<textarea id="sxN" rows="3" maxlength="800" placeholder="Equipment, who's leading what, anyone to keep an eye on">${esc(p.note||"")}</textarea></label>
     <div class="btns"><button class="btn gold" id="sxSave">Save the plan</button><button class="btn ghost" id="sxShare">Share with the coaches</button>${cnGet("plan",sxDay)?`<button class="btn ghost" id="sxDelete">Delete</button>`:""}</div></section></div>`}
 function sxRead(){const p=sxDraft;if(!p)return;const v=id=>{const el=$("#"+id);return el?el.value:null};if(v("sxF")!=null)p.focus=v("sxF");if(v("sxM")!=null)p.mins=+v("sxM")||60;if(v("sxN")!=null)p.note=v("sxN").trim();
   document.querySelectorAll("[data-sxmin]").forEach(el=>{const b=p.blocks[+el.dataset.sxmin];if(b)b.mins=Math.max(1,+el.value||1)});document.querySelectorAll("[data-sxnote]").forEach(el=>{const b=p.blocks[+el.dataset.sxnote];if(b)b.note=el.value.trim()})}
-// no AI: warm-up, two or three drills on the focus, finish with a game
-function sxLocal(p){const age=sxAge(),ok=d=>!age||((d.age_from||0)<=age&&(d.age_to||99)>=age),L=(DRILLS||[]).filter(ok),pick=(f,used)=>{const c=L.filter(d=>(d.focus||[]).includes(f)&&!used.has(d.id));return c[Math.floor(Math.random()*c.length)]};
-  const used=new Set(),out=[],total=+p.mins||60,push=(d,m)=>{if(!d)return;used.add(d.id);out.push({id:d.id,title:d.title,mins:m,note:""})};
-  push(pick("Warm-up",used),Math.round(total*.15));const opts=DR_FOCUS.filter(f=>!["Warm-up","Game","Goalkeeping","Fitness"].includes(f)),main=p.focus||opts[Math.floor(Math.random()*opts.length)];
-  push(pick(main,used),Math.round(total*.25));push(pick(main,used)||pick(DR_FOCUS[2],used),Math.round(total*.25));push(pick("Game",used),total-out.reduce((a,x)=>a+x.mins,0));
+// no AI: warm-up, two or three drills on the focus, finish with a game. Picks fit Tonight mode, prefer 👍 drills, skip 👎 ones and last week's.
+function sxLocal(p,day){day=day||sxDay||todayLocal();const used=new Set(),out=[],total=+p.mins||60,push=(d,m)=>{if(!d)return;used.add(d.id);out.push({id:d.id,title:d.title,mins:m,note:""})},pk=f=>sxPick(f,used,p,day);
+  push(pk("Warm-up"),Math.round(total*.15));const opts=sxMains(),main=sxAutoFocus(p,day)||opts[Math.floor(Math.random()*opts.length)];
+  push(pk(main),Math.round(total*.25));push(pk(main)||pk(DR_FOCUS[2]),Math.round(total*.25));push(pk("Game"),total-out.reduce((a,x)=>a+x.mins,0));
   return out}
-function sxText(){const p=sxDraft;return `🗒️ Training plan, ${longDate(sxDay)}${p.focus?` (${p.focus})`:""}\n\n${p.blocks.map((b,i)=>`${i+1}. ${b.title} (${b.mins} min)${b.note?`\n   ${b.note}`:""}`).join("\n")}${p.note?`\n\nNotes: ${p.note}`:""}`}
+function sxText(){const p=sxDraft,tn=p.tonight;return `🗒️ Training plan, ${longDate(sxDay)}${p.focus?` (${p.focus})`:""}${tn?`\n🌙 Tonight: ${tn.n} players, ${tn.mins} minutes, ${SX_SPACE[tn.space]||""}`.replace(/, $/,""):""}\n\n${p.blocks.map((b,i)=>`${i+1}. ${b.title} (${b.mins} min)${b.tn?`\n   ${b.tn}`:""}${b.note?`\n   ${b.note}`:""}`).join("\n")}${p.note?`\n\nNotes: ${p.note}`:""}`}
 
 // ---------- matchday checklist: the jobs before a game, ticked off by any coach (25 Nov 2026) ----------
 // coach_notes kind 'chk': k "_list" = the team's own list, k = a match id = what's ticked for that game. Coaches only.
@@ -5291,7 +5293,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
     await loadNotices();ntEdit=null;let msg="Notice posted.";if(push){const r=await alSend({notice:row.id});msg=r==null?"Notice posted. (Phone alerts aren't switched on for this team, so it's on the site only.)":r>0?`Notice posted and sent to ${r} phone${r===1?"":"s"}.`:"Notice posted. No phones with alerts on to send it to yet."}
     toast(msg);render();return}
   // session plans
-  if(d.sxday){sxDay=d.sxday;const p=cnGet("plan",sxDay);sxDraft=JSON.parse(JSON.stringify(p||{focus:"",mins:TR?Math.max(30,Math.min(120,(()=>{const [a,b]=[TR.start,TR.finish].map(x=>{const m=String(x||"").match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:0});return b>a?b-a:60})())):60,blocks:[],note:""}));if(view!=="splan")setView("splan");else render();window.scrollTo({top:0});return}
+  if(d.sxday){sxTn=null;sxDay=d.sxday;const p=cnGet("plan",sxDay);sxDraft=JSON.parse(JSON.stringify(p||{focus:"",mins:TR?Math.max(30,Math.min(120,(()=>{const [a,b]=[TR.start,TR.finish].map(x=>{const m=String(x||"").match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:0});return b>a?b-a:60})())):60,blocks:[],note:""}));if(view!=="splan")setView("splan");else render();window.scrollTo({top:0});return}
   if("sxback" in d){sxRead();sxDay=null;sxDraft=null;render();return}
   if(t.id==="sxOtherGo"){const v=$("#sxOther").value;if(v){t.dataset.sxday=v;sxDay=v;sxDraft=JSON.parse(JSON.stringify(cnGet("plan",v)||{focus:"",mins:60,blocks:[],note:""}));render()}return}
   if(view==="splan"&&d.drill){sxRead();drOpen=d.drill;setView("drills");return}
@@ -5300,11 +5302,11 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
   if(t.id==="sxAddGo"){sxRead();const id=$("#sxAdd").value,dr=(DRILLS||[]).find(x=>x.id===id);if(!dr)return;sxDraft.blocks.push({id:dr.id,title:dr.title,mins:+dr.minutes||10,note:""});render();return}
   if(t.id==="sxAddOwn"){sxRead();const ti=(prompt("What's the activity called?")||"").trim();if(!ti)return;sxDraft.blocks.push({id:"",title:ti.slice(0,80),mins:10,note:""});render();return}
   if(t.id==="sxAi"){sxRead();if(sxDraft.blocks.length&&!confirm("Replace the drills in this plan with a suggestion?"))return;sxBusy=true;render();let blocks=null,why="";
-    try{const age=sxAge(),ok=x=>!age||((x.age_from||0)<=age&&(x.age_to||99)>=age),lib=(DRILLS||[]).filter(ok).slice(0,120).map(x=>({id:x.id,title:x.title,focus:x.focus||[],minutes:x.minutes||null}));
-      const {data,error}=await sb.functions.invoke("preview",{body:fnBody({kind:"session",ask:{focus:sxDraft.focus||"",mins:+sxDraft.mins||60,age:TEAM.ageGroup||"",squad:players.filter(inGames).length},drills:lib,team:Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup},RUGBY?{sport:SP.key}:{})})});
+    try{const age=sxAge(),R=sxRated(sxDay),ok=x=>(!age||((x.age_from||0)<=age&&(x.age_to||99)>=age))&&(R[x.id]||0)>=0&&sxFits(x,sxDraft.tonight),lib=(DRILLS||[]).filter(ok).slice(0,120).map(x=>({id:x.id,title:x.title,focus:x.focus||[],minutes:x.minutes||null}));
+      const {data,error}=await sb.functions.invoke("preview",{body:fnBody({kind:"session",ask:{focus:sxAutoFocus(sxDraft,sxDay),mins:sxDraft.tonight?sxDraft.tonight.mins:+sxDraft.mins||60,age:TEAM.ageGroup||"",squad:sxDraft.tonight?sxDraft.tonight.n:players.filter(inGames).length,workOn:sxWork(sxDay).slice(0,2).map(w=>w.why.join(", "))},drills:lib,team:Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup},RUGBY?{sport:SP.key}:{})})});
       if(!error&&data&&Array.isArray(data.blocks)){blocks=data.blocks.map(b=>{const dr=(DRILLS||[]).find(x=>x.id===b.id);return dr?{id:dr.id,title:dr.title,mins:Math.max(1,Math.min(90,+b.mins||10)),note:String(b.note||"").slice(0,200)}:null}).filter(Boolean);if(data.note&&!sxDraft.note)sxDraft.note=String(data.note).slice(0,800)}else why=(data&&data.error)||""}catch(x){}
     sxBusy=false;if(!blocks||!blocks.length){blocks=sxLocal(sxDraft);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a session from the drills library.":"Here's a session from the drills library.")}else toast("Here's a suggestion. Change anything you like, then save.");
-    sxDraft.blocks=blocks;render();return}
+    sxDraft.blocks=blocks;if(sxDraft.tonight){sxTnStart();sxTnApply();sxTn=null}render();return}
   if(t.id==="sxSave"){sxRead();try{await cnSet("plan",sxDay,sxDraft);toast("Plan saved. The other coaches can see it.")}catch(x){toast("Couldn't save the plan. Try again.")}render();return}
   if(t.id==="sxDelete"){if(!confirm("Delete this plan?"))return;try{await cnDel("plan",sxDay);sxDay=null;sxDraft=null;toast("Plan deleted.")}catch(x){toast("Couldn't delete it.")}render();return}
   if(t.id==="sxShare"){sxRead();const txt=sxText();if(navigator.share){try{await navigator.share({text:txt});return}catch(x){if(x&&x.name==="AbortError")return}}try{await navigator.clipboard.writeText(txt);toast("Copied. Paste it into the coaches' chat.")}catch(x){prompt("Copy this",txt)}return}
@@ -5321,6 +5323,162 @@ document.addEventListener("change",async e=>{const el=e.target;
     const {error}=await sb.rpc("set_coach_role",{p_email:em,p_role:r});if(error){toast(/least one manager/.test(error.message)?"The team needs at least one manager. Make someone else a manager first.":/Only/.test(error.message)?"Only a manager can change roles.":"Couldn't save that. Try again.");el.value=was||"coach";return}
     if(c)c.role=r;toast(`${coachName(em)} is now ${/^[aeiou]/i.test(CR_ROLES[r][1])?"an":"a"} ${CR_ROLES[r][1].toLowerCase()}.`);render();return}
 });
+
+// ---------- training night upgrades (27 Nov 2026): Tonight mode, the season plan, and learning from the last match ----------
+// Everything lives in coach_notes kind 'plan' (no database change), coaches only:
+//   k = a date          a session plan; it can also carry tonight {n,mins,space,keeper}, stars 1-5 and a 👍/👎 (r) on each drill
+//   k = "_season"       the season plan: {blocks:[{from, weeks, focus}]}, every training night in a block gets that focus
+//   k = "m:<match id>"  after a game: {date, opp, issues:[...], note}; the next suggestion works on what went wrong
+const SX_ISSUES=RUGBY?[["Dropped passes and knock-ons","Handling"],["Passes went behind or astray","Passing"],["Ran into contact with no support","Running lines"],["Missed tackles","Tackling"],["Lost the ball in contact","Contact"],["Kicks went wrong","Kicking"],["Lost our shape","Game"]]
+  :[["Lost the ball under pressure","Dribbling"],["Passes went astray","Passing"],["Not enough shots, or missed chances","Shooting"],["Let in easy goals","Defending"],["Didn't win the ball back","Defending"],["The keeper had a hard time","Goalkeeping"],["Tired late on","Fitness"],["Bunched up, no spacing","Game"]];
+const SX_SPACE={full:"Full pitch",half:"Half pitch",small:"Small area or indoor hall"};
+const sxIso=(iso,n)=>{const d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);return d.toLocaleDateString("en-CA")};
+const sxMains=()=>DR_FOCUS.filter(f=>!["Warm-up","Game","Goalkeeping","Fitness"].includes(f));
+let sxTn=null,sxSeasonEdit=null,mwOpen=null;
+
+// what the last few games say to work on, for a session on `day`: [{focus, why}] best first
+function sxWork(day){const L=Object.entries((CN&&CN.plan)||{}).filter(([k,v])=>k.startsWith("m:")&&v&&v.date&&v.date<=day&&v.date>=sxIso(day,-21)&&(v.issues||[]).length).map(x=>x[1]).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!L.length)return [];const score={},why={};
+  L.forEach((m,i)=>m.issues.forEach(t=>{const f=(SX_ISSUES.find(x=>x[0]===t)||[])[1];if(!f)return;score[f]=(score[f]||0)+(i===0?2:1);(why[f]=why[f]||[]).push(t)}));
+  // a session already given to it since that game counts as one step done
+  Object.entries(CN.plan).forEach(([k,p])=>{if(/^\d{4}-/.test(k)&&k>L[L.length-1].date&&k<day&&p&&p.focus&&score[p.focus])score[p.focus]-=1});
+  return Object.keys(score).filter(f=>score[f]>0).sort((a,b)=>score[b]-score[a]).map(f=>({focus:f,why:[...new Set(why[f])],vs:L[0].opp}))}
+// drills coaches rated: id -> total of 👍 (+1) and 👎 (-1) over the last ten weeks
+function sxRated(day){const out={};Object.entries((CN&&CN.plan)||{}).forEach(([k,p])=>{if(!/^\d{4}-/.test(k)||k>=day||k<sxIso(day,-70)||!p)return;(p.blocks||[]).forEach(b=>{if(b.id&&b.r)out[b.id]=(out[b.id]||0)+b.r})});return out}
+// the season plan block that covers a day
+function sxSeasonFor(day){const s=cnGet("plan","_season");if(!s||!Array.isArray(s.blocks))return null;
+  for(const b of s.blocks){const end=sxIso(b.from,7*(+b.weeks||1)-1);if(day>=b.from&&day<=end){const wk=Math.floor((new Date(day+"T12:00:00")-new Date(b.from+"T12:00:00"))/6048e5)+1;return {focus:b.focus,week:wk,weeks:+b.weeks||1,fest:wk===(+b.weeks||1)&&(+b.weeks||1)>2}}}return null}
+
+// how many players a drill needs, read from its "players" line ("Pairs", "Groups of 4-6", "6-12", "2 v 2 + keepers")
+function sxNeed(d){const s=String(d.players||"").toLowerCase();let n=4;const vs=s.match(/(\d+)\s*v\s*(\d+)/),num=s.match(/(\d+)/);
+  if(vs)n=+vs[1]+ +vs[2];else if(/pair/.test(s))n=2;else if(/whole|squad|two teams/.test(s))n=4;else if(num)n=+num[1];return n+(/keeper/.test(s)&&!/1 server/.test(s)?1:0)}
+const sxKeeper=d=>/keeper/i.test(String(d.players||""))||(d.focus||[]).includes("Goalkeeping");
+// space a drill wants, from the yards in its kit list and set-up: full, half or small
+function sxRoom(d){const t=`${d.equipment||""} ${d.setup||""}`.toLowerCase();if(/full pitch|full-size pitch/.test(t))return "full";const y=[...t.matchAll(/(\d{2,3})\s*(?:x\s*\d{2,3}\s*)?(?:yards|yds|m\b|metres)/g)].map(m=>+m[1]);
+  return /half pitch|half a pitch/.test(t)||Math.max(0,...y)>=35?"half":"small"}
+function sxFits(d,tn){if(!tn)return true;if(sxNeed(d)>tn.n)return false;if(!tn.keeper&&sxKeeper(d))return false;const r=sxRoom(d),o={small:0,half:1,full:2};return o[r]<=o[tn.space||"full"]}
+// how to split the players tonight for one drill
+function sxSplit(d,n){const s=String(d.players||"").toLowerCase(),g=s.match(/(?:groups? of|teams? of)\s*(\d+)/),gk=/keeper/.test(s)?" Keepers in goal.":"";
+  if((d.focus||[]).includes("Game")||/two teams|\d+\s*v\s*\d+/.test(s)){const a=Math.ceil(n/2),b=Math.floor(n/2);return n>=12?`Two games of ${Math.ceil(n/4)} v ${Math.floor(n/4)}, or ${a} v ${b}.${gk}`:`${a} v ${b}${a!==b?" (a coach joins the smaller side, or rotate a player on)":""}.${gk}`}
+  if(/pair/.test(s))return n%2?`${Math.floor(n/2)} pairs, one group of 3.`:`${n/2} pairs.`;
+  if(g){const k=+g[1],full=Math.max(1,Math.floor(n/k)),left=n-full*k;return left?`${full} group${full===1?"":"s"} of ${k}, put the other ${left} in ${left===1?"one of them":"a smaller group"}.`:`${full} group${full===1?"":"s"} of ${k}.`}
+  return `All ${n} together.`}
+function sxShrink(d,space){if(space==="full")return "";const r=sxRoom(d);if(space==="small"&&r!=="small")return " Make the area about half the size.";if(space==="small")return " Keep the grid tight, about 15 x 15 yards.";return ""}
+
+// pick a drill for a focus: fits tonight, not 👎 lately, prefers 👍, avoids what was used last week
+function sxPick(f,used,p,day){const age=sxAge(),okA=d=>!age||((d.age_from||0)<=age&&(d.age_to||99)>=age),R=sxRated(day||todayLocal()),last=new Set(((cnGet("plan",sxIso(day||todayLocal(),-7))||{}).blocks||[]).map(b=>b.id));
+  let c=(DRILLS||[]).filter(d=>okA(d)&&(d.focus||[]).includes(f)&&!used.has(d.id));const tn=p&&p.tonight;
+  const narrow=(arr,test)=>{const x=arr.filter(test);return x.length?x:arr};
+  if(f!=="Goalkeeping"&&!(p&&p.focus==="Goalkeeping"))c=narrow(c,d=>!(d.focus||[]).includes("Goalkeeping"));if(tn)c=narrow(c,d=>sxFits(d,tn));c=narrow(c,d=>(R[d.id]||0)>=0);c=narrow(c,d=>!last.has(d.id));if(!c.length)return null;
+  const bag=[];c.forEach(d=>{const w=(R[d.id]||0)>0?3:1;for(let i=0;i<w;i++)bag.push(d)});return bag[Math.floor(Math.random()*bag.length)]}
+// the focus a new plan gets: what the coach picked, else what the last match says, else the season plan
+function sxAutoFocus(p,day){if(p.focus)return p.focus;const w=sxWork(day)[0];if(w)return w.focus;const s=sxSeasonFor(day);return s&&!s.fest?s.focus:""}
+
+// Tonight mode: rebuild the plan around who's here, the time and the space
+function sxTnStart(){const day=sxDay,p=sxDraft,roster=players.filter(x=>x.current).map(x=>x.name),prev=p.tonight;let who;
+  if(prev&&Array.isArray(prev.who))who=prev.who.filter(n=>roster.includes(n));
+  else if(ATT&&ATT[day])who=ATT[day].slice();
+  else{const a=TAV[day]||{};who=roster.filter(n=>a[n]==="yes"||a[n]==="maybe");if(!who.length)who=roster.filter(n=>a[n]!=="no")}
+  const total=p.blocks.reduce((a,x)=>a+(+x.mins||0),0)||+p.mins||60;
+  sxTn={who:new Set(who),mins:prev&&prev.mins||total,space:prev&&prev.space||"full",keeper:prev?!!prev.keeper:true}}
+function sxTnPanel(){const roster=players.filter(x=>x.current).sort((a,b)=>(+a.num||99)-(+b.num||99)),T=sxTn,a=TAV[sxDay]||{};
+  return `<section class="card stack sxtn"><h3 style="margin:0">🌙 Tonight mode</h3><p class="hint" style="margin:0">Tick who's here, then rebuild. Drills that need more players, a keeper or more room get swapped, the minutes fit the time you've got, and each drill says how to split the players.${Object.keys(a).length?" Ticks start from the availability answers.":""}</p>
+    <div class="sxwho">${roster.map(p=>`<label class="sxkid${T.who.has(p.name)?" on":""}"><input type="checkbox" data-sxwho="${esc(p.name)}"${T.who.has(p.name)?" checked":""}>${esc(p.name)}${a[p.name]?`<small>${a[p.name]==="yes"?"said yes":a[p.name]==="no"?"said no":"maybe"}</small>`:""}</label>`).join("")}</div>
+    <p class="hint" style="margin:0"><b id="sxTnN">${T.who.size}</b> here. <button class="mini" id="sxTnAll">Everyone</button> <button class="mini" id="sxTnNone">Nobody</button></p>
+    <div class="grid2"><label class="f">Time we've got (minutes)<input type="number" id="sxTnM" min="15" max="150" value="${+T.mins||60}"></label>
+      <label class="f">Space<select id="sxTnS">${Object.entries(SX_SPACE).map(([k,v])=>`<option value="${k}"${T.space===k?" selected":""}>${v}</option>`).join("")}</select></label></div>
+    <label class="row" style="gap:8px;justify-content:flex-start;cursor:pointer"><input type="checkbox" id="sxTnK"${T.keeper?" checked":""} style="width:20px;height:20px"> A keeper is here tonight</label>
+    <div class="btns"><button class="btn gold" id="sxTnGo">Rebuild for tonight</button><button class="btn ghost" id="sxTnX">Close</button></div></section>`}
+function sxTnRead(){if(!sxTn)return;const m=$("#sxTnM"),s=$("#sxTnS"),k=$("#sxTnK");if(m)sxTn.mins=Math.max(15,Math.min(150,+m.value||60));if(s)sxTn.space=s.value;if(k)sxTn.keeper=k.checked}
+function sxTnApply(){const p=sxDraft,T=sxTn,n=T.who.size,tn={n,mins:T.mins,space:T.space,keeper:T.keeper,who:[...T.who]};p.tonight=tn;p.mins=T.mins;
+  if(!p.blocks.length)p.blocks=sxLocal(Object.assign({},p,{mins:T.mins,focus:sxAutoFocus(p,sxDay)}),sxDay);
+  const used=new Set(p.blocks.map(b=>b.id).filter(Boolean)),swaps=[];
+  p.blocks=p.blocks.map(b=>{const d=b.id&&(DRILLS||[]).find(x=>x.id===b.id);if(!d||sxFits(d,tn))return b;
+    let alt=null;for(const f of [...(d.focus||[]).filter(x=>x!=="Goalkeeping"||tn.keeper),"Game"]){const a=sxPick(f,used,p,sxDay);if(a&&sxFits(a,tn)){alt=a;break}}
+    if(!alt)return b;used.add(alt.id);swaps.push(`${d.title} → ${alt.title}`);return {id:alt.id,title:alt.title,mins:b.mins,note:b.note}});
+  // fit the minutes to tonight's time
+  const total=p.blocks.reduce((a,x)=>a+(+x.mins||0),0)||1;if(total!==T.mins&&p.blocks.length){let left=T.mins;p.blocks.forEach((b,i)=>{b.mins=i===p.blocks.length-1?Math.max(3,left):Math.max(3,Math.round((+b.mins||10)*T.mins/total));left-=b.mins})}
+  p.blocks.forEach(b=>{const d=b.id&&(DRILLS||[]).find(x=>x.id===b.id);b.tn=d?(sxSplit(d,n)+sxShrink(d,T.space)).trim():`${n} players.`;if(d&&!sxFits(d,tn))b.tn+=" Needs adapting tonight."});
+  return swaps}
+
+// the season plan editor, on the Session plans page
+function sxSeasonDefault(){const mains=sxMains(),out=[];let from=(trUpcoming(1)[0]||{}).iso||todayLocal();for(let i=0;i<5;i++){out.push({from,weeks:6,focus:mains[i%mains.length]});from=sxIso(from,42)}return out}
+function sxSeasonCard(){const s=cnGet("plan","_season"),E=sxSeasonEdit;
+  if(E)return `<section class="card stack"><h3 style="margin:0">📅 Season plan</h3><p class="hint" style="margin:0">Give each block of weeks a theme. Every training night in a block gets a plan on that theme, and the last week of a block of 3 or more is a festival week: games only. You can still change any night.</p>
+    ${E.map((b,i)=>`<div class="sxblk"><label class="f">Starts<input type="date" data-sxbf="${i}" value="${esc(b.from)}"></label><label class="f">Weeks<input type="number" min="1" max="16" data-sxbw="${i}" value="${+b.weeks||6}"></label>
+      <label class="f">Theme<select data-sxbt="${i}">${DR_FOCUS.filter(f=>f!=="Warm-up"&&f!=="Game").map(f=>`<option${b.focus===f?" selected":""}>${f}</option>`).join("")}</select></label><button class="mini" data-sxbdel="${i}" aria-label="Remove this block">✕</button></div>`).join("")}
+    <div class="btns"><button class="mini" id="sxBAdd">Add a block</button></div>
+    <div class="btns"><button class="btn gold" id="sxSSave">Save the season plan</button><button class="btn ghost" id="sxSX">Cancel</button>${s?`<button class="btn ghost" id="sxSDel">Delete it</button>`:""}</div></section>`;
+  const bl=s&&Array.isArray(s.blocks)?s.blocks:[],now=sxSeasonFor(todayLocal())||sxSeasonFor((trUpcoming(1)[0]||{}).iso||todayLocal());
+  return `<section class="card stack"><h3 style="margin:0">📅 Season plan</h3>${bl.length?`<p class="hint" style="margin:0">${now?`Now: <b>${esc(now.focus)}</b>, week ${now.week} of ${now.weeks}${now.fest?" (festival week)":""}.`:"No block covers this week."}</p>
+    <div class="sxblks">${bl.map(b=>`<div class="sxb${now&&now.focus===b.focus&&todayLocal()>=b.from?" on":""}"><b>${esc(b.focus)}</b><small>${esc(shortDay(b.from))} · ${+b.weeks} week${+b.weeks===1?"":"s"}</small></div>`).join("")}</div>
+    <div class="btns"><button class="btn gold" id="sxFill">Plan every empty night</button><button class="btn ghost" id="sxSEdit">Change it</button></div>`
+    :`<p class="hint" style="margin:0">Theme your training in blocks of weeks, like passing for six weeks, then dribbling, and every training night gets a plan to match.</p><div class="btns"><button class="btn gold" id="sxSEdit">Plan the season</button></div>`}</section>`}
+function sxSeasonRead(){if(!sxSeasonEdit)return;document.querySelectorAll("[data-sxbf]").forEach(el=>{const b=sxSeasonEdit[+el.dataset.sxbf];if(b&&el.value)b.from=el.value});
+  document.querySelectorAll("[data-sxbw]").forEach(el=>{const b=sxSeasonEdit[+el.dataset.sxbw];if(b)b.weeks=Math.max(1,Math.min(16,+el.value||1))});
+  document.querySelectorAll("[data-sxbt]").forEach(el=>{const b=sxSeasonEdit[+el.dataset.sxbt];if(b)b.focus=el.value})}
+function sxMinsTR(){if(!TR)return 60;const [a,b]=[TR.start,TR.finish].map(x=>{const m=String(x||"").match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:0});return b>a?Math.max(30,Math.min(120,b-a)):60}
+function sxFestival(mins){const used=new Set(),out=[],push=(d,m)=>{if(d){used.add(d.id);out.push({id:d.id,title:d.title,mins:m,note:""})}};
+  push(sxPick("Warm-up",used,null),Math.round(mins*.2));push(sxPick("Game",used,null),Math.round(mins*.35));push(sxPick("Game",used,null),mins-out.reduce((a,x)=>a+x.mins,0));
+  if(out.length)out[out.length-1].note="Festival week: small-sided games, everyone plays, have fun.";return out}
+
+// after a game: what went wrong, for the next session
+function mwCard(m){if(!canWrite||!m||isFixture(m)||m.postponed||!result(m)&&!(m.live&&m.live.status==="ft"))return "";if(!CN)return "";
+  if(m.date<sxIso(todayLocal(),-28))return "";const k="m:"+m.id,v=cnGet("plan",k)||{issues:[],note:""},open=mwOpen===m.id||!(v.issues||[]).length;
+  const next=sxDays().find(d=>d>todayLocal()||(d===todayLocal()));
+  if(!open)return `<section class="card stack"><div class="row" style="justify-content:space-between;gap:8px"><h3 style="margin:0">🧠 Work on at training</h3><button class="mini" data-mwedit="${esc(m.id)}">Change</button></div>
+    <p class="hint" style="margin:0">${v.issues.map(esc).join(" · ")}${v.note?`<br>${esc(v.note)}`:""}</p>
+    <p class="hint" style="margin:0">The next suggested session works on ${esc([...new Set(v.issues.map(t=>(SX_ISSUES.find(x=>x[0]===t)||[])[1]).filter(Boolean))].join(" and ").toLowerCase())}.</p>${next?`<div class="btns"><button class="btn ghost" data-sxday="${esc(next)}">Plan ${esc(shortDay(next))}</button></div>`:""}</section>`;
+  return `<section class="card stack"><h3 style="margin:0">🧠 What should training work on?</h3><p class="hint" style="margin:0">Tick what went wrong in this game. The next suggested session picks drills to fix it. Only coaches see this.</p>
+    <div class="sxwho">${SX_ISSUES.map(([t])=>`<label class="sxkid${(v.issues||[]).includes(t)?" on":""}"><input type="checkbox" data-mwi="${esc(t)}"${(v.issues||[]).includes(t)?" checked":""}>${esc(t)}</label>`).join("")}</div>
+    <label class="f">Anything else<input type="text" id="mwNote" maxlength="200" value="${esc(v.note||"")}" placeholder="e.g. great effort, struggled on the bigger pitch"></label>
+    <div class="btns"><button class="btn gold" data-mwsave="${esc(m.id)}">Save</button>${(v.issues||[]).length?`<button class="btn ghost" data-mwx>Cancel</button>`:""}</div></section>`}
+
+function sxWorkHtml(p){const w=sxWork(sxDay),s=sxSeasonFor(sxDay);if(!w.length&&!s)return "";
+  return `<div class="sxwork">${w.length?`<div>🧠 <b>From the last game${w[0].vs?` v ${esc(w[0].vs)}`:""}:</b> ${w.map(x=>`<button class="mini${p.focus===x.focus?" on":""}" data-sxwork="${esc(x.focus)}" title="${esc(x.why.join(", "))}">${esc(x.focus)}</button>`).join(" ")}</div>`:""}${s?`<div>📅 <b>Season plan:</b> ${s.fest?"festival week, games only":`${esc(s.focus)}, week ${s.week} of ${s.weeks}`}${!s.fest&&p.focus!==s.focus?` <button class="mini" data-sxwork="${esc(s.focus)}">Use it</button>`:""}</div>`:""}${!p.focus&&(w.length||s&&!s.fest)?`<div class="hint">With the focus on Mixed, ✨ Suggest works on ${esc((w[0]||s).focus.toLowerCase())}.</div>`:""}</div>`}
+// how did it go: stars and 👍/👎 on each drill, for a session that has happened
+function sxRateHtml(p){if(!sxDay||sxDay>todayLocal()||!p.blocks.length)return "";const s=+p.stars||0;
+  return `<div class="sxrate"><b>How did it go?</b> <span class="sxstars">${[1,2,3,4,5].map(i=>`<button class="mini${i<=s?" on":""}" data-sxstar="${i}" aria-label="${i} out of 5">${i<=s?"★":"☆"}</button>`).join("")}</span>
+    <span class="hint"> Rate each drill with 👍 or 👎 too. Suggestions use the 👍 ones more and leave the 👎 ones out for a while.</span></div>`}
+function sxRateBtns(b,i){if(!sxDay||sxDay>todayLocal()||!b.id)return "";return `<button class="mini${b.r===1?" on":""}" data-sxr="${i}" data-v="1" aria-label="Worked well">👍</button><button class="mini${b.r===-1?" on":""}" data-sxr="${i}" data-v="-1" aria-label="Didn't work">👎</button>`}
+
+document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const d=t.dataset;
+  // Tonight mode
+  if(t.id==="sxTn"){sxRead();sxTnStart();render();return}
+  if(t.id==="sxTnX"){sxTn=null;render();return}
+  if(t.id==="sxTnAll"||t.id==="sxTnNone"){sxTnRead();sxTn.who=new Set(t.id==="sxTnAll"?players.filter(x=>x.current).map(x=>x.name):[]);render();return}
+  if(t.id==="sxTnGo"){sxRead();sxTnRead();if(sxTn.who.size<2){toast("Tick at least two players.");return}const sw=sxTnApply();sxTn=null;
+    toast(sw.length?`Rebuilt for ${sxDraft.tonight.n}: ${sw.length} drill${sw.length===1?"":"s"} swapped. Save the plan to keep it.`:`Rebuilt for ${sxDraft.tonight.n}. Save the plan to keep it.`);render();return}
+  if(t.id==="sxTnOff"){sxRead();delete sxDraft.tonight;sxDraft.blocks.forEach(b=>delete b.tn);render();return}
+  if(t.id==="sxTnReg"){const tn=sxDraft.tonight;if(!tn||!ATT)return;if(ATT[sxDay]&&!confirm(`Replace the register for ${shortDay(sxDay)}?`))return;
+    try{let r=await sb.from("training_attendance").delete().eq("day",sxDay);if(r.error)throw r.error;if(tn.who.length){r=await sb.from("training_attendance").insert(tn.who.map(player=>({day:sxDay,player})));if(r.error)throw r.error}
+      ATT[sxDay]=tn.who.slice();toast(`Register saved: ${tn.who.length} at training.`)}catch(x){toast("Couldn't save the register. Try again.")}render();return}
+  // ratings
+  if(d.sxstar){sxRead();sxDraft.stars=+d.sxstar===+sxDraft.stars?0:+d.sxstar;render();return}
+  if(d.sxr!=null){sxRead();const b=sxDraft.blocks[+d.sxr];if(b){const v=+d.v;b.r=b.r===v?0:v}render();return}
+  // what to work on, from the last match
+  if(d.sxwork){sxRead();sxDraft.focus=d.sxwork;render();return}
+  // season plan
+  if(t.id==="sxSEdit"){const s=cnGet("plan","_season");sxSeasonEdit=JSON.parse(JSON.stringify(s&&s.blocks&&s.blocks.length?s.blocks:sxSeasonDefault()));render();return}
+  if(t.id==="sxSX"){sxSeasonEdit=null;render();return}
+  if(t.id==="sxBAdd"){sxSeasonRead();const L=sxSeasonEdit,last=L[L.length-1],mains=sxMains();L.push({from:last?sxIso(last.from,7*(+last.weeks||1)):todayLocal(),weeks:6,focus:mains[L.length%mains.length]});render();return}
+  if(d.sxbdel!=null){sxSeasonRead();sxSeasonEdit.splice(+d.sxbdel,1);render();return}
+  if(t.id==="sxSSave"){sxSeasonRead();const blocks=sxSeasonEdit.filter(b=>b.from&&b.focus).sort((a,b)=>a.from.localeCompare(b.from));try{await cnSet("plan","_season",{blocks});sxSeasonEdit=null;toast("Season plan saved. Tap Plan every empty night to fill the plans in.")}catch(x){toast("Couldn't save the season plan. Try again.")}render();return}
+  if(t.id==="sxSDel"){if(!confirm("Delete the season plan? Plans already made for each night stay."))return;try{await cnDel("plan","_season");sxSeasonEdit=null;toast("Season plan deleted.")}catch(x){toast("Couldn't delete it.")}render();return}
+  if(t.id==="sxFill"){if(!DRILLS){toast("The drills library is still loading. Try again in a moment.");return}const days=trUpcoming(40).filter(x=>!x.off).map(x=>x.iso).filter(d=>sxSeasonFor(d)&&!cnGet("plan",d));
+    if(!days.length){toast("Every training night in the season plan already has a plan.");return}if(!confirm(`Make plans for ${days.length} training night${days.length===1?"":"s"}? Nights that already have a plan are left alone.`))return;
+    t.disabled=true;const mins=sxMinsTR(),rows=days.map(day=>{const s=sxSeasonFor(day),p={focus:s.fest?"":s.focus,mins,blocks:[],note:s.fest?"Festival week: games only, everyone plays.":`${s.focus}, week ${s.week} of ${s.weeks}.`,season:true};p.blocks=s.fest?sxFestival(mins):sxLocal(p,day);return {kind:"plan",k:day,data:p,updated:new Date().toISOString()}});
+    const {error}=await sb.from("coach_notes").upsert(rows,{onConflict:"kind,k"});t.disabled=false;if(error){toast("Couldn't make the plans. Try again.");return}rows.forEach(r=>(CN.plan=CN.plan||{})[r.k]=r.data);toast(`${rows.length} plan${rows.length===1?"":"s"} made. Open any night to change it.`);render();return}
+  // match review
+  if(d.mwedit){mwOpen=d.mwedit;render();return}
+  if("mwx" in d){mwOpen=null;render();return}
+  if(d.mwsave){const m=matches.find(x=>x.id===d.mwsave);if(!m)return;const issues=[...document.querySelectorAll("[data-mwi]")].filter(x=>x.checked).map(x=>x.dataset.mwi),note=($("#mwNote")||{}).value||"";
+    try{if(!issues.length&&!note.trim())await cnDel("plan","m:"+m.id);else await cnSet("plan","m:"+m.id,{date:m.date,opp:m.opp||"",issues,note:note.trim()});mwOpen=null;toast(issues.length?"Saved. The next suggested session will work on it.":"Saved.")}catch(x){toast("Couldn't save that. Try again.")}render();return}
+});
+document.addEventListener("change",e=>{const el=e.target;
+  if(el.dataset&&el.dataset.sxwho!=null&&sxTn){if(el.checked)sxTn.who.add(el.dataset.sxwho);else sxTn.who.delete(el.dataset.sxwho);el.closest("label").classList.toggle("on",el.checked);const n=$("#sxTnN");if(n)n.textContent=sxTn.who.size;return}
+  if(el.dataset&&el.dataset.mwi!=null){el.closest("label").classList.toggle("on",el.checked);return}
+  if(el.id==="sxTnS"||el.id==="sxTnM"||el.id==="sxTnK")sxTnRead()});
 
 // ---------- season posters: a printable end-of-season poster for the team or one player (25 Nov 2026) ----------
 // Our own design, drawn on a canvas at A4 size (2480 x 3508, 300 dpi) from what's already on the site. COACHES ONLY: the
