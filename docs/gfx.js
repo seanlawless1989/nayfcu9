@@ -40,6 +40,10 @@ let S=Object.assign({
   goals:{},us:0,them:0,usManual:false,ftPotm:"",potm:"",pkit:Object.keys(KITS)[0],captain:TEAM.captain||"",sponsorName:(TEAM.sponsor&&TEAM.sponsor.name)||"",assists:{},month:"",msPlayer:"",msLabel:""
 },store.get(SK+".state",{}));
 const save=()=>store.set(SK+".state",S);
+// a credit line at the end of each caption, so families who see the post can find Touchline Tales (and follow it).
+// Off for a team whose team.js sets poweredBy: false, and a coach can untick it (remembered on this phone).
+const TT_LINE="📲 Scores, stats and graphics by Touchline Tales: touchlinetales.club #TouchlineTales";
+const TT_CREDIT=()=>TEAM.poweredBy!==false&&S.ttCredit!==false;
 
 const IMG={octopus:null,coffeyLogo:null,crest:null,sponsor:null,coffey:null,opp:null,squadPhoto:null,ftPhoto:null,potmPhoto:null};
 const logos=store.get(SK+".logos",{});
@@ -459,8 +463,11 @@ function caption(){
   } else if(S.mode==="potm"){
     t=S.potmKind==="month"?`🏅 PLAYER OF THE MONTH 🏅\n\nCongratulations to ${S.potm||"…"}, our ${pomMonth().charAt(0)+pomMonth().slice(1).toLowerCase()} player of the month! 🌟${S.pomNote?`\n\n${S.pomNote}`:""}${sp}\n\n${TEAM.hashtags||""}`:S.potmKind==="tournament"?`⭐ PLAYER OF THE TOURNAMENT ⭐\n\nCongratulations to ${S.potm||"…"}, our player of the tournament${S.tname?` at the ${S.tname}`:""}! 🌟`:`${(TEAM.potm&&TEAM.potm.icon)||"🏆"} ${POTM_UP} ${(TEAM.potm&&TEAM.potm.icon)||"🏆"}\n\nCongratulations to ${S.potm||"…"}, our player of the match${S.opp?` against ${S.opp}`:""}! 🌟${TEAM.potm&&TEAM.potm.sponsor?`\n\nThanks to ${TEAM.potm.sponsor} for supporting the ${TEAM.ageGroup||"team"}.`:""}${sp}\n\n${TEAM.hashtags||""}`;
   }
+  if(TT_CREDIT())t=t.replace(/\s+$/,"")+"\n\n"+TT_LINE;
   $("caption").value=t;showWhen();
 }
+(function(){const c=$("ttCredit"),w=$("ttCreditWrap");if(!c)return;if(TEAM.poweredBy===false){if(w)w.hidden=true;return}
+  c.checked=S.ttCredit!==false;c.addEventListener("change",()=>{S.ttCredit=c.checked;save();caption()})})();
 // the game's date, big at the top and above the caption, with a warning when it's an old game
 function whenNow(){const dated=S.mode==="squad"||S.mode==="ft"||(S.mode==="potm"&&S.potmKind!=="month");return dated&&window.dateWhen?window.dateWhen(S.date):null}
 function showWhen(){const w=whenNow(),b=$("gWhen"),c=$("capWhen");if(!b||!c)return;b.hidden=c.hidden=!w;if(!w)return;

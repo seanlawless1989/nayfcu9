@@ -64,7 +64,7 @@ grant select, insert, update, delete on public.team_prefs to authenticated;
 do $$ begin
   if to_regclass('public.coach_notes') is not null then
     alter table public.coach_notes drop constraint if exists coach_notes_kind_check;
-    alter table public.coach_notes add constraint coach_notes_kind_check check (kind in ('fc','pos','opp','plan','chk'));
+    alter table public.coach_notes add constraint coach_notes_kind_check check (kind in ('fc','pos','opp','plan','chk','mday','deb'));
   end if;
 end $$;
 
