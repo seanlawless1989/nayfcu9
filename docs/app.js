@@ -154,6 +154,7 @@ function appsTracked(list){return list.length>0}// scorers and PotM count as app
 // ---------- views ----------
 function setView(v){rpClose();if(v!=="tactics"&&document.body.classList.contains("tbfs-on"))tbFsOff();view=v;if((v!=="md"&&/[?&]match=/.test(location.search))||(v!=="tr"&&/[?&]tour=/.test(location.search))||(v!=="event"&&/[?&]event=/.test(location.search)))try{history.replaceState(null,"",location.pathname)}catch(e){}document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));if(v==="fund"){fSel=null;fundOpen()}render();window.scrollTo({top:0})}
 function render(){
+  logCoachView();
   const sel=$("#season");const ss=seasons();if(!season||!ss.includes(season))season=ss[0];
   sel.innerHTML=ss.map(s=>`<option${s===season?" selected":""}>${s}</option>`).join("");
   const main=$("#main");const gv=view==="gfx";main.hidden=gv;$("#gfxView").hidden=!gv;if(gv){window.GFX&&GFX.refresh();document.body.classList.toggle("ro",!canWrite);return}
@@ -425,6 +426,11 @@ function logView(){try{
   const today=new Date().toLocaleDateString("en-CA",{timeZone:"Europe/London"}),isNew=localStorage.getItem(SK+".seen")!==today;
   localStorage.setItem(SK+".seen",today);sb.rpc("log_view",{p_new:isNew}).then(()=>{},()=>{});
 }catch(e){}}
+// coaches' own use of the site: one count each time a signed-in coach moves to another screen (supabase/48_coach_views.sql).
+// Only the owner page reads the totals. Visitor counts above leave coaches' phones out.
+let cvLast=null;
+function logCoachView(){if(!sb||!canWrite||window.DEMO)return;const v=view;if(!v||v===cvLast||v==="login"||v==="privacy")return;cvLast=v;
+  try{sb.rpc("log_coach_view",{p_area:String(v).toLowerCase().slice(0,24)}).then(()=>{},()=>{})}catch(e){}}
 function viewsCard(){
   if(!VIEWS)return "";if(!VIEWS.length)return `<section class="card edit-only"><h3>Website visits</h3><p class="hint">Counting starts now. Check back tomorrow.</p>${activeBlock()}</section>`;
   const today=new Date().toLocaleDateString("en-CA",{timeZone:"Europe/London"}),ago=n=>new Date(Date.now()-n*864e5).toLocaleDateString("en-CA",{timeZone:"Europe/London"});
