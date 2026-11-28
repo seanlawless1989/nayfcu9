@@ -123,7 +123,13 @@ window.H2H=opp=>meetings(opp,new Date().toISOString().slice(0,10));
 function assistsOf(m){return m.assists||{}}
 const ASSISTS_FROM=TEAM.assistsFrom||"2000-01";
 function assistsTracked(s){return s>=ASSISTS_FROM}
-function sortMatches(a){return a.slice().sort((x,y)=>(x.date||"").localeCompare(y.date||""))}
+// games on the same day (tournaments) go in the order they were played: real kick-off time from the live game first,
+// then the kick-off time typed in, then group games before knockout games (final last)
+const STAGE_ORD=s=>Math.max(0,STAGES.indexOf(s||"Group stage"));
+function koOrder(m){const e=m.live&&(m.live.events||[]).find(e=>e.k==="ko"&&e.at);if(e)return +e.at;
+  const k=(m.ko||"").match(/^(\d{1,2}):(\d{2})/);if(k){const t=Date.parse(m.date+"T"+k[1].padStart(2,"0")+":"+k[2]);if(!isNaN(t))return t}return null}
+function sortMatches(a){return a.slice().sort((x,y)=>{const d=(x.date||"").localeCompare(y.date||"");if(d)return d;
+  const kx=koOrder(x),ky=koOrder(y);if(kx!=null&&ky!=null&&kx!==ky)return kx-ky;return STAGE_ORD(x.stage)-STAGE_ORD(y.stage)})}
 function seasonMatches(){return sortMatches(matches.filter(m=>!m.practice&&seasonOf(m.date)===season))}
 function pname(id){return id}
 // in the squad for games: not a training-only player (players.training, supabase/34_training_only.sql)
@@ -176,6 +182,7 @@ function render(){
   else if(view==="event")main.innerHTML=evView();
   else if(view==="evnew"){if(!evEdit)evEdit=evBlank();view="event";main.innerHTML=evView()}
   else if(view==="splan")main.innerHTML=splanView();
+  else if(view==="assist")main.innerHTML=assistView();
   else if(view==="coaches")main.innerHTML=coachesView();
   else if(view==="insights")main.innerHTML=insightsView();
   else if(view==="kit")main.innerHTML=kitView();
@@ -249,13 +256,32 @@ function heroHtml(){const live=liveNow().find(m=>m.live.status!=="ft");const nm=
     <div class="btns">${live?`<button class="btn gold" data-tl="${esc(m.id)}">Follow live</button>`:hasPreview(m)?`<button class="btn gold" data-md="${esc(m.id)}">📰 Read preview</button>`:""}${days<=1||live?`<button class="btn gold" data-mday="${esc(m.id)}">📣 Matchday</button>`:""}<button class="btn ghost" data-view="alerts">🔔 Match alerts</button></div></section>`}
 
 const HOME_ITEMS=[["matchday","📣","Matchday","The next game: when, where, kit and the squad"],["notices","📌","Noticeboard","News and notes from the coaches"],["fixtures","📅","Fixtures","Next games, kick-off times and venues"],["results",SP.ball,"Results","Every score, scorer and player of the match"],["reports","📝","Match reports","Write-ups from the coaches"],["players",/girl/i.test(PL)?"👧":/boy|lad/i.test(PL)?"👦":"🧒","Players",`${RUGBY?"Tries, points":"Goals"}, games and awards for each ${PL.replace(/s$/,"")}`],["medals","🏅","Medals",`Badges the ${PL} win across the season`],["cards","🃏","Player cards","A football card for every player"],["certs","📜","Certificates","Print one when a player reaches a level"],["alerts","🔔","Match alerts",`Kick-off, ${SP.goals} and full time on your phone`],["parents","👪","Parents","Sign in with your family code"],["app","📲","Get the app","On your home screen, like any other app"],["calendar","🗓️","Add to calendar","Every game in your phone's calendar"],["training","🏃","Training","When, where and what to bring"],["gallery","📸","Photos","Match-day photos and videos"],["honours","🏆","Honours","Trophies and tournaments we've won"],["review","📊","Season review","Records and milestones"],["opps","🆚","Opponents","Our record against every team"],["squad","👕","Squad","Players, coaches and shirt numbers"]];
-const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["poster","🖼️","Season posters","Team and player posters to print"],["tnew","🏅","Tournament","Add a tournament day"],["evnew","🎉","Add an event","Party, presentation night, fundraiser"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["splan","🗒️","Session plans","Plan training from the drills library"],["coaches","👥","Coaches","Who can do what"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
+const HOME_COACH=[["new","➕","Add a match","Fixture or result"],["gfx","🎨","Graphics","Posts for Facebook and WhatsApp"],["book","📒","Sticker book","Print the season book"],["poster","🖼️","Season posters","Team and player posters to print"],["tnew","🏅","Tournament","Add a tournament day"],["evnew","🎉","Add an event","Party, presentation night, fundraiser"],["sponsors","🤝","Sponsors","Logos and links on the home page"],["fund","💷","Fundraiser","Sell squares on a virtual pitch"],["pom","🏅","Player of the month","Pick the star, make the poster"],["ratings","⭐","Player ratings","Scores out of 10, coaches only"],["assist","🤖","Coaching assistant","Session ideas, matchday plans and reports"],["splan","🗒️","Session plans","Plan training from the drills library"],["coaches","👥","Coaches","Who can do what"],["insights","📊","Data hub","Stats and charts, coaches only"],["birthdays","🎂","Birthdays","Reminders, coaches only"],["kit","📏","Kit sizes","Shirts, shorts and socks for ordering kit"],["cphotos","🔒","Coach photos","Private photos and videos, coaches only"],["help","🛟","Help and changes","Ask for a fix or a change"]];
 function homeMenu(){const tile=([v,ic,t,d],c)=>{if(v==="training"&&TR)d=`Every ${TR.day} ${clock(TR.start)}, ${TR.venue.split(",")[0]}`;if(v==="parents"&&myKids().length)d="Signed in for "+myKids().join(" and ");if(noScores())d=({results:"Every game and "+POTM,players:`Games and awards for each ${PL.replace(/s$/,"")}`,alerts:"Kick-off, half time and full time on your phone",opps:"Every team we play",review:"Appearances and milestones"})[v]||d;return `<button class="hm-tile${c}" data-view="${v}"><span class="ic">${ic}</span><b>${t}</b><span>${esc(d)}</span></button>`};
-  const pics=GAL.filter(galOk),openPolls=POLLS.filter(pollOpen);
+  const openPolls=POLLS.filter(pollOpen);
   if(openPolls.length||canWrite)HOME_ITEMS.some(x=>x[0]==="votes")||HOME_ITEMS.splice(4,0,["votes","🗳️","Votes",`${RUGBY?"Try":"Goal"} of the month and more`]);
   const fi=HOME_ITEMS.findIndex(x=>x[0]==="fund");if(fLive()){const t=["fund","💷","Fundraiser","Get your name on our pitch"];if(fi<0)HOME_ITEMS.splice(1,0,t)}else if(fi>=0)HOME_ITEMS.splice(fi,1);
   const vt=HOME_ITEMS.find(x=>x[0]==="votes");if(vt)vt[3]=openPolls.length?`${openPolls.length} vote${openPolls.length>1?"s":""} open now`:`${RUGBY?"Try":"Goal"} of the month and more`;
-  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||(PHOTOS_ON&&GAL_DB))&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).filter(x=>crCan(x[0])).map(x=>tile(x," coach")).join(""):""}</div>${galWaiting().length?`<section class="card" style="margin-top:12px"><b>⚑ ${galWaiting().length} photo${galWaiting().length>1?"s":""} to look at.</b> A family asked for ${galWaiting().length>1?"them":"it"} to come down. <button class="mini" data-view="gallery">Check now</button></section>`:""}${pics.length?`<h2 class="sect">Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${pics.length})</button></div>`:""}`}
+  return `<h2 class="sect">What's on the site</h2><div class="hm-tiles">${HOME_ITEMS.filter(x=>(x[0]!=="app"||!alStandalone())&&(x[0]!=="gallery"||(PHOTOS_ON&&GAL_DB))&&(x[0]!=="parents"||(PL_ON&&!canWrite))).map(x=>tile(x,"")).join("")}${canWrite?(hasSetup()?[...HOME_COACH,["setup","🛠️","Team setup","Name, colours, squad and coaches"]]:HOME_COACH).filter(x=>crCan(x[0])).map(x=>tile(x," coach")).join(""):""}</div>${guidesCard()}${galWaiting().length?`<section class="card" style="margin-top:12px"><b>⚑ ${galWaiting().length} photo${galWaiting().length>1?"s":""} to look at.</b> A family asked for ${galWaiting().length>1?"them":"it"} to come down. <button class="mini" data-view="gallery">Check now</button></section>`:""}`}
+// the newest photos, near the top of the home page
+function homePhotos(){const pics=GAL.filter(galOk);return pics.length?`<div><h2 class="sect">📸 Latest photos</h2>${albums(4)}<div class="btns" style="margin-top:10px"><button class="btn ghost" data-view="gallery">All photos (${pics.length})</button></div></div>`:""}
+// ---------- quick guides: a short video and a printable PDF for parents (family code, Home Screen, alerts) and coaches
+// (sign in, Team setup). One generic set for every team, made from the made-up Sample Town demo and kept on touchlinetales.club,
+// so a fix there reaches every site at once. TEAM.guides=false hides them. (25 Nov 2026)
+const GUIDES=TEAM.guides===false?null:"https://touchlinetales.club/guides/getting-started/";
+const GUIDE={parents:{ic:"👪",t:"Parents",d:"Family code, Home Screen and match alerts",v:"parents-guide",pdf:"Touchline_Tales_parents_guide.pdf",len:"45 sec"},
+  coaches:{ic:"🧢",t:"Coaches",d:"Signing in and Team setup",v:"coaches-guide",pdf:"Touchline_Tales_coaches_guide.pdf",len:"1 min"}};
+const guideBtns=k=>{const g=GUIDE[k];return `<button class="btn gold" type="button" data-guide="${k}">▶ Watch (${g.len})</button><a class="btn ghost" href="${GUIDES+g.pdf}" target="_blank" rel="noopener">📄 PDF guide</a>`};
+function guidesCard(){if(!GUIDES)return "";const order=canWrite?["coaches","parents"]:["parents","coaches"];
+  return `<section class="card gd-card"><h3>📘 New to the site? Quick guides</h3><p class="hint" style="margin-top:0">A short video and a guide you can print, on signing in and getting set up.</p>
+  <div class="gd-cols">${order.map(k=>{const g=GUIDE[k];return `<div class="gd"><b>${g.ic} ${g.t}</b><span class="hint">${g.d}</span><div class="btns">${guideBtns(k)}</div></div>`}).join("")}</div><div class="gd-play" hidden></div></section>`}
+// the video opens in the card it was tapped from, so the page doesn't jump
+document.addEventListener("click",e=>{const b=e.target.closest("[data-guide]");if(!b||!GUIDES)return;const g=GUIDE[b.dataset.guide];if(!g)return;
+  const card=b.closest(".card"),box=card&&card.querySelector(".gd-play");if(!box)return;
+  box.hidden=false;box.innerHTML=`<video src="${GUIDES+g.v}.mp4" poster="${GUIDES+g.v}.jpg" controls autoplay playsinline preload="metadata"></video><button class="mini" type="button" data-guideclose>Close video</button>`;
+  box.scrollIntoView({block:"nearest",behavior:"smooth"})});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-guideclose]");if(!b)return;const box=b.closest(".gd-play");if(box){box.innerHTML="";box.hidden=true}});
+function guideLine(k,lead){if(!GUIDES)return "";return `<div class="gd-line"><p class="hint" style="margin:0">${lead}</p><div class="btns">${guideBtns(k)}</div><div class="gd-play" hidden></div></div>`}
 function homeView(){if(noScores())return homeNoScores();
   const list=seasonMatches(),t=teamStats(list),ps=playerStats(list);
   const done=list.filter(result);const last=done.slice(-6);
@@ -273,7 +299,7 @@ function homeView(){if(noScores())return homeNoScores();
   return `<div class="stack">
   ${flagged&&canWrite?`<div class="note">${flagged} match${flagged>1?"es need":" needs"} checking. Look for the orange tag on the Results page.</div>`:""}
   ${homeLive()||heroHtml()}
-  ${homeMenu()}${pomHome()}
+  ${homePhotos()}${homeMenu()}${pomHome()}
   <h2 class="sect"><span class="ctag c-league">${LEAGUE_NAME}</span> ${season}</h2>
   <section class="card"><h3>${LEAGUE_NAME} record</h3>${REC(lt)}
       ${ldone.length?`<div style="margin-top:12px" class="btns"><span class="hint">Form</span><div class="form">${ldone.slice(-6).map(m=>`<span class="chip ${result(m)}" title="${esc(m.opp)} ${m.us}-${m.them}">${result(m)}</span>`).join("")}</div></div>`:""}</section>
@@ -304,7 +330,7 @@ function homeView(){if(noScores())return homeNoScores();
 function homeNoScores(){const list=seasonMatches(),ps=playerStats(list);
   const done=list.filter(m=>!isFixture(m)&&!m.postponed),upcoming=list.filter(isFixture).filter(m=>!m.postponed&&!isLive(m))[0];
   const potms=Object.entries(ps).filter(([,o])=>o.potm>0).sort((a,b)=>b[1].potm-a[1].potm||a[0].localeCompare(b[0]));
-  return `<div class="stack">${homeLive()||heroHtml()}${homeMenu()}${pomHome()}
+  return `<div class="stack">${homeLive()||heroHtml()}${homePhotos()}${homeMenu()}${pomHome()}
   <h2 class="sect">${esc(season)} season</h2>
   <div class="cols">
     <section class="card"><h3>Recent games</h3>${done.length?done.slice(-3).reverse().map(matchRow).join(""):`<p class="hint">No games played yet this season.</p>`}
@@ -341,7 +367,7 @@ const byComp=ms=>compFilter?ms.filter(m=>m.comp===compFilter):ms;
 const tByComp=ts=>!compFilter||compFilter==="Tournament"?ts:[];
 const STAGES=["Group stage","Round of 16","Quarter final","Semi final","Final","3rd place play-off","Plate","Shield","Friendly game"];
 const TROPHIES=["Winners","Runners-up","Semi-finalists","Plate winners","Shield winners"];
-function tGames(t){return matches.filter(m=>m.tournament_id===t.id).sort((a,b)=>(a.date||"").localeCompare(b.date||"")||STAGES.indexOf(a.stage||"Group stage")-STAGES.indexOf(b.stage||"Group stage"))}
+function tGames(t){return sortMatches(matches.filter(m=>m.tournament_id===t.id))}
 // A tournament runs from date to end_date; end_date is blank for a one-day tournament.
 const tEnd=t=>t.end_date&&t.end_date>(t.date||"")?t.end_date:t.date||"";
 const nextDay=iso=>{const d=new Date(iso+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+1);return d.toISOString().slice(0,10)};
@@ -925,7 +951,7 @@ function parentsView(){const kid=PRN.kid,kids=myKids();
     <h3>Another ${kid} in the squad?</h3>${joinBox("Type their family code as well.")}
     <div class="btns"><button class="btn ghost" id="pLeave">Sign this phone out</button></div>${coachToo()}</section>${kitFamCard()}`;
   return `<section class="card stack"><h2>👪 Parents</h2><p>Sign in with the family code the coach sent you. You only do this once on each phone, and both parents (or any carer) can use the same code on their own phones. Then you can:</p>${what}${joinBox("")}
-    <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p>${coachToo()}</section>`}
+    <p class="hint">No code? Ask the coach. We don't ask for your name or email: the code just tells the site which ${kid} is yours, so please keep it to your family.</p>${guideLine("parents","New to the site? The parents' guide shows how to sign in, add it to your Home Screen and turn on alerts.")}${coachToo()}</section>`}
 // coaches: every player's code, how many phones use it, and the "parents must sign in" switch (on the Squad page)
 async function loadFam(){if(!sb||!canWrite)return;const {data,error}=await sb.rpc("family_overview");FAM=error?[]:(data||[]);if(view==="squad")render()}
 const famText=f=>`Hi! Here's ${f.player}'s family code for the ${TEAM.name||""} ${TEAM.ageGroup||""} website:\n\n${fmtCode(f.code)}\n\nOpen ${siteUrl()}?parents on your phone and type it in once. Each parent or carer can type the same code on their own phone. Then you can tell us whether ${f.player} can make each game, add ${f.player}'s kit sizes, and vote in team votes.\n\nPlease keep it to your family. Thank you! ${TEAM.cheer||SP.ball}`;
@@ -1280,7 +1306,11 @@ async function loadGallery(){GAL=[];GAL_DB=false;if(!sb||!PHOTOS_ON||window.DEMO
     // a visitor isn't allowed to read it at all (42501), which still tells us it's set up
     if(!error){GAL_DB=true;GAL=galSee()?data||[]:[]}else if(error.code==="42501")GAL_DB=true}catch(e){}}
 const galOk=p=>p.status==="approved";
-const galOf=id=>GAL.filter(p=>p.match_id===id&&galOk(p));
+// newest photo first (GAL loads oldest first and new uploads go on the end)
+const galOf=id=>GAL.filter(p=>p.match_id===id&&galOk(p)).reverse();
+// games and tournament days with photos: the newest game first, then the one with the newest upload
+function galIds(){const last={};GAL.filter(galOk).forEach(p=>{const c=String(p.created||"");if(!(p.match_id in last)||c>last[p.match_id])last[p.match_id]=c});
+  return Object.keys(last).map(id=>({id,w:galWhat(id)})).sort((a,b)=>String(b.w.date||"").localeCompare(String(a.w.date||""))||last[b.id].localeCompare(last[a.id]))}
 const galWaiting=()=>canWrite?GAL.filter(p=>!galOk(p)):[];
 const galMine=()=>me&&!canWrite?GAL.filter(p=>!galOk(p)&&p.uploader===me.id):[];
 // signed links, made in batches and kept until ten minutes before they run out
@@ -1304,8 +1334,8 @@ function photosCard(m){if(!PHOTOS_ON||!GAL_DB)return "";const ps=galOf(m.id),can
   if(!ps.length&&!can)return "";
   return `<section class="card"><h3>Photos${ps.length>1?` (${ps.length})`:""}</h3>${ps.length?galGrid(ps):`<p class="hint">No photos or videos from this game yet.</p>`}${can?`<div style="margin-top:10px">${galAdd(m.id)}</div>`:""}</section>`}
 // newest games with photos, each as an album card
-function albums(n){const shown=GAL.filter(galOk),ids=[...new Set(shown.slice().reverse().map(p=>p.match_id))].slice(0,n);galPaintSoon();
-  return `<div class="albs">${ids.map(id=>{const ps=galOf(id),w=galWhat(id),c=ps.find(p=>p.caption)||ps[0],rest=ps.filter(p=>p!==c),strip=rest.slice(0,3),more=ps.length-1-strip.length;
+function albums(n){const ids=galIds().slice(0,n).map(x=>x.id);galPaintSoon();
+  return `<div class="albs">${ids.map(id=>{const ps=galOf(id),w=galWhat(id),c=ps[0],rest=ps.filter(p=>p!==c),strip=rest.slice(0,3),more=ps.length-1-strip.length;
     return `<div class="alb">${galTh(c)}${strip.length?`<div class="alb-strip">${strip.map((p,i)=>i===strip.length-1&&more>0?`<div class="alb-more">${galTh(p)}<span>+${more}</span></div>`:galTh(p)).join("")}</div>`:""}
       <button class="alb-meta" ${w.attr} style="text-align:left;border:0;background:none;cursor:pointer"><b>${esc(w.label)}</b><small>${w.date?esc(shortDay(w.date))+" · ":""}${galCount(ps)}</small>${c.caption?`<i>${esc(c.caption)}</i>`:""}</button></div>`}).join("")}</div>`}
 function galLabel(m){return `${shortDay(m.date)} · v ${esc(m.opp||"")}${result(m)?` · ${m.us}–${m.them}`:""}`}
@@ -1336,7 +1366,7 @@ function galleryView(){
   const ch=galChoices();if(!ch.some(c=>c.v===galMatch))galMatch=ch[0]?ch[0].v:"";
   const up=ch.length?`<section class="card"><h3>Add photos or videos</h3><label class="f">Which game?<select id="galPick">${ch.map(c=>`<option value="${esc(c.v)}"${c.v===galMatch?" selected":""}>${c.label}</option>`).join("")}</select></label><div style="margin-top:10px">${galAdd(galMatch)}</div></section>`:"";
   const mine=galMine(),mineCard=mine.length?`<section class="card"><h3>⚑ Taken down (${mine.length})</h3><p class="hint">A family asked for these to come down, so only you and the coaches can see them now. Tap one to delete it.</p>${galGrid(mine)}</section>`:"";
-  const shown=GAL.filter(galOk),ids=[...new Set(shown.map(p=>p.match_id))].map(id=>({id,w:galWhat(id)})).sort((a,b)=>String(b.w.date||"").localeCompare(String(a.w.date||"")));
+  const ids=galIds();
   const body=ids.length?ids.map(({id,w})=>`<section class="card"><button class="gal-h" ${w.attr}>${w.date?esc(shortDay(w.date))+" · ":""}${esc(w.label)} <span>${w.attr?(id.startsWith("t:")?"Tournament page →":"Match page →"):""}</span></button>${galGrid(galOf(id))}</section>`).join("")
     :`<div class="card empty">No photos yet. Add the first ones above.</div>`;
   return `<div class="stack"><h2 style="margin:6px 0 -6px">📸 Photos</h2><p class="hint">Match-day photos and videos from the team's families and coaches, newest game first. Tap one to see it full size or play it. 🔒 Only signed-in families and coaches can see them.</p>${galCheckCard()}${up}${mineCard}${body}</div>`}
@@ -2608,7 +2638,7 @@ function trView(){const t=tournaments.find(x=>x.id===trTour);
     :has?`<section class="card report"><h3>Tournament report</h3>${reportHtml(t.report)}<div class="btns"><button class="btn ghost" data-tshare="${esc(t.id)}">📤 Share report</button>${canWrite?`<button class="mini edit-only" data-trep="${esc(t.id)}">Edit report</button>`:""}</div></section>`
     :canWrite?`<section class="card report edit-only"><h3>Tournament report</h3><p class="hint">No report yet. A tournament gets one report for all of its games.</p><button class="btn gold" data-trep="${esc(t.id)}">Write tournament report</button></section>`:`<div class="card empty">No report for this tournament yet.</div>`;
   const games=g.length?`<section class="card"><h3>The games</h3><div class="tgames" style="border:0;margin:0;padding:0">${g.map(tGameRow).join("")}</div><p class="hint" style="margin-top:8px">Tap a game for the team, the awards and how it went.</p></section>`:"";
-  const ph=g.flatMap(m=>galOf(m.id));
+  const ph=[...galOf("t:"+t.id),...g.flatMap(m=>galOf(m.id))];
   const photos=ph.length?`<section class="card"><h3>Photos (${ph.length})</h3>${galGrid(ph)}</section>`:"";
   const coach=canWrite?`<section class="card edit-only"><h3>Coaches</h3><div class="mg"><button class="mini" data-tedit="${esc(t.id)}">Edit tournament</button><button class="mini" data-tpost="${esc(t.id)}"${t.potm?"":" disabled"}>Player of the tournament post</button></div></section>`:"";
   return `<div class="live md">${back}${head}${rep}${games}${photos}${coach}</div>`}
@@ -4476,7 +4506,7 @@ async function suLoad(){if(!sb||!canWrite)return;
   if(view==="setup")render()}
 function suRemember(row){SETUP_ROW=row;try{localStorage.setItem(SETUP_KEY,JSON.stringify(row))}catch(e){}}
 function settingUpView(){return `<section class="card empty"><h2>${esc(TEAM.name||"This team")}'s site is being set up</h2><p class="hint">It'll be ready soon. The club will share the link when it's live.</p><p class="hint" style="margin-top:12px">Are you one of the coaches? <button class="mini" id="signIn">Coach sign in</button> to finish setting it up.</p></section>`}
-function setupBanner(){return `<section class="card" style="border-left:6px solid var(--gold);margin-bottom:12px"><h2 style="margin-top:0">Finish setting up your team</h2><p class="hint">Only coaches can see the site until you've added your team's details and your ${WELFARE} has signed it off. It takes about 20 minutes.</p><div class="btns" style="margin-top:10px"><button class="btn gold" data-view="setup">Set up your team</button></div></section>`}
+function setupBanner(){return `<section class="card" style="border-left:6px solid var(--gold);margin-bottom:12px"><h2 style="margin-top:0">Finish setting up your team</h2><p class="hint">Only coaches can see the site until you've added your team's details and your ${WELFARE} has signed it off. It takes about 20 minutes.</p><div class="btns" style="margin-top:10px"><button class="btn gold" data-view="setup">Set up your team</button></div>${guideLine("coaches","First time? The coaches' guide shows every step.")}</section>`}
 function setupView(){
   if(!canWrite)return `<section class="card empty">Sign in as a coach to set up the team.</section>`;
   if(!SU)SU=suFromTeam();if(SU_COACHES===null)suLoad();const f=SU,S=SU_SIGN||{};
@@ -4852,7 +4882,7 @@ const gfxReady=()=>window.GFX?Promise.resolve(window.GFX):new Promise(ok=>{loadG
 async function checkCoach(){
   canWrite=false;matches=pubMatches();
   if(me&&!isParent()){const {data}=await sb.from("coaches").select("email").eq("email",(me.email||"").toLowerCase()).maybeSingle();canWrite=!!data;if(!canWrite){await sb.auth.signOut();me=null;toast("That email isn't on the club's coach list.")}}
-  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ssimport","ratings","insights","birthdays","kit","cphotos","drills","design","formation","splan","coaches"].includes(view))view="home";
+  if(!canWrite&&["new","edit","gfx","live","msg","pick","tnew","tedit","hnew","hedit","book","help","setup","ftimport","ssimport","ratings","insights","birthdays","kit","cphotos","drills","design","formation","splan","assist","coaches"].includes(view))view="home";
   if(canWrite&&TEAM.publicScores===false){matches=RAW.slice();if(PRACTICE)matches.push(PRACTICE)}
   if(canWrite)loadGfx();
   FAM=null;await loadParent();logActive();await loadMyDays();
@@ -5185,7 +5215,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
 // ---------- session planner: plan a training session from the drills library, with an AI suggestion (25 Nov 2026) ----------
 // Saved in coach_notes kind 'plan' (k = the session date), coaches only. "Suggest a session" asks the preview function
 // (kind "session") to pick from this site's own drills; with no AI key it builds one here from the library instead.
-let sxDay=null,sxDraft=null,sxBusy=false;
+let sxDay=null,sxDraft=null,sxBusy=false,sxAsk="";
 function sxDays(){const up=trUpcoming(6).filter(x=>!x.off).map(x=>x.iso),saved=Object.keys((CN&&CN.plan)||{}).filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)),all=[...new Set(up.concat(saved))].sort(),t=todayLocal();
   return all.filter(d=>d<t).slice(-3).concat(all.filter(d=>d>=t).slice(0,12))}
 function sxSum(p){const b=(p&&p.blocks)||[];return b.length?`${b.length} part${b.length===1?"":"s"}, ${b.reduce((a,x)=>a+(+x.mins||0),0)} minutes${p.focus?` · ${p.focus}`:""}`:"Not planned yet"}
@@ -5203,8 +5233,10 @@ function sxForm(){const p=sxDraft,total=p.blocks.reduce((a,x)=>a+(+x.mins||0),0)
   return `<div class="stack"><button class="btn ghost" data-sxback style="align-self:flex-start">← All plans</button><section class="card stack"><h2 style="margin:0">🗒️ ${esc(longDate(sxDay))}</h2>
     <div class="grid2"><label class="f">Focus<select id="sxF"><option value="">Mixed</option>${DR_FOCUS.filter(f=>f!=="Warm-up"&&f!=="Game").map(f=>`<option${p.focus===f?" selected":""}>${f}</option>`).join("")}</select></label>
     <label class="f">Session length (minutes)<input type="number" id="sxM" min="20" max="150" value="${+p.mins||60}"></label></div>
+    <label class="f">Anything to work on? (optional, for ✨ Suggest a session)<input type="text" id="sxAsk" maxlength="400" value="${esc(sxAsk)}" placeholder="For example: we bunch around the ball"></label>
     ${sxWorkHtml(p)}
-    <div class="btns"><button class="btn gold" id="sxAi"${sxBusy?" disabled":""}>${sxBusy?"Thinking…":"✨ Suggest a session"}</button><button class="btn ghost" id="sxTn">🌙 Tonight mode</button></div>
+    <div class="btns"><button class="btn gold" id="sxAi"${sxBusy?" disabled":""}>${sxBusy?"Thinking…":"✨ Suggest a session"}</button></div>
+    <div class="btns"><button class="btn ghost" id="sxTn">🌙 Tonight mode</button></div>
     ${sxTn?sxTnPanel():p.tonight?`<div class="sxtnbar">🌙 <b>Tonight: ${p.tonight.n} players, ${p.tonight.mins} minutes, ${esc((SX_SPACE[p.tonight.space]||"").toLowerCase())}${p.tonight.keeper?"":", no keeper"}.</b> <button class="mini" id="sxTn">Change</button> <button class="mini" id="sxTnOff">Clear</button>${ATT&&sxDay<=todayLocal()?` <button class="mini" id="sxTnReg">Save as the register</button>`:""}</div>`:""}
     <h3 style="margin:6px 0 0">The session · ${total} of ${+p.mins||60} minutes</h3>${sxRateHtml(p)}
     ${p.blocks.length?`<ol class="spl">${p.blocks.map((b,i)=>`<li><div class="row" style="gap:8px;justify-content:space-between;flex-wrap:wrap"><b>${b.id?`<button class="linkish" data-drill="${esc(b.id)}">${esc(b.title)}</button>`:esc(b.title)}</b>
@@ -5213,7 +5245,7 @@ function sxForm(){const p=sxDraft,total=p.blocks.reduce((a,x)=>a+(+x.mins||0),0)
     <div class="btns"><select id="sxAdd" style="flex:1;min-width:180px"><option value="">Add a drill…</option>${lib.map(d=>`<option value="${esc(d.id)}">${esc(d.title)} (${esc((d.focus||[]).join(", "))}${d.minutes?`, ${d.minutes} min`:""})</option>`).join("")}</select><button class="mini" id="sxAddGo">Add</button><button class="mini" id="sxAddOwn">Add my own</button></div>
     <label class="f">Notes for the coaches<textarea id="sxN" rows="3" maxlength="800" placeholder="Equipment, who's leading what, anyone to keep an eye on">${esc(p.note||"")}</textarea></label>
     <div class="btns"><button class="btn gold" id="sxSave">Save the plan</button><button class="btn ghost" id="sxShare">Share with the coaches</button>${cnGet("plan",sxDay)?`<button class="btn ghost" id="sxDelete">Delete</button>`:""}</div></section></div>`}
-function sxRead(){const p=sxDraft;if(!p)return;const v=id=>{const el=$("#"+id);return el?el.value:null};if(v("sxF")!=null)p.focus=v("sxF");if(v("sxM")!=null)p.mins=+v("sxM")||60;if(v("sxN")!=null)p.note=v("sxN").trim();
+function sxRead(){const p=sxDraft;if(!p)return;const v=id=>{const el=$("#"+id);return el?el.value:null};if(v("sxF")!=null)p.focus=v("sxF");if(v("sxM")!=null)p.mins=+v("sxM")||60;if(v("sxN")!=null)p.note=v("sxN").trim();if(v("sxAsk")!=null)sxAsk=v("sxAsk").trim();
   document.querySelectorAll("[data-sxmin]").forEach(el=>{const b=p.blocks[+el.dataset.sxmin];if(b)b.mins=Math.max(1,+el.value||1)});document.querySelectorAll("[data-sxnote]").forEach(el=>{const b=p.blocks[+el.dataset.sxnote];if(b)b.note=el.value.trim()})}
 // no AI: warm-up, two or three drills on the focus, finish with a game. Picks fit Tonight mode, prefer 👍 drills, skip 👎 ones and last week's.
 function sxLocal(p,day){day=day||sxDay||todayLocal();const used=new Set(),out=[],total=+p.mins||60,push=(d,m)=>{if(!d)return;used.add(d.id);out.push({id:d.id,title:d.title,mins:m,note:""})},pk=f=>sxPick(f,used,p,day);
@@ -5260,69 +5292,6 @@ function coachesView(){if(!canWrite)return `<div class="card empty">This page is
     <section class="card stack"><h3 style="margin:0">The coaches (${CTEAM.length})</h3>${CTEAM.length?CTEAM.map(c=>{const r=c.role||"coach";return `<div class="crrow"><div style="min-width:0"><b>${esc(coachName(c.email))}</b>${c.email===myCoachEmail()?" (you)":""}<div class="hint" style="overflow-wrap:anywhere">${esc(c.email)}</div></div>
       ${can?`<select data-crset="${esc(c.email)}" aria-label="Role">${Object.entries(CR_ROLES).map(([k,[i,l]])=>`<option value="${k}"${k===r?" selected":""}>${i} ${l}</option>`).join("")}</select>`:`<span class="pill">${CR_ROLES[r]?CR_ROLES[r][0]+" "+CR_ROLES[r][1]:r}</span>`}</div>`}).join(""):`<p class="hint">${CAV_ON?"Nobody on the list yet.":cnOff("Coach roles")}</p>`}
     <p class="hint" style="margin:0">${can?(hasSetup()?"Add or remove coaches in Team setup, or send an invite link from there.":"To add or remove a coach, ask Touchline Tales."):""} A role change works on this team's site straight away.</p></section></div>`}
-
-// ---------- clicks for the 25 Nov features ----------
-document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const d=t.dataset;
-  // live moments
-  if(d.lvact!=null&&LV){LV.askAct=d.lvact;LV.ask=null;LV.askOther=false;LV.subSlot=null;render();return}
-  if(d.lvmom!=null&&LV){const who=LV.askAct;LV.askAct=null;if(!d.lvmom||!who){render();return}
-    addEv(who==="__opp"?{k:"opp",t:d.lvmom}:{k:"act",t:d.lvmom,n:who});liveSaveLocal();render();livePush();return}
-  // player cards
-  if(d.pcopen){pcOpen=d.pcopen;setView("cards");window.scrollTo({top:0});return}
-  if("pcback" in d){pcOpen=null;render();return}
-  if(d.pcshare){pcShare(d.pcshare);return}
-  // certificates
-  if(d.ct){const n=d.ctn,c=certsFor(n).find(x=>x.id===d.ctid);if(c)ctOut(n,c.title,c.line,c.date,d.ct);return}
-  if(d.ctp!=null){ctPlayer=d.ctp;if(view!=="certs")setView("certs");else render();window.scrollTo({top:0});return}
-  if("ctback" in d){ctPlayer="";render();return}
-  if(d.ctc){const n=$("#ctcN").value,ti=$("#ctcT").value.trim(),w=$("#ctcW").value.trim(),dt=$("#ctcD").value;if(!ti){toast("Type the award, e.g. Most improved player.");return}ctOut(n,ti,w,dt,d.ctc);return}
-  if(t.id==="ctEdit"){ctEditLv=true;render();return}
-  if(t.id==="ctCancel"){ctEditLv=false;render();return}
-  if(t.id==="ctReset"||t.id==="ctSave"){let v={};if(t.id==="ctSave"){document.querySelectorAll("[data-ctlv]").forEach(el=>{const k=el.dataset.ctlv;v[k]=el.type==="checkbox"?el.checked:el.value.split(/[^\d]+/).map(Number).filter(x=>x>0&&x<1000)})}
-    t.disabled=true;const {error}=await sb.from("team_prefs").upsert({k:"certs",v,updated:new Date().toISOString()});t.disabled=false;if(error){toast("Couldn't save that. Try again.");return}CTP=v;ctEditLv=false;toast("Certificate levels saved.");render();return}
-  // noticeboard
-  if(t.id==="ntNew"){ntEdit={kind:"news",title:"",body:"",player:null,expires:null};render();return}
-  if(d.ntkind){ntRead();ntEdit.kind=d.ntkind;render();return}
-  if(t.id==="ntCancel"){ntEdit=null;render();return}
-  if(d.ntedit){const x=NT.find(y=>y.id===d.ntedit);if(x){ntEdit=Object.assign({},x);render();window.scrollTo({top:0})}return}
-  if(d.ntdel){if(!confirm("Delete this notice?"))return;const {error}=await sb.from("team_notices").delete().eq("id",d.ntdel);if(error){toast("Couldn't delete it.");return}NT=NT.filter(x=>x.id!==d.ntdel);toast("Notice deleted.");render();return}
-  if(d.ntpin){const x=NT.find(y=>y.id===d.ntpin);if(!x)return;const {error}=await sb.from("team_notices").update({pinned:!x.pinned}).eq("id",x.id);if(error){toast("Couldn't change it.");return}x.pinned=!x.pinned;render();return}
-  if(t.id==="ntSave"){ntRead();const f=ntEdit;if(!f.title){toast("Add a headline.");return}if(!f.player&&!crCan("notice")){toast("Only the manager or coaches can post to every family.");return}
-    const push=$("#ntPush")&&$("#ntPush").checked,row={id:f.id||`${Date.now().toString(36)}-${(f.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"note").slice(0,30)}`,kind:f.kind,title:f.title,body:f.body,player:f.player,expires:f.expires,pinned:!!f.pinned,author:myCoachEmail()};
-    ntBusy=true;render();const {error}=await sb.from("team_notices").upsert(row);ntBusy=false;if(error){toast("Couldn't save the notice. Try again.");render();return}
-    await loadNotices();ntEdit=null;let msg="Notice posted.";if(push){const r=await alSend({notice:row.id});msg=r==null?"Notice posted. (Phone alerts aren't switched on for this team, so it's on the site only.)":r>0?`Notice posted and sent to ${r} phone${r===1?"":"s"}.`:"Notice posted. No phones with alerts on to send it to yet."}
-    toast(msg);render();return}
-  // session plans
-  if(d.sxday){sxTn=null;sxDay=d.sxday;const p=cnGet("plan",sxDay);sxDraft=JSON.parse(JSON.stringify(p||{focus:"",mins:TR?Math.max(30,Math.min(120,(()=>{const [a,b]=[TR.start,TR.finish].map(x=>{const m=String(x||"").match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:0});return b>a?b-a:60})())):60,blocks:[],note:""}));if(view!=="splan")setView("splan");else render();window.scrollTo({top:0});return}
-  if("sxback" in d){sxRead();sxDay=null;sxDraft=null;render();return}
-  if(t.id==="sxOtherGo"){const v=$("#sxOther").value;if(v){t.dataset.sxday=v;sxDay=v;sxDraft=JSON.parse(JSON.stringify(cnGet("plan",v)||{focus:"",mins:60,blocks:[],note:""}));render()}return}
-  if(view==="splan"&&d.drill){sxRead();drOpen=d.drill;setView("drills");return}
-  if(d.sxdel!=null){sxRead();sxDraft.blocks.splice(+d.sxdel,1);render();return}
-  if(d.sxup!=null){sxRead();const i=+d.sxup;if(i>0){const b=sxDraft.blocks;[b[i-1],b[i]]=[b[i],b[i-1]]}render();return}
-  if(t.id==="sxAddGo"){sxRead();const id=$("#sxAdd").value,dr=(DRILLS||[]).find(x=>x.id===id);if(!dr)return;sxDraft.blocks.push({id:dr.id,title:dr.title,mins:+dr.minutes||10,note:""});render();return}
-  if(t.id==="sxAddOwn"){sxRead();const ti=(prompt("What's the activity called?")||"").trim();if(!ti)return;sxDraft.blocks.push({id:"",title:ti.slice(0,80),mins:10,note:""});render();return}
-  if(t.id==="sxAi"){sxRead();if(sxDraft.blocks.length&&!confirm("Replace the drills in this plan with a suggestion?"))return;sxBusy=true;render();let blocks=null,why="";
-    try{const age=sxAge(),R=sxRated(sxDay),ok=x=>(!age||((x.age_from||0)<=age&&(x.age_to||99)>=age))&&(R[x.id]||0)>=0&&sxFits(x,sxDraft.tonight),lib=(DRILLS||[]).filter(ok).slice(0,120).map(x=>({id:x.id,title:x.title,focus:x.focus||[],minutes:x.minutes||null}));
-      const {data,error}=await sb.functions.invoke("preview",{body:fnBody({kind:"session",ask:{focus:sxAutoFocus(sxDraft,sxDay),mins:sxDraft.tonight?sxDraft.tonight.mins:+sxDraft.mins||60,age:TEAM.ageGroup||"",squad:sxDraft.tonight?sxDraft.tonight.n:players.filter(inGames).length,workOn:sxWork(sxDay).slice(0,2).map(w=>w.why.join(", "))},drills:lib,team:Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup},RUGBY?{sport:SP.key}:{})})});
-      if(!error&&data&&Array.isArray(data.blocks)){blocks=data.blocks.map(b=>{const dr=(DRILLS||[]).find(x=>x.id===b.id);return dr?{id:dr.id,title:dr.title,mins:Math.max(1,Math.min(90,+b.mins||10)),note:String(b.note||"").slice(0,200)}:null}).filter(Boolean);if(data.note&&!sxDraft.note)sxDraft.note=String(data.note).slice(0,800)}else why=(data&&data.error)||""}catch(x){}
-    sxBusy=false;if(!blocks||!blocks.length){blocks=sxLocal(sxDraft);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a session from the drills library.":"Here's a session from the drills library.")}else toast("Here's a suggestion. Change anything you like, then save.");
-    sxDraft.blocks=blocks;if(sxDraft.tonight){sxTnStart();sxTnApply();sxTn=null}render();return}
-  if(t.id==="sxSave"){sxRead();try{await cnSet("plan",sxDay,sxDraft);toast("Plan saved. The other coaches can see it.")}catch(x){toast("Couldn't save the plan. Try again.")}render();return}
-  if(t.id==="sxDelete"){if(!confirm("Delete this plan?"))return;try{await cnDel("plan",sxDay);sxDay=null;sxDraft=null;toast("Plan deleted.")}catch(x){toast("Couldn't delete it.")}render();return}
-  if(t.id==="sxShare"){sxRead();const txt=sxText();if(navigator.share){try{await navigator.share({text:txt});return}catch(x){if(x&&x.name==="AbortError")return}}try{await navigator.clipboard.writeText(txt);toast("Copied. Paste it into the coaches' chat.")}catch(x){prompt("Copy this",txt)}return}
-  // checklist
-  if(t.id==="ckEdit"){ckEdit=true;render();return}
-  if(t.id==="ckCancel"){ckEdit=false;render();return}
-  if(t.id==="ckSave"||t.id==="ckReset"){const items=t.id==="ckReset"?CK_DEF:$("#ckL").value.split("\n").map(x=>x.trim().slice(0,80)).filter(Boolean).slice(0,30);try{await cnSet("chk","_list",{items});ckEdit=false;toast("Checklist saved.")}catch(x){toast("Couldn't save that.")}render();return}
-});
-document.addEventListener("change",async e=>{const el=e.target;
-  if(el.dataset&&el.dataset.ck){const id=el.dataset.ck,it=el.dataset.cki,cur=Object.assign({done:[]},cnGet("chk",id)||{}),s=new Set(cur.done);if(el.checked)s.add(it);else s.delete(it);cur.done=[...s];
-    try{await cnSet("chk",id,cur)}catch(x){el.checked=!el.checked;toast("Couldn't save that tick.")}render();return}
-  if(el.dataset&&el.dataset.crset){const em=el.dataset.crset,r=el.value,c=CTEAM.find(x=>x.email===em),was=c&&c.role;
-    if(r==="manager"&&!crHasMgr()&&em!==myCoachEmail()&&!confirm(`Make ${coachName(em)} a manager? Only managers will then be able to change the coaches list and roles.`)){el.value=was||"coach";return}
-    const {error}=await sb.rpc("set_coach_role",{p_email:em,p_role:r});if(error){toast(/least one manager/.test(error.message)?"The team needs at least one manager. Make someone else a manager first.":/Only/.test(error.message)?"Only a manager can change roles.":"Couldn't save that. Try again.");el.value=was||"coach";return}
-    if(c)c.role=r;toast(`${coachName(em)} is now ${/^[aeiou]/i.test(CR_ROLES[r][1])?"an":"a"} ${CR_ROLES[r][1].toLowerCase()}.`);render();return}
-});
 
 // ---------- training night upgrades (27 Nov 2026): Tonight mode, the season plan, and learning from the last match ----------
 // Everything lives in coach_notes kind 'plan' (no database change), coaches only:
@@ -5480,6 +5449,159 @@ document.addEventListener("change",e=>{const el=e.target;
   if(el.dataset&&el.dataset.mwi!=null){el.closest("label").classList.toggle("on",el.checked);return}
   if(el.id==="sxTnS"||el.id==="sxTnM"||el.id==="sxTnK")sxTnRead()});
 
+// ---------- clicks for the 25 Nov features ----------
+document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;const d=t.dataset;
+  // live moments
+  if(d.lvact!=null&&LV){LV.askAct=d.lvact;LV.ask=null;LV.askOther=false;LV.subSlot=null;render();return}
+  if(d.lvmom!=null&&LV){const who=LV.askAct;LV.askAct=null;if(!d.lvmom||!who){render();return}
+    addEv(who==="__opp"?{k:"opp",t:d.lvmom}:{k:"act",t:d.lvmom,n:who});liveSaveLocal();render();livePush();return}
+  // player cards
+  if(d.pcopen){pcOpen=d.pcopen;setView("cards");window.scrollTo({top:0});return}
+  if("pcback" in d){pcOpen=null;render();return}
+  if(d.pcshare){pcShare(d.pcshare);return}
+  // certificates
+  if(d.ct){const n=d.ctn,c=certsFor(n).find(x=>x.id===d.ctid);if(c)ctOut(n,c.title,c.line,c.date,d.ct);return}
+  if(d.ctp!=null){ctPlayer=d.ctp;if(view!=="certs")setView("certs");else render();window.scrollTo({top:0});return}
+  if("ctback" in d){ctPlayer="";render();return}
+  if(d.ctc){const n=$("#ctcN").value,ti=$("#ctcT").value.trim(),w=$("#ctcW").value.trim(),dt=$("#ctcD").value;if(!ti){toast("Type the award, e.g. Most improved player.");return}ctOut(n,ti,w,dt,d.ctc);return}
+  if(t.id==="ctEdit"){ctEditLv=true;render();return}
+  if(t.id==="ctCancel"){ctEditLv=false;render();return}
+  if(t.id==="ctReset"||t.id==="ctSave"){let v={};if(t.id==="ctSave"){document.querySelectorAll("[data-ctlv]").forEach(el=>{const k=el.dataset.ctlv;v[k]=el.type==="checkbox"?el.checked:el.value.split(/[^\d]+/).map(Number).filter(x=>x>0&&x<1000)})}
+    t.disabled=true;const {error}=await sb.from("team_prefs").upsert({k:"certs",v,updated:new Date().toISOString()});t.disabled=false;if(error){toast("Couldn't save that. Try again.");return}CTP=v;ctEditLv=false;toast("Certificate levels saved.");render();return}
+  // noticeboard
+  if(t.id==="ntNew"){ntEdit={kind:"news",title:"",body:"",player:null,expires:null};render();return}
+  if(d.ntkind){ntRead();ntEdit.kind=d.ntkind;render();return}
+  if(t.id==="ntCancel"){ntEdit=null;render();return}
+  if(d.ntedit){const x=NT.find(y=>y.id===d.ntedit);if(x){ntEdit=Object.assign({},x);render();window.scrollTo({top:0})}return}
+  if(d.ntdel){if(!confirm("Delete this notice?"))return;const {error}=await sb.from("team_notices").delete().eq("id",d.ntdel);if(error){toast("Couldn't delete it.");return}NT=NT.filter(x=>x.id!==d.ntdel);toast("Notice deleted.");render();return}
+  if(d.ntpin){const x=NT.find(y=>y.id===d.ntpin);if(!x)return;const {error}=await sb.from("team_notices").update({pinned:!x.pinned}).eq("id",x.id);if(error){toast("Couldn't change it.");return}x.pinned=!x.pinned;render();return}
+  if(t.id==="ntSave"){ntRead();const f=ntEdit;if(!f.title){toast("Add a headline.");return}if(!f.player&&!crCan("notice")){toast("Only the manager or coaches can post to every family.");return}
+    const push=$("#ntPush")&&$("#ntPush").checked,row={id:f.id||`${Date.now().toString(36)}-${(f.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"note").slice(0,30)}`,kind:f.kind,title:f.title,body:f.body,player:f.player,expires:f.expires,pinned:!!f.pinned,author:myCoachEmail()};
+    ntBusy=true;render();const {error}=await sb.from("team_notices").upsert(row);ntBusy=false;if(error){toast("Couldn't save the notice. Try again.");render();return}
+    await loadNotices();ntEdit=null;let msg="Notice posted.";if(push){const r=await alSend({notice:row.id});msg=r==null?"Notice posted. (Phone alerts aren't switched on for this team, so it's on the site only.)":r>0?`Notice posted and sent to ${r} phone${r===1?"":"s"}.`:"Notice posted. No phones with alerts on to send it to yet."}
+    toast(msg);render();return}
+  // session plans
+  if(d.sxday){sxTn=null;sxDay=d.sxday;const p=cnGet("plan",sxDay);sxDraft=JSON.parse(JSON.stringify(p||{focus:"",mins:TR?Math.max(30,Math.min(120,(()=>{const [a,b]=[TR.start,TR.finish].map(x=>{const m=String(x||"").match(/(\d+):(\d+)/);return m?+m[1]*60+ +m[2]:0});return b>a?b-a:60})())):60,blocks:[],note:""}));if(view!=="splan")setView("splan");else render();window.scrollTo({top:0});return}
+  if("sxback" in d){sxRead();sxDay=null;sxDraft=null;sxAsk="";render();return}
+  if(t.id==="sxOtherGo"){const v=$("#sxOther").value;if(v){t.dataset.sxday=v;sxDay=v;sxDraft=JSON.parse(JSON.stringify(cnGet("plan",v)||{focus:"",mins:60,blocks:[],note:""}));render()}return}
+  if(view==="splan"&&d.drill){sxRead();drOpen=d.drill;setView("drills");return}
+  if(d.sxdel!=null){sxRead();sxDraft.blocks.splice(+d.sxdel,1);render();return}
+  if(d.sxup!=null){sxRead();const i=+d.sxup;if(i>0){const b=sxDraft.blocks;[b[i-1],b[i]]=[b[i],b[i-1]]}render();return}
+  if(t.id==="sxAddGo"){sxRead();const id=$("#sxAdd").value,dr=(DRILLS||[]).find(x=>x.id===id);if(!dr)return;sxDraft.blocks.push({id:dr.id,title:dr.title,mins:+dr.minutes||10,note:""});render();return}
+  if(t.id==="sxAddOwn"){sxRead();const ti=(prompt("What's the activity called?")||"").trim();if(!ti)return;sxDraft.blocks.push({id:"",title:ti.slice(0,80),mins:10,note:""});render();return}
+  if(t.id==="sxAi"){sxRead();if(sxDraft.blocks.length&&!confirm("Replace the drills in this plan with a suggestion?"))return;sxBusy=true;render();let blocks=null,why="";
+    try{const age=sxAge(),R=sxRated(sxDay),ok=x=>(!age||((x.age_from||0)<=age&&(x.age_to||99)>=age))&&(R[x.id]||0)>=0&&sxFits(x,sxDraft.tonight),lib=(DRILLS||[]).filter(ok).slice(0,120).map(x=>({id:x.id,title:x.title,focus:x.focus||[],minutes:x.minutes||null}));
+      const {data,error}=await sb.functions.invoke("preview",{body:fnBody({kind:"session",ask:{focus:sxAutoFocus(sxDraft,sxDay),mins:sxDraft.tonight?sxDraft.tonight.mins:+sxDraft.mins||60,age:TEAM.ageGroup||"",squad:sxDraft.tonight?sxDraft.tonight.n:players.filter(inGames).length,workOn:sxWork(sxDay).slice(0,2).map(w=>w.why.join(", ")),text:sxAsk},drills:lib,team:Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup},RUGBY?{sport:SP.key}:{})})});
+      if(!error&&data&&Array.isArray(data.blocks)){blocks=data.blocks.map(b=>{const dr=(DRILLS||[]).find(x=>x.id===b.id);return dr?{id:dr.id,title:dr.title,mins:Math.max(1,Math.min(90,+b.mins||10)),note:String(b.note||"").slice(0,200)}:null}).filter(Boolean);if(data.note&&!sxDraft.note)sxDraft.note=String(data.note).slice(0,800)}else why=(data&&data.error)||""}catch(x){}
+    sxBusy=false;if(!blocks||!blocks.length){blocks=sxLocal(sxDraft);toast(why==="no_key"?"AI suggestions aren't switched on yet, so here's a session from the drills library.":"Here's a session from the drills library.")}else toast("Here's a suggestion. Change anything you like, then save.");
+    sxDraft.blocks=blocks;if(sxDraft.tonight){sxTnStart();sxTnApply();sxTn=null}render();return}
+  if(t.id==="sxSave"){sxRead();try{await cnSet("plan",sxDay,sxDraft);toast("Plan saved. The other coaches can see it.")}catch(x){toast("Couldn't save the plan. Try again.")}render();return}
+  if(t.id==="sxDelete"){if(!confirm("Delete this plan?"))return;try{await cnDel("plan",sxDay);sxDay=null;sxDraft=null;toast("Plan deleted.")}catch(x){toast("Couldn't delete it.")}render();return}
+  if(t.id==="sxShare"){sxRead();const txt=sxText();if(navigator.share){try{await navigator.share({text:txt});return}catch(x){if(x&&x.name==="AbortError")return}}try{await navigator.clipboard.writeText(txt);toast("Copied. Paste it into the coaches' chat.")}catch(x){prompt("Copy this",txt)}return}
+  // checklist
+  if(t.id==="ckEdit"){ckEdit=true;render();return}
+  if(t.id==="ckCancel"){ckEdit=false;render();return}
+  if(t.id==="ckSave"||t.id==="ckReset"){const items=t.id==="ckReset"?CK_DEF:$("#ckL").value.split("\n").map(x=>x.trim().slice(0,80)).filter(Boolean).slice(0,30);try{await cnSet("chk","_list",{items});ckEdit=false;toast("Checklist saved.")}catch(x){toast("Couldn't save that.")}render();return}
+});
+document.addEventListener("change",async e=>{const el=e.target;
+  if(el.dataset&&el.dataset.ck){const id=el.dataset.ck,it=el.dataset.cki,cur=Object.assign({done:[]},cnGet("chk",id)||{}),s=new Set(cur.done);if(el.checked)s.add(it);else s.delete(it);cur.done=[...s];
+    try{await cnSet("chk",id,cur)}catch(x){el.checked=!el.checked;toast("Couldn't save that tick.")}render();return}
+  if(el.dataset&&el.dataset.crset){const em=el.dataset.crset,r=el.value,c=CTEAM.find(x=>x.email===em),was=c&&c.role;
+    if(r==="manager"&&!crHasMgr()&&em!==myCoachEmail()&&!confirm(`Make ${coachName(em)} a manager? Only managers will then be able to change the coaches list and roles.`)){el.value=was||"coach";return}
+    const {error}=await sb.rpc("set_coach_role",{p_email:em,p_role:r});if(error){toast(/least one manager/.test(error.message)?"The team needs at least one manager. Make someone else a manager first.":/Only/.test(error.message)?"Only a manager can change roles.":"Couldn't save that. Try again.");el.value=was||"coach";return}
+    if(c)c.role=r;toast(`${coachName(em)} is now ${/^[aeiou]/i.test(CR_ROLES[r][1])?"an":"a"} ${CR_ROLES[r][1].toLowerCase()}.`);render();return}
+});
+
+// ---------- coaching assistant (25 Nov 2026): suggestions and drafts for coaches, never decisions about children ----------
+// One coaches-only page that brings the AI helpers together: plan a training session (the session planner), find drills
+// for something the coach describes, a matchday plan for the next game, and after a game the parents' report plus a
+// private coaches' debrief. Every call goes to the preview edge function (kinds "session", "drills", "matchday", "debrief",
+// "report"), which checks the caller is a coach and keeps the Anthropic key on the server. No children's names are sent
+// for the matchday plan, so it can't pick a team. With no key, each tool falls back to a simple draft made here.
+// Nothing is saved until a coach saves it. Matchday plans and debriefs are kept in coach_notes kinds 'mday' and 'deb'
+// (k = match id), coaches only (supabase/49_coach_assistant.sql).
+let aiQ="",aiPicks=null,aiTip="",aiBusy="",aiMd=null,aiMdTxt="",aiMdAsk="",aiDb=null,aiDbAsk="",aiDbOut=null;
+const AI_RULE="It suggests and drafts. You decide. It never picks the team, positions or minutes, and never rates or compares children.";
+const AI_PRIV="Describe the team, not a child. Leave out surnames and anything private, like health or family matters.";
+const aiTeam=()=>Object.assign({name:TEAM.name,ageGroup:TEAM.ageGroup,publicScores:TEAM.publicScores,format:TEAM.format||"",halfLength:+TEAM.halfLength||null},RUGBY?{sport:SP.key}:{});
+async function aiCall(b){try{const {data,error}=await sb.functions.invoke("preview",{body:fnBody(Object.assign({team:aiTeam()},b))});if(!error&&data&&!data.error)return data;return {error:(data&&data.error)||"failed"}}catch(e){return {error:"failed"}}}
+const aiWhy=e=>e==="no_key"?"AI suggestions aren't switched on yet":e==="coaches_only"?"Only signed-in coaches can use the assistant":"Couldn't reach the assistant";
+const aiAgeOk=d=>{const a=sxAge();return !a||((d.age_from||0)<=a&&(d.age_to||99)>=a)};
+const aiGames=()=>matches.filter(m=>isFixture(m)&&!m.postponed&&!m.practice).sort((a,b)=>(a.date||"").localeCompare(b.date||"")).slice(0,6);
+const aiPlayed=()=>matches.filter(m=>!m.practice&&!m.postponed&&!isFixture(m)&&(m.date||"")<=todayLocal()).sort((a,b)=>(b.date||"").localeCompare(a.date||"")).slice(0,8);
+const aiGameLabel=m=>`${longDate(m.date)}: ${m.ha==="A"?"away at":m.ha==="H"?"home to":"v"} ${m.opp}${m.ko?`, ${clock(m.ko)}`:""}`;
+const aiLastDeb=()=>{const d=(CN&&CN.deb)||{},ids=Object.keys(d).filter(id=>matches.some(m=>m.id===id)).sort((a,b)=>(matches.find(m=>m.id===b).date||"").localeCompare(matches.find(m=>m.id===a).date||""));return ids.length?d[ids[0]]:null};
+const aiList=a=>(a||[]).map(x=>"• "+x).join("\n");
+const aiUnlist=t=>String(t||"").split("\n").map(x=>x.replace(/^\s*[•\-*]\s*/,"").trim()).filter(Boolean).slice(0,6);
+function aiRead(){const v=id=>{const el=$("#"+id);return el?el.value:null};if(v("aiQ")!=null)aiQ=v("aiQ");if(v("aiMdAsk")!=null)aiMdAsk=v("aiMdAsk");if(v("aiMdTxt")!=null)aiMdTxt=v("aiMdTxt");if(v("aiDbAsk")!=null)aiDbAsk=v("aiDbAsk");
+  if(aiDbOut){if(v("aiDbWell")!=null)aiDbOut.well=aiUnlist(v("aiDbWell"));if(v("aiDbWork")!=null)aiDbOut.work=aiUnlist(v("aiDbWork"));if(v("aiDbFocus")!=null)aiDbOut.focus=v("aiDbFocus");if(v("aiDbIdea")!=null)aiDbOut.idea=v("aiDbIdea").trim()}}
+// no AI: the drills whose words best match what the coach typed
+function aiDrillsLocal(q){const w=String(q||"").toLowerCase().split(/[^a-z]+/).filter(x=>x.length>3),L=(DRILLS||[]).filter(aiAgeOk);
+  const sc=d=>{const f=(d.focus||[]).join(" ").toLowerCase(),t=`${d.title} ${d.setup||d.idea||""} ${d.points||""}`.toLowerCase();return w.reduce((a,x)=>a+(f.includes(x.slice(0,5))?3:0)+(t.includes(x.slice(0,5))?1:0),0)};
+  return L.map(d=>[d,sc(d)]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([d])=>({id:d.id,why:`Matches "${(d.focus||[]).join(", ")}".`}))}
+// no AI: a plain matchday plan the coaches fill in
+function aiMdLocal(m){const ko=/^(\d{1,2}):(\d{2})/.exec(m.ko||""),a=sxAge(),before=a&&a<=9?30:a&&a<=12?40:45,at=n=>{if(!ko)return "";const t=+ko[1]*60+ +ko[2]-n;return clock(`${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`)};
+  const wu=(DRILLS||[]).filter(d=>aiAgeOk(d)&&(d.focus||[]).includes("Warm-up")),w=wu[Math.floor(Math.random()*wu.length)],deb=aiLastDeb();
+  return `⏰ Timings\n${ko?`Meet ${at(before)}\nWarm-up ${at(before-10)}\nKick-off ${clock(m.ko)}`:"Meet about "+before+" minutes before kick-off"}\n\n🔥 Warm-up\n${w?`${w.title} (${w.minutes||10} min), then a few passes and shots`:"10 to 15 minutes, a ball each"}\n\n🎯 Our focus today\n${deb&&deb.work&&deb.work.length?aiList(deb.work.slice(0,2)):"• \n• "}\n\n🗣️ Team talk\n• Have fun and work for each other\n• Talk to your team-mates\n• Try things, mistakes are fine\n\n⏸️ Half time\n• What's going well?\n• What could we try next?\n\n🔄 Fair minutes\nEveryone gets a fair share. Use the Sub planner.\n\n🙌 After the game\nPraise the effort, thank the parents and the referee.`}
+function aiCard(){if(!canWrite)return "";return `<section class="card stack"><h3 style="margin:0">🤖 Coaching assistant</h3><p class="hint" style="margin:0">Session ideas, drills, a matchday plan and match reports. ${AI_RULE}</p><div class="btns"><button class="btn gold" data-view="assist">Open the assistant</button></div></section>`}
+function assistView(){if(!canWrite)return `<div class="card empty">The coaching assistant is for coaches. Sign in to use it.</div>`;
+  const d=sxDays().find(x=>x>=todayLocal()),p=d&&CN&&cnGet("plan",d),games=aiGames(),played=aiPlayed(),busy=k=>aiBusy===k?" disabled":"";
+  if(aiMd&&!games.some(m=>m.id===aiMd))aiMd=null;if(!aiMd&&games[0]){aiMd=games[0].id;aiMdTxt=(cnGet("mday",aiMd)||{}).text||""}
+  if(aiDb&&!played.some(m=>m.id===aiDb))aiDb=null;if(!aiDb&&played[0]){aiDb=played[0].id;aiDbOut=cnGet("deb",aiDb)?Object.assign({},cnGet("deb",aiDb)):null}
+  const drill=id=>(DRILLS||[]).find(x=>x.id===id);
+  const picks=(aiPicks||[]).map(x=>[drill(x.id),x.why]).filter(x=>x[0]);
+  const dbm=aiDb&&matches.find(m=>m.id===aiDb),noSc=TEAM.publicScores===false||(!RUGBY&&(()=>{const a=sxAge();return !a||(a>=7&&a<=11)})());
+  return `<div class="stack"><section class="card"><h2 style="margin-top:0">🤖 Coaching assistant</h2><p class="hint" style="margin:0">Help planning training, finding drills, getting ready for a game and writing it up afterwards. <b>${AI_RULE}</b> Only coaches see this page.</p></section>
+  <section class="card stack"><h3 style="margin:0">🗒️ Plan a training session</h3><p class="hint" style="margin:0">${d?`Next session, ${esc(longDate(d))}: <b>${esc(sxSum(p))}</b>.`:"Pick a day and build it from the drills library."} Open it and tap ✨ Suggest a session, then change anything you like.</p>
+    <div class="btns"><button class="btn gold" data-sxday="${esc(d||todayLocal())}">${p?"Open the plan":"Plan the session"}</button><button class="btn ghost" data-view="splan">All plans</button></div></section>
+  <section class="card stack"><h3 style="margin:0">🎯 Find drills</h3><label class="f">What do you want to work on?<textarea id="aiQ" rows="2" maxlength="400" placeholder="For example: we all chase the ball, or passing when someone's closing us down">${esc(aiQ)}</textarea></label>
+    <p class="hint" style="margin:0">Suggestions come from your drills library and suit ${esc(TEAM.ageGroup||"your age group")}. ${AI_PRIV}</p>
+    <div class="btns"><button class="btn gold" id="aiDrills"${busy("drills")}>${aiBusy==="drills"?"Thinking…":"✨ Suggest drills"}</button></div>
+    ${picks.length?`<ol class="spl">${picks.map(([x,why])=>`<li><b>${esc(x.title)}</b> <small class="hint">${esc((x.focus||[]).join(", "))}${x.minutes?` · ${x.minutes} min`:""}${x.age_from?` · ages ${x.age_from}${x.age_to?`-${x.age_to}`:"+"}`:""}</small>${why?`<p style="margin:6px 0">${esc(why)}</p>`:""}<div class="btns"><button class="mini" data-aidrill="${esc(x.id)}">Open the drill</button><button class="mini" data-aiadd="${esc(x.id)}">Add to next session</button></div></li>`).join("")}</ol>${aiTip?`<p class="hint" style="margin:0">💡 ${esc(aiTip)}</p>`:""}`:aiPicks?`<p class="hint">No drills in the library matched that. Try other words, or browse the <button class="linkish" data-view="drills">Drills library</button>.</p>`:""}</section>
+  <section class="card stack"><h3 style="margin:0">📋 Matchday plan</h3>${games.length?`<label class="f">Game<select id="aiMdG">${games.map(m=>`<option value="${esc(m.id)}"${m.id===aiMd?" selected":""}>${esc(aiGameLabel(m))}</option>`).join("")}</select></label>
+    <label class="f">Anything to focus on? (optional)<input type="text" id="aiMdAsk" maxlength="300" value="${esc(aiMdAsk)}" placeholder="For example: spreading out, talking to each other"></label>
+    <p class="hint" style="margin:0">A plan for the day: timings, warm-up, what to focus on, team talk and half-time questions. No names go in, so it never picks anyone: the squad, positions and minutes stay with you.</p>
+    <div class="btns"><button class="btn gold" id="aiMdGo"${busy("md")}>${aiBusy==="md"?"Thinking…":"✨ Draft a matchday plan"}</button>${aiMd?`<button class="mini" data-pick="${esc(aiMd)}">Pick squad</button>`:""}</div>
+    ${aiMdTxt||cnGet("mday",aiMd)?`<label class="f">The plan (change anything)<textarea id="aiMdTxt" rows="16" maxlength="3000">${esc(aiMdTxt)}</textarea></label>
+    <div class="btns"><button class="btn gold" id="aiMdSave">Save the plan</button><button class="btn ghost" id="aiMdShare">Share with the coaches</button>${cnGet("mday",aiMd)?`<button class="btn ghost" id="aiMdDel">Delete</button>`:""}</div>`:""}`:`<p class="hint" style="margin:0">No games coming up. Add a fixture first.</p>`}</section>
+  <section class="card stack"><h3 style="margin:0">📝 After the game</h3>${played.length?`<label class="f">Game<select id="aiDbG">${played.map(m=>`<option value="${esc(m.id)}"${m.id===aiDb?" selected":""}>${esc(aiGameLabel(m))}</option>`).join("")}</select></label>
+    <h4 style="margin:4px 0 0">Report for the parents</h4><p class="hint" style="margin:0">Drafts the match report from the game's facts and Live mode timeline, in your usual style. First names only, positive about every child.${noSc?` For this team it leaves out the score, the result and who scored (FA youth rules).`:""} It goes on your team's own site, which search engines don't list, once you've checked it and tapped Save.</p>
+    <div class="btns"><button class="btn gold" data-airep="${esc(aiDb)}">${dbm&&dbm.report?"Open the report":"✨ Draft the report"}</button></div>
+    <h4 style="margin:10px 0 0">Coaches' debrief (private)</h4><p class="hint" style="margin:0">What went well and what to work on, for the team as a whole. Only coaches see it, and it can set the focus of the next session.</p>
+    <label class="f">Your thoughts (optional)<textarea id="aiDbAsk" rows="2" maxlength="800" placeholder="For example: great energy, but we stopped talking in the second half">${esc(aiDbAsk)}</textarea></label>
+    <p class="hint" style="margin:0">${AI_PRIV}</p>
+    <div class="btns"><button class="btn gold" id="aiDbGo"${busy("deb")}>${aiBusy==="deb"?"Thinking…":"✨ Draft a debrief"}</button></div>
+    ${aiDbOut?`<label class="f">What went well<textarea id="aiDbWell" rows="3" maxlength="900">${esc(aiList(aiDbOut.well))}</textarea></label><label class="f">To work on<textarea id="aiDbWork" rows="3" maxlength="900">${esc(aiList(aiDbOut.work))}</textarea></label>
+    <div class="grid2"><label class="f">Training focus<select id="aiDbFocus"><option value="">Mixed</option>${DR_FOCUS.filter(f=>f!=="Warm-up"&&f!=="Game").map(f=>`<option${aiDbOut.focus===f?" selected":""}>${f}</option>`).join("")}</select></label>
+    <label class="f">Idea for next session<input type="text" id="aiDbIdea" maxlength="300" value="${esc(aiDbOut.idea||"")}"></label></div>
+    <div class="btns"><button class="btn gold" id="aiDbSave">Save the debrief</button><button class="btn ghost" id="aiDbPlan">Plan the next session on this</button></div>`:""}`:`<p class="hint" style="margin:0">Once a game has been played, you can write it up here.</p>`}</section></div>`}
+async function aiSaveNote(kind,k,data,ok){try{if(!CN)throw 0;await cnSet(kind,k,data);toast(ok)}catch(x){toast(CN?"Couldn't save it. This team's database may need a quick update first, so copy it for now.":"Saving isn't switched on for this team yet, so copy it for now.")}}
+document.addEventListener("change",e=>{const el=e.target;if(view!=="assist")return;
+  if(el.id==="aiMdG"){aiRead();aiMd=el.value;aiMdTxt=(cnGet("mday",aiMd)||{}).text||"";render();return}
+  if(el.id==="aiDbG"){aiRead();aiDb=el.value;aiDbOut=cnGet("deb",aiDb)?Object.assign({},cnGet("deb",aiDb)):null;render();return}});
+document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t||view!=="assist"||!canWrite)return;const d=t.dataset;
+  if(d.aidrill){aiRead();drOpen=d.aidrill;setView("drills");return}
+  if(d.aiadd){aiRead();const dr=(DRILLS||[]).find(x=>x.id===d.aiadd);if(!dr)return;const day=sxDays().find(x=>x>=todayLocal())||todayLocal();sxDay=day;sxDraft=JSON.parse(JSON.stringify(cnGet("plan",day)||{focus:"",mins:60,blocks:[],note:""}));
+    sxDraft.blocks.push({id:dr.id,title:dr.title,mins:+dr.minutes||10,note:""});setView("splan");toast("Added. Tap Save the plan to keep it.");return}
+  if(d.airep){aiRead();const m=matches.find(x=>x.id===d.airep);if(!m)return;openMatch(m.id);mdWrite=true;render();const ta=$("#mdReport");if(ta){ta.scrollIntoView({block:"center"});if(!ta.value.trim()){const b=$("#mdReportAi");if(b)b.click()}}return}
+  if(t.id==="aiDrills"){aiRead();if(!aiQ.trim()){toast("Say what you want to work on first.");return}if(!DRILLS)await loadDrills();aiBusy="drills";render();
+    const lib=(DRILLS||[]).filter(aiAgeOk).slice(0,160).map(x=>({id:x.id,title:x.title,focus:x.focus||[],minutes:x.minutes||null,ages:[x.age_from||0,x.age_to||0],about:String(x.setup||x.idea||"").slice(0,160)}));
+    const r=await aiCall({kind:"drills",ask:{text:aiQ.trim()},drills:lib});aiBusy="";
+    if(r.picks){aiPicks=r.picks;aiTip=r.tip||"";toast("Here are some ideas. You choose what fits.")}else{aiPicks=aiDrillsLocal(aiQ);aiTip="";toast(`${aiWhy(r.error)}, so these are drills that match your words.`)}render();return}
+  if(t.id==="aiMdGo"){aiRead();const m=matches.find(x=>x.id===aiMd);if(!m)return;if(aiMdTxt.trim()&&!confirm("Replace the plan in the box with a new draft?"))return;aiBusy="md";render();
+    const deb=aiLastDeb(),r=await aiCall({kind:"matchday",match:m.id,ask:{text:aiMdAsk.trim(),focus:deb&&deb.work?deb.work.join("; "):""}});aiBusy="";
+    if(r.text){aiMdTxt=r.text;toast("Here's a draft. Change anything, then save.")}else{aiMdTxt=aiMdLocal(m);toast(`${aiWhy(r.error)}, so here's a simple plan to fill in.`)}render();return}
+  if(t.id==="aiMdSave"){aiRead();if(!aiMdTxt.trim()){toast("The plan is empty.");return}await aiSaveNote("mday",aiMd,{text:aiMdTxt.trim().slice(0,3000)},"Matchday plan saved. The other coaches can see it.");render();return}
+  if(t.id==="aiMdDel"){if(!confirm("Delete this matchday plan?"))return;try{await cnDel("mday",aiMd);aiMdTxt="";toast("Plan deleted.")}catch(x){toast("Couldn't delete it.")}render();return}
+  if(t.id==="aiMdShare"){aiRead();const m=matches.find(x=>x.id===aiMd),txt=`📋 Matchday plan${m?`, ${aiGameLabel(m)}`:""}\n\n${aiMdTxt.trim()}`;if(navigator.share){try{await navigator.share({text:txt});return}catch(x){if(x&&x.name==="AbortError")return}}try{await navigator.clipboard.writeText(txt);toast("Copied. Paste it into the coaches' chat.")}catch(x){prompt("Copy this",txt)}return}
+  if(t.id==="aiDbGo"){aiRead();const m=matches.find(x=>x.id===aiDb);if(!m)return;if(aiDbOut&&(aiDbOut.well||[]).concat(aiDbOut.work||[]).length&&!confirm("Replace the debrief with a new draft?"))return;aiBusy="deb";render();
+    const r=await aiCall({kind:"debrief",match:m.id,ask:{text:aiDbAsk.trim()},focuses:DR_FOCUS.filter(f=>f!=="Warm-up"&&f!=="Game")});aiBusy="";
+    if(r.well||r.work){aiDbOut={well:r.well||[],work:r.work||[],focus:r.focus||"",idea:r.idea||""};toast("Here's a draft. Change anything, then save.")}else{aiDbOut={well:[],work:[],focus:"",idea:""};toast(`${aiWhy(r.error)}, so fill in the debrief yourself.`)}render();return}
+  if(t.id==="aiDbSave"){aiRead();if(!aiDbOut)return;await aiSaveNote("deb",aiDb,{well:aiDbOut.well,work:aiDbOut.work,focus:aiDbOut.focus||"",idea:aiDbOut.idea||""},"Debrief saved. Only coaches can see it.");render();return}
+  if(t.id==="aiDbPlan"){aiRead();if(!aiDbOut)return;const day=sxDays().find(x=>x>=todayLocal())||todayLocal(),cur=cnGet("plan",day);sxDay=day;sxDraft=JSON.parse(JSON.stringify(cur||{focus:"",mins:60,blocks:[],note:""}));
+    if(aiDbOut.focus)sxDraft.focus=aiDbOut.focus;const n=[aiDbOut.work&&aiDbOut.work.length?"To work on: "+aiDbOut.work.join("; "):"",aiDbOut.idea||""].filter(Boolean).join("\n");if(n&&!sxDraft.note)sxDraft.note=n.slice(0,800);sxAsk=(aiDbOut.work||[]).join("; ").slice(0,400);
+    setView("splan");toast("Focus set from the debrief. Tap ✨ Suggest a session, then save.");return}
+});
 // ---------- season posters: a printable end-of-season poster for the team or one player (25 Nov 2026) ----------
 // Our own design, drawn on a canvas at A4 size (2480 x 3508, 300 dpi) from what's already on the site. COACHES ONLY: the
 // poster is never shown on the site, a coach downloads, prints or shares it. Players are first names only, as everywhere.
@@ -5715,8 +5837,8 @@ document.addEventListener("change",e=>{if(view!=="poster")return;const id=e.targ
   if(window.SETUP_WAIT)suRefresh().catch(()=>{window.SETUP_WAIT=false;render()});
   const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
   sb.auth.onAuthStateChange((_ev,s)=>{const u=s?.user||null;if((u&&u.id)!==(me&&me.id)){me=u;checkCoach()}});
-  db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup")render()},()=>toast("Couldn't load the squad. Reload the page."));
-  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit)||(view==="drills"&&!!drEdit)||view==="design";
+  db.collection("players").onSnapshot(s=>{players=s.docs.map(d=>Object.assign({id:d.id},d.data()));window.GFX&&GFX.setSquad(players.filter(inGames).sort((a,b)=>(+a.num||99)-(+b.num||99)));if(view!=="new"&&view!=="edit"&&view!=="login"&&view!=="setup"&&view!=="assist")render()},()=>toast("Couldn't load the squad. Reload the page."));
+  const formOpen=()=>["new","edit","login","tnew","tedit","hnew","hedit","setup"].includes(view)||(view==="md"&&(mdWrite||mdPrevWrite))||(view==="tr"&&trWrite)||(view==="training"&&!!trEdit)||(view==="drills"&&!!drEdit)||view==="design"||view==="assist";
   db.collection("matches").onSnapshot(s=>{RAW=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(m=>m.stage!=="placeholder");matches=pubMatches();if(PRACTICE)matches.push(PRACTICE);if(!formOpen())render()},()=>toast("Couldn't load the results. Reload the page."));
   db.collection("tournaments").onSnapshot(s=>{tournaments=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
   db.collection("honours").onSnapshot(s=>{honours=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(!formOpen())render()},()=>{});
@@ -5730,7 +5852,7 @@ document.addEventListener("change",e=>{if(view!=="poster")return;const id=e.targ
   const qinv=new URLSearchParams(location.search).get("invite");if(qinv&&!canWrite)showInvite(qinv.trim().toLowerCase());else if(qinv&&canWrite){toast("You're already signed in as a coach, so you don't need that invite.");try{history.replaceState(null,"",location.pathname)}catch(e){}}
   logView();
   if(new URLSearchParams(location.search).has("alerts")){view="alerts";render()}
-  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos","notices","cards","certs","poster"])if(new URLSearchParams(location.search).has(v))setView(v);
+  for(const v of ["fixtures","gallery","calendar","training","help","setup","votes","matchday","privacy","parents","sponsors","pom","drills","cphotos","notices","cards","certs","assist","poster"])if(new URLSearchParams(location.search).has(v))setView(v);
   if(new URLSearchParams(location.search).has("fund")){view="fund";render();fundReturn(new URLSearchParams(location.search))}
   const qm=new URLSearchParams(location.search).get("match");if(qm){mdMatch=qm;mdFrom="results";view="md";render()}
   const qev=new URLSearchParams(location.search).get("event");if(qev){evOpen=qev;view="event";render()}
