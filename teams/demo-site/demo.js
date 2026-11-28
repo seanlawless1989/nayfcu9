@@ -8,10 +8,13 @@
 (function(){
 const DD=window.DEMO_DATA||{},SKEY=(window.TEAM&&TEAM.storageKey)||"tt-demo";
 const URL0=(window.TEAM_CONFIG&&TEAM_CONFIG.supabaseUrl)||"https://demo.supabase.co",KEY=SKEY+"-db",FLAGS=SKEY+"-flags",TOKEN=`sb-${new URL(URL0).hostname.split(".")[0]}-auth-token`;
-const COACH="coach@sampletown.example";
+// The instant trial (/try/, trial.js) is this demo with an empty season in the visitor's own team's name, kept on their phone
+// (localStorage) until they clear it, with them as the coach. DD.trial says so.
+const TRIAL=DD.trial||null,COACH=(TRIAL&&String(TRIAL.email||"").toLowerCase())||"coach@sampletown.example";
 const ss={get(k){try{return JSON.parse(sessionStorage.getItem(k)||"null")}catch(e){return null}},
   set(k,v){try{sessionStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{sessionStorage.removeItem(k)}catch(e){}}};
 const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const db=TRIAL?{get(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){ls.del(k)}}:ss;
 const flags=Object.assign({hidden:false},ss.get(FLAGS)||{});
 // "See it as an under-9s team": FA rules for U7 to U11 hide scores and scorers from parents
 if(flags.hidden&&window.TEAM)Object.assign(TEAM,DD.hiddenTeam||{publicScores:false,ageGroup:"Under 9s",ageShort:"U9s",appName:"Sample Town U9s",potm:Object.assign({},TEAM.potm,{ribbon:"STFC U9s"})});
@@ -90,10 +93,11 @@ function season(){
 // what happens next in today's game, in seconds after the visitor first opens the demo
 const SCRIPT=DD.script||[[30,{k:"goal",n:"Ava",a:"Mia"}],[75,{k:"sub",on:"Harper",off:"Ruby"}],[130,{k:"goal",n:"Mia",a:"Ella"}],[200,{k:"them"}],[260,{k:"sub",on:"Zara",off:"Isla"}]];
 
-let DB=ss.get(KEY);
+let DB=db.get(KEY);
 const makeSeason=()=>DD.season?DD.season(day,flags):season();
-if(!DB||DB.made!==day(0)||Date.now()-DB.start>3*3600e3){DB={made:day(0),start:Date.now(),done:0,touched:false,t:makeSeason()};ss.set(KEY,DB)}
-const T=DB.t,save=()=>ss.set(KEY,DB);
+if(DB&&TRIAL&&DB.trial!==TRIAL.at)DB=null;   // a different trial team: start afresh
+if(!DB||(!TRIAL&&(DB.made!==day(0)||Date.now()-DB.start>3*3600e3))){DB={made:day(0),start:Date.now(),done:0,touched:false,trial:TRIAL&&TRIAL.at,t:makeSeason()};db.set(KEY,DB)}
+const T=DB.t,save=()=>db.set(KEY,DB);
 if(!T.family_codes){const t=makeSeason();["parent_settings","family_codes","parent_links"].forEach(k=>T[k]=t[k]);save()}   // a tab opened before parent login
 // supporter cheers: a few already sent for today's game, and more that arrive while the visitor watches
 const CHEER_SCRIPT=[[20,{cheer:1,name:"Grandad"}],[50,{cheer:3,name:null}],[95,{cheer:5,name:"Auntie Sam"}],[150,{cheer:2,name:"Nana"}],[230,{cheer:4,name:null}]];
@@ -294,6 +298,9 @@ const WD=Object.assign({ageBtn:"U7–U11 view",coachTip:"You're a coach now. Ope
   tip:"Today's game is live. Tap the red bar to follow it like a parent would. To try parent sign-in, open Parents and type Ava's family code, AVA-123."},DD.words||{});
 window.DEMO={paint(){
   const el=document.getElementById("ttdemo");if(!el)return;const c=isCoach();
+  if(TRIAL){el.innerHTML=`<div class="in"><span><b>TRIAL</b>Your team's own site. Only you can see it, on this phone.</span>
+    <span class="acts">${TRIAL.start?"":`<button class="go" data-demo="keep">Make it my real site</button>`}<button data-demo="${c?"parent":"coach"}">${c?"Parents' view":"Coach view"}</button>
+    <button data-demo="reset">Start again</button></span><span class="tip">${c?WD.coachTip:WD.tip}</span></div>`;return}
   el.innerHTML=`<div class="in"><span><b>DEMO</b>A made-up team. Try anything: nothing you do is saved or seen by anyone else.</span>
     <span class="acts"><button class="go" data-demo="${c?"parent":"coach"}">${c?"Parents' view":"Try the coach view"}</button>
     <button data-demo="age">${flags.hidden?"Show scores":WD.ageBtn}</button>
@@ -304,6 +311,7 @@ window.DEMO={paint(){
 const FORM="https://formsubmit.co/ajax/5f26f2b94f7b8df49f80d9aced927305",LEAD="tt-lead",ASKED="tt-demo-asked";
 const REF=(new URLSearchParams(location.search).get("ref")||ss.get("tt-demo-ref")||"").slice(0,40);if(REF)ss.set("tt-demo-ref",REF);   // kept through the demo bar's reloads
 function askLater(){
+  if(TRIAL)return;   // the trial already has their email
   if(ls.get(LEAD)==="sent"||ss.get(ASKED))return;
   setTimeout(()=>{if(ls.get(LEAD)==="sent"||ss.get(ASKED)||document.querySelector(".ttlead"))return;showLead()},120000)}
 function showLead(){
@@ -335,8 +343,12 @@ function mount(){
   el.addEventListener("click",e=>{const b=e.target.closest("[data-demo]");if(!b)return;const k=b.dataset.demo;
     if(k==="coach")coachOn();if(k==="parent")coachOff();
     if(k==="age"){flags.hidden=!flags.hidden;ss.set(FLAGS,flags);ss.del(KEY);ls.del((TEAM.storageKey||"team")+".setup");location.href=location.pathname}
+    if(k==="keep"&&TRIAL&&TRIAL.keep){TRIAL.keep(T);return}
+    if(k==="reset"&&TRIAL){if(!confirm("Clear everything you've added and start again?"))return;db.del(KEY);ls.del((TEAM.storageKey||"team")+".setup");location.href=location.pathname;return}
     if(k==="reset"){ss.del(KEY);ss.del(FLAGS);ls.del(TOKEN);ls.del((TEAM.storageKey||"team")+".setup");location.href=location.pathname}});
 }
+// the trial opens in the coach's view the first time, so Team setup is the first thing they see
+if(TRIAL&&!TRIAL.start&&!DB.coached){DB.coached=1;save();if(!tok())ls.set(TOKEN,JSON.stringify(session()))}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount);else mount();
 askLater();
 })();
