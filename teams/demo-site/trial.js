@@ -92,14 +92,15 @@ function keep(DB){
   const row=((DB.team_settings||[])[0])||{},st=Object.assign({},row.settings||{});
   const el=document.createElement("form");el.className="ttlead tttrial-keep";el.noValidate=true;el.setAttribute("aria-label","Make it my real site");
   el.innerHTML=`<button type="button" class="x" aria-label="Close">×</button><h3>Make it your real site</h3>
-    <p>We'll set ${esc(st.name||info.team)} up on its own web address, ready to share with your parents. £5 a month per team, free setup, no contract, cancel anytime.</p>
+    <p>We'll set ${esc(st.name||info.team)} up on its own web address, ready to share with your parents. Your first month is free, then it's £5 a month per team. Free setup, no contract, cancel anytime. If you're a club, the next five clubs to join are free for life: just say so below.</p>
     <p class="small">So far you've added ${players.length} player${players.length===1?"":"s"} and ${games.length} fixture${games.length===1?"":"s"}. We'll copy your team details and fixtures across. Players' names stay on your phone: you add them on your real site (paste the list, it takes a minute).</p>
     <input name="phone" type="tel" placeholder="Mobile, if you'd like a call (optional)" autocomplete="tel">
+    <label class="tk"><input type="checkbox" name="club"><span>We're a club with more than one team, and we'd like one of the free-for-life places</span></label>
     <button class="send">Yes, make it my real site</button><p class="msg" role="status" aria-live="polite"></p>`;
   document.body.appendChild(el);el.querySelector(".x").onclick=()=>el.remove();
   el.addEventListener("submit",async e=>{e.preventDefault();const b=el.querySelector(".send"),msg=el.querySelector(".msg");b.disabled=true;msg.textContent="Sending…";
     const line=m=>[m.date,m.ko||"",(m.ha==="A"?"away at ":m.ha==="H"?"home v ":"v ")+(m.opp||""),m.venue?"("+m.venue+")":"",m.comp||""].filter(Boolean).join(" ");
-    const payload={"Team":info.team,"Email":info.email,"Mobile":el.phone.value.trim().slice(0,30),"Team name on site":st.name||"","Age group":st.ageGroup||"","Sport":st.sport||"football",
+    const payload={"Team":info.team,"Email":info.email,"Mobile":el.phone.value.trim().slice(0,30),"Wants a free-for-life club place":el.club.checked?"Yes":"","Team name on site":st.name||"","Age group":st.ageGroup||"","Sport":st.sport||"football",
       "Format":st.format||"","League":st.league||"","Colours":st.colours?[st.colours.club,st.colours.gold].join(" / "):"","Players added":String(players.length),
       "Fixtures added":String(games.length),"Fixtures":games.slice(0,40).map(line).join("\n"),"Team setup finished":row.ready?"Yes":"Not yet","Trial started":info.at,"Link used":info.ref||REF,
       _subject:`Touchline Tales trial: make it real: ${info.team}`,_replyto:info.email,_template:"table",_captcha:"false"};
@@ -111,8 +112,9 @@ function keep(DB){
     el.innerHTML=`<button type="button" class="x" aria-label="Close">×</button>`;el.querySelector(".x").onclick=()=>el.remove();
     const h=document.createElement("h3"),p=document.createElement("p");el.append(h,p);
     if(pay&&pay.isFree(club)){h.textContent="Thanks! It's free for your club";p.textContent=`Newton Aycliffe and Washington Athletic teams don't pay. We'll email ${info.email} within a day to get your real site live.`;return}
-    if(pay&&pay.on){h.textContent="Last step: start your team plan";p.textContent="£5 a month per team, by card or Direct Debit. Setup is free and you can cancel any time. We'll have your real site ready within a few days.";
-      const a=document.createElement("a");a.className="send";a.style.cssText="display:block;text-align:center;text-decoration:none;box-sizing:border-box";a.href=pay.url(r.id,info.email);a.textContent="Pay £5 a month securely";
+    if(el.club&&el.club.checked||payload["Wants a free-for-life club place"]){h.textContent="Thanks! We'll be in touch about your club";p.textContent=`The next five clubs to join are free for life, for every team. We'll email ${info.email} within a day to check your place and get your real site live.`;return}
+    if(pay&&pay.on){h.textContent="Last step: start your team plan";p.textContent="Your first month is free, then £5 a month per team, by card or Direct Debit. Nothing is taken until the free month ends, and you can cancel any time. We'll have your real site ready within a few days.";
+      const a=document.createElement("a");a.className="send";a.style.cssText="display:block;text-align:center;text-decoration:none;box-sizing:border-box";a.href=pay.url(r.id,info.email);a.textContent="Start my free month";
       a.addEventListener("click",()=>count("pay-click","Pay button tapped",{where:"trial"}));
       const s=document.createElement("p");s.className="small";s.textContent=pay.test?"Test mode: use card 4242 4242 4242 4242, any future date, any CVC.":"Payments are handled by Stripe. Rather chat first? Close this and we'll be in touch.";
       el.append(a,s);count("pay-shown","Pay step shown",{where:"trial"});return}
